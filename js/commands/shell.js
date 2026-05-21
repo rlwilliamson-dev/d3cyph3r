@@ -4,8 +4,68 @@ import { termEl } from "../terminal/dom.js";
 import { print } from "../terminal/output.js";
 import { connectTo } from "../engine/ssh.js";
 import { currentLevelKey } from "../engine/state.js";
+import { LEVELS } from "../../levels/index.js";
 
 const LOBBY = "guest@d3cyph3r";
+
+// Help reference, grouped by track. Sections whose track has no level
+// data render dimmed with a "no levels yet" annotation, so the player
+// can see what the engine supports without thinking the unshipped
+// commands are broken.
+const HELP_SECTIONS = [
+  { track: "linux", title: "LINUX BASICS", lines: [
+    "ls / ls -a / ls -l       – list files (all / long format)",
+    "cd <dir>                 – change into a directory",
+    "cd ..                    – go up one directory",
+    "cat <file>               – print file contents",
+    "pwd                      – print working directory",
+    "whoami                   – print current user",
+    "echo <text>              – print text to terminal",
+    "grep <word> <file|*>     – search for word in file(s)",
+    "find <path> -name <pat>  – find files matching pattern",
+    "env                      – list environment variables",
+  ]},
+  { track: "network", title: "NETWORK RECON", lines: [
+    "nmap <host>              – port scan",
+    "nmap -sV <host>          – port + service version scan",
+    "netstat                  – list active connections",
+    "whois <domain>           – WHOIS domain lookup",
+    "dig <domain> [type]      – DNS record lookup",
+  ]},
+  { track: "crypto", title: "CRYPTOGRAPHY", lines: [
+    "base64 <file>            – decode base64 file",
+    "base64 -d <string>       – decode base64 string directly",
+    "rot13 <file>             – ROT13 decode file",
+    "xxd <file>               – hex dump viewer",
+    "decode-hex <file>        – decode hex string → ASCII",
+    "hash-id <file>           – identify hash algorithm",
+    "john <hashfile>          – dictionary attack on hash",
+    "xor <file> <key>         – XOR decrypt (key e.g. 0x5A)",
+  ]},
+  { track: "web", title: "WEB RECON", lines: [
+    "curl <url>               – fetch a URL",
+    "curl -I <url>            – fetch HTTP headers only",
+    "gobuster <url>           – brute-force hidden directories",
+    "cookies <url>            – inspect session cookies",
+  ]},
+  { track: "forensics", title: "FORENSICS", lines: [
+    "file <filename>          – identify true file type",
+    "file *                   – identify all files at once",
+    "strings <file>           – extract printable strings",
+    "exif <file>              – read EXIF metadata",
+  ]},
+];
+
+const HELP_TERMINAL = {
+  title: "TERMINAL",
+  lines: [
+    "clear                    – clear the screen",
+    "ssh <user@host>          – connect to a level",
+    "exit / logout            – disconnect and return to the lobby",
+    "report                   – show how to report bugs",
+    "help                     – show this reference",
+  ],
+};
 
 // Mimics an ssh logout — prints the standard close-msg and drops the
 // player back into the lobby. `logout` is an alias for muscle memory.
@@ -22,55 +82,20 @@ function exitToLobby() {
 
 export const shellCommands = {
   help() {
-    return { cls: "info", text: `
-LINUX BASICS
-  ls / ls -a / ls -l     – list files (all / long format)
-  cd <dir>               – change into a directory
-  cd ..                  – go up one directory
-  cat <file>             – print file contents
-  pwd                    – print working directory
-  whoami                 – print current user
-  echo <text>            – print text to terminal
-  grep <word> <file|*>   – search for word in file(s)
-  find <path> -name <pat>– find files matching pattern
-  env                    – list environment variables
-
-NETWORK RECON
-  nmap <host>            – port scan
-  nmap -sV <host>        – port + service version scan
-  netstat                – list active connections
-  whois <domain>         – WHOIS domain lookup
-  dig <domain> [type]    – DNS record lookup
-
-CRYPTOGRAPHY
-  base64 <file>          – decode base64 file
-  base64 -d <string>     – decode base64 string directly
-  rot13 <file>           – ROT13 decode file
-  xxd <file>             – hex dump viewer
-  decode-hex <file>      – decode hex string → ASCII
-  hash-id <file>         – identify hash algorithm
-  john <hashfile>        – dictionary attack on hash
-  xor <file> <key>       – XOR decrypt (key e.g. 0x5A)
-
-WEB RECON
-  curl <url>             – fetch a URL
-  curl -I <url>          – fetch HTTP headers only
-  gobuster <url>         – brute-force hidden directories
-  cookies <url>          – inspect session cookies
-
-FORENSICS
-  file <filename>        – identify true file type
-  file *                 – identify all files at once
-  strings <file>         – extract printable strings
-  exif <file>            – read EXIF metadata
-
-TERMINAL
-  clear                  – clear the screen
-  ssh <user@host>        – connect to a level
-  exit / logout          – disconnect and return to the lobby
-  report                 – show how to report bugs
-  help                   – show this reference
-`.trim() };
+    print("", "out");
+    for (const section of HELP_SECTIONS) {
+      const hasLevels = Object.values(LEVELS).some(l => l.track === section.track);
+      const headerCls = hasLevels ? "success" : "dim";
+      const bodyCls   = hasLevels ? "out"     : "dim";
+      const suffix    = hasLevels ? ""        : "  (no levels yet — commands available; no level to use them on)";
+      print(`  ${section.title}${suffix}`, headerCls);
+      for (const line of section.lines) print("    " + line, bodyCls);
+      print("", "out");
+    }
+    print(`  ${HELP_TERMINAL.title}`, "success");
+    for (const line of HELP_TERMINAL.lines) print("    " + line, "out");
+    print("", "out");
+    return null;
   },
 
   clear() {

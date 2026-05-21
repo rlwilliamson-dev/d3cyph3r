@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- 1200×630 `og-image.png` for link unfurls in Slack, Discord, iMessage,
+  and Twitter (`og:image` + `twitter:image`; `twitter:card` upgraded
+  from `summary` to `summary_large_image`). Source template lives at
+  `assets/og-template.html`; regenerate the PNG with
+  `node tests/generate-og-image.cjs`.
+
+### Changed
+
+- `help` command grouped by track with an availability indicator: tracks
+  with shipped level data render in their normal color; tracks the engine
+  supports but has no level data for yet render dimmed with a
+  "(no levels yet — commands available; no level to use them on)" hint.
+  Player now sees the roadmap at a glance without confusion about what
+  actually works today.
+
 ## [0.2.0] - 2026-05-21
 
 ### Added
