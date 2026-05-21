@@ -5,6 +5,13 @@
 // ssh into this level (set by the PREVIOUS level's content); leave null
 // for the entry level.
 //
+// Optional: `playerUser` (and `playerGroup`, defaulting to `playerUser`)
+// override the in-world identity the player sees inside the box. The
+// level key (e.g. `level1@linux`) is engine bookkeeping for the SSH-hop
+// metaphor; `playerUser` is what `whoami`, the prompt, `pwd`, `find`,
+// and `ls -la` owner columns show. Without this override the engine
+// falls back to the level key's user prefix.
+//
 // Optional: `permissions` is a map keyed by file basename (within the
 // level's home directory) whose values describe the file's mode and
 // ownership for `ls -l` and `cat`:
@@ -15,10 +22,9 @@
 //   }
 //
 // Mode follows the standard 10-char format: [type][owner rwx][group rwx]
-// [other rwx]. Levels are single-user / single-group; the player's user
-// name is the level key prefix (e.g. `level1` for `level1@linux`) and
-// belongs to a primary group of the same name. `cat` will return
-// "Permission denied" for files the player can't read.
+// [other rwx]. Levels are single-user / single-group; the player belongs
+// to a primary group named by `playerGroup`. `cat` returns "Permission
+// denied" for files the player can't read.
 //
 // Continuity: all levels are set at Driftwood Systems, a mid-sized tech
 // consulting firm (~600 consultants, ~80 simultaneous engagements). The
@@ -363,16 +369,17 @@ Return to the lobby:    ssh guest@d3cyph3r
   "level1@linux": {
     password: "please-rotate-me",
     track: "linux",
+    playerUser: "app_admin",
     objective: "Find the production database credential a misconfigured backup is leaking — and document the blast radius before Priya rotates it.",
-    lesson: "Day two. You used the credential from Daniel's creds.txt to ssh into Halton Bank's jumphost — and Halton's ops team left the staging service account with a login shell. You're now logged in as app_admin (the shell calls you level1), sitting on a client production bastion. A real attacker who pulled the same trick would be exactly here. Walk the home directory and find the production credential a careless backup has left exposed. Read welcome.md first; it explains the new permission columns you'll use today. Then lessons-learned.md once you've found it.",
+    lesson: "Day two. You used the credential from Daniel's creds.txt to ssh into Halton Bank's jumphost — and Halton's ops team left the staging service account with a login shell. You're now logged in as app_admin, sitting on a client production bastion. A real attacker who pulled the same trick would be exactly here. Walk the home directory and find the production credential a careless backup has left exposed. Read welcome.md first; it explains the new permission columns you'll use today. Then lessons-learned.md once you've found it.",
     permissions: {
-      "welcome.md":             { mode: "-rw-r--r--", owner: "level1", group: "level1", size: 1842 },
-      "handoff.md":             { mode: "-rw-r--r--", owner: "level1", group: "level1", size: 1956 },
-      "backup.sh":              { mode: "-rwxr-xr-x", owner: "level1", group: "level1", size:  612 },
-      ".bash_history":          { mode: "-rw-------", owner: "level1", group: "level1", size:  524 },
-      "staging-worker.env":     { mode: "-rw-------", owner: "root",   group: "root",   size:  287 },
-      "staging-worker.env.bak": { mode: "-rw-r--r--", owner: "level1", group: "level1", size:  342 },
-      "lessons-learned.md":     { mode: "-rw-r--r--", owner: "level1", group: "level1", size: 4521 },
+      "welcome.md":             { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 1842 },
+      "handoff.md":             { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 1956 },
+      "backup.sh":              { mode: "-rwxr-xr-x", owner: "app_admin", group: "app_admin", size:  612 },
+      ".bash_history":          { mode: "-rw-------", owner: "app_admin", group: "app_admin", size:  524 },
+      "staging-worker.env":     { mode: "-rw-------", owner: "root",      group: "root",      size:  287 },
+      "staging-worker.env.bak": { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size:  342 },
+      "lessons-learned.md":     { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 4521 },
     },
     fs: {
       type: "dir",
@@ -383,11 +390,9 @@ Return to the lobby:    ssh guest@d3cyph3r
           content:
 `Driftwood internal security — Halton Bank engagement, ongoing.
 
-You're logged in as \`level1\` on Halton's jumphost. (The box would
-normally see you as the \`app_admin\` service account; the local user
-mapping doesn't matter for the audit.)
-
-This is a different box than yesterday. Yesterday you were auditing
+You're logged in as \`app_admin\` on Halton's jumphost — the staging
+service account whose credentials you found on Daniel's laptop. This
+is a different box than yesterday. Yesterday you were auditing
 Daniel's laptop offline. Today you're on a live client production
 bastion using credentials Daniel leaked. A real attacker who pulled
 the same trick would be exactly here.

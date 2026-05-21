@@ -64,8 +64,9 @@ export function connectTo(key) {
 }
 
 function updatePrompt() {
-  const [user, host] = currentLevelKey.split("@");
-  promptUser.textContent = user;
+  const [keyUser, host] = currentLevelKey.split("@");
+  const level = LEVELS[currentLevelKey];
+  promptUser.textContent = level?.playerUser || keyUser;
   promptHost.textContent = host;
-  levelBadge.textContent = LEVELS[currentLevelKey]?.isLobby ? "LOBBY" : currentLevelKey.toUpperCase();
+  levelBadge.textContent = level?.isLobby ? "LOBBY" : currentLevelKey.toUpperCase();
 }

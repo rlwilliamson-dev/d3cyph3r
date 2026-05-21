@@ -14,14 +14,26 @@ function getFSNode(level, pathParts) {
   return node;
 }
 
-function buildDisplayPath() {
-  const user = currentLevelKey.split("@")[0];
+// In-world identity for the current level. Levels can override the
+// engine's abstract slot name (e.g. `level1` from `level1@linux`) with
+// a lore-accurate username via `level.playerUser` — used by `whoami`,
+// `pwd`, `find`, `ls -la` owner columns, the prompt label, and the
+// `cat` permission check. `playerGroup` defaults to `playerUser`.
+function getCurrentUser(level) {
+  return level?.playerUser || currentLevelKey.split("@")[0];
+}
+function getCurrentGroup(level) {
+  return level?.playerGroup || getCurrentUser(level);
+}
+
+function buildDisplayPath(level) {
+  const user = getCurrentUser(level);
   const base = `/home/${user}`;
   return currentPath.length === 0 ? base : base + "/" + currentPath.join("/");
 }
 
 // Permission metadata helpers. `level.permissions[name]` is shaped
-// { mode: "-rw-r--r--", owner: "level1", group: "level1", size: 1024 }
+// { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 1024 }
 // — a structured object used by both `ls -l` rendering and `cat`'s
 // read-permission check. Mode strings follow the standard 10-char
 // format: [type][owner rwx][group rwx][other rwx].
@@ -32,12 +44,12 @@ function defaultMeta(name) {
 }
 
 // Simple Unix-style read check. Levels are single-user / single-group,
-// so we treat the current level user as also belonging to a primary
-// group named the same as the user.
-function canReadFile(meta, currentUser) {
+// so the level player belongs to a primary group named by `playerGroup`
+// (which defaults to `playerUser`).
+function canReadFile(meta, currentUser, currentGroup) {
   if (!meta || !meta.mode) return true;
   if (currentUser === meta.owner) return meta.mode[1] === "r";
-  if (currentUser === meta.group) return meta.mode[4] === "r";
+  if (currentGroup === meta.group) return meta.mode[4] === "r";
   return meta.mode[7] === "r";
 }
 
@@ -117,7 +129,7 @@ export const linuxCommands = {
     // behave exactly as before.
     const basename = parts[parts.length - 1];
     const meta     = level.permissions?.[basename];
-    if (meta && !canReadFile(meta, currentLevelKey.split("@")[0])) {
+    if (meta && !canReadFile(meta, getCurrentUser(level), getCurrentGroup(level))) {
       return { text: `cat: ${arg}: Permission denied`, cls: "err" };
     }
 
@@ -125,12 +137,12 @@ export const linuxCommands = {
     return { text: node.content, cls: "out" };
   },
 
-  pwd() {
-    return { text: buildDisplayPath(), cls: "out" };
+  pwd(level) {
+    return { text: buildDisplayPath(level), cls: "out" };
   },
 
-  whoami() {
-    return { text: currentLevelKey.split("@")[0], cls: "out" };
+  whoami(level) {
+    return { text: getCurrentUser(level), cls: "out" };
   },
 
   echo(_level, arg) {
@@ -177,7 +189,7 @@ export const linuxCommands = {
 
     if (found.length === 0) return { text: "(no files found)", cls: "dim" };
 
-    const user = currentLevelKey.split("@")[0];
+    const user = getCurrentUser(level);
     return { text: found.map(f => `/home/${user}/` + f).join("\n"), cls: "out" };
   },
 

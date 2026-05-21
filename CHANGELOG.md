@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     single-group model).
   - Backward-compatible: levels without a `permissions` map (e.g. level0)
     behave exactly as before.
+- Levels can override the player's in-world identity via `playerUser`
+  (and optional `playerGroup`). When set, `whoami`, `ls -la` owner
+  columns, the prompt label, `pwd`, and `find` output all show the
+  lore-accurate identity instead of the engine's slot name. Level1
+  sets `playerUser: "app_admin"` to match its Halton-jumphost scenario.
 - Headless Playwright playtest (`tests/playtest.cjs`) running 30 end-to-end
   checks against `level0@linux` — lobby render, ssh transitions, `ls` / `cat`
   / tab completion / history, `exit` and `logout` flows, no console errors.
@@ -61,10 +66,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `actions/setup-node@v6` (Node 20 is being deprecated on GitHub runners).
 - Playtest assertions updated to match the new lobby copy; one new check
   (Driftwood welcome appears on first visit) brings the suite to 31.
-- Playtest now also exercises level1 end-to-end (17 new checks: password
-  gate, ssh into Halton jumphost, `ls -la` perm strings, `cat` permission
-  denied on the root-mode-600 file, the find on the mode-644 backup,
-  recurring-character continuity). Suite total: 48 checks.
+- Playtest now also exercises level1 end-to-end (18 new checks: password
+  gate, ssh into Halton jumphost, prompt label shows `app_admin`, `ls -la`
+  perm strings, `cat` permission denied on the root-mode-600 file, the
+  find on the mode-644 backup, recurring-character continuity). Suite
+  total: 49 checks.
 
 ## [0.1.0] - 2026-05-21
 

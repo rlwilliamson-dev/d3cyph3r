@@ -129,9 +129,10 @@ async function termText(page) {
   await typeAndEnter(page, "please-rotate-me");
   await page.waitForTimeout(600);
   t = await termText(page);
-  check("Correct password connects to level1@linux", t.includes("Connected: level1@linux"));
-  check("Prompt host updated to linux on level1", (await page.locator("#prompt-host").innerText()) === "linux");
-  check("Objective references the production credential", t.includes("production"));
+  check("Correct password connects to level1@linux",          t.includes("Connected: level1@linux"));
+  check("Prompt host updated to linux on level1",              (await page.locator("#prompt-host").innerText()) === "linux");
+  check("Prompt user shows in-world identity app_admin",       (await page.locator("#prompt-user").innerText()) === "app_admin");
+  check("Objective references the production credential",      t.includes("production"));
 
   await typeAndEnter(page, "ls");
   t = await termText(page);
@@ -167,7 +168,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "whoami");
   t = await termText(page);
-  check("whoami prints 'level1'", /\blevel1\b/.test(t));
+  check("whoami prints in-world identity 'app_admin'", /\bapp_admin\b/.test(t));
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
