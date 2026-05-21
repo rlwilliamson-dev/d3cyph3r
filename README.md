@@ -6,7 +6,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-This is **v0.1** — engine complete, one Linux level (`level0@linux`) shipped. New levels and tracks land one PR at a time.
+This is **v0.1** — engine complete, one Linux level (`level0@linux`) shipped. New levels and tracks land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Running it locally
 

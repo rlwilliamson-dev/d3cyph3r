@@ -1,3 +1,13 @@
+# Azure Static Web Apps CI/CD
+#
+# IMPORTANT — manual edits to watch for if Azure regenerates this file:
+#   1. The `playtest_job` below was added by hand.
+#   2. `build_and_deploy_job` has a `needs: playtest_job` line so a failed
+#      playtest blocks the deploy.
+#   3. `actions/checkout` is pinned to v6 (Azure's generator uses v3).
+# If Azure rewrites this file (e.g. after reconfiguring the SWA in the portal),
+# restore those three things from git history.
+
 name: Azure Static Web Apps CI/CD
 
 on:
@@ -10,12 +20,45 @@ on:
       - main
 
 jobs:
+  playtest_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+    name: Playtest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: tests/package-lock.json
+      - name: Install playtest dependencies
+        working-directory: tests
+        run: npm ci
+      - name: Install Chromium
+        working-directory: tests
+        run: npx playwright install --with-deps chromium
+      - name: Start static server
+        run: |
+          python3 -m http.server 8000 >/dev/null 2>&1 &
+          echo $! > /tmp/d3_server.pid
+      - name: Wait for server
+        run: timeout 30 bash -c 'until curl -sf http://localhost:8000/ >/dev/null; do sleep 1; done'
+      - name: Run playtest
+        working-directory: tests
+        env:
+          D3CYPH3R_URL: http://localhost:8000/
+        run: node playtest.cjs
+      - name: Stop static server
+        if: always()
+        run: kill "$(cat /tmp/d3_server.pid)" 2>/dev/null || true
+
   build_and_deploy_job:
+    needs: playtest_job
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
         with:
           submodules: true
           lfs: false

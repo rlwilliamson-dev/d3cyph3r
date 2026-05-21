@@ -1,4 +1,5 @@
-// Lobby screen: ASCII logo, welcome / instructions, and boot sequence.
+// Lobby screen: ASCII logo, in-world Driftwood welcome (first visit only),
+// and the persistent engagement list. Also defines the boot sequence.
 //
 // The lobby is the user's "home" — they ssh out to tracks and back here.
 
@@ -11,10 +12,12 @@ import { connectTo } from "./ssh.js";
 // CLI, bun) than the giant ASCII art of an old-school CTF site.
 const LOGO_TEXT = "D3CYPH3R";
 
-// Build the "AVAILABLE TRACKS" block from the live LEVELS map so it stays
-// in sync as tracks are added in future sessions. A track is "available"
-// if at least one level exists for it.
-function trackList() {
+const DIVIDER = "  ────────────────────────────────────────────────";
+
+// Build the engagement list from the live LEVELS map so it stays in sync
+// as tracks are added in future sessions. A track is "available" if at
+// least one level exists for it.
+function engagementList() {
   const tracks = [
     { key: "linux",     label: "Linux fundamentals", host: "linux"     },
     { key: "network",   label: "Networking tools",   host: "network"   },
@@ -39,36 +42,43 @@ function trackList() {
 export function showLobby() {
   termEl.innerHTML = "";
   printBanner(LOGO_TEXT);
-  print("v0.1 · Cybersecurity training for people who already know infrastructure.", "dim");
+  print("v0.1 · A Driftwood Systems property. Security training for the people who already run the infrastructure.", "dim");
   print("", "out");
 
   const firstVisit = !sessionStorage.getItem("seenOnboarding");
   if (firstVisit) {
     sessionStorage.setItem("seenOnboarding", "true");
 
-    print("  ────────────────────────────────────────────────", "dim");
-    print("  START HERE", "success");
-    print("  ────────────────────────────────────────────────", "dim");
+    print(DIVIDER, "dim");
+    print("  WELCOME TO DRIFTWOOD SYSTEMS", "success");
+    print(DIVIDER, "dim");
+    print("", "out");
+    print("  You've been assigned to the Security Engineering rotation.", "out");
+    print("  Driftwood runs ~80 client engagements across ~600 consultants;", "out");
+    print("  people roll on, people roll off, and access goes stale.", "out");
+    print("", "out");
+    print("  Your job: inherit the boxes they leave behind.", "out");
+    print("  Find what shouldn't be there.", "out");
+    print("", "out");
+
+    print(DIVIDER, "dim");
+    print("  FIRST ASSIGNMENT", "success");
+    print(DIVIDER, "dim");
     print("", "out");
     print("  ssh level0@linux", "cmd");
     print("", "out");
-    print("  ────────────────────────────────────────────────", "dim");
-    print("  YOUR GOAL", "success");
-    print("  ────────────────────────────────────────────────", "dim");
-    print("", "out");
-    print("  Find passwords hidden in each level.", "out");
-    print("  Use them with ssh to connect to the next level.", "out");
-    print("  Example: ssh level1@linux  (after finding the password)", "dim");
+    print("  Each box hides a password. Find it, use it with ssh to", "dim");
+    print("  move to the next box (e.g. ssh level1@linux once you have it).", "dim");
     print("", "out");
   }
 
-  print("  ────────────────────────────────────────────────", "dim");
-  print("  AVAILABLE TRACKS", "success");
-  print("  ────────────────────────────────────────────────", "dim");
+  print(DIVIDER, "dim");
+  print("  AVAILABLE ENGAGEMENTS", "success");
+  print(DIVIDER, "dim");
   print("", "out");
-  trackList().forEach(line => print(line, "out"));
+  engagementList().forEach(line => print(line, "out"));
   print("", "out");
-  print("  ────────────────────────────────────────────────", "dim");
+  print(DIVIDER, "dim");
   print("  Type 'help' for available commands.", "warn");
   print("", "out");
 }

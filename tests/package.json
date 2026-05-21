@@ -1,0 +1,12 @@
+{
+  "name": "d3cyph3r-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Headless playtest harness for D3CYPH3R. Drives a real Chromium against a local static server and asserts on terminal output.",
+  "scripts": {
+    "playtest": "node playtest.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}
