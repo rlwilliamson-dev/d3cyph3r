@@ -14,10 +14,43 @@ function getFSNode(level, pathParts) {
   return node;
 }
 
-function buildDisplayPath() {
-  const user = currentLevelKey.split("@")[0];
+// In-world identity for the current level. Levels can override the
+// engine's abstract slot name (e.g. `level1` from `level1@linux`) with
+// a lore-accurate username via `level.playerUser` — used by `whoami`,
+// `pwd`, `find`, `ls -la` owner columns, the prompt label, and the
+// `cat` permission check. `playerGroup` defaults to `playerUser`.
+function getCurrentUser(level) {
+  return level?.playerUser || currentLevelKey.split("@")[0];
+}
+function getCurrentGroup(level) {
+  return level?.playerGroup || getCurrentUser(level);
+}
+
+function buildDisplayPath(level) {
+  const user = getCurrentUser(level);
   const base = `/home/${user}`;
   return currentPath.length === 0 ? base : base + "/" + currentPath.join("/");
+}
+
+// Permission metadata helpers. `level.permissions[name]` is shaped
+// { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 1024 }
+// — a structured object used by both `ls -l` rendering and `cat`'s
+// read-permission check. Mode strings follow the standard 10-char
+// format: [type][owner rwx][group rwx][other rwx].
+function defaultMeta(name) {
+  if (name.endsWith("/"))   return { mode: "drwxr-xr-x", owner: "user", group: "user", size: 0   };
+  if (name.endsWith(".sh")) return { mode: "-rwxr-xr-x", owner: "user", group: "user", size: 128 };
+  return                          { mode: "-rw-r--r--", owner: "user", group: "user", size: 256 };
+}
+
+// Simple Unix-style read check. Levels are single-user / single-group,
+// so the level player belongs to a primary group named by `playerGroup`
+// (which defaults to `playerUser`).
+function canReadFile(meta, currentUser, currentGroup) {
+  if (!meta || !meta.mode) return true;
+  if (currentUser === meta.owner) return meta.mode[1] === "r";
+  if (currentGroup === meta.group) return meta.mode[4] === "r";
+  return meta.mode[7] === "r";
 }
 
 export const linuxCommands = {
@@ -55,15 +88,20 @@ export const linuxCommands = {
 
     if (longFmt) {
       const perms = level.permissions || {};
-      const defaultPerm = (f) => {
-        if (f.endsWith("/"))   return "drwxr-xr-x  2 user  user     0";
-        if (f.endsWith(".sh")) return "-rwxr-xr-x  1 user  user   128";
-        return "-rw-r--r--  1 user  user   256";
-      };
-      const lines = ["total " + names.length * 8];
-      names.forEach(f => {
+      const metas = names.map(f => {
         const key = f.endsWith("/") ? f.slice(0, -1) : f;
-        lines.push((perms[key] || defaultPerm(f)) + "  " + f);
+        return perms[key] || defaultMeta(f);
+      });
+      const ownerW = Math.max(...metas.map(m => m.owner.length));
+      const groupW = Math.max(...metas.map(m => m.group.length));
+      const sizeW  = Math.max(...metas.map(m => String(m.size).length));
+
+      const lines = ["total " + names.length * 8];
+      names.forEach((f, i) => {
+        const m = metas[i];
+        lines.push(
+          `${m.mode} 1 ${m.owner.padEnd(ownerW)} ${m.group.padEnd(groupW)} ${String(m.size).padStart(sizeW)}  ${f}`
+        );
       });
       return { text: lines.join("\n"), cls: "out" };
     }
@@ -85,16 +123,26 @@ export const linuxCommands = {
     const node  = getFSNode(level, [...currentPath, ...parts]);
     if (!node)               return { text: `cat: ${arg}: No such file or directory`, cls: "err" };
     if (node.type === "dir") return { text: `cat: ${arg}: Is a directory`,            cls: "err" };
-    if (!node.content)       return { text: "(empty file)", cls: "dim" };
+
+    // Permission check — only applies if the level defines a metadata
+    // entry for this basename. Levels without `permissions` (e.g. level0)
+    // behave exactly as before.
+    const basename = parts[parts.length - 1];
+    const meta     = level.permissions?.[basename];
+    if (meta && !canReadFile(meta, getCurrentUser(level), getCurrentGroup(level))) {
+      return { text: `cat: ${arg}: Permission denied`, cls: "err" };
+    }
+
+    if (!node.content) return { text: "(empty file)", cls: "dim" };
     return { text: node.content, cls: "out" };
   },
 
-  pwd() {
-    return { text: buildDisplayPath(), cls: "out" };
+  pwd(level) {
+    return { text: buildDisplayPath(level), cls: "out" };
   },
 
-  whoami() {
-    return { text: currentLevelKey.split("@")[0], cls: "out" };
+  whoami(level) {
+    return { text: getCurrentUser(level), cls: "out" };
   },
 
   echo(_level, arg) {
@@ -141,7 +189,7 @@ export const linuxCommands = {
 
     if (found.length === 0) return { text: "(no files found)", cls: "dim" };
 
-    const user = currentLevelKey.split("@")[0];
+    const user = getCurrentUser(level);
     return { text: found.map(f => `/home/${user}/` + f).join("\n"), cls: "out" };
   },
 

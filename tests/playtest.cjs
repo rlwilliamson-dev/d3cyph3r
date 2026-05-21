@@ -49,6 +49,7 @@ async function termText(page) {
   check("Lesson mentions Driftwood",   t.includes("Driftwood"));
   check("Lesson mentions Halton Bank", t.includes("Halton"));
   check("Prompt host updated to linux", (await page.locator("#prompt-host").innerText()) === "linux");
+  check("Prompt user shows in-world identity 'daniel'", (await page.locator("#prompt-user").innerText()) === "daniel");
 
   await typeAndEnter(page, "ls");
   t = await termText(page);
@@ -77,7 +78,7 @@ async function termText(page) {
   await page.keyboard.press("Enter");
   await page.waitForTimeout(80);
   t = await termText(page);
-  check("whoami prints 'level0'", /\blevel0\b/.test(t));
+  check("whoami prints in-world identity 'daniel'", /\bdaniel\b/.test(t));
 
   await page.keyboard.press("ArrowUp");
   await page.waitForTimeout(80);
@@ -114,6 +115,65 @@ async function termText(page) {
   await typeAndEnter(page, "logout");
   await page.waitForTimeout(500);
   check("logout alias also returns to lobby", (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 1 — Halton jumphost (permissions puzzle) ──────────────
+  // Wrong password first to confirm the gate works.
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "wrong-password");
+  await page.waitForTimeout(200);
+  t = await termText(page);
+  check("Wrong password prints 'Permission denied, please try again.'", t.includes("Permission denied, please try again."));
+
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "please-rotate-me");
+  await page.waitForTimeout(600);
+  t = await termText(page);
+  check("Correct password connects to level1@linux",          t.includes("Connected: level1@linux"));
+  check("Prompt host updated to linux on level1",              (await page.locator("#prompt-host").innerText()) === "linux");
+  check("Prompt user shows in-world identity app_admin",       (await page.locator("#prompt-user").innerText()) === "app_admin");
+  check("Objective references the production credential",      t.includes("production"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  check("ls shows backup.sh",              t.includes("backup.sh"));
+  check("ls shows staging-worker.env",     /\bstaging-worker\.env\b/.test(t));
+  check("ls shows staging-worker.env.bak", t.includes("staging-worker.env.bak"));
+
+  await typeAndEnter(page, "ls -la");
+  t = await termText(page);
+  check("ls -la shows restrictive perms (-rw-------)", t.includes("-rw-------"));
+  check("ls -la shows loose perms (-rw-r--r--)",       t.includes("-rw-r--r--"));
+  check("ls -la shows root root on staging-worker.env", /root\s+root\s+\d+\s+staging-worker\.env\b/.test(t));
+
+  await typeAndEnter(page, "cat staging-worker.env");
+  t = await termText(page);
+  check("cat on root-mode-600 file returns Permission denied",
+        t.includes("cat: staging-worker.env: Permission denied"));
+
+  await typeAndEnter(page, "cat staging-worker.env.bak");
+  t = await termText(page);
+  check("cat on mode-644 backup reveals DB_PROD_PASS=Halton-2024-Q3!",
+        t.includes("DB_PROD_PASS=Halton-2024-Q3!"));
+
+  await typeAndEnter(page, "cat handoff.md");
+  t = await termText(page);
+  check("handoff.md mentions Priya (recurring character)", t.includes("Priya"));
+  check("handoff.md cites the November incident",          t.includes("November"));
+
+  await typeAndEnter(page, "cat .bash_history");
+  t = await termText(page);
+  check(".bash_history shows the sudo cp smoking gun",
+        t.includes("sudo cp /etc/systemd/system/staging-worker.service.d/override.conf"));
+
+  await typeAndEnter(page, "whoami");
+  t = await termText(page);
+  check("whoami prints in-world identity 'app_admin'", /\bapp_admin\b/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level1 returns to lobby", (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));

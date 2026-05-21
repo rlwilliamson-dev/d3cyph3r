@@ -5,6 +5,27 @@
 // ssh into this level (set by the PREVIOUS level's content); leave null
 // for the entry level.
 //
+// Optional: `playerUser` (and `playerGroup`, defaulting to `playerUser`)
+// override the in-world identity the player sees inside the box. The
+// level key (e.g. `level1@linux`) is engine bookkeeping for the SSH-hop
+// metaphor; `playerUser` is what `whoami`, the prompt, `pwd`, `find`,
+// and `ls -la` owner columns show. Without this override the engine
+// falls back to the level key's user prefix.
+//
+// Optional: `permissions` is a map keyed by file basename (within the
+// level's home directory) whose values describe the file's mode and
+// ownership for `ls -l` and `cat`:
+//
+//   permissions: {
+//     "creds.txt": { mode: "-rw-------", owner: "root", group: "root", size: 287 },
+//     ...
+//   }
+//
+// Mode follows the standard 10-char format: [type][owner rwx][group rwx]
+// [other rwx]. Levels are single-user / single-group; the player belongs
+// to a primary group named by `playerGroup`. `cat` returns "Permission
+// denied" for files the player can't read.
+//
 // Continuity: all levels are set at Driftwood Systems, a mid-sized tech
 // consulting firm (~600 consultants, ~80 simultaneous engagements). The
 // player works on Driftwood's internal security team, auditing the
@@ -26,6 +47,7 @@ export const linuxLevels = {
   "level0@linux": {
     password: null,
     track: "linux",
+    playerUser: "daniel",
     objective: "Audit Daniel's laptop and find the client credential he left behind before IT reimages the box on Wednesday.",
     lesson: "Day one at Driftwood. A senior consultant whose engagement at Halton Bank ended Friday left his work laptop with IT for reimaging. His client access was revoked over the weekend, but the laptop hasn't been wiped yet, and his home directory hasn't been audited. Sweep it before Wednesday. Anything that looks like a client credential, you flag. Read every file. Then read lessons-learned.md.",
     fs: {
@@ -51,6 +73,12 @@ revoked over the weekend, but the laptop hasn't been wiped yet, and
 his home directory hasn't been audited. IT is reimaging Wednesday.
 You have between now and then to find anything sensitive he left
 exposed.
+
+IT booted the laptop and logged you into Daniel's user account so
+you can read everything he had access to. The shell prompt shows
+\`daniel@linux\` because you're working inside his profile, not
+because you are Daniel. This is how forensic audits work: when the
+user is gone, you take their shoes.
 
 Commands you'll need today:
   ls           list files in this directory
@@ -328,6 +356,375 @@ reputationally a breach. The firm's standing rides on every
 consultant's home directory.
 
 The disappointment, when you find one, is the lesson.
+
+Return to the lobby:    ssh guest@d3cyph3r
+`
+        },
+
+      },
+    },
+  },
+
+  // ── level 1 — "The Backup Daniel Forgot" ────────────────────────
+  // Player uses Daniel's leaked staging creds to ssh into Halton's
+  // jumphost. They're now `app_admin` on a client production bastion.
+  // The puzzle: the production DB password lives in a systemd override
+  // owned by root (mode 600 — can't read) but Daniel left a debugging
+  // copy in his home dir at mode 644 (readable). The lesson is
+  // CWE-732 (Incorrect Permission Assignment) via the "shadow copy"
+  // anti-pattern. Introduces `ls -l` / `ls -la` and "Permission denied".
+  "level1@linux": {
+    password: "please-rotate-me",
+    track: "linux",
+    playerUser: "app_admin",
+    objective: "Find the production database credential a misconfigured backup is leaking — and document the blast radius before Priya rotates it.",
+    lesson: "Day two. You used the credential from Daniel's creds.txt to ssh into Halton Bank's jumphost — and Halton's ops team left the staging service account with a login shell. You're now logged in as app_admin, sitting on a client production bastion. A real attacker who pulled the same trick would be exactly here. Walk the home directory and find the production credential a careless backup has left exposed. Read welcome.md first; it explains the new permission columns you'll use today. Then lessons-learned.md once you've found it.",
+    permissions: {
+      "welcome.md":             { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 1842 },
+      "handoff.md":             { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 1956 },
+      "backup.sh":              { mode: "-rwxr-xr-x", owner: "app_admin", group: "app_admin", size:  612 },
+      ".bash_history":          { mode: "-rw-------", owner: "app_admin", group: "app_admin", size:  524 },
+      "staging-worker.env":     { mode: "-rw-------", owner: "root",      group: "root",      size:  287 },
+      "staging-worker.env.bak": { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size:  342 },
+      "lessons-learned.md":     { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 4521 },
+    },
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`Driftwood internal security — Halton Bank engagement, ongoing.
+
+You're logged in as \`app_admin\` on Halton's jumphost — the staging
+service account whose credentials you found on Daniel's laptop. This
+is a different box than yesterday. Yesterday you were auditing
+Daniel's laptop offline. Today you're on a live client production
+bastion using credentials Daniel leaked. A real attacker who pulled
+the same trick would be exactly here.
+
+You have a job to do: find the production database credential a
+misconfigured file is leaking. Read every file you can read.
+
+New commands you'll use today:
+
+  ls -l       Long format. Adds permission and ownership columns.
+  ls -la      Long format AND hidden files (the -a from yesterday).
+
+Each line of \`ls -l\` output starts with a permissions string that
+looks like this:
+
+  -rw-r--r--
+
+Read it as four chunks:
+
+  -           File type. - for regular file, d for directory.
+  rw-         Owner permissions: r=read, w=write, x=execute, -=denied.
+  r--         Group permissions, same letters.
+  r--         Other permissions (everyone else), same letters.
+
+A file with mode \`-rw-------\` can only be read by its owner. If you
+try to cat a file you don't have read permission for, you'll get
+"Permission denied" instead of the contents.
+
+Read handoff.md next — it's Daniel's note to whoever inherits this
+account. Then run \`ls -la\` and look at the column. The find is in
+this directory; you just need to notice which file has permissions
+it should not.
+`
+        },
+
+        "handoff.md": {
+          type: "file",
+          content:
+`# Hand-off — Daniel → whoever Halton rotates onto this account
+
+So you ssh'd in as app_admin. That probably means you used the
+creds from my old laptop. Yes, those credentials are not supposed
+to give a login shell on this box. Halton's ops team configured
+the staging service account with /bin/bash "for debugging." It
+is what it is.
+
+What you need to know:
+
+  - The live production database password lives in:
+      /etc/systemd/system/staging-worker.service.d/override.conf
+
+    That file is owned by root and mode 600 — you can't cat it as
+    app_admin. That's the correct configuration. (For the record:
+    Halton's ops team got this part right.)
+
+  - Last November I was debugging a staging-worker outage and I
+    needed to grep the env vars without sudo. So I cp'd a copy into
+    my home directory and called it \`staging-worker.env.bak\`. I
+    MEANT to delete it after the incident.
+
+    I did not.
+
+    The copy I made retained the default mode and ended up owned by
+    me — owner-readable, group-readable, world-readable. Mode 644.
+    Anyone who lands on this box as app_admin can read the same
+    production password the original file carefully protects.
+
+    Run \`ls -la\` and look at the permissions column. The official
+    file is locked down. My backup is not. That's the whole story.
+
+  - Priya (the senior consultant who handles handoffs) is supposed
+    to rotate the prod password as part of the engagement closeout.
+    She has not. The Q3 password is still live. Yes, the one from
+    Q3. Last quarter's. Currently May.
+
+  - The cron at 02:00 UTC runs backup.sh — that's mine. Don't
+    disable it; Priya's pipeline depends on it. If you ever do need
+    to, her ssh key is on the receiving end at the bastion.
+
+Things that aren't important but I'm telling you anyway:
+
+  - Halton is still on Ubuntu 20.04. Twelve months from EOL. They
+    know. They will deal with it in Q4. (Q4 of which year, unclear.)
+  - The Halton dashboard is, as of this writing, still red.
+  - The nickel coffee machine on Driftwood's floor 4 still takes
+    nickels. The vendor is "Vendolux." I called them. They were not
+    interested in changing.
+
+— Daniel
+`
+        },
+
+        "backup.sh": {
+          type: "file",
+          content:
+`#!/bin/bash
+# Halton-staging schema backup. Daniel's hand-rolled job.
+# Runs at 02:00 UTC via root crontab. Output ships to the bastion
+# via ssh — Priya's key is on the receiving end.
+
+set -euo pipefail
+
+# Load the staging-worker environment override so we have the DB
+# connection string. The override file is the canonical place
+# Halton's ops team stashed the credentials.
+source /etc/systemd/system/staging-worker.service.d/override.conf
+
+OUT="/tmp/halton-staging-$(date +%F).sql.gz"
+
+pg_dump -h "$DB_STAGING_HOST" -U "$DB_STAGING_USER" halton_staging \\
+  | gzip \\
+  > "$OUT"
+
+scp "$OUT" halton-bastion:/var/backups/halton-staging/
+rm -f "$OUT"
+`
+        },
+
+        ".bash_history": {
+          type: "file",
+          content:
+`ls -la
+sudo systemctl status staging-worker
+sudo journalctl -u staging-worker -n 200
+sudo cat /etc/systemd/system/staging-worker.service.d/override.conf
+sudo vi /etc/systemd/system/staging-worker.service.d/override.conf
+sudo systemctl restart staging-worker
+sudo cp /etc/systemd/system/staging-worker.service.d/override.conf /home/app_admin/staging-worker.env.bak
+sudo chown app_admin:app_admin staging-worker.env.bak
+grep DB_PROD_PASS staging-worker.env.bak
+psql -h prod-db.halton.internal -U svc_prod_worker
+ssh halton-bastion
+exit
+`
+        },
+
+        "staging-worker.env": {
+          type: "file",
+          content:
+`# Halton Bank — staging-worker production override
+# This file is sourced by systemd at unit start.
+# Owner: root  Mode: 600  — DO NOT loosen perms.
+
+DB_STAGING_HOST=staging-db.halton.internal
+DB_STAGING_USER=app_admin
+DB_STAGING_PASS=please-rotate-me
+
+DB_PROD_HOST=prod-db.halton.internal
+DB_PROD_USER=svc_prod_worker
+DB_PROD_PASS=Halton-2024-Q3!
+
+PG_SSLMODE=require
+`
+        },
+
+        "staging-worker.env.bak": {
+          type: "file",
+          content:
+`# Halton Bank — staging-worker production override
+# Daniel's debug copy from the November staging-worker incident.
+# TODO: delete this. (Never did.)
+# TODO: also rotate the prod creds. (Never did either.)
+
+DB_STAGING_HOST=staging-db.halton.internal
+DB_STAGING_USER=app_admin
+DB_STAGING_PASS=please-rotate-me
+
+DB_PROD_HOST=prod-db.halton.internal
+DB_PROD_USER=svc_prod_worker
+DB_PROD_PASS=Halton-2024-Q3!
+
+PG_SSLMODE=require
+`
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`# Post-mortem: what you just found, and why it matters
+
+You just found a production database credential exposed by a careless
+backup. The credential itself lives in a properly protected file
+(mode 600, root-owned). A debugging copy of that file — at standard
+default mode 644, owned by a service account anyone with the leaked
+staging creds can log in as — leaks the same secret to anyone on the
+box.
+
+The lock on the front door doesn't matter if there's a key under the
+mat. Daniel locked the front door. Then he taped a copy of the key
+to the wall and left.
+
+## The blunt version
+
+This is one of the most common findings in real-world security
+audits, especially on systems where ops engineers debug under
+pressure. The pattern always looks the same:
+
+  1. A sensitive file is properly locked down.
+  2. Someone needs to read it (debugging, config inspection, a
+     forensic capture) and doesn't want to keep using sudo.
+  3. They cp it somewhere readable, chown it to themselves.
+  4. They get distracted. The copy never gets deleted.
+  5. Months later, someone with shell access (legitimate or not)
+     finds the copy.
+
+Backups and dev copies of secrets are the source of an enormous
+share of real-world credential exposures. The CWE catalog has been
+flagging this for over a decade.
+
+## The consulting-firm angle
+
+For a consulting firm specifically, the leak is worse than it would
+be at a single-tenant org. The exposed credential here is Halton's
+production database password — not Driftwood's. The Master Services
+Agreement Driftwood signed with Halton makes exposure of a client
+production credential a material breach with notification obligations
+typically measured in hours.
+
+The blast radius isn't just "this one box." Anyone who pivoted onto
+this jumphost — through the leaked staging creds in level 0, or
+through any other foothold — could have exfiltrated the prod
+password months ago. The "have we been breached?" question is
+suddenly an "are we sure we haven't been breached?" question, which
+forensically is much harder to answer cleanly.
+
+## Frameworks that cover this
+
+  CWE-732: Incorrect Permission Assignment for Critical Resource
+    Exactly this finding. The catalog entry specifically calls out
+    config files, key material, and credential stores left at
+    overly permissive modes.
+
+  NIST SP 800-53 Rev. 5
+    AC-3 (Access Enforcement): the system must enforce approved
+      authorizations. Mode 644 doesn't enforce; mode 600 does.
+    AC-6 (Least Privilege): app_admin had no business being able
+      to read prod credentials. The backup gave it that ability.
+    SC-28 (Protection of Information at Rest): credentials are
+      data at rest. The control requires either encryption or
+      strict access control. Mode 644 is neither.
+
+  CIS Critical Security Controls v8
+    3.3 (Configure Data Access Control Lists): the canonical
+      defender play against this anti-pattern.
+    4.7 (Restrict access to administrative interfaces): related,
+      since the jumphost shouldn't have been giving service
+      accounts an interactive shell in the first place.
+
+  OWASP Top 10 (2021) — A05: Security Misconfiguration
+    The umbrella category. "Improperly configured permissions on
+    cloud services / files / directories" is one of the named
+    examples.
+
+  GLBA Safeguards Rule (16 CFR Part 314)
+    For Halton specifically. Safeguards Rule 314.4(c)(1) requires
+    "appropriate access controls" on customer-information systems.
+    This is a textbook failure to meet that standard.
+
+## Where this shows up on certifications
+
+  CompTIA Security+ (SY0-701)
+    Domain 3.1 (Security architecture: hardening) — file system
+    permissions and least privilege are tested directly.
+
+  (ISC)² CC / SSCP
+    Access control fundamentals — owner / group / other model.
+
+  CISSP
+    Domain 5 (Identity & Access Management). Domain 7 (Sec Ops).
+    Both touch this. Discretionary access control (DAC) is the
+    Unix permission model in CISSP parlance.
+
+  OSCP / PEN-200
+    Privilege escalation via misconfigured files is a category. The
+    classic pattern: SUID binaries, world-writable cron scripts,
+    sudoers misconfigurations. Today's lesson is the credential
+    variant — equally common in real engagements.
+
+## MITRE ATT&CK mapping
+
+What you simulated maps to:
+
+  T1078     — Valid Accounts (the staging-account login itself)
+  T1083     — File and Directory Discovery (carryover from lvl 0)
+  T1552.001 — Unsecured Credentials: Credentials In Files
+  T1006     — Direct Volume Access (loosely — when an attacker
+              reads files the access-control layer should have
+              denied, but the layer was misconfigured)
+
+T1552.001 in particular is one of the highest-frequency techniques
+in published threat reports. It will be in every incident report
+you read for the rest of your career.
+
+## What a defender should actually do about this
+
+  1. Audit world-readable files in /home and /tmp for credential
+     patterns. Tools that find this fast: \`grep -r\` with credential
+     regexes, gitleaks/trufflehog (not just for git — they scan
+     filesystems too), osquery, CrowdStrike Falcon, Microsoft
+     Purview, AWS Macie / S3 sensitive-data scanning.
+  2. File Integrity Monitoring (FIM) on /etc and other sensitive
+     paths. AIDE, OSSEC/Wazuh, Tripwire — anything that alerts when
+     /etc/systemd/system/* gets cat'd or cp'd unexpectedly.
+  3. Deploy tooling that re-applies correct modes on every run.
+     Ansible's \`file\` module, Chef's \`file\` resource, Puppet's
+     \`File\` type — all of them let you assert "this file MUST be
+     mode 600 owned by root" and remediate drift on each run.
+  4. Just-in-time access via bastion/PAM tools (CyberArk, BeyondTrust,
+     HashiCorp Boundary, AWS Systems Manager Session Manager). The
+     fix for "this service account has a login shell" is not
+     "remove the shell" — it's "remove the persistent account
+     entirely; use short-lived broker-issued credentials."
+  5. Secret-management retrofit. If the credential ever lived in a
+     config file, ANY config file, treat it as compromised — even
+     the supposedly locked one. Rotate. Then migrate to a real
+     secrets backend (Vault, Secrets Manager, Doppler, etc).
+
+## Closing thought
+
+The fix isn't a new lock. It's not having the key copies.
+
+Every credential-exposure incident you read about in the news has
+this finding somewhere in the timeline: somebody copied a secret to
+make their day easier and forgot to clean up. The mistake is mundane.
+The consequences are not.
 
 Return to the lobby:    ssh guest@d3cyph3r
 `

@@ -7,8 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-21
+
 ### Added
 
+- `level1@linux` — "The Backup Daniel Forgot." Player uses the credential
+  found in level0 to ssh into Halton Bank's jumphost, then chases a
+  production database password leaked by a misconfigured backup. Teaches
+  Unix file permissions (`ls -l` / `ls -la`, mode-string reading, owner /
+  group / other) and the CWE-732 shadow-copy anti-pattern. Recurring
+  characters Priya and Daniel referenced.
+- Permission-aware filesystem on the engine side:
+  - `ls -l` / `ls -la` render real `-rw-r--r--`-style mode strings from
+    per-file `{ mode, owner, group, size }` metadata declared on the level.
+  - `cat` returns "Permission denied" for files the current level user
+    lacks read access to (Unix-style owner/group/other check, single-user
+    single-group model).
+  - Backward-compatible: levels without a `permissions` map (e.g. level0)
+    behave exactly as before.
+- Canonical version source at `js/engine/version.js`. Topbar title and
+  lobby tagline now read from it so future bumps are a one-file edit.
+- Levels can override the player's in-world identity via `playerUser`
+  (and optional `playerGroup`). When set, `whoami`, `ls -la` owner
+  columns, the prompt label, `pwd`, and `find` output all show the
+  lore-accurate identity instead of the engine's slot name. Applied to:
+  - **level0** — `playerUser: "daniel"`, since the player is sitting at
+    Daniel's offboarded laptop reading his files. Welcome.md gains a
+    paragraph explaining the forensic-audit framing.
+  - **level1** — `playerUser: "app_admin"`, matching the Halton-jumphost
+    scenario where the player has used Daniel's leaked staging-account
+    creds.
 - Headless Playwright playtest (`tests/playtest.cjs`) running 30 end-to-end
   checks against `level0@linux` — lobby render, ssh transitions, `ls` / `cat`
   / tab completion / history, `exit` and `logout` flows, no console errors.
@@ -47,6 +75,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `actions/setup-node@v6` (Node 20 is being deprecated on GitHub runners).
 - Playtest assertions updated to match the new lobby copy; one new check
   (Driftwood welcome appears on first visit) brings the suite to 31.
+- Playtest now also exercises level1 end-to-end (18 new checks: password
+  gate, ssh into Halton jumphost, prompt label shows `app_admin`, `ls -la`
+  perm strings, `cat` permission denied on the root-mode-600 file, the
+  find on the mode-644 backup, recurring-character continuity). The
+  level0 block gains one new check for the `daniel` prompt label. Suite
+  total: 50 checks.
 
 ## [0.1.0] - 2026-05-21
 
@@ -72,5 +106,6 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/releases/tag/v0.1.0
