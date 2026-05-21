@@ -3,14 +3,37 @@
 //
 // The lobby is the user's "home" — they ssh out to tracks and back here.
 
-import { print, printBanner, printSlow } from "../terminal/output.js";
+import { print, printSlow } from "../terminal/output.js";
 import { termEl } from "../terminal/dom.js";
 import { LEVELS } from "../../levels/index.js";
 import { connectTo } from "./ssh.js";
 
-// Clean text wordmark — feels more like modern dev tools (Vercel, GitHub
-// CLI, bun) than the giant ASCII art of an old-school CTF site.
-const LOGO_TEXT = "D3CYPH3R";
+// Wordmark rendered char-by-char in mixed fonts and colors — meant to read
+// like a partially-decrypted fragment, half hacker, half scratched-out.
+// Glyph classes are defined in style.css under `.glyph-*`.
+const LOGO_GLYPHS = [
+  { ch: "D", cls: "glyph-mono glyph-white" },
+  { ch: "3", cls: "glyph-vt323 glyph-green" },
+  { ch: "C", cls: "glyph-share-tech-italic glyph-cyan" },
+  { ch: "Y", cls: "glyph-vt323 glyph-accent" },
+  { ch: "P", cls: "glyph-courier glyph-red" },
+  { ch: "H", cls: "glyph-mono glyph-white" },
+  { ch: "3", cls: "glyph-vt323 glyph-green" },
+  { ch: "R", cls: "glyph-share-tech glyph-white" },
+];
+
+function renderLogo() {
+  const banner = document.createElement("div");
+  banner.className = "line banner";
+  for (const { ch, cls } of LOGO_GLYPHS) {
+    const span = document.createElement("span");
+    span.className = cls;
+    span.textContent = ch;
+    banner.appendChild(span);
+  }
+  termEl.appendChild(banner);
+  termEl.scrollTop = termEl.scrollHeight;
+}
 
 const DIVIDER = "  ────────────────────────────────────────────────";
 
@@ -41,7 +64,7 @@ function engagementList() {
 
 export function showLobby() {
   termEl.innerHTML = "";
-  printBanner(LOGO_TEXT);
+  renderLogo();
   print("v0.1 · A Driftwood Systems property. Security training for the people who already run the infrastructure.", "dim");
   print("", "out");
 
