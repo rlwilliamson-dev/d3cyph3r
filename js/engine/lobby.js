@@ -39,7 +39,7 @@ function trackList() {
 export function showLobby() {
   termEl.innerHTML = "";
   printBanner(LOGO_TEXT);
-  print("v0.1 · A terminal-based cybersecurity training game.", "dim");
+  print("v0.1 · Cybersecurity training for people who already know infrastructure.", "dim");
   print("", "out");
 
   const firstVisit = !sessionStorage.getItem("seenOnboarding");

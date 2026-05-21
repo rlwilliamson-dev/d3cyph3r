@@ -51,11 +51,16 @@ export function connectTo(key) {
   if (level.isLobby) { showLobby(); return; }
 
   print("", "out");
-  print(`─── Connected: ${key} ───`, "dim");
-  if (level.lesson)    print(`📚 ${level.lesson}`, "dim");
+  print(`── Connected: ${key}`, "dim");
   print("", "out");
-  if (level.objective) print(`▶ Objective: ${level.objective}`, "info");
-  print("", "out");
+  if (level.lesson) {
+    print(level.lesson, "dim");
+    print("", "out");
+  }
+  if (level.objective) {
+    print(`Objective: ${level.objective}`, "info");
+    print("", "out");
+  }
 }
 
 function updatePrompt() {
