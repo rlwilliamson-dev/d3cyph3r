@@ -19,6 +19,9 @@ if (isMobile()) {
   const { startClock }               = await import("./terminal/clock.js");
   const { boot }                     = await import("./engine/lobby.js");
   const { ALL_CMDS }                 = await import("./commands/index.js");
+  const { VERSION_DISPLAY }          = await import("./engine/version.js");
+
+  document.getElementById("topbar-title").textContent = `D3CYPH3R ${VERSION_DISPLAY}`;
 
   setCommandSet(ALL_CMDS);
   initInput();

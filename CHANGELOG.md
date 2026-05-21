@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-21
+
 ### Added
 
 - `level1@linux` — "The Backup Daniel Forgot." Player uses the credential
@@ -23,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     single-group model).
   - Backward-compatible: levels without a `permissions` map (e.g. level0)
     behave exactly as before.
+- Canonical version source at `js/engine/version.js`. Topbar title and
+  lobby tagline now read from it so future bumps are a one-file edit.
 - Levels can override the player's in-world identity via `playerUser`
   (and optional `playerGroup`). When set, `whoami`, `ls -la` owner
   columns, the prompt label, `pwd`, and `find` output all show the
@@ -102,5 +106,6 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/releases/tag/v0.1.0

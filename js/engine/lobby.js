@@ -7,6 +7,7 @@ import { print, printSlow } from "../terminal/output.js";
 import { termEl } from "../terminal/dom.js";
 import { LEVELS } from "../../levels/index.js";
 import { connectTo } from "./ssh.js";
+import { VERSION_DISPLAY } from "./version.js";
 
 // Wordmark rendered char-by-char in mixed fonts and colors — meant to read
 // like a partially-decrypted fragment, half hacker, half scratched-out.
@@ -65,7 +66,7 @@ function engagementList() {
 export function showLobby() {
   termEl.innerHTML = "";
   renderLogo();
-  print("v0.1 · A Driftwood Systems property. Security training for the people who already run the infrastructure.", "dim");
+  print(`${VERSION_DISPLAY} · A Driftwood Systems property. Security training for the people who already run the infrastructure.`, "dim");
   print("", "out");
 
   const firstVisit = !sessionStorage.getItem("seenOnboarding");
