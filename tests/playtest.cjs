@@ -37,8 +37,9 @@ async function termText(page) {
   };
 
   let t = await termText(page);
-  check("Lobby AVAILABLE TRACKS rendered", t.includes("AVAILABLE TRACKS"));
-  check("Lobby lists Linux track",        t.includes("ssh level0@linux"));
+  check("Lobby AVAILABLE ENGAGEMENTS rendered",     t.includes("AVAILABLE ENGAGEMENTS"));
+  check("Lobby shows Driftwood welcome on first visit", t.includes("WELCOME TO DRIFTWOOD SYSTEMS"));
+  check("Lobby lists Linux track",                   t.includes("ssh level0@linux"));
 
   await typeAndEnter(page, "ssh level0@linux");
   await page.waitForTimeout(300);
@@ -102,7 +103,7 @@ async function termText(page) {
   await page.waitForTimeout(500);
   check("exit returns prompt host to d3cyph3r", (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
   t = await termText(page);
-  check("exit re-renders lobby tracks",  t.includes("AVAILABLE TRACKS"));
+  check("exit re-renders lobby engagements",  t.includes("AVAILABLE ENGAGEMENTS"));
 
   await typeAndEnter(page, "exit");
   t = await termText(page);

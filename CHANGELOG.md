@@ -24,11 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Lobby home screen rewritten with a lore-forward Driftwood Systems
+  welcome (first-visit only). The persistent `AVAILABLE TRACKS` heading
+  is now `AVAILABLE ENGAGEMENTS`. The tagline line and `START HERE` /
+  `YOUR GOAL` onboarding blocks are reframed as `WELCOME TO DRIFTWOOD
+  SYSTEMS` and `FIRST ASSIGNMENT`. Auto-detection of available tracks
+  from the `LEVELS` map is unchanged.
 - `<title>` lengthened from "D3CYPH3R" to
   "D3CYPH3R — Terminal CTF for infrastructure people" so link previews and
   search-result snippets carry the tagline.
 - Workflow tooling: `actions/checkout` v3 → v6, Node 24 pinned via
   `actions/setup-node@v6` (Node 20 is being deprecated on GitHub runners).
+- Playtest assertions updated to match the new lobby copy; one new check
+  (Driftwood welcome appears on first visit) brings the suite to 31.
 
 ## [0.1.0] - 2026-05-21
 
