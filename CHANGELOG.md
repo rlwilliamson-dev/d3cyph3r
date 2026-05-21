@@ -26,8 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Levels can override the player's in-world identity via `playerUser`
   (and optional `playerGroup`). When set, `whoami`, `ls -la` owner
   columns, the prompt label, `pwd`, and `find` output all show the
-  lore-accurate identity instead of the engine's slot name. Level1
-  sets `playerUser: "app_admin"` to match its Halton-jumphost scenario.
+  lore-accurate identity instead of the engine's slot name. Applied to:
+  - **level0** — `playerUser: "daniel"`, since the player is sitting at
+    Daniel's offboarded laptop reading his files. Welcome.md gains a
+    paragraph explaining the forensic-audit framing.
+  - **level1** — `playerUser: "app_admin"`, matching the Halton-jumphost
+    scenario where the player has used Daniel's leaked staging-account
+    creds.
 - Headless Playwright playtest (`tests/playtest.cjs`) running 30 end-to-end
   checks against `level0@linux` — lobby render, ssh transitions, `ls` / `cat`
   / tab completion / history, `exit` and `logout` flows, no console errors.
@@ -69,8 +74,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Playtest now also exercises level1 end-to-end (18 new checks: password
   gate, ssh into Halton jumphost, prompt label shows `app_admin`, `ls -la`
   perm strings, `cat` permission denied on the root-mode-600 file, the
-  find on the mode-644 backup, recurring-character continuity). Suite
-  total: 49 checks.
+  find on the mode-644 backup, recurring-character continuity). The
+  level0 block gains one new check for the `daniel` prompt label. Suite
+  total: 50 checks.
 
 ## [0.1.0] - 2026-05-21
 

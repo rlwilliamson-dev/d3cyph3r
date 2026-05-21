@@ -49,6 +49,7 @@ async function termText(page) {
   check("Lesson mentions Driftwood",   t.includes("Driftwood"));
   check("Lesson mentions Halton Bank", t.includes("Halton"));
   check("Prompt host updated to linux", (await page.locator("#prompt-host").innerText()) === "linux");
+  check("Prompt user shows in-world identity 'daniel'", (await page.locator("#prompt-user").innerText()) === "daniel");
 
   await typeAndEnter(page, "ls");
   t = await termText(page);
@@ -77,7 +78,7 @@ async function termText(page) {
   await page.keyboard.press("Enter");
   await page.waitForTimeout(80);
   t = await termText(page);
-  check("whoami prints 'level0'", /\blevel0\b/.test(t));
+  check("whoami prints in-world identity 'daniel'", /\bdaniel\b/.test(t));
 
   await page.keyboard.press("ArrowUp");
   await page.waitForTimeout(80);

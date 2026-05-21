@@ -47,6 +47,7 @@ export const linuxLevels = {
   "level0@linux": {
     password: null,
     track: "linux",
+    playerUser: "daniel",
     objective: "Audit Daniel's laptop and find the client credential he left behind before IT reimages the box on Wednesday.",
     lesson: "Day one at Driftwood. A senior consultant whose engagement at Halton Bank ended Friday left his work laptop with IT for reimaging. His client access was revoked over the weekend, but the laptop hasn't been wiped yet, and his home directory hasn't been audited. Sweep it before Wednesday. Anything that looks like a client credential, you flag. Read every file. Then read lessons-learned.md.",
     fs: {
@@ -72,6 +73,12 @@ revoked over the weekend, but the laptop hasn't been wiped yet, and
 his home directory hasn't been audited. IT is reimaging Wednesday.
 You have between now and then to find anything sensitive he left
 exposed.
+
+IT booted the laptop and logged you into Daniel's user account so
+you can read everything he had access to. The shell prompt shows
+\`daniel@linux\` because you're working inside his profile, not
+because you are Daniel. This is how forensic audits work: when the
+user is gone, you take their shoes.
 
 Commands you'll need today:
   ls           list files in this directory
