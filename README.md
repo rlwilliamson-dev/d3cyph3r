@@ -1,8 +1,12 @@
 # D3CYPH3R
 
-A browser-based terminal CTF training game. You ssh into simulated boxes, run real-feeling commands (`ls`, `grep`, `nmap`, `john`, `curl`, `strings` ...) and find the password hidden in each scenario.
+A browser-based terminal CTF for DevOps engineers, SREs, and SysAdmins learning cybersecurity. You play a new hire at **Driftwood Systems**, a mid-sized tech consulting firm with roughly 600 consultants spread across ~80 client engagements at any given time. Each level drops you on a real-feeling box you've inherited — a rolled-off consultant's laptop, a stale client engagement environment, a forgotten audit artifact — and asks you to find what got left exposed.
 
-This is **v0.1** — the engine is complete and one demo level (`level0@linux`) is shipped. New tracks and levels land one at a time.
+The puzzles stay close to what actually happens at consulting firms with rotating engagements and shared client access. The post-mortem at the end of each level pulls the thread out to the controls (NIST 800-53, CIS Controls v8, CWE), the techniques (MITRE ATT&CK), the regs that bite (GLBA, PCI-DSS, HIPAA when relevant), and the certs (Security+, CISSP, OSCP) that cover this territory in the real world.
+
+Recurring characters, recurring clients, recurring technical debt across levels.
+
+This is **v0.1** — engine complete, one Linux level (`level0@linux`) shipped. New levels and tracks land one PR at a time.
 
 ## Running it locally
 
@@ -54,18 +58,14 @@ OSINT and Cloud will need new simulated commands added under `js/commands/`. Wir
 
 ## Commands implemented
 
-All commands from the original engine survive the refactor. See `help` inside the terminal for the full reference. Track-by-track:
+All commands from the original engine survive the refactor, with `exit` / `logout` added for muscle memory. See `help` inside the terminal for the full reference. Track-by-track:
 
 - **Linux:** `ls` / `cd` / `cat` / `pwd` / `whoami` / `echo` / `grep` / `find` / `env`
 - **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig`
 - **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor`
 - **Web:** `curl` (+ `-I`) / `gobuster` / `cookies`
 - **Forensics:** `file` (+ `*`) / `strings` / `exif`
-- **Shell:** `clear` / `help` / `report` / `ssh`
-
-## Customizing the `report` command
-
-`js/commands/shell.js` has a `YOUR_USERNAME` placeholder for the GitHub issues URL. Replace it with your GitHub handle once you push the repo.
+- **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`
 
 ## Credit
 
