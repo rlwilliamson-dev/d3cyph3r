@@ -16,9 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `needs: playtest_job`, so a failing playtest blocks production.
 - SVG favicon — `>_` glyph in `--green` on `--bg`, matching the lobby's
   success styling and progress bar.
+- Open Graph and Twitter Card meta tags so links unfurl in Slack, Discord,
+  iMessage, and Twitter with a title and description. Text-only for now;
+  `og:image` will land in a follow-up.
+- `<meta name="description">` and `<meta name="theme-color">` for basic SEO
+  and mobile-chrome theming.
 
 ### Changed
 
+- `<title>` lengthened from "D3CYPH3R" to
+  "D3CYPH3R — Terminal CTF for infrastructure people" so link previews and
+  search-result snippets carry the tagline.
 - Workflow tooling: `actions/checkout` v3 → v6, Node 24 pinned via
   `actions/setup-node@v6` (Node 20 is being deprecated on GitHub runners).
 
