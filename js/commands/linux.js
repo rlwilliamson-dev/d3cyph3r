@@ -20,6 +20,27 @@ function buildDisplayPath() {
   return currentPath.length === 0 ? base : base + "/" + currentPath.join("/");
 }
 
+// Permission metadata helpers. `level.permissions[name]` is shaped
+// { mode: "-rw-r--r--", owner: "level1", group: "level1", size: 1024 }
+// — a structured object used by both `ls -l` rendering and `cat`'s
+// read-permission check. Mode strings follow the standard 10-char
+// format: [type][owner rwx][group rwx][other rwx].
+function defaultMeta(name) {
+  if (name.endsWith("/"))   return { mode: "drwxr-xr-x", owner: "user", group: "user", size: 0   };
+  if (name.endsWith(".sh")) return { mode: "-rwxr-xr-x", owner: "user", group: "user", size: 128 };
+  return                          { mode: "-rw-r--r--", owner: "user", group: "user", size: 256 };
+}
+
+// Simple Unix-style read check. Levels are single-user / single-group,
+// so we treat the current level user as also belonging to a primary
+// group named the same as the user.
+function canReadFile(meta, currentUser) {
+  if (!meta || !meta.mode) return true;
+  if (currentUser === meta.owner) return meta.mode[1] === "r";
+  if (currentUser === meta.group) return meta.mode[4] === "r";
+  return meta.mode[7] === "r";
+}
+
 export const linuxCommands = {
   cd(level, arg) {
     if (!arg || arg === "~") { setCurrentPath([]); return { text: "", cls: "out" }; }
@@ -55,15 +76,20 @@ export const linuxCommands = {
 
     if (longFmt) {
       const perms = level.permissions || {};
-      const defaultPerm = (f) => {
-        if (f.endsWith("/"))   return "drwxr-xr-x  2 user  user     0";
-        if (f.endsWith(".sh")) return "-rwxr-xr-x  1 user  user   128";
-        return "-rw-r--r--  1 user  user   256";
-      };
-      const lines = ["total " + names.length * 8];
-      names.forEach(f => {
+      const metas = names.map(f => {
         const key = f.endsWith("/") ? f.slice(0, -1) : f;
-        lines.push((perms[key] || defaultPerm(f)) + "  " + f);
+        return perms[key] || defaultMeta(f);
+      });
+      const ownerW = Math.max(...metas.map(m => m.owner.length));
+      const groupW = Math.max(...metas.map(m => m.group.length));
+      const sizeW  = Math.max(...metas.map(m => String(m.size).length));
+
+      const lines = ["total " + names.length * 8];
+      names.forEach((f, i) => {
+        const m = metas[i];
+        lines.push(
+          `${m.mode} 1 ${m.owner.padEnd(ownerW)} ${m.group.padEnd(groupW)} ${String(m.size).padStart(sizeW)}  ${f}`
+        );
       });
       return { text: lines.join("\n"), cls: "out" };
     }
@@ -85,7 +111,17 @@ export const linuxCommands = {
     const node  = getFSNode(level, [...currentPath, ...parts]);
     if (!node)               return { text: `cat: ${arg}: No such file or directory`, cls: "err" };
     if (node.type === "dir") return { text: `cat: ${arg}: Is a directory`,            cls: "err" };
-    if (!node.content)       return { text: "(empty file)", cls: "dim" };
+
+    // Permission check — only applies if the level defines a metadata
+    // entry for this basename. Levels without `permissions` (e.g. level0)
+    // behave exactly as before.
+    const basename = parts[parts.length - 1];
+    const meta     = level.permissions?.[basename];
+    if (meta && !canReadFile(meta, currentLevelKey.split("@")[0])) {
+      return { text: `cat: ${arg}: Permission denied`, cls: "err" };
+    }
+
+    if (!node.content) return { text: "(empty file)", cls: "dim" };
     return { text: node.content, cls: "out" };
   },
 

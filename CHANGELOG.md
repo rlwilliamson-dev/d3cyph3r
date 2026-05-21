@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `level1@linux` — "The Backup Daniel Forgot." Player uses the credential
+  found in level0 to ssh into Halton Bank's jumphost, then chases a
+  production database password leaked by a misconfigured backup. Teaches
+  Unix file permissions (`ls -l` / `ls -la`, mode-string reading, owner /
+  group / other) and the CWE-732 shadow-copy anti-pattern. Recurring
+  characters Priya and Daniel referenced.
+- Permission-aware filesystem on the engine side:
+  - `ls -l` / `ls -la` render real `-rw-r--r--`-style mode strings from
+    per-file `{ mode, owner, group, size }` metadata declared on the level.
+  - `cat` returns "Permission denied" for files the current level user
+    lacks read access to (Unix-style owner/group/other check, single-user
+    single-group model).
+  - Backward-compatible: levels without a `permissions` map (e.g. level0)
+    behave exactly as before.
 - Headless Playwright playtest (`tests/playtest.cjs`) running 30 end-to-end
   checks against `level0@linux` — lobby render, ssh transitions, `ls` / `cat`
   / tab completion / history, `exit` and `logout` flows, no console errors.
@@ -47,6 +61,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `actions/setup-node@v6` (Node 20 is being deprecated on GitHub runners).
 - Playtest assertions updated to match the new lobby copy; one new check
   (Driftwood welcome appears on first visit) brings the suite to 31.
+- Playtest now also exercises level1 end-to-end (17 new checks: password
+  gate, ssh into Halton jumphost, `ls -la` perm strings, `cat` permission
+  denied on the root-mode-600 file, the find on the mode-644 backup,
+  recurring-character continuity). Suite total: 48 checks.
 
 ## [0.1.0] - 2026-05-21
 
