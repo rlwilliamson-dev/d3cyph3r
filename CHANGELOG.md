@@ -30,6 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `YOUR GOAL` onboarding blocks are reframed as `WELCOME TO DRIFTWOOD
   SYSTEMS` and `FIRST ASSIGNMENT`. Auto-detection of available tracks
   from the `LEVELS` map is unchanged.
+- Darker theme: `--bg` drops from `#0d1117` to `#06080b`; the old `--bg`
+  shifts down into `--bg-elev` so the progress bar and other layered
+  surfaces still read against the page.
+- Lobby wordmark rendered char-by-char with each glyph in its own
+  terminal-family font (JetBrains Mono, VT323, Share Tech Mono,
+  Courier New) and saturated ANSI console color (white / matrix green
+  / cyan / blue / dark red). Evokes a "code being deciphered" feel.
+  Per-font size compensation keeps visual cap-heights aligned. Glyph
+  styling lives in `.glyph-*` utility classes; recipe lives in
+  `js/engine/lobby.js`.
 - `<title>` lengthened from "D3CYPH3R" to
   "D3CYPH3R — Terminal CTF for infrastructure people" so link previews and
   search-result snippets carry the tagline.
