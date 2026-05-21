@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   / tab completion / history, `exit` and `logout` flows, no console errors.
 - Gating in the Azure Static Web Apps workflow: the deploy job now declares
   `needs: playtest_job`, so a failing playtest blocks production.
+- SVG favicon — `>_` glyph in `--green` on `--bg`, matching the lobby's
+  success styling and progress bar.
 
 ### Changed
 
