@@ -1,6 +1,24 @@
-// Shell built-ins: help, clear, report.
+// Shell built-ins: help, clear, report, exit.
 
 import { termEl } from "../terminal/dom.js";
+import { print } from "../terminal/output.js";
+import { connectTo } from "../engine/ssh.js";
+import { currentLevelKey } from "../engine/state.js";
+
+const LOBBY = "guest@d3cyph3r";
+
+// Mimics an ssh logout — prints the standard close-msg and drops the
+// player back into the lobby. `logout` is an alias for muscle memory.
+function exitToLobby() {
+  if (currentLevelKey === LOBBY) {
+    return { text: "Already at the lobby. Use ssh <user@host> to connect to a level.", cls: "dim" };
+  }
+  const from = currentLevelKey;
+  print("logout", "dim");
+  print(`Connection to ${from} closed.`, "dim");
+  setTimeout(() => connectTo(LOBBY), 200);
+  return null;
+}
 
 export const shellCommands = {
   help() {
@@ -49,6 +67,7 @@ FORENSICS
 TERMINAL
   clear                  – clear the screen
   ssh <user@host>        – connect to a level
+  exit / logout          – disconnect and return to the lobby
   report                 – show how to report bugs
   help                   – show this reference
 `.trim() };
@@ -62,7 +81,9 @@ TERMINAL
   report() {
     return { cls: "info", text:
 `Found a bug or have feedback?
-Open an issue: https://github.com/YOUR_USERNAME/d3cyph3r/issues
-(replace YOUR_USERNAME with the GitHub handle for this fork)` };
+Open an issue: https://github.com/rlwilliamson-dev/d3cyph3r/issues` };
   },
+
+  exit:   exitToLobby,
+  logout: exitToLobby,
 };
