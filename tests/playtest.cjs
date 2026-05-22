@@ -44,6 +44,16 @@ async function termText(page) {
   check("Lobby lists Crypto track",                     t.includes("ssh level0@crypto"));
   check("Lobby lists Web track",                        t.includes("ssh level0@web"));
   check("Lobby lists Forensics track",                  t.includes("ssh level0@forensics"));
+  check("Lobby lists OSINT track (scaffolded)",         t.includes("ssh level0@osint"));
+  check("Lobby lists Cloud track (scaffolded)",         t.includes("ssh level0@cloud"));
+  check("Lobby flags scaffolded tracks with (no levels yet)", t.includes("(no levels yet)"));
+
+  // ssh into a scaffolded-but-empty track should produce the friendly
+  // warm message, not a generic DNS-style "Could not resolve hostname".
+  await typeAndEnter(page, "ssh level0@osint");
+  t = await termText(page);
+  check("ssh level0@osint shows friendly scaffolded-track message", /This track is scaffolded but no levels are built yet/.test(t));
+  check("ssh level0@osint still leaves player in the lobby",        (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   // ── Engine command-surface smoke test ─────────────────────────────
   // Exercise every new command from the lobby (where no level data

@@ -21,6 +21,13 @@ player-callable commands or per-level schema fields," not just new
 levels. Engine-surface expansion is a real category that the rules
 previously didn't capture cleanly.
 
+The lobby's AVAILABLE ENGAGEMENTS list now also surfaces scaffolded
+tracks (OSINT, Cloud) as dimmed entries with a `(no levels yet)` hint,
+mirroring how the `help` command works. Players see the full roadmap
+in the lobby, not just what's playable today. `ssh level0@osint` and
+`ssh level0@cloud` return a friendly "scaffolded — levels coming"
+message instead of the generic DNS-style hostname error.
+
 ### Added
 
 - **OSINT command surface** — `js/commands/osint.js` ships with seven new
@@ -77,7 +84,7 @@ previously didn't capture cleanly.
   plus the new commands within existing track sections. The auto-dim logic
   for tracks-without-levels still works — OSINT and CLOUD render dimmed
   with the "no levels yet" hint.
-- Playtest grows 129 → 159 (+30 checks): comprehensive smoke test for
+- Playtest grows 129 → 164 (+35 checks): comprehensive smoke test for
   the new engine surface, run from the lobby (where no level data
   exists). Verifies (a) `help` includes the new sections and new
   commands per track; (b) each new command prints its usage string when
@@ -85,7 +92,15 @@ previously didn't capture cleanly.
   no level data exists rather than crashing; (d) `aws` prints its
   multi-service usage block; (e) `jwt` actually decodes a real test
   token end-to-end without requiring level data (pure utility, no level
-  data needed).
+  data needed); (f) the lobby lists OSINT and Cloud as scaffolded
+  tracks with the `(no levels yet)` marker; (g) `ssh level0@osint`
+  produces the friendly scaffolded-track message and leaves the player
+  in the lobby.
+- `js/engine/tracks.js` — single-source-of-truth track registry
+  consumed by both `lobby.js` (for the engagement list) and `ssh.js`
+  (for the scaffolded-track-friendly-error detection). Removes the
+  duplicated hardcoded track list that previously lived only in
+  `lobby.js`.
 
 ## [0.3.0] - 2026-05-22
 
