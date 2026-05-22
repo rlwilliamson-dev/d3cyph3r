@@ -44,52 +44,50 @@ export const cryptoLevels = {
         "welcome.md": {
           type: "file",
           content:
-`Driftwood internal security — Vesta Retail engagement, PCI-DSS
-re-attestation pre-review.
+`─── Driftwood Systems / Crypto Audit Workstation ──────────────
 
-You're on the Driftwood audit workstation, logged in as \`secops\`.
-The host is \`crypto\` — internal name for the static-analysis /
-code-review station, where we look at scripts, configs, and binary
-artifacts the client engineers committed.
+You're logged in as \`secops\` — the security team's shared service
+account. The host \`crypto\` is our static-analysis station where
+we review client scripts, configs, and binary artifacts.
 
-Today's task: Vesta Retail is going through annual PCI-DSS
-re-attestation. Driftwood is reviewing their payment-processing
-deploy scripts before the formal QSA walkthrough next month.
-Priya pulled a copy of Theo's deploy.sh from Vesta's repo on
-Friday and dropped it here for us to look at.
+Today's client: Vesta Retail. Their PCI-DSS re-attestation is six
+weeks out. Priya pulled Theo's deploy.sh from Vesta's repo and
+dropped it here for review. The script is small — and wrong, but
+maybe not in the way Theo thought he was wrong-proofing it.
 
-The script is small. It is also wrong — but maybe not in the way
-Theo thought he was wrong-proofing it.
 
-New commands you'll use today:
+─── NEW COMMANDS ──────────────────────────────────────────────
 
-  base64 <file>           Decode a base64-encoded file.
-  base64 -d <string>      Decode a base64 string directly.
+  base64 <file>        Decode a base64-encoded file.
+  base64 -d <string>   Decode a base64 string directly.
 
-Base64 is NOT encryption. It is an encoding — a deterministic
-mapping from arbitrary bytes onto a 65-character ASCII alphabet
-(the letters A-Z, a-z, the digits 0-9, the symbols + and /, plus
-'=' as padding). The point of base64 is to make binary data safe
-to put in places that only accept ASCII text: email bodies, URLs,
-HTTP headers, JSON values, environment variables, config files.
 
-The point of base64 is explicitly NOT to make secrets unreadable.
-Anyone who sees a base64 string can decode it in one line —
-software treats the mapping as reversible by design. Both
-directions are public, neither requires a key.
+─── WHAT BASE64 IS (AND ISN'T) ────────────────────────────────
 
-The way to tell base64 at a glance: a long-ish string that only
-uses the letters A-Z / a-z / 0-9 / + / / and ends in zero, one,
-or two '=' signs. Example:
+Base64 is an ENCODING, not encryption. It maps arbitrary bytes
+onto a 65-character ASCII alphabet (A-Z, a-z, 0-9, +, /, plus
+'=' padding) so binary data can ride safely through systems that
+expect text: email, URLs, headers, JSON, env vars, config files.
 
-  SGVsbG8sIHdvcmxkIQ==        decodes to:   Hello, world!
+It is explicitly NOT a way to make secrets unreadable. The
+mapping is deterministic and public. There is no key. Anyone can
+decode a base64 blob in one line.
 
-You'd be surprised how many engineers — junior and otherwise —
-think base64-encoding their API key counts as "securing" it.
+Spotting base64 by eye: a long-ish string using only A-Z / a-z /
+0-9 / + / / and ending in zero, one, or two '=' signs.
 
-Read engagement-notes.md for the Vesta context. Then look at
-deploy.sh. Decide what's wrong about it. The "secured" key lives
-in api-key.b64 — when you've decoded it, read lessons-learned.md.
+  SGVsbG8sIHdvcmxkIQ==    decodes to:   Hello, world!
+
+You'd be surprised how many engineers think base64-encoding their
+API key counts as "securing" it.
+
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat engagement-notes.md     Vesta / Theo / Saanvi / PCI-DSS
+  2.  cat deploy.sh               The script under review
+  3.  base64 api-key.b64          Decode the "secured" API key
+  4.  cat lessons-learned.md      Post-mortem (after step 3)
 `
         },
 

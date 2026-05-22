@@ -100,6 +100,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- All `level0` `welcome.md` files (`linux` excepted — it predates the
+  template) reformatted into four labeled sections separated by
+  `─── HEADER ───` dividers matching the lobby's aesthetic: a one-line
+  workstation header + one-sentence scene-set, a clean NEW COMMANDS
+  block, a "what this tool does" conceptual section, and a numbered
+  HOW TO PLAY checklist at the bottom. Compresses ~70 lines of running
+  prose into ~50 lines with strong visual hierarchy. Scenario backstory
+  that lived in welcome.md now lives only in engagement-notes.md
+  (single source of truth). Applied uniformly to `level0@network`,
+  `level0@crypto`, and `level0@web`.
 - `help` command grouped by track with an availability indicator: tracks
   with shipped level data render in their normal color; tracks the engine
   supports but has no level data for yet render dimmed with a

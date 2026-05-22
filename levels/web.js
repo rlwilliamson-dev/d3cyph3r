@@ -201,78 +201,59 @@ M-1873244,Olivia,Chen,chen.o@meridian.edu,Music Performance,3.88
         "welcome.md": {
           type: "file",
           content:
-`Driftwood internal security — Meridian State University engagement,
-pre-renewal web audit for cyber-insurance carrier.
+`─── Driftwood Systems / Web Audit Workstation ─────────────────
 
-You're on the Driftwood audit workstation, logged in as \`secops\` —
-the shared service account the security team uses for client web
-recon. The host is \`web\` — our internal name for the web-audit
-station.
+You're logged in as \`secops\` — the security team's shared service
+account. The host \`web\` is our audit workstation for client web
+reconnaissance.
 
-Today's job: Meridian's cyber-insurance carrier has asked them to
-present a clean third-party web audit as a condition of policy
-renewal. Meridian asked Driftwood to do that audit. Carlos, their
-in-house web dev, told us he's been finding and removing leftover
-artifacts on the production web server for months — the previous
-agency that built the site (BluePier Digital, dismissed in 2024)
-left a lot of mess behind. He suspects he hasn't caught all of it.
+Today's client: Meridian State University. Their cyber-insurance
+carrier requires a third-party web audit before policy renewal.
+Carlos (their in-house web dev) suspects a dismissed agency left
+artifacts on the production server he hasn't cleaned up. Find
+them.
 
-If we find something, the carrier and Carlos both want to know
-before the renewal review. Same audit, two audiences.
 
-New commands you'll use today:
+─── NEW COMMANDS ──────────────────────────────────────────────
 
-  gobuster <url>         Brute-force-discover URL paths on a web
-                         server, using a built-in wordlist of
-                         common path names (admin, login, backup,
-                         api, etc).
+  gobuster <url>     Brute-force-discover hidden URL paths using
+                     a built-in wordlist of common names.
 
-  curl <url>             Fetch a URL and print the response body.
-                         The browser-less way to look at a page.
+  curl <url>         Fetch a URL and print the response body.
+                     The browser-less way to look at a page.
 
-  curl -I <url>          Fetch only the HTTP response headers
-                         (server type, status code, etc) without
-                         downloading the body. Useful when you want
-                         to know "what is this thing?" before you
-                         pull a possibly large response.
+  curl -I <url>      Fetch only the response headers (no body).
 
-What "gobuster" is and why it works:
 
-Web servers serve content at URLs. Some URLs are linked from the
-site's navigation — \`/about\`, \`/contact\`, \`/admissions\` — and
-search engines find them by following those links. Other URLs
-exist but aren't linked from anywhere: an old admin panel, a
-staging API, a backup directory that nobody removed. Those are
-INVISIBLE to a crawler that only follows visible links, but they
-are NOT invisible to anyone who can guess the path name.
+─── WHAT GOBUSTER DOES ────────────────────────────────────────
 
-gobuster automates the guessing. It takes a wordlist of common
-path names — about 4,600 entries in /usr/share/wordlists/dirb/
-common.txt, the default — and fires an HTTP request at each one,
-reporting any path the server answered for.
+Web servers expose URLs. Some are linked from the site nav
+(/about, /admissions). Others aren't linked anywhere but still
+respond when asked: an old admin panel, a staging API, a backup
+directory nobody removed.
 
-Status codes you'll see in gobuster output:
+gobuster fires HTTP requests at ~4,600 common path names from
+/usr/share/wordlists/dirb/common.txt and reports which ones the
+server answered for.
 
-  200    OK — the path exists and the server returned content.
-         Anything 200 that you didn't INTEND to expose is a finding.
-  301
-  302    Redirect — the path exists, and the server redirected you
-         somewhere else. Often fine (e.g., http→https redirect).
-  401    Unauthorized — the path exists but requires authentication.
-         A 401 on /admin is normal and good; a 200 on /admin is not.
-  403    Forbidden — the path exists but is blocked. Also acceptable.
-  404    Not Found — gobuster filters these out by default.
+Status codes you'll see:
 
-A web audit consists of: enumerate paths with gobuster, identify
-anything unexpected, fetch the unexpected paths with curl, decide
-what they are, write up what shouldn't be there.
+  200    OK — path exists, server returned content.
+         Anything 200 you didn't intend to expose is a finding.
+  302    Redirect — path exists; server sends you elsewhere.
+         Usually fine (e.g. login walls, http → https).
+  401    Unauthorized — path exists, requires auth. Good.
+  403    Forbidden — path exists, access blocked. Also fine.
+  404    Not found — gobuster filters these out by default.
 
-Read engagement-notes.md for the Meridian context, then
-meridian-scope.txt for the URL we're auditing today. Then run
-gobuster against it. Anything 200 that surprises you, fetch with
-curl and read.
 
-When you've found the FERPA-grade exposure, read lessons-learned.md.`
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat engagement-notes.md     Meridian / Carlos / FERPA
+  2.  cat meridian-scope.txt      The URL in scope today
+  3.  gobuster <that URL>         Enumerate paths
+  4.  curl <interesting path>     Confirm the finding
+  5.  cat lessons-learned.md      Post-mortem (read after step 4)`
         },
 
         "engagement-notes.md": {
