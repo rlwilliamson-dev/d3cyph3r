@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `level0@network` — "Atlas Health Perimeter Check." First level of the
+  network track. Player verifies a healthcare client's claim that their
+  staging environment is VPN-only; `nmap` reveals a production-grade
+  PostgreSQL still exposed to the internet, and the engagement notes
+  name a default credential that was never rotated. Teaches `nmap` and
+  `nmap -sV`. Maps to CWE-200 / CWE-668 (exposure of sensitive resource
+  to wrong sphere), HIPAA Security Rule, NIST SC-7, and MITRE T1046 /
+  T1190.
+- New client: **Atlas Health** — Pacific Northwest healthcare provider
+  (~400k patients), HIPAA in scope. Introduces a new recurring character
+  (Marcus, the Atlas DevOps lead).
+- New track scaffolding: `levels/network.js` registered in
+  `levels/index.js`. The lobby auto-detects the new track and the `help`
+  command's `NETWORK RECON` section now renders un-dimmed.
 - 1200×630 `og-image.png` for link unfurls in Slack, Discord, iMessage,
   and Twitter (`og:image` + `twitter:image`; `twitter:card` upgraded
   from `summary` to `summary_large_image`). Source template lives at
@@ -23,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "(no levels yet — commands available; no level to use them on)" hint.
   Player now sees the roadmap at a glance without confusion about what
   actually works today.
+- Playtest grows from 50 → 66 checks: new lobby-detection assertion for
+  the network track, plus a level0@network walkthrough (connect, prompt
+  identity, file listing, nmap finding, `nmap -sV` version detection,
+  recurring-character continuity).
 
 ## [0.2.0] - 2026-05-21
 
