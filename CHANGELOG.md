@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **OSINT command surface** — `js/commands/osint.js` ships with seven new
+  commands ready to be consumed by future levels:
+  - `sherlock <username>` — username enumeration across social platforms
+    (reads `level.sherlockResults`)
+  - `hibp <email>` — Have I Been Pwned breach lookup (reads
+    `level.hibpResults`)
+  - `wayback <url>` — Internet Archive snapshot history (reads
+    `level.waybackResults`)
+  - `crtsh <domain>` — certificate-transparency subdomain discovery
+    (reads `level.crtshResults`)
+  - `theharvester <domain>` — email / subdomain / host harvesting (reads
+    `level.harvesterResults`)
+  - `shodan <query>` — Shodan host / service search (reads
+    `level.shodanResults`)
+  - `ipinfo <ip>` — IP geolocation / ASN / org lookup (reads
+    `level.ipinfoResults`)
+- **Cloud command surface** — `js/commands/cloud.js` ships a fake AWS CLI
+  with multi-service dispatch. Subcommands implemented:
+  - `aws s3 ls [s3://bucket]` and `aws s3 cp s3://bucket/key <local|->`
+  - `aws iam list-users`, `aws iam list-attached-user-policies --user-name X`,
+    `aws iam get-policy --policy-arn X`
+  - `aws ec2 describe-instances`, `aws ec2 describe-security-groups`
+  - `aws sts get-caller-identity` (AWS-side `whoami`)
+  - Global flags `--no-sign-request`, `--profile <name>`, `--region <name>`,
+    `--output <fmt>` parse cleanly as no-ops so realistic command-lines
+    don't error
+  - All reads from `level.cloud = { s3, iam, ec2, sts }`
+- New track scaffolding: `levels/osint.js` and `levels/cloud.js` registered
+  in `levels/index.js`, each with full schema documentation at the top of
+  the file and an empty `Levels = {}` export ready for the first level
+  build. The lobby auto-detects when levels appear; the `help` command's
+  `OPEN-SOURCE INTEL` and `CLOUD SECURITY` sections now render dimmed
+  (with the standard "no levels yet" hint) until a level lands.
+- **Cross-cutting utility commands across existing tracks:**
+  - `head <file> [-n N]` and `tail <file> [-n N]` (linux) — print first /
+    last N lines (default 10)
+  - `stat <file>` (linux) — detailed file metadata; pulls from
+    `level.permissions` and an optional `level.statData` override
+  - `ps` (linux) — process listing; reads `level.processes` array of
+    `{ pid, tty, time, cmd }`
+  - `diff <file1> <file2>` (linux) — classic `diff(1)`-style line
+    comparison; levels can override via `level.diffOut`
+  - `sha256sum <file>` and `md5sum <file>` (forensics) — chain-of-custody
+    hashing; levels can override via `level.fileHashes[file].sha256` /
+    `.md5`. Deterministic content-derived synthetic fallback when no
+    override is set (NOT cryptographic — real hashing needs Web Crypto
+    which is async-only and incompatible with the sync handler signature)
+  - `jwt <token>` (crypto) — decode JWT header + payload (handles
+    base64url, JSON parses both segments), surface common red flags
+    (`alg: none`, empty signature, expired `exp`)
+- **`help` command** updated to include the OSINT and CLOUD track sections
+  plus the new commands within existing track sections. The auto-dim logic
+  for tracks-without-levels still works — OSINT and CLOUD render dimmed
+  with the "no levels yet" hint.
+- Playtest grows 129 → 159 (+30 checks): comprehensive smoke test for
+  the new engine surface, run from the lobby (where no level data
+  exists). Verifies (a) `help` includes the new sections and new
+  commands per track; (b) each new command prints its usage string when
+  called with no args; (c) `ps` and `aws s3 ls` degrade gracefully when
+  no level data exists rather than crashing; (d) `aws` prints its
+  multi-service usage block; (e) `jwt` actually decodes a real test
+  token end-to-end without requiring level data (pure utility, no level
+  data needed).
+
 ## [0.3.0] - 2026-05-22
 
 "Pre-Foundation iteration." Four new level0s — one each for the

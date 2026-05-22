@@ -10,6 +10,8 @@ import { networkLevels }   from "./network.js";
 import { cryptoLevels }    from "./crypto.js";
 import { webLevels }       from "./web.js";
 import { forensicsLevels } from "./forensics.js";
+import { osintLevels }     from "./osint.js";
+import { cloudLevels }     from "./cloud.js";
 
 export const LEVELS = initLevels({
   // ── Lobby ────────────────────────────────────────────────────
@@ -27,4 +29,6 @@ export const LEVELS = initLevels({
   ...cryptoLevels,
   ...webLevels,
   ...forensicsLevels,
+  ...osintLevels,
+  ...cloudLevels,
 });
