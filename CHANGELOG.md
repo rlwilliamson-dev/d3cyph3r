@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-22
+
+"Engine surface expansion." Two new tracks scaffolded (OSINT, Cloud)
+with full command surfaces ready to be consumed by future levels. Plus
+a handful of cross-cutting utility commands (`head`, `tail`, `stat`,
+`ps`, `diff`, `sha256sum`, `md5sum`, `jwt`) that will be useful across
+the rest of the existing tracks.
+
+This release also clarifies the bump rules in CLAUDE.md: MINOR now
+explicitly covers "new engine surface that meaningfully expands
+player-callable commands or per-level schema fields," not just new
+levels. Engine-surface expansion is a real category that the rules
+previously didn't capture cleanly.
+
 ### Added
 
 - **OSINT command surface** — `js/commands/osint.js` ships with seven new
@@ -342,7 +356,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/releases/tag/v0.1.0
