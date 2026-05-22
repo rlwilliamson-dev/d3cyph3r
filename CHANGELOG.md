@@ -24,17 +24,17 @@ levels track.
   surfaced in an open-letter campaign about a controversial Phase III
   trial at his previous employer. Player runs `hibp` against the
   executive's known personal Gmail and finds five breach hits — two of
-  which surface the SAME cleartext password (`BostonStrong#2013`,
-  recovered from the cracked LinkedIn 2012 and LiveJournal 2014 corpora),
-  the high-confidence credential-reuse signal. Teaches `hibp`. Maps to
+  which surface the SAME cleartext password (recovered from the
+  cracked LinkedIn 2012 and LiveJournal 2014 corpora), the high-
+  confidence credential-reuse signal. Teaches `hibp`. Maps to
   CWE-521 (Weak Password Requirements), CWE-262, CWE-309, OWASP A07
   (Identification and Authentication Failures), NIST SP 800-63B (breach-
   list screening, §5.1.1.2), HIPAA Security Rule §164.308(a)(5)(ii)(D),
   HITRUST CSF v11 (01.b / 01.q), NIST SP 800-66 Rev. 2, CIS Controls
   v8 (5.4, 6.3, 6.5), MA 201 CMR 17.04, HHS HPH-CPGs, and MITRE T1078 /
-  T1110.004 / T1589.001 / T1593. The breadcrumb password
-  (`BostonStrong#2013`) is the natural gate for a future `level1@osint`,
-  matching the per-track credential-chain pattern.
+  T1110.004 / T1589.001 / T1593. The breadcrumb password is the
+  natural gate for a future `level1@osint`, matching the per-track
+  credential-chain pattern.
 - New client: **Veridian Analytics** — healthcare-analytics SaaS
   company (~250 engineers, founded 2018, Boston/Cambridge MA), HIPAA
   Business Associate, HITRUST CSF v11 certified. Introduces two new
@@ -174,11 +174,9 @@ formalized so every level cleanly leaks the password for the next.
   Forensic Techniques into Incident Response), NIST 800-171 Rev. 2,
   CMMC Level 2 (IR domain), DFARS 252.204-7012, and MITRE T1078 /
   T1583 / T1592. `case-summary.txt` also leaks a forensic-archive
-  handoff password (`POL-IIS-2026-0007-handoff`) as the natural
-  breadcrumb for a future `level1@forensics`, matching the per-track
-  credential-chain pattern used by all other tracks (linux's
-  `please-rotate-me`, network's `atlas-default-2025`, crypto's
-  Vesta API key, web's `M3rid14n!2023-prod`).
+  handoff password as the natural breadcrumb for a future
+  `level1@forensics`, matching the per-track credential-chain
+  pattern used by all other tracks.
 - New client: **Polaris Defense Systems** — defense industrial-base
   subcontractor (~$80M revenue, ~250 engineers; Reston VA / Manassas
   VA), CMMC Level 2 / NIST 800-171 in scope, DoD Secret-cleared
