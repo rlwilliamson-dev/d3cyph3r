@@ -106,8 +106,15 @@ export function initInput() {
     }
   });
 
-  // Click anywhere outside an input → refocus the command line.
-  document.addEventListener("click", () => cmdInput.focus());
+  // Click anywhere outside an input → refocus the command line, UNLESS
+  // the user has an active text selection. Otherwise the focus-steal on
+  // mouseup tears the selection before the player can hit Cmd+C, making
+  // it impossible to copy text out of the terminal (e.g. a base64 blob
+  // they want to paste back into `base64 -d`).
+  document.addEventListener("click", () => {
+    if (window.getSelection().toString()) return;
+    cmdInput.focus();
+  });
 
   updateCursor();
 }
