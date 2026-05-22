@@ -5,10 +5,11 @@
 // lobby where the user lands at boot and returns to after completing tracks.
 
 import { initLevels } from "../js/fs/flatten.js";
-import { linuxLevels }   from "./linux.js";
-import { networkLevels } from "./network.js";
-import { cryptoLevels }  from "./crypto.js";
-import { webLevels }     from "./web.js";
+import { linuxLevels }     from "./linux.js";
+import { networkLevels }   from "./network.js";
+import { cryptoLevels }    from "./crypto.js";
+import { webLevels }       from "./web.js";
+import { forensicsLevels } from "./forensics.js";
 
 export const LEVELS = initLevels({
   // ── Lobby ────────────────────────────────────────────────────
@@ -25,4 +26,5 @@ export const LEVELS = initLevels({
   ...networkLevels,
   ...cryptoLevels,
   ...webLevels,
+  ...forensicsLevels,
 });
