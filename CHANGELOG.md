@@ -41,6 +41,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `assets/og-template.html`; regenerate the PNG with
   `node tests/generate-og-image.cjs`.
 
+### Fixed
+
+- Copy-paste from terminal output now works. The global click-to-refocus
+  handler used to steal focus into `#cmd-input` on every click, including
+  the mouseup that ends a text-selection drag — which tore the selection
+  before the player could hit Cmd+C. The handler now skips the refocus
+  when there's an active text selection, so the player can select and
+  copy a base64 blob (or any other content) out of the terminal.
+
 ### Changed
 
 - `help` command grouped by track with an availability indicator: tracks
