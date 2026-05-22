@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `level0@forensics` — "Reed's Soccer Alibi." First level of the
+  forensics track. Driftwood is hired by Polaris Defense Systems
+  (defense subcontractor) for an internal-investigation engagement: a
+  senior engineer's badge logs show after-hours access to a secured
+  fabrication bay, and his alibi photo needs forensic verification.
+  Player runs `file` to confirm the artifact is a JPEG, then `exif` —
+  and the EXIF metadata reveals the photo was taken eight months earlier
+  in Key Largo, Florida (~1,000 miles from the claimed Centreville, VA
+  soccer field). Teaches `file` and `exif`. Maps to CWE-200 (Exposure
+  of Sensitive Information), NIST SP 800-86 (Guide to Integrating
+  Forensic Techniques into Incident Response), NIST 800-171 Rev. 2,
+  CMMC Level 2 (IR domain), DFARS 252.204-7012, and MITRE T1078 /
+  T1583 / T1592.
+- New client: **Polaris Defense Systems** — defense industrial-base
+  subcontractor (~$80M revenue, ~250 engineers; Reston VA / Manassas
+  VA), CMMC Level 2 / NIST 800-171 in scope, DoD Secret-cleared
+  facility. Introduces a new recurring character (Dana Reyes, in-house
+  counsel running the internal investigation — first non-engineer
+  client-side character in the recurring cast).
 - `level0@web` — "Meridian's Forgotten Backup Folder." First level of
   the web track. Player audits Meridian State University's public web
   stack ahead of a cyber-insurance renewal; `gobuster` reveals an
@@ -45,10 +64,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New client: **Atlas Health** — Pacific Northwest healthcare provider
   (~400k patients), HIPAA in scope. Introduces a new recurring character
   (Marcus, the Atlas DevOps lead).
-- New track scaffolding: `levels/network.js`, `levels/crypto.js`, and
-  `levels/web.js` registered in `levels/index.js`. The lobby auto-detects
-  the new tracks and the `help` command's `NETWORK RECON`, `CRYPTOGRAPHY`,
-  and `WEB RECON` sections now render un-dimmed.
+- New track scaffolding: `levels/network.js`, `levels/crypto.js`,
+  `levels/web.js`, and `levels/forensics.js` registered in
+  `levels/index.js`. The lobby auto-detects the new tracks and the
+  `help` command's `NETWORK RECON`, `CRYPTOGRAPHY`, `WEB RECON`, and
+  `FORENSICS` sections now render un-dimmed.
 - 1200×630 `og-image.png` for link unfurls in Slack, Discord, iMessage,
   and Twitter (`og:image` + `twitter:image`; `twitter:card` upgraded
   from `summary` to `summary_large_image`). Source template lives at
@@ -127,15 +147,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "(no levels yet — commands available; no level to use them on)" hint.
   Player now sees the roadmap at a glance without confusion about what
   actually works today.
-- Playtest grows from 50 → 107 checks: new lobby-detection assertions
-  for all three new tracks, a level0@network walkthrough (connect, prompt
+- Playtest grows from 50 → 128 checks: new lobby-detection assertions
+  for all four new tracks, a level0@network walkthrough (connect, prompt
   identity, file listing, nmap finding, `nmap -sV` version detection,
   recurring-character continuity), a level0@crypto walkthrough (connect,
   files, `base64 <file>` decode, `base64 -d <string>` decode, PCI-DSS /
-  CWE-261 post-mortem citations), and a level0@web walkthrough (connect,
+  CWE-261 post-mortem citations), a level0@web walkthrough (connect,
   `gobuster` against www.meridian.edu, `/admin` properly gated as 401,
   `curl` on the `/backup/` autoindex, FERPA-grade CSV finding, leaked
-  db-creds.txt credential, CWE-548 / OWASP A05 post-mortem citations).
+  db-creds.txt credential, CWE-548 / OWASP A05 post-mortem citations),
+  and a level0@forensics walkthrough (connect, `file` and `exif` on
+  the alibi photo, DateTimeOriginal mismatch, Key Largo GPS coordinates,
+  iPhone 14 Pro device identification, CMMC / NIST 800-171 / 800-86 /
+  CWE-200 post-mortem citations).
 
 ## [0.2.0] - 2026-05-21
 

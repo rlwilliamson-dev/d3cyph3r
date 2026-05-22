@@ -43,6 +43,7 @@ async function termText(page) {
   check("Lobby lists Network track",                    t.includes("ssh level0@network"));
   check("Lobby lists Crypto track",                     t.includes("ssh level0@crypto"));
   check("Lobby lists Web track",                        t.includes("ssh level0@web"));
+  check("Lobby lists Forensics track",                  t.includes("ssh level0@forensics"));
 
   await typeAndEnter(page, "ssh level0@linux");
   await page.waitForTimeout(300);
@@ -305,6 +306,48 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@web returns to lobby",                      (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 0 — Reed's Soccer Alibi (forensics track) ─────────────
+  // No password (level0 of each track is the entry point).
+  await typeAndEnter(page, "ssh level0@forensics");
+  await page.waitForTimeout(300);
+  t = await termText(page);
+  check("Connected to level0@forensics",                              t.includes("Connected: level0@forensics"));
+  check("Prompt host updated to 'forensics'",                         (await page.locator("#prompt-host").innerText()) === "forensics");
+  check("Prompt user shows in-world identity 'secops'",               (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Objective references Polaris Defense Systems",               t.includes("Polaris"));
+  check("Lesson mentions Dana (new recurring character)",             t.includes("Dana"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "case-summary.txt", "soccer-field.jpg", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "file soccer-field.jpg");
+  t = await termText(page);
+  check("file soccer-field.jpg identifies as JPEG with EXIF",         /soccer-field\.jpg.*JPEG image data.*EXIF/.test(t));
+
+  await typeAndEnter(page, "exif soccer-field.jpg");
+  t = await termText(page);
+  check("exif reveals DateTimeOriginal of 2025:07:18 (NOT March 2026)", t.includes("2025:07:18"));
+  check("exif reveals GPS coordinates in Key Largo, Florida",         t.includes("25.0865") && t.includes("80.4473"));
+  check("exif identifies the device as iPhone 14 Pro",                t.includes("iPhone 14 Pro"));
+
+  await typeAndEnter(page, "cat engagement-notes.md");
+  t = await termText(page);
+  check("engagement-notes.md mentions Priya (continuity)",            t.includes("Priya"));
+  check("engagement-notes.md cites CMMC Level 2",                     t.includes("CMMC Level 2"));
+  check("engagement-notes.md cites NIST 800-171",                     t.includes("NIST SP 800-171") || t.includes("NIST 800-171"));
+
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("lessons-learned.md cites NIST SP 800-86 (Forensics Guide)",  t.includes("800-86"));
+  check("lessons-learned.md cites CWE-200 (Info Exposure)",           t.includes("CWE-200"));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level0@forensics returns to lobby",                (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
