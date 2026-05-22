@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-22
+
+"OSINT goes live." First playable OSINT level lands — the engine
+surface that shipped scaffolded in v0.4.0 now has its first level
+content consuming it. Six tracks of seven now have at least one
+shipped level; Cloud is the last remaining commands-wired-but-no-
+levels track.
+
+### Added
+
+- `level0@osint` — "Veridian's Open Letter." First level of the OSINT
+  track. Driftwood is hired by Veridian Analytics (mid-sized healthcare-
+  analytics SaaS, HIPAA Business Associate) for a personal-credential
+  exposure check on their newly-hired Chief Medical Officer, who has
+  surfaced in an open-letter campaign about a controversial Phase III
+  trial at his previous employer. Player runs `hibp` against the
+  executive's known personal Gmail and finds five breach hits — two of
+  which surface the SAME cleartext password (`BostonStrong#2013`,
+  recovered from the cracked LinkedIn 2012 and LiveJournal 2014 corpora),
+  the high-confidence credential-reuse signal. Teaches `hibp`. Maps to
+  CWE-521 (Weak Password Requirements), CWE-262, CWE-309, OWASP A07
+  (Identification and Authentication Failures), NIST SP 800-63B (breach-
+  list screening, §5.1.1.2), HIPAA Security Rule §164.308(a)(5)(ii)(D),
+  HITRUST CSF v11 (01.b / 01.q), NIST SP 800-66 Rev. 2, CIS Controls
+  v8 (5.4, 6.3, 6.5), MA 201 CMR 17.04, HHS HPH-CPGs, and MITRE T1078 /
+  T1110.004 / T1589.001 / T1593. The breadcrumb password
+  (`BostonStrong#2013`) is the natural gate for a future `level1@osint`,
+  matching the per-track credential-chain pattern.
+- New client: **Veridian Analytics** — healthcare-analytics SaaS
+  company (~250 engineers, founded 2018, Boston/Cambridge MA), HIPAA
+  Business Associate, HITRUST CSF v11 certified. Introduces two new
+  recurring characters: Marisol Vega (Veridian General Counsel,
+  running the personal-exposure request) and Dr. Aaron Hines (Veridian
+  CMO, the subject of the lookup — first executive-level subject in
+  the recurring cast).
+- Playtest grows 164 → 190 (+26 checks): full `level0@osint`
+  walkthrough — connect with the `intel` shared service account, file
+  listing, engagement-notes / subject-brief / lessons-learned content
+  citations (HIPAA Security Rule, HITRUST overlay, Marisol continuity),
+  `hibp aaron.hines.md@gmail.com` returns the five breach hits including
+  the LinkedIn / LiveJournal cracked-corpus cleartext and the CONFIRMED
+  REUSE flag, `hibp` on the Veridian work email gracefully returns "no
+  breaches found" (verifies scope discipline), post-mortem cites
+  800-63B / CWE-521 / T1110.004. The scaffolded-track friendly-error
+  smoke test moved from OSINT (now shipping a level) to Cloud (still
+  the last commands-wired-but-no-level-data track).
+
 ## [0.4.0] - 2026-05-22
 
 "Engine surface expansion." Two new tracks scaffolded (OSINT, Cloud)
@@ -371,7 +418,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.1.0...v0.2.0
