@@ -60,6 +60,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     cohorts, and Topics API.
   - **Cross-Origin-Opener-Policy: same-origin** — isolates browsing
     context from cross-origin window references.
+  - **Cross-Origin-Embedder-Policy: require-corp** — every cross-origin
+    embedded resource must opt in via CORS or CORP. Verified that both
+    Google Fonts endpoints (`fonts.googleapis.com` for the CSS and
+    `fonts.gstatic.com` for the font files) ship `CORP: cross-origin`,
+    so the wordmark fonts still load.
+  - **Cross-Origin-Resource-Policy: cross-origin** — set permissively
+    on our own responses so OG-image embeds (Slack, Discord, Twitter
+    cards) keep working. The site has no sensitive resources at
+    well-known URLs, so strict CORP would harden nothing here.
   - **X-Permitted-Cross-Domain-Policies: none** — legacy Adobe header,
     included for completeness.
 - Removed the one inline `style="width:0%"` attribute on `#progress-fill`
