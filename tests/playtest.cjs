@@ -44,16 +44,17 @@ async function termText(page) {
   check("Lobby lists Crypto track",                     t.includes("ssh level0@crypto"));
   check("Lobby lists Web track",                        t.includes("ssh level0@web"));
   check("Lobby lists Forensics track",                  t.includes("ssh level0@forensics"));
-  check("Lobby lists OSINT track (scaffolded)",         t.includes("ssh level0@osint"));
+  check("Lobby lists OSINT track",                      t.includes("ssh level0@osint"));
   check("Lobby lists Cloud track (scaffolded)",         t.includes("ssh level0@cloud"));
   check("Lobby flags scaffolded tracks with (no levels yet)", t.includes("(no levels yet)"));
 
-  // ssh into a scaffolded-but-empty track should produce the friendly
-  // warm message, not a generic DNS-style "Could not resolve hostname".
-  await typeAndEnter(page, "ssh level0@osint");
+  // ssh into a scaffolded-but-empty track (Cloud, the last remaining
+  // commands-wired-but-no-level track) should produce the friendly warm
+  // message, not a generic DNS-style "Could not resolve hostname".
+  await typeAndEnter(page, "ssh level0@cloud");
   t = await termText(page);
-  check("ssh level0@osint shows friendly scaffolded-track message", /This track is scaffolded but no levels are built yet/.test(t));
-  check("ssh level0@osint still leaves player in the lobby",        (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("ssh level0@cloud shows friendly scaffolded-track message", /This track is scaffolded but no levels are built yet/.test(t));
+  check("ssh level0@cloud still leaves player in the lobby",        (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   // ── Engine command-surface smoke test ─────────────────────────────
   // Exercise every new command from the lobby (where no level data
@@ -432,6 +433,62 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@forensics returns to lobby",                (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 0 — Veridian's Open Letter (OSINT track) ──────────────
+  // No password (level0 of each track is the entry point).
+  await typeAndEnter(page, "ssh level0@osint");
+  await page.waitForTimeout(300);
+  t = await termText(page);
+  check("Connected to level0@osint",                                  t.includes("Connected: level0@osint"));
+  check("Prompt host updated to 'osint'",                             (await page.locator("#prompt-host").innerText()) === "osint");
+  check("Prompt user shows in-world identity 'intel'",                (await page.locator("#prompt-user").innerText()) === "intel");
+  check("Objective references Veridian (client)",                     t.includes("Veridian"));
+  check("Objective references Dr. Aaron Hines (subject)",             t.includes("Aaron Hines"));
+  check("Lesson mentions Marisol (new recurring character)",          t.includes("Marisol"));
+  check("Lesson mentions HIPAA (compliance regime)",                  t.includes("HIPAA"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "subject-brief.txt", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "cat engagement-notes.md");
+  t = await termText(page);
+  check("engagement-notes.md mentions Priya (continuity)",            t.includes("Priya"));
+  check("engagement-notes.md cites HIPAA Security Rule",              t.includes("HIPAA Security Rule"));
+  check("engagement-notes.md cites HITRUST CSF (overlay framework)",  t.includes("HITRUST"));
+
+  await typeAndEnter(page, "cat subject-brief.txt");
+  t = await termText(page);
+  check("subject-brief.txt provides personal email for HIBP lookup",  t.includes("aaron.hines.md@gmail.com"));
+  check("subject-brief.txt scopes Veridian work email OUT",           t.includes("OUT OF SCOPE"));
+
+  await typeAndEnter(page, "hibp aaron.hines.md@gmail.com");
+  t = await termText(page);
+  check("hibp returns LinkedIn 2012 breach hit",                      t.includes("LinkedIn (2012)"));
+  check("hibp returns Adobe 2013 breach hit",                         t.includes("Adobe (2013)"));
+  check("hibp returns LiveJournal 2014 breach hit",                   t.includes("LiveJournal"));
+  check("hibp surfaces cleartext password (LinkedIn cracked corpus)", t.includes("BostonStrong#2013"));
+  check("hibp flags CONFIRMED REUSE across two breaches",             t.includes("CONFIRMED REUSE"));
+
+  // Verify the out-of-scope guard: Aaron's WORK email should produce
+  // the graceful "no breaches found" message, not a configured hit.
+  // (Per Marisol's scope: only the personal email was authorized.)
+  await typeAndEnter(page, "hibp ahines@veridian-analytics.com");
+  t = await termText(page);
+  check("hibp returns 'no breaches found' for un-configured work email",
+        /no breaches found for 'ahines@veridian-analytics\.com'/.test(t));
+
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("lessons-learned.md cites NIST SP 800-63B (breach-list screening)", t.includes("800-63B"));
+  check("lessons-learned.md cites CWE-521 (Weak Password Requirements)",    t.includes("CWE-521"));
+  check("lessons-learned.md cites T1110.004 (Credential Stuffing)",         t.includes("T1110.004"));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level0@osint returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
