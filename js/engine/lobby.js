@@ -8,6 +8,7 @@ import { termEl } from "../terminal/dom.js";
 import { LEVELS } from "../../levels/index.js";
 import { connectTo } from "./ssh.js";
 import { VERSION_DISPLAY } from "./version.js";
+import { TRACKS } from "./tracks.js";
 
 // Wordmark rendered char-by-char in mixed fonts and colors — meant to read
 // like a partially-decrypted fragment, half hacker, half scratched-out.
@@ -38,29 +39,22 @@ function renderLogo() {
 
 const DIVIDER = "  ────────────────────────────────────────────────";
 
-// Build the engagement list from the live LEVELS map so it stays in sync
-// as tracks are added in future sessions. A track is "available" if at
-// least one level exists for it.
+// Build the engagement list from the live LEVELS map and the canonical
+// TRACKS registry. Tracks with shipped levels render in normal color
+// with a count; scaffolded-only tracks (commands wired, no level data
+// yet) render dimmed with a "(no levels yet)" suffix so players see
+// the full roadmap, not just what's playable today.
 function engagementList() {
-  const tracks = [
-    { key: "linux",     label: "Linux fundamentals", host: "linux"     },
-    { key: "network",   label: "Networking tools",   host: "network"   },
-    { key: "crypto",    label: "Cryptography",       host: "crypto"    },
-    { key: "web",       label: "Web security",       host: "web"       },
-    { key: "forensics", label: "Digital forensics",  host: "forensics" },
-    { key: "osint",     label: "Open-source intel",  host: "osint"     },
-    { key: "cloud",     label: "Cloud security",     host: "cloud"     },
-  ];
-
-  return tracks
-    .map(t => {
-      const count = Object.values(LEVELS).filter(l => l.track === t.key).length;
-      if (count === 0) return null;
-      const cmd = `ssh level0@${t.host}`.padEnd(22);
-      const desc = `${t.label.padEnd(20)} (${count} ${count === 1 ? "level" : "levels"})`;
-      return `  ${cmd} ${desc}`;
-    })
-    .filter(Boolean);
+  return TRACKS.map(t => {
+    const count = Object.values(LEVELS).filter(l => l.track === t.key).length;
+    const cmd = `ssh level0@${t.host}`.padEnd(22);
+    if (count === 0) {
+      const desc = `${t.label.padEnd(20)} (no levels yet)`;
+      return { line: `  ${cmd} ${desc}`, cls: "dim" };
+    }
+    const desc = `${t.label.padEnd(20)} (${count} ${count === 1 ? "level" : "levels"})`;
+    return { line: `  ${cmd} ${desc}`, cls: "out" };
+  });
 }
 
 export function showLobby() {
@@ -100,7 +94,7 @@ export function showLobby() {
   print("  AVAILABLE ENGAGEMENTS", "success");
   print(DIVIDER, "dim");
   print("", "out");
-  engagementList().forEach(line => print(line, "out"));
+  engagementList().forEach(({ line, cls }) => print(line, cls));
   print("", "out");
   print(DIVIDER, "dim");
   print("  Type 'help' for available commands.", "warn");

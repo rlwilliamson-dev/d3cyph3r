@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-22
+
+"Engine surface expansion." Two new tracks scaffolded (OSINT, Cloud)
+with full command surfaces ready to be consumed by future levels. Plus
+a handful of cross-cutting utility commands (`head`, `tail`, `stat`,
+`ps`, `diff`, `sha256sum`, `md5sum`, `jwt`) that will be useful across
+the rest of the existing tracks.
+
+This release also clarifies the bump rules in CLAUDE.md: MINOR now
+explicitly covers "new engine surface that meaningfully expands
+player-callable commands or per-level schema fields," not just new
+levels. Engine-surface expansion is a real category that the rules
+previously didn't capture cleanly.
+
+The lobby's AVAILABLE ENGAGEMENTS list now also surfaces scaffolded
+tracks (OSINT, Cloud) as dimmed entries with a `(no levels yet)` hint,
+mirroring how the `help` command works. Players see the full roadmap
+in the lobby, not just what's playable today. `ssh level0@osint` and
+`ssh level0@cloud` return a friendly "scaffolded — levels coming"
+message instead of the generic DNS-style hostname error.
+
 ### Added
 
 - **OSINT command surface** — `js/commands/osint.js` ships with seven new
@@ -63,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plus the new commands within existing track sections. The auto-dim logic
   for tracks-without-levels still works — OSINT and CLOUD render dimmed
   with the "no levels yet" hint.
-- Playtest grows 129 → 159 (+30 checks): comprehensive smoke test for
+- Playtest grows 129 → 164 (+35 checks): comprehensive smoke test for
   the new engine surface, run from the lobby (where no level data
   exists). Verifies (a) `help` includes the new sections and new
   commands per track; (b) each new command prints its usage string when
@@ -71,7 +92,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   no level data exists rather than crashing; (d) `aws` prints its
   multi-service usage block; (e) `jwt` actually decodes a real test
   token end-to-end without requiring level data (pure utility, no level
-  data needed).
+  data needed); (f) the lobby lists OSINT and Cloud as scaffolded
+  tracks with the `(no levels yet)` marker; (g) `ssh level0@osint`
+  produces the friendly scaffolded-track message and leaves the player
+  in the lobby.
+- `js/engine/tracks.js` — single-source-of-truth track registry
+  consumed by both `lobby.js` (for the engagement list) and `ssh.js`
+  (for the scaffolded-track-friendly-error detection). Removes the
+  duplicated hardcoded track list that previously lived only in
+  `lobby.js`.
 
 ## [0.3.0] - 2026-05-22
 
@@ -342,7 +371,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/releases/tag/v0.1.0

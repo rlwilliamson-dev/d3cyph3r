@@ -12,10 +12,27 @@ import {
 } from "./state.js";
 import { markVisited } from "./progress.js";
 import { showLobby } from "./lobby.js";
+import { SCAFFOLDED_HOSTS } from "./tracks.js";
 
 export function handleSSH(target) {
   const level = LEVELS[target];
   if (!level) {
+    // Distinguish "unknown hostname" (typo, returns DNS-style error)
+    // from "known track, no levels yet" (warm scaffolded-track message).
+    // The lobby surfaces both kinds in its engagement list; ssh has to
+    // route them differently.
+    const host = target.split("@")[1];
+    if (host && SCAFFOLDED_HOSTS.has(host) && !Object.values(LEVELS).some(l => l.track === host)) {
+      return {
+        cls: "warn",
+        text:
+`ssh: ${target}: This track is scaffolded but no levels are built yet.
+
+The ${host} command surface is wired (type 'help' to see what's available),
+but no scenario has been written for it. Future PRs will land levels for
+${host}; check the lobby's AVAILABLE ENGAGEMENTS list as new ones ship.`,
+      };
+    }
     return { text: `ssh: Could not resolve hostname '${target}': Name or service not known`, cls: "err" };
   }
   if (!level.password) { connectTo(target); return null; }
