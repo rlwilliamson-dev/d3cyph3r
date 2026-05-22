@@ -203,7 +203,9 @@ echo "Done."
         "lessons-learned.md": {
           type: "file",
           content:
-`# Post-mortem: what you just found, and why it matters
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
 
 You just confirmed that Vesta Retail's production payment-card-
 processor API key is "secured" by being base64-encoded in a
@@ -217,7 +219,7 @@ up in every credential-exposure report ever published: confusing
 ENCODING (a reversible, public mapping) with ENCRYPTION
 (a key-protected secrecy operation).
 
-## The blunt version
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 Base64 is a transport format. It exists so that bytes can ride
 safely through systems that expect printable ASCII. It is
@@ -248,7 +250,7 @@ the categories are:
 Base64 is not on any of those lists. It is on the "transport
 encoding" list, and the protection list is a different list.
 
-## The consulting-firm angle
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 For Vesta specifically, this finding is a PCI-DSS issue, not just
 a security hygiene issue. PCI-DSS Requirement 3.5 says credentials
@@ -264,7 +266,7 @@ remediation (move the key to AWS Secrets Manager / HashiCorp Vault
 days of engineering. Cheaper to do now, before the QSA's report,
 than to add a finding to a remediation plan.
 
-## Frameworks that cover this
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   PCI-DSS v4.0
     Requirement 3.5  — Render cardholder data (and the keys that
@@ -305,7 +307,7 @@ than to add a finding to a remediation plan.
     from misuse of cryptography (or non-cryptography mistaken
     for cryptography), not absence of it.
 
-## Where this shows up on certifications
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   CompTIA Security+ (SY0-701)
     Domain 1 (General Security Concepts) — cryptographic concepts
@@ -330,7 +332,7 @@ than to add a finding to a remediation plan.
     opening play is \`grep -r 'base64' .\` against any repo
     you've pulled.
 
-## MITRE ATT&CK mapping
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
 What you simulated maps to:
 
@@ -349,7 +351,7 @@ techniques in published threat reports. The fact that defenders
 and attackers both use base64 — defenders erroneously, attackers
 deliberately — is the whole point.
 
-## What a defender should actually do about this
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   1. Move the API key to a real secrets backend. Vesta is on
      AWS; AWS Secrets Manager + IAM-scoped runtime identity is
@@ -381,7 +383,7 @@ deliberately — is the whole point.
      not encryption" and link it from the code-review checklist.
      This will save a future Theo from making the same mistake.
 
-## Closing thought
+─── CLOSING THOUGHT ──────────────────────────────────────────
 
 The mistake is mundane. "I obscured the value" feels like a
 security improvement; "I obscured the value via a published,

@@ -186,7 +186,9 @@ controlled conditions.
         "lessons-learned.md": {
           type: "file",
           content:
-`# Post-mortem: what you just found, and why it matters
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
 
 You just discovered that Atlas Health's staging database is still
 exposed to the open internet, three months after their DevOps lead
@@ -195,7 +197,7 @@ enough for a finding. Combined with the default credential Marcus
 mentioned and never rotated, it's an active, easily-exploitable
 data exposure with HIPAA implications.
 
-## The blunt version
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 Public-facing database servers are one of the most reliable
 indicators of compromise readiness in real-world breach reports.
@@ -219,7 +221,7 @@ For a healthcare org specifically, "when" answers in two ways:
      Atlas has 400,000 patients. A confirmed breach here is
      front-page news.
 
-## The consulting-firm angle
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 The pattern that made this happen is mundane:
 
@@ -239,7 +241,7 @@ us to surface this kind of finding within 24 hours of discovery,
 and Priya needs to be in the room when it's communicated to
 Marcus — the conversation goes better when there's no surprise.
 
-## Frameworks that cover this
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   HIPAA Security Rule (45 CFR 164.312)
     164.312(a)(1) Access Control — implement technical policies
@@ -284,7 +286,7 @@ Marcus — the conversation goes better when there's no surprise.
   OWASP Top 10 (2021) — A05: Security Misconfiguration
     Covers public exposure of services that should be internal.
 
-## Where this shows up on certifications
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   CompTIA Security+ (SY0-701)
     Domain 4 (Security Operations) — vulnerability scanning,
@@ -306,7 +308,7 @@ Marcus — the conversation goes better when there's no surprise.
     The first command on every box on the exam is essentially
     \`nmap -sV <target>\`. You just ran the opening play.
 
-## MITRE ATT&CK mapping
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
 What you simulated maps to:
 
@@ -323,7 +325,7 @@ T1046 is one of the most common opening techniques in published
 threat reports. T1190 is what shows up when the finding goes
 unfixed.
 
-## What a defender should actually do about this
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   1. Continuous external attack-surface management, not quarterly
      perimeter checks. Tools: Shodan Monitor, Censys ASM, Bishop
@@ -350,7 +352,7 @@ unfixed.
   5. Quarterly perimeter checks remain the floor, not the
      ceiling. Continuous monitoring is the ceiling.
 
-## Closing thought
+─── CLOSING THOUGHT ──────────────────────────────────────────
 
 In security, "we've done that" and "it's continuously verified"
 mean different things. Marcus's claim was a snapshot. The

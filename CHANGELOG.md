@@ -100,16 +100,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- All `level0` `welcome.md` files (`linux` excepted — it predates the
-  template) reformatted into four labeled sections separated by
-  `─── HEADER ───` dividers matching the lobby's aesthetic: a one-line
-  workstation header + one-sentence scene-set, a clean NEW COMMANDS
-  block, a "what this tool does" conceptual section, and a numbered
-  HOW TO PLAY checklist at the bottom. Compresses ~70 lines of running
-  prose into ~50 lines with strong visual hierarchy. Scenario backstory
-  that lived in welcome.md now lives only in engagement-notes.md
-  (single source of truth). Applied uniformly to `level0@network`,
-  `level0@crypto`, and `level0@web`.
+- Level-content files (`welcome.md`, `lessons-learned.md`) reformatted
+  into a shared visual template using box-drawing-character dividers,
+  since the terminal doesn't render markdown.
+  - `welcome.md` (level0 only — level0@linux predates the template and
+    is sufficiently different in shape that retrofitting is left for
+    later) gets four labeled sections separated by `─── HEADER ───`
+    dividers matching the lobby's aesthetic: a one-line workstation
+    header + one-sentence scene-set, a clean NEW COMMANDS block, a
+    "what this tool does" conceptual section, and a numbered HOW TO
+    PLAY checklist at the bottom. Compresses ~70 lines of running
+    prose into ~50 lines with strong visual hierarchy. Scenario
+    backstory that lived in welcome.md now lives only in
+    engagement-notes.md (single source of truth).
+  - `lessons-learned.md` (every level) opens with a `═══ POST-MORTEM
+    ═══` heavy-rule banner, then uses 7 single-rule `─── SECTION ───`
+    dividers in a consistent order: THE BLUNT VERSION → THE CONSULTING-
+    FIRM ANGLE → FRAMEWORKS THAT COVER THIS → WHERE THIS SHOWS UP ON
+    CERTIFICATIONS → MITRE ATT&CK MAPPING → WHAT A DEFENDER SHOULD
+    ACTUALLY DO → CLOSING THOUGHT. Section content (CWE / framework /
+    MITRE / cert citations) is preserved — the change is visual only.
+  - Future level builds must follow the same template.
 - `help` command grouped by track with an availability indicator: tracks
   with shipped level data render in their normal color; tracks the engine
   supports but has no level data for yet render dimmed with a

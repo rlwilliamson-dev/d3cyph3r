@@ -369,7 +369,9 @@ Surface it with the right urgency.
         "lessons-learned.md": {
           type: "file",
           content:
-`# Post-mortem: what you just found, and why it matters
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
 
 You just confirmed that Meridian State University's public web
 server is hosting — at a guessable URL with autoindex enabled —
@@ -384,7 +386,7 @@ combination — exposure plus a live credential to the internal
 database — is the kind of finding that becomes a published
 breach disclosure if an attacker gets there before a defender does.
 
-## The blunt version
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 Two distinct failures stack on top of each other in this finding,
 and both are textbook:
@@ -420,7 +422,7 @@ actually does is publish a list of the exact URLs the defender
 considers sensitive. Every reconnaissance script reads robots.txt
 first. "Security through robots.txt" is a category mistake.
 
-## The consulting-firm angle
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 For Meridian specifically, this finding lands in two places at
 once:
@@ -450,7 +452,7 @@ problem"; it should start with "we found what BluePier left."
 That tonal difference is the difference between Driftwood landing
 ongoing work with Meridian and not landing it.
 
-## Frameworks that cover this
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   FERPA (20 U.S.C. § 1232g; 34 CFR Part 99)
     34 CFR 99.31  — conditions for disclosure of PII from
@@ -502,7 +504,7 @@ ongoing work with Meridian and not landing it.
     A01  Broken Access Control — the records are accessible to
          anyone who guesses the path.
 
-## Where this shows up on certifications
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   CompTIA Security+ (SY0-701)
     Domain 2 (Threats, Vulnerabilities, and Mitigations) — web
@@ -527,7 +529,7 @@ ongoing work with Meridian and not landing it.
     on a public web server is one of the highest-yield
     openings in the exam labs and in real engagements.
 
-## MITRE ATT&CK mapping
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
 What you simulated maps to:
 
@@ -546,7 +548,7 @@ T1595.003 is the canonical opening move in published reports of
 publicly-accessible backup directory." That's not a rare incident
 pattern; it's a weekly one.
 
-## What a defender should actually do about this
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   1. Remove the directory. \`rm -r /var/www/meridian/public/backup/\`
      then reload Apache. Nothing in /backup/ should ever have been
@@ -591,7 +593,7 @@ pattern; it's a weekly one.
      .htaccess deny-all in any directory not explicitly meant to
      be public. Code review on web-server config changes.
 
-## Closing thought
+─── CLOSING THOUGHT ──────────────────────────────────────────
 
 The agency that did this is gone. The mistake stayed for two
 years. That gap — between "the people who made the decision
