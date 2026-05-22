@@ -41,6 +41,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `assets/og-template.html`; regenerate the PNG with
   `node tests/generate-og-image.cjs`.
 
+### Security
+
+- Hardened HTTP response headers via a new `staticwebapp.config.json`:
+  - **Content-Security-Policy** — strict allow-list. `default-src 'self'`,
+    `script-src 'self'`, `style-src 'self' https://fonts.googleapis.com`,
+    `font-src 'self' https://fonts.gstatic.com`, `img-src 'self' data:`,
+    `connect-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`,
+    `base-uri 'self'`, `form-action 'self'`, plus `upgrade-insecure-requests`.
+    No `'unsafe-inline'` anywhere.
+  - **Strict-Transport-Security** — `max-age=31536000; includeSubDomains`
+    (1 year, all subdomains).
+  - **X-Content-Type-Options: nosniff** — block MIME-sniffing.
+  - **Referrer-Policy: strict-origin-when-cross-origin** — limit referer
+    leakage on cross-origin navigation.
+  - **Permissions-Policy** — opts out of camera, microphone, geolocation,
+    payment, USB, accelerometer/gyroscope/magnetometer, FLoC interest
+    cohorts, and Topics API.
+  - **Cross-Origin-Opener-Policy: same-origin** — isolates browsing
+    context from cross-origin window references.
+  - **Cross-Origin-Embedder-Policy: require-corp** — every cross-origin
+    embedded resource must opt in via CORS or CORP. Verified that both
+    Google Fonts endpoints (`fonts.googleapis.com` for the CSS and
+    `fonts.gstatic.com` for the font files) ship `CORP: cross-origin`,
+    so the wordmark fonts still load.
+  - **Cross-Origin-Resource-Policy: cross-origin** — set permissively
+    on our own responses so OG-image embeds (Slack, Discord, Twitter
+    cards) keep working. The site has no sensitive resources at
+    well-known URLs, so strict CORP would harden nothing here.
+  - **X-Permitted-Cross-Domain-Policies: none** — legacy Adobe header,
+    included for completeness.
+- Removed the one inline `style="width:0%"` attribute on `#progress-fill`
+  in `index.html` (moved to a CSS rule on the same element) so the strict
+  CSP can ship without an `'unsafe-inline'` style-src loophole.
+
 ### Fixed
 
 - Copy-paste from terminal output now works. The global click-to-refocus

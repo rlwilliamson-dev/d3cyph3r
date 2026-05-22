@@ -52,7 +52,7 @@ html, body {
 #topbar .clock  { color: var(--dim); font-variant-numeric: tabular-nums; }
 
 #progress-bar  { height: 2px; background: var(--bg-elev); margin-bottom: 12px; flex-shrink: 0; }
-#progress-fill { height: 100%; background: var(--green); transition: width 0.6s ease; }
+#progress-fill { height: 100%; width: 0; background: var(--green); transition: width 0.6s ease; }
 
 #terminal {
   flex: 1;
