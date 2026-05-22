@@ -37,9 +37,10 @@ async function termText(page) {
   };
 
   let t = await termText(page);
-  check("Lobby AVAILABLE ENGAGEMENTS rendered",     t.includes("AVAILABLE ENGAGEMENTS"));
+  check("Lobby AVAILABLE ENGAGEMENTS rendered",         t.includes("AVAILABLE ENGAGEMENTS"));
   check("Lobby shows Driftwood welcome on first visit", t.includes("WELCOME TO DRIFTWOOD SYSTEMS"));
-  check("Lobby lists Linux track",                   t.includes("ssh level0@linux"));
+  check("Lobby lists Linux track",                      t.includes("ssh level0@linux"));
+  check("Lobby lists Network track",                    t.includes("ssh level0@network"));
 
   await typeAndEnter(page, "ssh level0@linux");
   await page.waitForTimeout(300);
@@ -174,6 +175,44 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level1 returns to lobby", (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 0 — Atlas Health perimeter check (network track) ──────
+  // No password (level0 of each track is the entry point).
+  await typeAndEnter(page, "ssh level0@network");
+  await page.waitForTimeout(300);
+  t = await termText(page);
+  check("Connected to level0@network",                                t.includes("Connected: level0@network"));
+  check("Prompt host updated to 'network'",                           (await page.locator("#prompt-host").innerText()) === "network");
+  check("Prompt user shows in-world identity 'secops'",               (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Objective references Atlas Health",                          t.includes("Atlas Health"));
+  check("Lesson mentions Marcus (new recurring character)",           t.includes("Marcus"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "atlas-perimeter.txt", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "nmap staging.atlas.health");
+  t = await termText(page);
+  check("nmap on staging reveals open 5432/postgresql",               /5432\/tcp\s+open\s+postgresql/.test(t));
+
+  await typeAndEnter(page, "nmap -sV staging.atlas.health");
+  t = await termText(page);
+  check("nmap -sV reveals PostgreSQL 13.11",                          t.includes("PostgreSQL 13.11"));
+
+  await typeAndEnter(page, "cat engagement-notes.md");
+  t = await termText(page);
+  check("engagement-notes.md mentions Priya (continuity)",            t.includes("Priya"));
+  check("engagement-notes.md leaks default cred breadcrumb",          t.includes("atlas-default-2025"));
+
+  await typeAndEnter(page, "whoami");
+  t = await termText(page);
+  check("whoami prints 'secops' on the audit workstation",            /\bsecops\b/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level0@network returns to lobby",                  (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
