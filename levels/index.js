@@ -8,6 +8,7 @@ import { initLevels } from "../js/fs/flatten.js";
 import { linuxLevels }   from "./linux.js";
 import { networkLevels } from "./network.js";
 import { cryptoLevels }  from "./crypto.js";
+import { webLevels }     from "./web.js";
 
 export const LEVELS = initLevels({
   // ── Lobby ────────────────────────────────────────────────────
@@ -23,4 +24,5 @@ export const LEVELS = initLevels({
   ...linuxLevels,
   ...networkLevels,
   ...cryptoLevels,
+  ...webLevels,
 });

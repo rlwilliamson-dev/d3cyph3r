@@ -225,14 +225,16 @@ exit
         "lessons-learned.md": {
           type: "file",
           content:
-`# Post-mortem: what you just found, and why it matters
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
 
 You just found cleartext credentials for a CLIENT environment sitting
 on an offboarded consultant's laptop. In a real engagement, this single
 file could be the entire breach — and "we exposed the client" is the
 worst kind of breach for a consulting firm.
 
-## The consulting-firm angle
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 Tech consulting introduces a security model that internal-only teams
 rarely confront directly:
@@ -251,7 +253,7 @@ days. Financial-services clients add a regulatory layer on top of
 the contract: GLBA's Safeguards Rule and PCI-DSS both treat
 consultants as a covered party.
 
-## The blunt version
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 Stolen credentials are, every year, the leading way attackers get
 into networks. Verizon's 2024 Data Breach Investigations Report put
@@ -264,7 +266,7 @@ When the insider is a consultant, the blast radius expands: not
 just YOUR data, but every client whose environment they had access
 to.
 
-## Frameworks that cover this
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   NIST SP 800-53 Rev. 5 — AC-2 (Account Management)
     Specifically AC-2(13): privileged accounts must be terminated
@@ -296,7 +298,7 @@ to.
     data is in scope. Halton is a bank; payment data is always in
     scope somewhere.
 
-## Where this shows up on certifications
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   CompTIA Security+ (SY0-701)
     Domain 4.1 (Apply common security techniques) — secrets
@@ -317,7 +319,7 @@ to.
     foothold. The ls-then-cat-everything loop you just executed is
     literally the opening play of every box on the OSCP exam.
 
-## MITRE ATT&CK mapping
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
 What you simulated maps to:
 
@@ -328,7 +330,7 @@ These two techniques together account for an enormous share of
 real-world post-compromise activity. T1552.001 in particular shows
 up in nearly every credible threat report.
 
-## What a defender should actually do about this
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   1. Disable rolled-off consultants' client access immediately on
      engagement end. Preserve the device image for audit; don't
@@ -348,7 +350,7 @@ up in nearly every credible threat report.
      windows for credential exposure. Missing those is a separate
      compliance event from the exposure itself.
 
-## Closing thought
+─── CLOSING THOUGHT ──────────────────────────────────────────
 
 In a regular tech org, this is bad. In a consulting firm, this is
 contractually a breach, often regulatorily a breach, and always
@@ -578,7 +580,9 @@ PG_SSLMODE=require
         "lessons-learned.md": {
           type: "file",
           content:
-`# Post-mortem: what you just found, and why it matters
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
 
 You just found a production database credential exposed by a careless
 backup. The credential itself lives in a properly protected file
@@ -591,7 +595,7 @@ The lock on the front door doesn't matter if there's a key under the
 mat. Daniel locked the front door. Then he taped a copy of the key
 to the wall and left.
 
-## The blunt version
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 This is one of the most common findings in real-world security
 audits, especially on systems where ops engineers debug under
@@ -609,7 +613,7 @@ Backups and dev copies of secrets are the source of an enormous
 share of real-world credential exposures. The CWE catalog has been
 flagging this for over a decade.
 
-## The consulting-firm angle
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 For a consulting firm specifically, the leak is worse than it would
 be at a single-tenant org. The exposed credential here is Halton's
@@ -625,7 +629,7 @@ password months ago. The "have we been breached?" question is
 suddenly an "are we sure we haven't been breached?" question, which
 forensically is much harder to answer cleanly.
 
-## Frameworks that cover this
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   CWE-732: Incorrect Permission Assignment for Critical Resource
     Exactly this finding. The catalog entry specifically calls out
@@ -658,7 +662,7 @@ forensically is much harder to answer cleanly.
     "appropriate access controls" on customer-information systems.
     This is a textbook failure to meet that standard.
 
-## Where this shows up on certifications
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   CompTIA Security+ (SY0-701)
     Domain 3.1 (Security architecture: hardening) — file system
@@ -678,7 +682,7 @@ forensically is much harder to answer cleanly.
     sudoers misconfigurations. Today's lesson is the credential
     variant — equally common in real engagements.
 
-## MITRE ATT&CK mapping
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
 What you simulated maps to:
 
@@ -693,7 +697,7 @@ T1552.001 in particular is one of the highest-frequency techniques
 in published threat reports. It will be in every incident report
 you read for the rest of your career.
 
-## What a defender should actually do about this
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   1. Audit world-readable files in /home and /tmp for credential
      patterns. Tools that find this fast: \`grep -r\` with credential
@@ -717,7 +721,7 @@ you read for the rest of your career.
      the supposedly locked one. Rotate. Then migrate to a real
      secrets backend (Vault, Secrets Manager, Doppler, etc).
 
-## Closing thought
+─── CLOSING THOUGHT ──────────────────────────────────────────
 
 The fix isn't a new lock. It's not having the key copies.
 

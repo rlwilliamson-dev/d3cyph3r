@@ -44,52 +44,50 @@ export const cryptoLevels = {
         "welcome.md": {
           type: "file",
           content:
-`Driftwood internal security — Vesta Retail engagement, PCI-DSS
-re-attestation pre-review.
+`─── Driftwood Systems / Crypto Audit Workstation ──────────────
 
-You're on the Driftwood audit workstation, logged in as \`secops\`.
-The host is \`crypto\` — internal name for the static-analysis /
-code-review station, where we look at scripts, configs, and binary
-artifacts the client engineers committed.
+You're logged in as \`secops\` — the security team's shared service
+account. The host \`crypto\` is our static-analysis station where
+we review client scripts, configs, and binary artifacts.
 
-Today's task: Vesta Retail is going through annual PCI-DSS
-re-attestation. Driftwood is reviewing their payment-processing
-deploy scripts before the formal QSA walkthrough next month.
-Priya pulled a copy of Theo's deploy.sh from Vesta's repo on
-Friday and dropped it here for us to look at.
+Today's client: Vesta Retail. Their PCI-DSS re-attestation is six
+weeks out. Priya pulled Theo's deploy.sh from Vesta's repo and
+dropped it here for review. The script is small — and wrong, but
+maybe not in the way Theo thought he was wrong-proofing it.
 
-The script is small. It is also wrong — but maybe not in the way
-Theo thought he was wrong-proofing it.
 
-New commands you'll use today:
+─── NEW COMMANDS ──────────────────────────────────────────────
 
-  base64 <file>           Decode a base64-encoded file.
-  base64 -d <string>      Decode a base64 string directly.
+  base64 <file>        Decode a base64-encoded file.
+  base64 -d <string>   Decode a base64 string directly.
 
-Base64 is NOT encryption. It is an encoding — a deterministic
-mapping from arbitrary bytes onto a 65-character ASCII alphabet
-(the letters A-Z, a-z, the digits 0-9, the symbols + and /, plus
-'=' as padding). The point of base64 is to make binary data safe
-to put in places that only accept ASCII text: email bodies, URLs,
-HTTP headers, JSON values, environment variables, config files.
 
-The point of base64 is explicitly NOT to make secrets unreadable.
-Anyone who sees a base64 string can decode it in one line —
-software treats the mapping as reversible by design. Both
-directions are public, neither requires a key.
+─── WHAT BASE64 IS (AND ISN'T) ────────────────────────────────
 
-The way to tell base64 at a glance: a long-ish string that only
-uses the letters A-Z / a-z / 0-9 / + / / and ends in zero, one,
-or two '=' signs. Example:
+Base64 is an ENCODING, not encryption. It maps arbitrary bytes
+onto a 65-character ASCII alphabet (A-Z, a-z, 0-9, +, /, plus
+'=' padding) so binary data can ride safely through systems that
+expect text: email, URLs, headers, JSON, env vars, config files.
 
-  SGVsbG8sIHdvcmxkIQ==        decodes to:   Hello, world!
+It is explicitly NOT a way to make secrets unreadable. The
+mapping is deterministic and public. There is no key. Anyone can
+decode a base64 blob in one line.
 
-You'd be surprised how many engineers — junior and otherwise —
-think base64-encoding their API key counts as "securing" it.
+Spotting base64 by eye: a long-ish string using only A-Z / a-z /
+0-9 / + / / and ending in zero, one, or two '=' signs.
 
-Read engagement-notes.md for the Vesta context. Then look at
-deploy.sh. Decide what's wrong about it. The "secured" key lives
-in api-key.b64 — when you've decoded it, read lessons-learned.md.
+  SGVsbG8sIHdvcmxkIQ==    decodes to:   Hello, world!
+
+You'd be surprised how many engineers think base64-encoding their
+API key counts as "securing" it.
+
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat engagement-notes.md     Vesta / Theo / Saanvi / PCI-DSS
+  2.  cat deploy.sh               The script under review
+  3.  base64 api-key.b64          Decode the "secured" API key
+  4.  cat lessons-learned.md      Post-mortem (after step 3)
 `
         },
 
@@ -205,7 +203,9 @@ echo "Done."
         "lessons-learned.md": {
           type: "file",
           content:
-`# Post-mortem: what you just found, and why it matters
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
 
 You just confirmed that Vesta Retail's production payment-card-
 processor API key is "secured" by being base64-encoded in a
@@ -219,7 +219,7 @@ up in every credential-exposure report ever published: confusing
 ENCODING (a reversible, public mapping) with ENCRYPTION
 (a key-protected secrecy operation).
 
-## The blunt version
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 Base64 is a transport format. It exists so that bytes can ride
 safely through systems that expect printable ASCII. It is
@@ -250,7 +250,7 @@ the categories are:
 Base64 is not on any of those lists. It is on the "transport
 encoding" list, and the protection list is a different list.
 
-## The consulting-firm angle
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 For Vesta specifically, this finding is a PCI-DSS issue, not just
 a security hygiene issue. PCI-DSS Requirement 3.5 says credentials
@@ -266,7 +266,7 @@ remediation (move the key to AWS Secrets Manager / HashiCorp Vault
 days of engineering. Cheaper to do now, before the QSA's report,
 than to add a finding to a remediation plan.
 
-## Frameworks that cover this
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   PCI-DSS v4.0
     Requirement 3.5  — Render cardholder data (and the keys that
@@ -307,7 +307,7 @@ than to add a finding to a remediation plan.
     from misuse of cryptography (or non-cryptography mistaken
     for cryptography), not absence of it.
 
-## Where this shows up on certifications
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   CompTIA Security+ (SY0-701)
     Domain 1 (General Security Concepts) — cryptographic concepts
@@ -332,7 +332,7 @@ than to add a finding to a remediation plan.
     opening play is \`grep -r 'base64' .\` against any repo
     you've pulled.
 
-## MITRE ATT&CK mapping
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
 What you simulated maps to:
 
@@ -351,7 +351,7 @@ techniques in published threat reports. The fact that defenders
 and attackers both use base64 — defenders erroneously, attackers
 deliberately — is the whole point.
 
-## What a defender should actually do about this
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   1. Move the API key to a real secrets backend. Vesta is on
      AWS; AWS Secrets Manager + IAM-scoped runtime identity is
@@ -383,7 +383,7 @@ deliberately — is the whole point.
      not encryption" and link it from the code-review checklist.
      This will save a future Theo from making the same mistake.
 
-## Closing thought
+─── CLOSING THOUGHT ──────────────────────────────────────────
 
 The mistake is mundane. "I obscured the value" feels like a
 security improvement; "I obscured the value via a published,

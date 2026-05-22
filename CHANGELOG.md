@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `level0@web` — "Meridian's Forgotten Backup Folder." First level of
+  the web track. Player audits Meridian State University's public web
+  stack ahead of a cyber-insurance renewal; `gobuster` reveals an
+  autoindexed `/backup/` directory left by a dismissed agency, holding
+  a 4,217-row student-records CSV (FERPA-grade exposure) and a
+  plaintext DB credential note. Teaches `gobuster` and `curl`. Maps to
+  CWE-548 (Information Exposure Through Directory Listing), CWE-552,
+  CWE-200, CWE-798, FERPA (34 CFR Part 99), NIST 800-171, OWASP A05
+  (Security Misconfiguration), and MITRE T1083 / T1595.003 / T1190.
+- New client: **Meridian State University** — Pacific Northwest public
+  regional university (~30,000 students), FERPA in scope. Introduces a
+  new recurring character (Carlos, Meridian's in-house web developer;
+  inherited the public web stack from a dismissed agency that left
+  artifacts strewn across the production server).
 - `level0@crypto` — "Theo's Safer API Key." First level of the crypto
   track. Player audits a Vesta Retail payment-deploy script ahead of
   the client's PCI-DSS re-attestation; a junior backend engineer
@@ -31,10 +45,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New client: **Atlas Health** — Pacific Northwest healthcare provider
   (~400k patients), HIPAA in scope. Introduces a new recurring character
   (Marcus, the Atlas DevOps lead).
-- New track scaffolding: `levels/network.js` and `levels/crypto.js`
-  registered in `levels/index.js`. The lobby auto-detects both new
-  tracks and the `help` command's `NETWORK RECON` and `CRYPTOGRAPHY`
-  sections now render un-dimmed.
+- New track scaffolding: `levels/network.js`, `levels/crypto.js`, and
+  `levels/web.js` registered in `levels/index.js`. The lobby auto-detects
+  the new tracks and the `help` command's `NETWORK RECON`, `CRYPTOGRAPHY`,
+  and `WEB RECON` sections now render un-dimmed.
 - 1200×630 `og-image.png` for link unfurls in Slack, Discord, iMessage,
   and Twitter (`og:image` + `twitter:image`; `twitter:card` upgraded
   from `summary` to `summary_large_image`). Source template lives at
@@ -86,18 +100,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Level-content files (`welcome.md`, `lessons-learned.md`) reformatted
+  into a shared visual template using box-drawing-character dividers,
+  since the terminal doesn't render markdown.
+  - `welcome.md` (level0 only — level0@linux predates the template and
+    is sufficiently different in shape that retrofitting is left for
+    later) gets four labeled sections separated by `─── HEADER ───`
+    dividers matching the lobby's aesthetic: a one-line workstation
+    header + one-sentence scene-set, a clean NEW COMMANDS block, a
+    "what this tool does" conceptual section, and a numbered HOW TO
+    PLAY checklist at the bottom. Compresses ~70 lines of running
+    prose into ~50 lines with strong visual hierarchy. Scenario
+    backstory that lived in welcome.md now lives only in
+    engagement-notes.md (single source of truth).
+  - `lessons-learned.md` (every level) opens with a `═══ POST-MORTEM
+    ═══` heavy-rule banner, then uses 7 single-rule `─── SECTION ───`
+    dividers in a consistent order: THE BLUNT VERSION → THE CONSULTING-
+    FIRM ANGLE → FRAMEWORKS THAT COVER THIS → WHERE THIS SHOWS UP ON
+    CERTIFICATIONS → MITRE ATT&CK MAPPING → WHAT A DEFENDER SHOULD
+    ACTUALLY DO → CLOSING THOUGHT. Section content (CWE / framework /
+    MITRE / cert citations) is preserved — the change is visual only.
+  - Future level builds must follow the same template.
 - `help` command grouped by track with an availability indicator: tracks
   with shipped level data render in their normal color; tracks the engine
   supports but has no level data for yet render dimmed with a
   "(no levels yet — commands available; no level to use them on)" hint.
   Player now sees the roadmap at a glance without confusion about what
   actually works today.
-- Playtest grows from 50 → 84 checks: new lobby-detection assertions
-  for both new tracks, a level0@network walkthrough (connect, prompt
+- Playtest grows from 50 → 107 checks: new lobby-detection assertions
+  for all three new tracks, a level0@network walkthrough (connect, prompt
   identity, file listing, nmap finding, `nmap -sV` version detection,
-  recurring-character continuity), and a level0@crypto walkthrough
-  (connect, files, `base64 <file>` decode, `base64 -d <string>` decode,
-  PCI-DSS / CWE-261 post-mortem citations).
+  recurring-character continuity), a level0@crypto walkthrough (connect,
+  files, `base64 <file>` decode, `base64 -d <string>` decode, PCI-DSS /
+  CWE-261 post-mortem citations), and a level0@web walkthrough (connect,
+  `gobuster` against www.meridian.edu, `/admin` properly gated as 401,
+  `curl` on the `/backup/` autoindex, FERPA-grade CSV finding, leaked
+  db-creds.txt credential, CWE-548 / OWASP A05 post-mortem citations).
 
 ## [0.2.0] - 2026-05-21
 

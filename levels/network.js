@@ -54,49 +54,48 @@ export const networkLevels = {
         "welcome.md": {
           type: "file",
           content:
-`Driftwood internal security — Atlas Health engagement, quarterly
-perimeter verification.
+`─── Driftwood Systems / Network Audit Workstation ─────────────
 
-You're on the Driftwood audit workstation, logged in as \`secops\` —
-the shared service account the security team uses for client
-perimeter checks. The hostname is \`network\` (our internal naming
-for the network-recon jumpbox).
+You're logged in as \`secops\` — the security team's shared service
+account. The host \`network\` is our network-recon jumpbox for
+client perimeter checks.
 
-Today's job: verify Atlas Health's claim. They told us last quarter
-that their staging environment is VPN-only. We do a routine
-perimeter check on every client engagement, every quarter. Today
-is Atlas's turn.
+Today's client: Atlas Health. Last quarter they told us their
+staging environment is VPN-only. Today is their quarterly
+verification — we check whether that's actually true. If it
+isn't, depending on what's exposed, that's a HIPAA breach.
 
-If the claim holds, this is a 10-minute task and we move on. If it
-doesn't hold, we have a finding to write up — and depending on
-what's exposed, possibly a HIPAA breach to disclose.
 
-New commands you'll use today:
+─── NEW COMMANDS ──────────────────────────────────────────────
 
-  nmap <hostname>       Port scan. Shows what ports are listening.
-  nmap -sV <hostname>   Same, plus service version detection.
+  nmap <hostname>       Port scan. Lists ports the host has open.
+  nmap -sV <hostname>   Same, plus service-version detection.
 
-What "ports" are: when a service runs on a server, it binds to a
-numbered port and listens for traffic. Some common ones:
+
+─── WHAT A PERIMETER AUDIT DOES ───────────────────────────────
+
+When a service runs on a server, it binds to a numbered port and
+listens for connections. Common ones:
 
   22     ssh (admin login)
   80     http (web, unencrypted)
-  443    https (web, TLS-encrypted)
+  443    https (web, TLS)
   3306   mysql
   5432   postgresql
   3389   rdp (Windows remote desktop)
 
-A perimeter audit asks one question: "which ports are open to the
-internet on each of this client's hosts?" Cross-reference what
-SHOULD be open (per engagement docs) against what ACTUALLY is. The
-gap between those two lists is the finding.
+The audit asks one question: which ports are open to the internet
+on each host? Cross-reference what SHOULD be open (per engagement
+docs) against what ACTUALLY is. The gap is the finding.
 
-Read engagement-notes.md next for Atlas Health context, then
-atlas-perimeter.txt for the hostnames we audit and what each should
-expose. Run nmap against each one. Look for ports that shouldn't
-be there.
 
-When you've found it, read lessons-learned.md.
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat engagement-notes.md     Atlas Health / Marcus / HIPAA
+  2.  cat atlas-perimeter.txt     Hosts in scope + expected ports
+  3.  nmap <each host>            Find unexpected open ports
+  4.  nmap -sV <surprising host>  Identify the service version
+  5.  cat lessons-learned.md      Post-mortem (after step 3-4)
 `
         },
 
@@ -187,7 +186,9 @@ controlled conditions.
         "lessons-learned.md": {
           type: "file",
           content:
-`# Post-mortem: what you just found, and why it matters
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
 
 You just discovered that Atlas Health's staging database is still
 exposed to the open internet, three months after their DevOps lead
@@ -196,7 +197,7 @@ enough for a finding. Combined with the default credential Marcus
 mentioned and never rotated, it's an active, easily-exploitable
 data exposure with HIPAA implications.
 
-## The blunt version
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 Public-facing database servers are one of the most reliable
 indicators of compromise readiness in real-world breach reports.
@@ -220,7 +221,7 @@ For a healthcare org specifically, "when" answers in two ways:
      Atlas has 400,000 patients. A confirmed breach here is
      front-page news.
 
-## The consulting-firm angle
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 The pattern that made this happen is mundane:
 
@@ -240,7 +241,7 @@ us to surface this kind of finding within 24 hours of discovery,
 and Priya needs to be in the room when it's communicated to
 Marcus — the conversation goes better when there's no surprise.
 
-## Frameworks that cover this
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   HIPAA Security Rule (45 CFR 164.312)
     164.312(a)(1) Access Control — implement technical policies
@@ -285,7 +286,7 @@ Marcus — the conversation goes better when there's no surprise.
   OWASP Top 10 (2021) — A05: Security Misconfiguration
     Covers public exposure of services that should be internal.
 
-## Where this shows up on certifications
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   CompTIA Security+ (SY0-701)
     Domain 4 (Security Operations) — vulnerability scanning,
@@ -307,7 +308,7 @@ Marcus — the conversation goes better when there's no surprise.
     The first command on every box on the exam is essentially
     \`nmap -sV <target>\`. You just ran the opening play.
 
-## MITRE ATT&CK mapping
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
 What you simulated maps to:
 
@@ -324,7 +325,7 @@ T1046 is one of the most common opening techniques in published
 threat reports. T1190 is what shows up when the finding goes
 unfixed.
 
-## What a defender should actually do about this
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   1. Continuous external attack-surface management, not quarterly
      perimeter checks. Tools: Shodan Monitor, Censys ASM, Bishop
@@ -351,7 +352,7 @@ unfixed.
   5. Quarterly perimeter checks remain the floor, not the
      ceiling. Continuous monitoring is the ceiling.
 
-## Closing thought
+─── CLOSING THOUGHT ──────────────────────────────────────────
 
 In security, "we've done that" and "it's continuously verified"
 mean different things. Marcus's claim was a snapshot. The
