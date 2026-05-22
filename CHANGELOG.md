@@ -21,7 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of Sensitive Information), NIST SP 800-86 (Guide to Integrating
   Forensic Techniques into Incident Response), NIST 800-171 Rev. 2,
   CMMC Level 2 (IR domain), DFARS 252.204-7012, and MITRE T1078 /
-  T1583 / T1592.
+  T1583 / T1592. `case-summary.txt` also leaks a forensic-archive
+  handoff password (`POL-IIS-2026-0007-handoff`) as the natural
+  breadcrumb for a future `level1@forensics`, matching the per-track
+  credential-chain pattern used by all other tracks (linux's
+  `please-rotate-me`, network's `atlas-default-2025`, crypto's
+  Vesta API key, web's `M3rid14n!2023-prod`).
 - New client: **Polaris Defense Systems** — defense industrial-base
   subcontractor (~$80M revenue, ~250 engineers; Reston VA / Manassas
   VA), CMMC Level 2 / NIST 800-171 in scope, DoD Secret-cleared
@@ -147,7 +152,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "(no levels yet — commands available; no level to use them on)" hint.
   Player now sees the roadmap at a glance without confusion about what
   actually works today.
-- Playtest grows from 50 → 128 checks: new lobby-detection assertions
+- Playtest grows from 50 → 129 checks: new lobby-detection assertions
   for all four new tracks, a level0@network walkthrough (connect, prompt
   identity, file listing, nmap finding, `nmap -sV` version detection,
   recurring-character continuity), a level0@crypto walkthrough (connect,
@@ -159,7 +164,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a level0@forensics walkthrough (connect, `file` and `exif` on
   the alibi photo, DateTimeOriginal mismatch, Key Largo GPS coordinates,
   iPhone 14 Pro device identification, CMMC / NIST 800-171 / 800-86 /
-  CWE-200 post-mortem citations).
+  CWE-200 post-mortem citations, and forensic-archive handoff password
+  breadcrumb for the future `level1@forensics`).
 
 ## [0.2.0] - 2026-05-21
 

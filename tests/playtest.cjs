@@ -340,6 +340,10 @@ async function termText(page) {
   check("engagement-notes.md cites CMMC Level 2",                     t.includes("CMMC Level 2"));
   check("engagement-notes.md cites NIST 800-171",                     t.includes("NIST SP 800-171") || t.includes("NIST 800-171"));
 
+  await typeAndEnter(page, "cat case-summary.txt");
+  t = await termText(page);
+  check("case-summary.txt leaks level1@forensics breadcrumb password", t.includes("POL-IIS-2026-0007-handoff"));
+
   await typeAndEnter(page, "cat lessons-learned.md");
   t = await termText(page);
   check("lessons-learned.md cites NIST SP 800-86 (Forensics Guide)",  t.includes("800-86"));
