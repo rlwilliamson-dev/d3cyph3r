@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-22
+
+"Pre-Foundation iteration." Four new level0s — one each for the
+Network, Crypto, Web, and Forensics tracks — plus four new clients
+covering HIPAA, PCI-DSS, FERPA, and CMMC / NIST 800-171 compliance
+regimes. Site security hardening (9 response headers, A+ rating on
+securityheaders.com). Visual harmonization of all welcome.md and
+lessons-learned.md files. Per-track credential-chain pattern
+formalized so every level cleanly leaks the password for the next.
+
 ### Added
 
 - `level0@forensics` — "Reed's Soccer Alibi." First level of the
@@ -266,6 +276,7 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/releases/tag/v0.1.0
