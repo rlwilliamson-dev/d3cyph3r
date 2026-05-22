@@ -8,3 +8,7 @@ node_modules/
 
 # Local Claude Code onboarding — kept out of the public repo
 CLAUDE.md
+
+# Local testing cheat sheet (level passwords by track) — kept out of
+# the public repo since shipping these defeats the puzzle
+PASSWORDS.md
