@@ -41,6 +41,7 @@ async function termText(page) {
   check("Lobby shows Driftwood welcome on first visit", t.includes("WELCOME TO DRIFTWOOD SYSTEMS"));
   check("Lobby lists Linux track",                      t.includes("ssh level0@linux"));
   check("Lobby lists Network track",                    t.includes("ssh level0@network"));
+  check("Lobby lists Crypto track",                     t.includes("ssh level0@crypto"));
 
   await typeAndEnter(page, "ssh level0@linux");
   await page.waitForTimeout(300);
@@ -213,6 +214,45 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@network returns to lobby",                  (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 0 — Theo's Safer API Key (crypto track) ───────────────
+  // No password (level0 of each track is the entry point).
+  await typeAndEnter(page, "ssh level0@crypto");
+  await page.waitForTimeout(300);
+  t = await termText(page);
+  check("Connected to level0@crypto",                                 t.includes("Connected: level0@crypto"));
+  check("Prompt host updated to 'crypto'",                            (await page.locator("#prompt-host").innerText()) === "crypto");
+  check("Prompt user shows in-world identity 'secops'",               (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Objective references Vesta Retail",                          t.includes("Vesta Retail"));
+  check("Lesson mentions Theo (new recurring character)",             t.includes("Theo"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "deploy.sh", "api-key.b64", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "base64 api-key.b64");
+  t = await termText(page);
+  check("base64 api-key.b64 decodes to the Vesta API key",            t.includes("vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3"));
+
+  await typeAndEnter(page, "base64 -d dmVzdGFfcGtfbGl2ZV9IeEs0blA5cVIydlQ4WXdCbUM1ZEUz");
+  t = await termText(page);
+  check("base64 -d <string> also works for direct decoding",          /vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3/.test(t));
+
+  await typeAndEnter(page, "cat engagement-notes.md");
+  t = await termText(page);
+  check("engagement-notes.md mentions Priya (continuity)",            t.includes("Priya"));
+  check("engagement-notes.md mentions Saanvi (Vesta CTO)",            t.includes("Saanvi"));
+
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("lessons-learned.md cites PCI-DSS Requirement 3.5",           t.includes("PCI-DSS") && t.includes("3.5"));
+  check("lessons-learned.md cites CWE-261 (Weak Encoding for Password)", t.includes("CWE-261"));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level0@crypto returns to lobby",                   (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));

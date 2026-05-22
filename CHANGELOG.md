@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `level0@crypto` — "Theo's Safer API Key." First level of the crypto
+  track. Player audits a Vesta Retail payment-deploy script ahead of
+  the client's PCI-DSS re-attestation; a junior backend engineer
+  "secured" the production API key by base64-encoding it. Teaches
+  `base64` and `base64 -d`. Maps to CWE-261 (Weak Encoding for
+  Password), CWE-326, CWE-256, PCI-DSS 3.5 / 3.6, OWASP A02
+  (Cryptographic Failures), and MITRE T1027.013.
+- New client: **Vesta Retail** — Level 2 e-commerce merchant ($200M
+  annual revenue), PCI-DSS in scope. Introduces two new recurring
+  characters: Theo (Vesta backend engineer; well-intentioned, missing
+  the encoding-vs-encryption distinction) and Saanvi (Vesta CTO).
 - `level0@network` — "Atlas Health Perimeter Check." First level of the
   network track. Player verifies a healthcare client's claim that their
   staging environment is VPN-only; `nmap` reveals a production-grade
@@ -20,9 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New client: **Atlas Health** — Pacific Northwest healthcare provider
   (~400k patients), HIPAA in scope. Introduces a new recurring character
   (Marcus, the Atlas DevOps lead).
-- New track scaffolding: `levels/network.js` registered in
-  `levels/index.js`. The lobby auto-detects the new track and the `help`
-  command's `NETWORK RECON` section now renders un-dimmed.
+- New track scaffolding: `levels/network.js` and `levels/crypto.js`
+  registered in `levels/index.js`. The lobby auto-detects both new
+  tracks and the `help` command's `NETWORK RECON` and `CRYPTOGRAPHY`
+  sections now render un-dimmed.
 - 1200×630 `og-image.png` for link unfurls in Slack, Discord, iMessage,
   and Twitter (`og:image` + `twitter:image`; `twitter:card` upgraded
   from `summary` to `summary_large_image`). Source template lives at
@@ -37,10 +49,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "(no levels yet — commands available; no level to use them on)" hint.
   Player now sees the roadmap at a glance without confusion about what
   actually works today.
-- Playtest grows from 50 → 66 checks: new lobby-detection assertion for
-  the network track, plus a level0@network walkthrough (connect, prompt
+- Playtest grows from 50 → 84 checks: new lobby-detection assertions
+  for both new tracks, a level0@network walkthrough (connect, prompt
   identity, file listing, nmap finding, `nmap -sV` version detection,
-  recurring-character continuity).
+  recurring-character continuity), and a level0@crypto walkthrough
+  (connect, files, `base64 <file>` decode, `base64 -d <string>` decode,
+  PCI-DSS / CWE-261 post-mortem citations).
 
 ## [0.2.0] - 2026-05-21
 
