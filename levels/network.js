@@ -30,7 +30,7 @@ export const networkLevels = {
     track: "network",
     playerUser: "secops",
     objective: "Verify Atlas Health's claim that their staging environment is VPN-only — and document what's exposed if it isn't.",
-    lesson: "Day three. Atlas Health is one of Driftwood's largest healthcare clients — they handle PHI for ~400,000 patients across the Pacific Northwest. Their DevOps lead, Marcus, told Priya last quarter that staging.atlas.health is now VPN-only. We do a routine perimeter verification on every client engagement every quarter. Today is Atlas's turn. You're on Driftwood's audit workstation (the shell calls you `secops`, that's the shared service account the security team uses for these checks). Read welcome.md first — it explains nmap. Then read the engagement notes, then start scanning. When you've found what's wrong, read lessons-learned.md.",
+    lesson: "Atlas Health is one of Driftwood's largest healthcare clients — they handle PHI for ~400,000 patients across the Pacific Northwest. Their DevOps lead, Marcus, told Priya last quarter that staging.atlas.health is now VPN-only. We do a routine perimeter verification on every client engagement every quarter; today is Atlas's turn. You're on Driftwood's audit workstation (the shell calls you `secops`, the shared service account the security team uses for these checks). Read welcome.md first — it explains nmap. Then read the engagement notes, then start scanning. When you've found what's wrong, read lessons-learned.md.",
     net: {
       "staging.atlas.health": [
         { port: 22,   state: "open", service: "ssh",        version: "OpenSSH 8.9p1 Ubuntu" },
