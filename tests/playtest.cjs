@@ -42,6 +42,7 @@ async function termText(page) {
   check("Lobby lists Linux track",                      t.includes("ssh level0@linux"));
   check("Lobby lists Network track",                    t.includes("ssh level0@network"));
   check("Lobby lists Crypto track",                     t.includes("ssh level0@crypto"));
+  check("Lobby lists Web track",                        t.includes("ssh level0@web"));
 
   await typeAndEnter(page, "ssh level0@linux");
   await page.waitForTimeout(300);
@@ -253,6 +254,57 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@crypto returns to lobby",                   (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 0 — Meridian's Forgotten Backup Folder (web track) ────
+  // No password (level0 of each track is the entry point).
+  await typeAndEnter(page, "ssh level0@web");
+  await page.waitForTimeout(300);
+  t = await termText(page);
+  check("Connected to level0@web",                                    t.includes("Connected: level0@web"));
+  check("Prompt host updated to 'web'",                               (await page.locator("#prompt-host").innerText()) === "web");
+  check("Prompt user shows in-world identity 'secops'",               (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Objective references Meridian State University",             t.includes("Meridian State University"));
+  check("Lesson mentions Carlos (new recurring character)",           t.includes("Carlos"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "meridian-scope.txt", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "gobuster https://www.meridian.edu");
+  t = await termText(page);
+  check("gobuster reveals /backup as Status 200",                     /\/backup\s+\(Status: 200\)/.test(t));
+  check("gobuster shows /admin properly gated as 401",                /\/admin\s+\(Status: 401\)/.test(t));
+
+  await typeAndEnter(page, "curl https://www.meridian.edu/backup/");
+  t = await termText(page);
+  check("curl on /backup/ shows the autoindex listing",               t.includes("Index of /backup"));
+  check("autoindex lists the student-records CSV",                    t.includes("students_export_2023.csv"));
+  check("autoindex lists the leaked DB credential note",              t.includes("db-creds.txt"));
+
+  await typeAndEnter(page, "curl https://www.meridian.edu/backup/students_export_2023.csv");
+  t = await termText(page);
+  check("CSV exposes student PII (FERPA finding)",                    t.includes("patel.a@meridian.edu") && /3\.91/.test(t));
+  check("CSV is truncated with the 4,217-records hint",               t.includes("4,217 records"));
+
+  await typeAndEnter(page, "curl https://www.meridian.edu/backup/db-creds.txt");
+  t = await termText(page);
+  check("db-creds.txt leaks the M3rid14n!2023-prod credential",       t.includes("M3rid14n!2023-prod"));
+
+  await typeAndEnter(page, "cat engagement-notes.md");
+  t = await termText(page);
+  check("engagement-notes.md mentions Priya (continuity)",            t.includes("Priya"));
+  check("engagement-notes.md cites FERPA as compliance regime",       t.includes("FERPA"));
+
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("lessons-learned.md cites CWE-548 (Directory Listing)",       t.includes("CWE-548"));
+  check("lessons-learned.md cites OWASP A05 Security Misconfiguration", t.includes("A05") && t.includes("Misconfiguration"));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level0@web returns to lobby",                      (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
