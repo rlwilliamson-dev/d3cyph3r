@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-This is **v0.4** — engine surface complete (all 7 tracks have their commands wired), 6 levels shipped across 5 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+This is **v0.5** — engine surface complete (all 7 tracks have their commands wired), 7 levels shipped across 6 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -17,8 +17,9 @@ This is **v0.4** — engine surface complete (all 7 tracks have their commands w
 | Crypto | `level0@crypto` ("Theo's Safer API Key") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder") | Meridian State University | FERPA |
 | Forensics | `level0@forensics` ("Reed's Soccer Alibi") | Polaris Defense Systems | CMMC / NIST 800-171 |
+| OSINT | `level0@osint` ("Veridian's Open Letter") | Veridian Analytics | HIPAA / HITRUST CSF |
 
-OSINT and Cloud tracks have their command surfaces shipped (see "Commands implemented" below) but no level content yet — the next `level0@osint` or `level0@cloud` will be a pure content PR with no engine work needed. New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The Cloud track has its command surface shipped (see "Commands implemented" below) but no level content yet — the next `level0@cloud` will be a pure content PR with no engine work needed. New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Running it locally
 
