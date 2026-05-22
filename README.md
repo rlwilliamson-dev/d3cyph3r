@@ -65,29 +65,30 @@ d3cyph3r/
     ├── network.js          Network track (1 level)
     ├── crypto.js           Crypto track (1 level)
     ├── web.js              Web track (1 level)
-    └── forensics.js        Forensics track (1 level)
+    ├── forensics.js        Forensics track (1 level)
+    ├── osint.js            OSINT track (engine ready; no levels yet)
+    └── cloud.js            Cloud track (engine ready; no levels yet)
 ```
 
 Adding a new level is a single object literal under `levels/<track>.js`. The schema is documented at the top of `levels/linux.js`.
 
-## Tracks not yet shipped
+## Tracks scaffolded but no levels yet
 
-Two tracks remain. Both need new simulated commands under `js/commands/` before levels can land:
+Both the **OSINT** and **Cloud** tracks have their command surfaces shipped (see "Commands implemented" below) but no level data yet. The next level0 for either track can land as pure content — no further engine work needed.
 
-- **OSINT** — no OSINT-specific commands yet. Would need surfaces for breach lookups, archive.org-style historical lookups, social-media OSINT.
-- **Cloud** — no `aws` / `az` / `gcloud` surfaces yet. Would need fake CLI implementations covering IAM, S3 / blob storage, security groups / NSGs, and the canonical misconfigurations of each.
-
-The lobby auto-detects which tracks have level data and only lists those, so the rest of the engine is ready to receive both.
+The lobby auto-detects which tracks have level data and only lists those, so adding the first level0 for OSINT or Cloud will automatically un-dim their `help` sections and add them to the engagement list.
 
 ## Commands implemented
 
 All commands from the original engine survive the refactor, with `exit` / `logout` added for muscle memory. See `help` inside the terminal for the full reference. Track-by-track:
 
-- **Linux:** `ls` / `cd` / `cat` / `pwd` / `whoami` / `echo` / `grep` / `find` / `env`
+- **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `env`
 - **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig`
-- **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor`
+- **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
 - **Web:** `curl` (+ `-I`) / `gobuster` / `cookies`
-- **Forensics:** `file` (+ `*`) / `strings` / `exif`
+- **Forensics:** `file` (+ `*`) / `strings` / `exif` / `sha256sum` / `md5sum`
+- **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo`
+- **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`
 
 ## Credit

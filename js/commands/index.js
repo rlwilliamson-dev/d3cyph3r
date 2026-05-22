@@ -7,6 +7,8 @@ import { networkCommands }   from "./network.js";
 import { cryptoCommands }    from "./crypto.js";
 import { webCommands }       from "./web.js";
 import { forensicsCommands } from "./forensics.js";
+import { osintCommands }     from "./osint.js";
+import { cloudCommands }     from "./cloud.js";
 import { shellCommands }     from "./shell.js";
 
 export const COMMANDS = {
@@ -15,6 +17,8 @@ export const COMMANDS = {
   ...cryptoCommands,
   ...webCommands,
   ...forensicsCommands,
+  ...osintCommands,
+  ...cloudCommands,
   ...shellCommands,
 };
 

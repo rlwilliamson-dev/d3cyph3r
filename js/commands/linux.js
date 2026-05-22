@@ -199,4 +199,135 @@ export const linuxCommands = {
     const lines = Object.entries(vars).map(([k, v]) => `${k}=${v}`);
     return { text: lines.join("\n"), cls: "warn" };
   },
+
+  // head / tail share the same -n parsing: `head [-n N] <file>`.
+  // If -n is given as a separate token it's parsed; otherwise N defaults
+  // to 10. Works against level.files (flat map) for cross-level
+  // consistency with grep / find.
+  head(level, arg) {
+    if (!arg) return { text: "Usage: head [-n N] <file>", cls: "err" };
+    const { n, file } = parseHeadTailArgs(arg);
+    if (file === null) return { text: "Usage: head [-n N] <file>", cls: "err" };
+    if (!(file in level.files)) return { text: `head: cannot open '${file}' for reading: No such file or directory`, cls: "err" };
+    const content = String(level.files[file] || "");
+    if (!content) return { text: "(empty file)", cls: "dim" };
+    return { text: content.split("\n").slice(0, n).join("\n"), cls: "out" };
+  },
+
+  tail(level, arg) {
+    if (!arg) return { text: "Usage: tail [-n N] <file>", cls: "err" };
+    const { n, file } = parseHeadTailArgs(arg);
+    if (file === null) return { text: "Usage: tail [-n N] <file>", cls: "err" };
+    if (!(file in level.files)) return { text: `tail: cannot open '${file}' for reading: No such file or directory`, cls: "err" };
+    const content = String(level.files[file] || "");
+    if (!content) return { text: "(empty file)", cls: "dim" };
+    return { text: content.split("\n").slice(-n).join("\n"), cls: "out" };
+  },
+
+  // stat: detailed file metadata. Pulls from level.permissions (the
+  // primary metadata source) and level.statData (optional override for
+  // mtime/uid/etc). Synthesizes reasonable defaults for anything missing.
+  stat(level, arg) {
+    if (!arg) return { text: "Usage: stat <file>", cls: "err" };
+    if (!(arg in level.files)) return { text: `stat: cannot stat '${arg}': No such file or directory`, cls: "err" };
+    const meta  = level.permissions?.[arg] || {};
+    const extra = level.statData?.[arg]    || {};
+    const size  = meta.size ?? String(level.files[arg] || "").length;
+    const mode  = meta.mode  || "-rw-r--r--";
+    const owner = meta.owner || getCurrentUser(level);
+    const group = meta.group || getCurrentGroup(level);
+    const mtime = extra.mtime || "2026-05-22 10:00:00.000000000 +0000";
+    const atime = extra.atime || mtime;
+    const ctime = extra.ctime || mtime;
+    const blocks = Math.max(1, Math.ceil(size / 512));
+
+    const lines = [
+      `  File: ${arg}`,
+      `  Size: ${String(size).padEnd(12)}  Blocks: ${String(blocks).padEnd(6)}  IO Block: 4096   regular file`,
+      `Device: 252,1     Inode: ${extra.inode || "1048576"}     Links: 1`,
+      `Access: (${extra.modeNumeric || "0644"}/${mode})  Uid: (${extra.uid || "1000"}/ ${owner})   Gid: (${extra.gid || "1000"}/ ${group})`,
+      `Access: ${atime}`,
+      `Modify: ${mtime}`,
+      `Change: ${ctime}`,
+      ` Birth: -`,
+    ];
+    return { text: lines.join("\n"), cls: "out" };
+  },
+
+  // ps: process listing. Reads level.processes (array of { pid, tty,
+  // time, cmd }). Levels without a `processes` field show a graceful
+  // empty-state message instead of crashing.
+  ps(level) {
+    const procs = level.processes;
+    if (!procs || procs.length === 0) {
+      return { text: "(no processes visible from this shell)", cls: "dim" };
+    }
+    const pidW  = Math.max(3, ...procs.map(p => String(p.pid).length));
+    const ttyW  = Math.max(3, ...procs.map(p => String(p.tty || "?").length));
+    const timeW = Math.max(8, ...procs.map(p => String(p.time || "00:00:00").length));
+    const lines = [
+      `${"PID".padStart(pidW)} ${"TTY".padEnd(ttyW)} ${"TIME".padEnd(timeW)} CMD`,
+      ...procs.map(p => `${String(p.pid).padStart(pidW)} ${String(p.tty || "?").padEnd(ttyW)} ${String(p.time || "00:00:00").padEnd(timeW)} ${p.cmd}`),
+    ];
+    return { text: lines.join("\n"), cls: "out" };
+  },
+
+  // diff: classic line-by-line file comparison. Levels can override the
+  // output with `level.diffOut["file1:file2"]` for a curated teaching
+  // diff; otherwise we compute a basic per-line comparison in the
+  // standard diff(1) annotation format (`Nc N`, `< old`, `---`, `> new`).
+  diff(level, arg) {
+    if (!arg) return { text: "Usage: diff <file1> <file2>", cls: "err" };
+    const parts = arg.trim().split(/\s+/);
+    if (parts.length < 2) return { text: "Usage: diff <file1> <file2>", cls: "err" };
+    const [f1, f2] = parts;
+    if (!(f1 in level.files)) return { text: `diff: ${f1}: No such file or directory`, cls: "err" };
+    if (!(f2 in level.files)) return { text: `diff: ${f2}: No such file or directory`, cls: "err" };
+
+    // Level-curated override
+    const override = level.diffOut?.[`${f1}:${f2}`];
+    if (override) return { text: override, cls: "warn" };
+
+    const a = String(level.files[f1] || "").split("\n");
+    const b = String(level.files[f2] || "").split("\n");
+    if (a.join("\n") === b.join("\n")) return { text: "(files are identical)", cls: "dim" };
+
+    const lines = [];
+    const maxLen = Math.max(a.length, b.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (a[i] === b[i]) continue;
+      if (a[i] !== undefined && b[i] !== undefined) {
+        lines.push(`${i + 1}c${i + 1}`);
+        lines.push(`< ${a[i]}`);
+        lines.push(`---`);
+        lines.push(`> ${b[i]}`);
+      } else if (a[i] !== undefined) {
+        lines.push(`${i + 1}d${i + 1}`);
+        lines.push(`< ${a[i]}`);
+      } else {
+        lines.push(`${i + 1}a${i + 1}`);
+        lines.push(`> ${b[i]}`);
+      }
+    }
+    return { text: lines.join("\n"), cls: "warn" };
+  },
 };
+
+// Shared parser for head / tail. Returns { n, file } or { file: null }
+// on malformed args. Accepts: "<file>", "-n <N> <file>", "<file> -n <N>"
+// (the last form is rare but matches GNU coreutils behavior).
+function parseHeadTailArgs(arg) {
+  const parts = arg.trim().split(/\s+/);
+  let n = 10;
+  let file = null;
+  for (let i = 0; i < parts.length; i++) {
+    if (parts[i] === "-n" && parts[i + 1] !== undefined) {
+      const parsed = parseInt(parts[i + 1], 10);
+      if (!isNaN(parsed) && parsed > 0) n = parsed;
+      i++;
+      continue;
+    }
+    if (file === null) file = parts[i];
+  }
+  return { n, file };
+}

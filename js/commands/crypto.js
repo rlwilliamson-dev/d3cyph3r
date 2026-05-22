@@ -1,4 +1,4 @@
-// Crypto-track commands: base64, rot13, xxd, decode-hex, hash-id, john, xor.
+// Crypto-track commands: base64, rot13, xxd, decode-hex, hash-id, john, xor, jwt.
 
 import { rot13 } from "../util/rot13.js";
 import { hexToAscii, isHexString, formatHexDump } from "../util/hex.js";
@@ -129,5 +129,80 @@ export const cryptoCommands = {
     }).join("");
 
     return { text: `XOR result (key=0x${key.toString(16).toUpperCase().padStart(2,"0")}): ${result}`, cls: "success" };
+  },
+
+  // jwt: decode a JWT (header + payload, signature shown raw). Handles
+  // the base64url variant correctly (+→-, /→_, padding stripped) and
+  // surfaces common red flags (alg=none, expired, empty signature).
+  //
+  // Levels can optionally override the output via
+  //   level.jwtDecode[token] = "...curated output..."
+  // when they want a specific narrative around a known token; otherwise
+  // the decoder runs and prints whatever's in the JWT.
+  jwt(level, arg) {
+    if (!arg) return { text: "Usage: jwt <token>", cls: "err" };
+    const token = arg.trim();
+
+    if (level.jwtDecode?.[token]) {
+      return { text: level.jwtDecode[token], cls: "warn" };
+    }
+
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return { text: "jwt: invalid token format (expected three dot-separated segments: header.payload.signature)", cls: "err" };
+    }
+    const [headerB64, payloadB64, signatureB64] = parts;
+
+    // base64url → base64 → ASCII (atob is sync; perfect for our handlers).
+    const decodeB64Url = (s) => {
+      const b64 = s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice(0, (4 - s.length % 4) % 4);
+      try { return atob(b64); } catch (_) { return null; }
+    };
+
+    const headerJson  = decodeB64Url(headerB64);
+    const payloadJson = decodeB64Url(payloadB64);
+    if (headerJson === null || payloadJson === null) {
+      return { text: "jwt: failed to base64url-decode header or payload segment", cls: "err" };
+    }
+
+    let header, payload;
+    try { header  = JSON.parse(headerJson);  } catch (_) { header  = { _raw: headerJson  }; }
+    try { payload = JSON.parse(payloadJson); } catch (_) { payload = { _raw: payloadJson }; }
+
+    const indent = (s) => s.split("\n").map(l => "  " + l).join("\n");
+    const lines = [
+      `Decoded JWT`,
+      `──────────────────────────────────────────`,
+      ``,
+      `Header:`,
+      indent(JSON.stringify(header, null, 2)),
+      ``,
+      `Payload:`,
+      indent(JSON.stringify(payload, null, 2)),
+      ``,
+      `Signature (raw, ${signatureB64.length} bytes):`,
+      `  ${signatureB64 || "(empty)"}`,
+    ];
+
+    // Surface common red flags so the player doesn't have to memorize CVE classes.
+    const notes = [];
+    const alg = header?.alg;
+    if (typeof alg === "string" && alg.toLowerCase() === "none") {
+      notes.push(`[!] alg: '${alg}' — server-side acceptance of an unsigned token is a known CVE class (alg=none confusion). Anyone can forge claims.`);
+    }
+    if (!signatureB64) {
+      notes.push(`[!] Signature is empty. Verify the server is actually checking it.`);
+    }
+    if (payload?.exp && typeof payload.exp === "number") {
+      const expMs = payload.exp * 1000;
+      const isExpired = expMs < Date.now();
+      notes.push(`[*] exp: ${new Date(expMs).toISOString()} (${isExpired ? "EXPIRED" : "valid"})`);
+    }
+    if (notes.length) {
+      lines.push(``, `Notes:`);
+      notes.forEach(n => lines.push(`  ${n}`));
+    }
+
+    return { text: lines.join("\n"), cls: "warn" };
   },
 };

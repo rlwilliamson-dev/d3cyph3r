@@ -45,6 +45,76 @@ async function termText(page) {
   check("Lobby lists Web track",                        t.includes("ssh level0@web"));
   check("Lobby lists Forensics track",                  t.includes("ssh level0@forensics"));
 
+  // ── Engine command-surface smoke test ─────────────────────────────
+  // Exercise every new command from the lobby (where no level data
+  // exists) and confirm it returns its usage string / graceful empty
+  // state rather than crashing. Catches wiring regressions before any
+  // level uses these commands in anger.
+
+  await typeAndEnter(page, "help");
+  t = await termText(page);
+  check("help renders OSINT section",       t.includes("OPEN-SOURCE INTEL"));
+  check("help renders CLOUD section",       t.includes("CLOUD SECURITY"));
+  check("help lists `head` (linux util)",   t.includes("head <file>"));
+  check("help lists `tail` (linux util)",   t.includes("tail <file>"));
+  check("help lists `stat` (linux util)",   t.includes("stat <file>"));
+  check("help lists `ps`  (linux util)",    /ps\s+–\s+list running processes/.test(t));
+  check("help lists `diff` (linux util)",   t.includes("diff <file1>"));
+  check("help lists `jwt` (crypto)",        t.includes("jwt <token>"));
+  check("help lists `sha256sum` (forensics)", t.includes("sha256sum <file>"));
+  check("help lists `md5sum` (forensics)",  t.includes("md5sum <file>"));
+
+  // Each new command with no args should print a usage string (or for
+  // `ps`, a graceful empty-state). These calls happen from the lobby
+  // where level.processes / level.cloud / level.sherlockResults / etc.
+  // are all undefined; the smoke test verifies graceful handling.
+  const usageProbes = [
+    ["head",         "Usage: head"],
+    ["tail",         "Usage: tail"],
+    ["stat",         "Usage: stat"],
+    ["diff",         "Usage: diff"],
+    ["jwt",          "Usage: jwt"],
+    ["sha256sum",    "Usage: sha256sum"],
+    ["md5sum",       "Usage: md5sum"],
+    ["sherlock",     "Usage: sherlock"],
+    ["hibp",         "Usage: hibp"],
+    ["wayback",      "Usage: wayback"],
+    ["crtsh",        "Usage: crtsh"],
+    ["theharvester", "Usage: theharvester"],
+    ["shodan",       "Usage: shodan"],
+    ["ipinfo",       "Usage: ipinfo"],
+  ];
+  for (const [cmd, expected] of usageProbes) {
+    await typeAndEnter(page, cmd);
+    t = await termText(page);
+    check(`${cmd} prints usage when called with no args`, t.includes(expected));
+  }
+
+  // `ps` is the one new command without a usage string — it prints a
+  // graceful empty-state message when level.processes is undefined.
+  await typeAndEnter(page, "ps");
+  t = await termText(page);
+  check("ps prints empty-state when no level.processes is set", t.includes("no processes visible"));
+
+  // `aws` (no args) prints its own multi-service usage block.
+  await typeAndEnter(page, "aws");
+  t = await termText(page);
+  check("aws prints multi-service usage when called with no args", t.includes("usage: aws") && t.includes("Available services"));
+
+  // `aws s3 ls` with no level.cloud data prints the graceful empty
+  // bucket-list message (not a crash).
+  await typeAndEnter(page, "aws s3 ls");
+  t = await termText(page);
+  check("aws s3 ls degrades gracefully when no level.cloud data exists", t.includes("no buckets visible"));
+
+  // `jwt` against a real-looking test token (the IETF / jwt.io standard
+  // sample) should actually decode — no level data required.
+  await typeAndEnter(page, "jwt eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
+  t = await termText(page);
+  check("jwt actually decodes a valid token (alg in header)",   /"alg":\s*"HS256"/.test(t));
+  check("jwt actually decodes a valid token (sub in payload)",  /"sub":\s*"1234567890"/.test(t));
+  check("jwt actually decodes a valid token (name in payload)", t.includes("John Doe"));
+
   await typeAndEnter(page, "ssh level0@linux");
   await page.waitForTimeout(300);
   t = await termText(page);
