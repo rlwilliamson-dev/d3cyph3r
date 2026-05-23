@@ -72,9 +72,9 @@
 //      The release notes inherit the anti-spoiler rule from step 1.
 //
 // VERSION is the full semver string (used by tooling and the tag).
-// VERSION_DISPLAY is the major.minor form shown to the player in the
-// topbar and lobby tagline.
+// VERSION_DISPLAY is the player-visible form shown in the topbar
+// and lobby tagline — full semver with a leading "v" (e.g. "v0.7.5").
 
 export const VERSION = "0.7.5";
 
-export const VERSION_DISPLAY = "v" + VERSION.split(".").slice(0, 2).join(".");
+export const VERSION_DISPLAY = "v" + VERSION;

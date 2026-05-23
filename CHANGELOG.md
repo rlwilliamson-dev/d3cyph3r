@@ -9,13 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.7.5] - 2026-05-23
 
-Three changes in one release: another content addition under the
+Four changes in one release: another content addition under the
 documentation infrastructure, a small in-game citation fix from a
-backfill audit, and a procedure extension so the link-audit step
-now covers both the walkthrough file AND the corresponding in-game
-lessons-learned content. The post-mortems players read at the end
-of each level are now in scope for every per-walkthrough audit
-going forward.
+backfill audit, a procedure extension so the link-audit step now
+covers both the walkthrough file AND the corresponding in-game
+lessons-learned content, and a player-visible version-display tweak
+in the topbar and lobby tagline. The post-mortems players read at
+the end of each level are now in scope for every per-walkthrough
+audit going forward.
 
 ### Added
 
@@ -28,6 +29,16 @@ going forward.
   the walkthrough and the in-game post-mortem — exactly the
   kind of cross-file drift the extended procedure is designed
   to catch.
+
+### Changed (player-visible)
+
+- **Topbar and lobby tagline now show the full semver** (e.g.
+  `v0.7.5`) instead of the major.minor form (`v0.7`). The patch
+  level was visible only via tag/release before; it's now visible
+  in the running game too, so players can tell at a glance which
+  point release they're on without reading the GitHub Releases
+  page. The change is in the `VERSION_DISPLAY` derivation in
+  `js/engine/version.js` — one line + a comment refresh.
 
 ### Fixed (in-game post-mortem citations)
 
