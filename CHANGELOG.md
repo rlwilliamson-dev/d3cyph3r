@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-22
+
+"All seven engagement slots playable." The Cloud track ships its
+first level, which is also the seventh and final track to get one.
+Every track that was wired into the lobby now has at least one
+playable level0; the next phase of the roadmap shifts to level1
+content across the tracks that have breadcrumb credentials staged.
+
+This release also extends the cloud engine slightly to model the
+real-AWS `AccessDenied` response for properly-locked-down S3 buckets
+— a small but pedagogically important addition, because for an
+auditor-perspective bucket review, "AccessDenied is what GOOD looks
+like" is the headline lesson.
+
+### Added
+
+- `level0@cloud` — "Coverline's Twelfth Bucket." First level of the
+  Cloud track (and the seventh and final track to get a level0 — all
+  seven engagement slots are now playable). Driftwood is asked by
+  Coverline Insurance (mid-sized insurtech, SOC 2 Type II in scope,
+  NAIC Insurance Data Security Model Law + NYDFS 23 NYCRR 500 + GLBA
+  Safeguards Rule layered on top) to walk a SOC 2 auditor's worksheet
+  of 6 production S3 buckets. Player runs
+  `aws s3 ls --no-sign-request s3://<bucket>` against each. Four
+  return `AccessDenied` (correctly locked down), one is intentionally
+  public (marketing CDN — flagged as expected in the worksheet, the
+  "context matters" beat), and one — `coverline-claims-uploads-prod`
+  — returns an unexpected listing containing 2024-Q1 claims files
+  (PII: claimant names, masked SSNs, addresses, claim amounts) AND
+  a stale 2023 region-cutover migration script with a hardcoded RDS
+  master password. Teaches the `aws s3 ls --no-sign-request` and
+  `aws s3 cp` workflow. Maps to SOC 2 Trust Services Criteria
+  (CC6.1, CC6.6, CC6.7, CC7.1), NIST SP 800-53 Rev. 5 (AC-3 / AC-6 /
+  SC-7 / AU-12), NIST CSF 2.0 (PR.AA / PR.DS / DE.CM), CIS AWS
+  Foundations Benchmark v3.0.0 (§2.1.1–2.1.6), ISO/IEC 27017,
+  OWASP Cloud-Native Top 10 (CNAS-1, CNAS-7), CWE-200 / CWE-732 /
+  CWE-285 / CWE-798 / CWE-540, NAIC Insurance Data Security Model
+  Law, NYDFS 23 NYCRR 500.03 / 500.15 / 500.17, GLBA Safeguards Rule
+  (16 CFR 314.4), and MITRE T1530 (Data from Cloud Storage Object) /
+  T1602 / T1078.004 / T1213 / T1580. The hardcoded credential in the
+  migration script is the natural breadcrumb gate for a future
+  `level1@cloud`, matching the per-track credential-chain pattern.
+- New client: **Coverline Insurance** — insurtech (P&C insurance for
+  small businesses, ~150 engineers, founded 2019, headquartered in
+  Hartford CT), SOC 2 Type II in active fieldwork, NAIC / NYDFS /
+  GLBA in scope. Introduces two new recurring characters: Jordan
+  Nguyen (Sr. Director of Cloud Infrastructure & Platform, the
+  engagement counterpart) and a brief reference to Sloane Becker
+  (CISO).
+- **Engine extension** — `js/commands/cloud.js` gains a small
+  `deniedBuckets` schema field on `level.cloud.s3`. When a bucket
+  name is in the list, both `aws s3 ls` and `aws s3 cp` return the
+  real-AWS-shaped `An error occurred (AccessDenied) when calling
+  the <op> operation: Access Denied` response instead of the
+  previous `NoSuchBucket` (which was wrong for "exists but
+  locked down"). Teaches that `AccessDenied` is what GOOD looks
+  like for a properly-secured bucket probed from outside.
+- Playtest grows 190 → 226 (+36 checks): full `level0@cloud`
+  walkthrough — connect with the `cloudsec` shared service account,
+  file listing, engagement-notes / audit-worksheet / lessons-learned
+  content citations (SOC 2 Type II, NAIC, NYDFS, Jordan continuity),
+  AccessDenied response on each of the four locked-down buckets,
+  expected-public listing on the marketing bucket, unexpected listing
+  on the misconfigured claims bucket, `aws s3 cp` reads on the PII
+  claim file and the migration script, defense-in-depth check that
+  `aws s3 cp` against a denied bucket also returns AccessDenied, and
+  post-mortem citations (SOC 2 CC6.1, CWE-200, CWE-798, MITRE T1530,
+  CIS AWS Foundations Benchmark, AWS Block Public Access). The two
+  scaffolded-track smoke checks (lobby `(no levels yet)` dimming +
+  the friendly `This track is scaffolded…` ssh response) are removed
+  — every track now has at least one level, so the scaffolded-only
+  state is unreachable through normal play.
+
 ## [0.5.0] - 2026-05-22
 
 "OSINT goes live." First playable OSINT level lands — the engine
@@ -416,7 +489,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.2.0...v0.3.0

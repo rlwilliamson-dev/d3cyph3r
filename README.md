@@ -4,11 +4,11 @@
 
 A browser-based terminal CTF for DevOps engineers, SREs, and SysAdmins learning cybersecurity. You play a new hire at **Driftwood Systems**, a mid-sized tech consulting firm with roughly 600 consultants spread across ~80 client engagements at any given time. Each level drops you on a real-feeling box you've inherited — a rolled-off consultant's laptop, a stale client engagement environment, a forgotten audit artifact, an alibi photograph submitted to in-house counsel — and asks you to find what got left exposed.
 
-The puzzles stay close to what actually happens at consulting firms with rotating engagements and shared client access. The post-mortem at the end of each level pulls the thread out to the controls (NIST 800-53, NIST 800-171, CIS Controls v8, CWE), the techniques (MITRE ATT&CK), the regs that bite (GLBA, PCI-DSS, HIPAA, FERPA, CMMC), and the certs (Security+, CySA+, PenTest+, CISSP, OSCP, CHFI, GCFE / GCFA) that cover this territory in the real world.
+The puzzles stay close to what actually happens at consulting firms with rotating engagements and shared client access. The post-mortem at the end of each level pulls the thread out to the controls (NIST 800-53, NIST 800-171, CIS Controls v8, CIS AWS Foundations Benchmark, CWE), the techniques (MITRE ATT&CK), the regs that bite (GLBA, PCI-DSS, HIPAA, FERPA, CMMC, SOC 2, NAIC, NYDFS), and the certs (Security+, CySA+, PenTest+, CISSP, OSCP, CHFI, GCFE / GCFA, AWS Security Specialty, CCSP, CCSK) that cover this territory in the real world.
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-This is **v0.5** — engine surface complete (all 7 tracks have their commands wired), 7 levels shipped across 6 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+This is **v0.6** — **all 7 engagement slots are now playable.** 8 levels shipped across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -18,8 +18,9 @@ This is **v0.5** — engine surface complete (all 7 tracks have their commands w
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder") | Meridian State University | FERPA |
 | Forensics | `level0@forensics` ("Reed's Soccer Alibi") | Polaris Defense Systems | CMMC / NIST 800-171 |
 | OSINT | `level0@osint` ("Veridian's Open Letter") | Veridian Analytics | HIPAA / HITRUST CSF |
+| Cloud | `level0@cloud` ("Coverline's Twelfth Bucket") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
 
-The Cloud track has its command surface shipped (see "Commands implemented" below) but no level content yet — the next `level0@cloud` will be a pure content PR with no engine work needed. New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The next phase is level1 across the tracks — five tracks have their breadcrumb credentials staged from level0 and are waiting on level1 content. New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Running it locally
 
