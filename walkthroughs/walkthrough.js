@@ -56,7 +56,15 @@ const MANIFEST = {
     title: "Crypto",
     blurb:
       "Encoding ≠ encryption. Client: Vesta Retail — PCI-DSS.",
-    levels: {},
+    levels: {
+      level0: {
+        title: "Theo's Safer API Key",
+        blurb:
+          "Pre-PCI-DSS-audit review at a retailer. A junior engineer " +
+          "base64-encoded a payment-processor API key and called it " +
+          "protection. base64 is not protection.",
+      },
+    },
   },
   web: {
     title: "Web",

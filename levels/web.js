@@ -462,14 +462,16 @@ ongoing work with Meridian and not landing it.
       An exposed CSV creates an undocumented, undated, untracked
       "disclosure" to an unknown number of recipients.
 
-  NIST SP 800-171 Rev. 2 (Protecting CUI in non-federal systems —
+  NIST SP 800-171 Rev. 3 (Protecting CUI in non-federal systems —
   the standard most US universities map to for federal-data
-  handling)
-    3.1.20  — Verify and control / limit connections to and use
-      of external information systems. A public autoindex
-      satisfies neither verification nor limitation.
-    3.13.1  — Monitor, control, and protect organizational
-      communications at the external boundaries.
+  handling; Rev. 3 was finalized in May 2024 and supersedes Rev. 2)
+    03.01.20 Use of External Systems — control connections to and
+      use of external information systems. A public autoindex on
+      a directory of CUI-bearing records satisfies neither
+      verification nor limitation of external access.
+    03.13.01 Boundary Protection — monitor, control, and protect
+      organizational communications at external boundaries; an
+      indexed public directory is a boundary failure.
 
   NIST SP 800-53 Rev. 5
     AC-3   Access Enforcement — autoindex enforces no access
@@ -480,7 +482,7 @@ ongoing work with Meridian and not landing it.
       production unless a directory is explicitly intended to
       be a public download index.
 
-  CIS Critical Security Controls v8
+  CIS Critical Security Controls v8.1
     4.1   Establish and Maintain a Secure Configuration Process
       — autoindex-off is a baseline-config item.
     4.8   Uninstall or Disable Unnecessary Services on
@@ -497,12 +499,13 @@ ongoing work with Meridian and not landing it.
     CWE-798  Use of Hard-coded Credentials — the DB password in
       db-creds.txt.
 
-  OWASP Top 10 (2021)
-    A05  Security Misconfiguration — autoindex left on, robots.txt
+  OWASP Top 10 (2025)
+    A02  Security Misconfiguration — autoindex left on, robots.txt
          listing sensitive paths, artifacts in the web root: this
-         is the canonical example.
+         is the canonical example. (A05 in the 2021 edition;
+         moved up to A02 in 2025.)
     A01  Broken Access Control — the records are accessible to
-         anyone who guesses the path.
+         anyone who guesses the path (slot unchanged from 2021).
 
 ─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
@@ -510,10 +513,10 @@ ongoing work with Meridian and not landing it.
     Domain 2 (Threats, Vulnerabilities, and Mitigations) — web
     application vulnerabilities, security misconfiguration.
 
-  CompTIA PenTest+ (PT0-002)
+  CompTIA PenTest+ (PT0-003)
     Domain 3 (Attacks and Exploits) — directory enumeration is a
-    named technique. Domain 2 (Information Gathering) — web
-    reconnaissance with gobuster / ffuf / dirb is on the exam.
+    named technique. Domain 2 (Reconnaissance and Enumeration) —
+    web reconnaissance with gobuster / ffuf / dirb is on the exam.
 
   CompTIA CySA+ (CS0-003)
     Domain 2 — reconnaissance detection.

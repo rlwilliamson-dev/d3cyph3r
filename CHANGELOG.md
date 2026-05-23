@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-05-23
+
+Another content addition under the documentation infrastructure
+introduced in v0.7.0, **plus** a cross-track audit of in-game
+post-mortem citations that surfaced several factual errors and
+version-drift issues. The post-mortem citations players read at the
+end of each level are now aligned with current canonical standards
+as of May 2026.
+
+### Added
+
+- One additional long-form reference document under the v0.7.0
+  documentation scaffolding. Manifest in the subsite client
+  router updated to register the new entry.
+- Pre-merge link-audit pass performed per the v0.7.1-established
+  procedure. Audit findings applied before merge.
+
+### Fixed (in-game post-mortem citations)
+
+- **level0@network — wrong CWE ID corrected.** The Atlas Health
+  default-credential finding was cited as CWE-1051 ("Initialization
+  with Hard-coded Default Credentials"). CWE-1051 is actually
+  "Initialization with Hard-Coded Network Resource Configuration
+  Data" — wrong topic. Corrected to **CWE-1392 "Use of Default
+  Credentials,"** which is the precise weakness for the scenario.
+- **level0@linux — NIST AC-2 enhancement clarified.** The
+  post-mortem described AC-2(13) as requiring privileged-account
+  termination on separation. AC-2(13) is actually "Disable
+  Accounts for High-Risk Individuals" (e.g., people under
+  investigation). Corrected to reference **AC-2(3) "Disable
+  Accounts"** plus **PS-4 "Personnel Termination"**, which are
+  the correct controls for the offboarding scenario.
+
+### Changed (in-game post-mortem references — version drift)
+
+- **OWASP Top 10 references** updated from the 2021 edition to
+  the 2025 numbering across levels where the citation slot
+  changed: A05 → A02 (Security Misconfiguration), A02 → A04
+  (Cryptographic Failures), A07 renamed from "Identification and
+  Authentication Failures" to "Authentication Failures."
+- **CIS Critical Security Controls** updated from v8 to v8.1
+  across linux (×2 levels), network, crypto, web, forensics, and
+  osint post-mortems.
+- **PCI-DSS** updated from v4.0 to v4.0.1 across linux and crypto
+  post-mortems (v4.0 was retired Dec 31, 2024).
+- **NIST SP 800-171** updated from Rev. 2 to Rev. 3 (finalized
+  May 2024) across web and forensics post-mortems, including
+  Rev. 3's updated control numbering format.
+- **CompTIA PenTest+** updated from PT0-002 to PT0-003 across
+  network and web post-mortems (PT0-002 was retired June 17, 2025).
+
 ## [0.7.1] - 2026-05-23
 
 Content addition under the documentation infrastructure introduced
@@ -540,7 +591,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.5.0...v0.6.0

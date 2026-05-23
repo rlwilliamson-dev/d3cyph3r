@@ -268,7 +268,7 @@ than to add a finding to a remediation plan.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  PCI-DSS v4.0
+  PCI-DSS v4.0.1
     Requirement 3.5  — Render cardholder data (and the keys that
       protect it) unreadable wherever stored. Base64 does not
       render anything unreadable.
@@ -301,8 +301,9 @@ than to add a finding to a remediation plan.
     CWE-798  Use of Hard-coded Credentials — the underlying
       pattern Theo's "fix" was trying to address but didn't.
 
-  OWASP Top 10 (2021) — A02: Cryptographic Failures
-    Renamed from "Sensitive Data Exposure" in OWASP 2021
+  OWASP Top 10 (2025) — A04: Cryptographic Failures
+    Renamed from "Sensitive Data Exposure" in the 2021 edition
+    (where it sat at A02 before moving down to A04 in 2025)
     specifically because so many failures in this category come
     from misuse of cryptography (or non-cryptography mistaken
     for cryptography), not absence of it.

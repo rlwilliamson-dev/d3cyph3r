@@ -529,7 +529,7 @@ threat model. The lookup we just ran is the first step.
     maps directly to the breach-screening / MFA practices
     above.
 
-  CIS Critical Security Controls v8
+  CIS Critical Security Controls v8.1
     Control 5  Account Management — including 5.4 (use
       unique passwords).
     Control 6  Access Control Management — including 6.3
@@ -538,10 +538,12 @@ threat model. The lookup we just ran is the first step.
     Control 14 Security Awareness and Skills Training —
       14.5 (train on the dangers of credential reuse).
 
-  OWASP Top 10 (2021)
-    A07:2021 Identification and Authentication Failures —
+  OWASP Top 10 (2025)
+    A07:2025 Authentication Failures —
       includes "permits credential stuffing" and "permits
-      brute-force attacks" as application weaknesses.
+      brute-force attacks" as application weaknesses. Renamed
+      from "Identification and Authentication Failures" in the
+      2021 edition; slot unchanged.
 
   CWE
     CWE-521  Weak Password Requirements

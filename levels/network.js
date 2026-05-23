@@ -266,7 +266,7 @@ Marcus — the conversation goes better when there's no surprise.
       only essential capabilities. Public-internet exposure of
       a staging DB is not essential.
 
-  CIS Critical Security Controls v8
+  CIS Critical Security Controls v8.1
     4.5  Implement and Manage a Firewall on Servers — the
       mitigation. Atlas should have host- or network-level
       firewalls enforcing "VPN-only" rather than relying on
@@ -280,11 +280,12 @@ Marcus — the conversation goes better when there's no surprise.
       Unauthorized Actor — the database itself.
     CWE-668 Exposure of Resource to Wrong Sphere — the network
       perimeter mistake.
-    CWE-1051 Initialization with Hard-coded Default
-      Credentials — the unrotated \`atlas-default-2025\`.
+    CWE-1392 Use of Default Credentials — the unrotated
+      \`atlas-default-2025\`.
 
-  OWASP Top 10 (2021) — A05: Security Misconfiguration
-    Covers public exposure of services that should be internal.
+  OWASP Top 10 (2025) — A02: Security Misconfiguration
+    Covers public exposure of services that should be internal
+    (A05 in the 2021 edition; moved up to A02 in 2025).
 
 ─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
@@ -296,8 +297,8 @@ Marcus — the conversation goes better when there's no surprise.
     Domain 2 (Threat Intelligence & Threat Hunting) — active
     recon. Domain 1 (Security Operations) — perimeter monitoring.
 
-  CompTIA PenTest+ (PT0-002)
-    Domain 2 (Information Gathering & Vulnerability Scanning).
+  CompTIA PenTest+ (PT0-003)
+    Domain 2 (Reconnaissance and Enumeration).
 
   CISSP
     Domain 3 (Security Architecture and Engineering) — secure
