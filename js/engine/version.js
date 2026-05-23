@@ -33,6 +33,23 @@
 //      intended destination for full solve paths and credentials;
 //      spoilers belong there. Authors should still avoid copy-pasting
 //      passwords into anything outside walkthroughs/.
+//      LINK-AUDIT REQUIREMENT (pre-merge, every walkthrough PR —
+//      including small content edits to an existing walkthrough):
+//        a. Delegate a research agent (general-purpose Agent tool +
+//           WebFetch/WebSearch) to audit every URL in §9 Further
+//           Reading and every version-specific claim in §5 and §6
+//           (cert versions, framework revisions, regulation
+//           citation IDs, breach incident figures). Standards drift
+//           — OWASP, NIST 800-63, CIS Controls, PCI-DSS, certs all
+//           have multi-year refresh cycles. Breach disclosures grow
+//           (Change Healthcare's affected-individuals count tripled
+//           between Oct 2024 and Jul 2025 — these are the kinds of
+//           drifts to catch).
+//        b. Apply the corrections.
+//        c. Bump the "Last reviewed: <Month Year>" line at the top
+//           of §9 to the current month.
+//        d. The audit report goes in the PR description so the
+//           review trail is preserved.
 //   5. Merge the release commit.
 //   6. Tag v<VERSION> on the merge commit (annotated tag).
 //   7. gh release create v<VERSION> with notes pulled from CHANGELOG.

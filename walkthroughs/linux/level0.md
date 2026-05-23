@@ -425,6 +425,8 @@ This rule, tuned by replacing "medium" with "high" for service accounts and drop
 
 ## §9 — Further reading
 
+*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+
 - [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final)
 - [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html)
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)

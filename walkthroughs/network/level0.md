@@ -147,7 +147,7 @@ UHS was not the only large healthcare ransomware event of 2020 — Cerner, Magel
 
 ### Change Healthcare — February 2024
 
-On February 21, 2024, Change Healthcare — a subsidiary of UnitedHealth Group that processes roughly one third of all US healthcare payment transactions — was breached by the ALPHV/BlackCat ransomware affiliate program. The attacker disrupted payment processing across the US healthcare system for weeks; pharmacies could not verify insurance, providers could not submit claims, small medical practices ran out of operating cash. The Department of Health and Human Services issued emergency funding programs. UnitedHealth's CEO testified before Congress in May. The disclosed cost as of the FY2024 financial statements was approximately $2.4 billion. The number of individuals whose PHI was exposed was reported in October 2024 at approximately 100 million — making it the largest US healthcare data breach on record.
+On February 21, 2024, Change Healthcare — a subsidiary of UnitedHealth Group that processes roughly one third of all US healthcare payment transactions — was breached by the ALPHV/BlackCat ransomware affiliate program. The attacker disrupted payment processing across the US healthcare system for weeks; pharmacies could not verify insurance, providers could not submit claims, small medical practices ran out of operating cash. The Department of Health and Human Services issued emergency funding programs. UnitedHealth's CEO testified before Congress in May. The disclosed cost as of UnitedHealth's FY2024 financial statements was approximately $2.4 billion. The number of individuals whose PHI was exposed climbed across subsequent disclosures — initially reported around 100 million in October 2024, the HHS Office for Civil Rights count reached approximately 192.7 million by July 2025, making it by an enormous margin the largest US healthcare data breach on record.
 
 The initial access vector, per UnitedHealth's congressional testimony, was a Citrix portal that did not have multi-factor authentication enforced. The attacker used a compromised credential — exact source disclosed but not central to this analysis — to log in. From there, they pivoted, escalated, deployed BlackCat across Change Healthcare's environment, and exfiltrated approximately 4 TB of data.
 
@@ -213,15 +213,15 @@ Two safeguards apply directly to the Atlas Health finding:
 
 Audit evidence for CIS controls includes the documented baseline configuration, deployment evidence (configuration management tooling outputs, host-by-host attestation), and continuous-monitoring data showing the baseline is maintained. Common findings: baseline documented but not deployed; deployed but not monitored for drift; monitored but no remediation SLA.
 
-### CWE-200, CWE-668, CWE-1051
+### CWE-200, CWE-668, CWE-1392
 
 The Common Weakness Enumeration — MITRE's catalog of software weakness patterns — has three entries that map directly to the Atlas Health finding:
 
 **CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.** The umbrella weakness. The Atlas Health database is the sensitive information; the unauthorized actor is any entity outside Atlas's authorized user population. CWE-200 has been in the catalog since the early days of the CWE program and is consistently in MITRE's annual Top 25 Most Dangerous Software Weaknesses.
 
-**CWE-668 — Exposure of Resource to Wrong Sphere.** The specific weakness pattern in this finding: a resource (the database) is exposed to a network sphere (the open internet) that should not have access to it. CWE-668 is the parent of more specific weaknesses including CWE-200 (sensitive data) and CWE-749 (exposed dangerous functions).
+**CWE-668 — Exposure of Resource to Wrong Sphere.** The conceptual weakness in this finding: a resource (the database) is exposed to a network sphere (the open internet) that should not have access to it. CWE-668 is the parent of more specific weaknesses including CWE-200 (sensitive data) and CWE-749 (exposed dangerous functions). MITRE now flags CWE-668 as **"Discouraged" for mapping real-world vulnerabilities** — it's too high-level a catch-all for compliance-grade citations. It remains useful as an awareness reference and as the conceptual hierarchy parent; for an actual vulnerability writeup the more specific child weakness (CWE-200 here) is the preferred citation.
 
-**CWE-1051 — Initialization with Hard-coded Default Credentials.** The credential half of the finding. The database was initialized with a default credential (`atlas-default-2025`) and never rotated. CWE-1051 is the modern, more-specific cousin of CWE-798 (Use of Hard-coded Credentials) — the difference is that CWE-1051 specifically addresses the *initialization* event, where the credential is set at deployment time and persists.
+**CWE-1392 — Use of Default Credentials.** The credential half of the finding. The database is operating with a default credential (`atlas-default-2025`) that should have been changed at provisioning time and was not. CWE-1392 is the modern, narrowly-scoped successor to the older "default credentials" patterns — it specifically addresses the case where a product or system ships with a known-default authenticator that the operator failed to change. The closely-related **CWE-798 (Use of Hard-coded Credentials)** would also be cited if the credential were *baked into the product* rather than configured by the operator; in this case the operator chose `atlas-default-2025` themselves at install time, which fits CWE-1392 more precisely.
 
 Audit and detection tools that surface these CWEs against an infrastructure inventory: Tenable Nessus (credentialed scans), Qualys, Rapid7 InsightVM, Microsoft Defender Vulnerability Management. For codebase-level credential leaks (the CWE-798 cousin), the secret-scanning tools — gitleaks, TruffleHog, GitHub Secret Scanning, GitGuardian — handle the source-control side.
 
@@ -260,7 +260,7 @@ The trap is A — rotating the credential is necessary but does not address the 
 
 ### CompTIA CySA+ — current version CS0-003
 
-CompTIA's CySA+ (Cybersecurity Analyst) is the analyst-track cert, focused on threat-detection, vulnerability-management, and incident-response work. The current exam is **CS0-003**, in market since 2023. Atlas Health's material maps to two domains.
+CompTIA's CySA+ (Cybersecurity Analyst) is the analyst-track cert, focused on threat-detection, vulnerability-management, and incident-response work. The current exam is **CS0-003** (in market since June 2023; CS0-004 is expected to supersede it around mid-2026 — anyone starting a study plan today should check CompTIA's exam blueprint page first). Atlas Health's material maps to two domains.
 
 - **Domain 1 — Security Operations.** Objective 1.4 covers vulnerability scanning interpretation, including nmap output, Nessus output, and the workflow for prioritizing findings. Objective 1.6 covers active and passive reconnaissance — Driftwood's quarterly verification is exactly the activity this objective tests.
 - **Domain 2 — Threat Intelligence and Threat Hunting.** Objective 2.2 covers threat-intelligence sources, including Shodan and Censys (the tools an attacker would use to find Atlas Health's exposed postgres before Driftwood's check found it).
@@ -393,6 +393,8 @@ This rule, with the allowed CIDR list maintained as part of the firewall-as-code
 
 ## §9 — Further reading
 
+*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+
 - [HIPAA Security Rule — 45 CFR Part 164, Subpart C (HHS)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C)
 - [HHS Office for Civil Rights — Breach Portal ("Wall of Shame")](https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf)
 - [HITECH Act — Subtitle D, Privacy (HHS Summary)](https://www.hhs.gov/hipaa/for-professionals/special-topics/hitech-act-enforcement-interim-final-rule/index.html)
@@ -401,22 +403,24 @@ This rule, with the allowed CIDR list maintained as part of the firewall-as-code
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
 - [CIS PostgreSQL Benchmark](https://www.cisecurity.org/benchmark/postgresql)
 - [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-- [CWE-668 — Exposure of Resource to Wrong Sphere](https://cwe.mitre.org/data/definitions/668.html)
-- [CWE-1051 — Initialization with Hard-coded Default Credentials](https://cwe.mitre.org/data/definitions/1051.html)
+- [CWE-668 — Exposure of Resource to Wrong Sphere (parent; MITRE flags as "Discouraged" for mapping)](https://cwe.mitre.org/data/definitions/668.html)
+- [CWE-1392 — Use of Default Credentials](https://cwe.mitre.org/data/definitions/1392.html)
+- [CWE-798 — Use of Hard-coded Credentials (closely related)](https://cwe.mitre.org/data/definitions/798.html)
 - [OWASP Top 10:2025](https://owasp.org/Top10/2025/)
 - [MITRE ATT&CK — T1046: Network Service Discovery](https://attack.mitre.org/techniques/T1046/)
 - [MITRE ATT&CK — T1595.002: Active Scanning: Vulnerability Scanning](https://attack.mitre.org/techniques/T1595/002/)
 - [MITRE ATT&CK — T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/)
 - [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/)
 - [HHS HPH-CPGs (Healthcare and Public Health Cybersecurity Performance Goals)](https://hphcyber.hhs.gov/performance-goals.html)
-- [Universal Health Services September 2020 Ransomware — Form 8-K](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000352915&type=8-K)
-- [Change Healthcare February 2024 cyberattack — UnitedHealth Group statement](https://www.unitedhealthgroup.com/newsroom/2024/2024-02-22-changehc-statement.html)
+- [Universal Health Services September 2020 ransomware — 8-K filing (direct)](https://www.sec.gov/Archives/edgar/data/0000352915/000156459020044863/uhs-8k_20200927.htm)
+- [Universal Health Services SEC filings index (EDGAR)](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000352915&type=8-K)
+- [Change Healthcare February 2024 cyberattack — UnitedHealth Group 8-K filing (SEC, Feb 22 2024)](https://www.sec.gov/Archives/edgar/data/0000731766/000073176624000045/unh-20240221.htm)
 - [GDI Foundation — MongoDB ransom-attack campaign coverage (2017)](https://gdi.foundation/)
 - [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
-- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/security/data-breach)
+- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach)
 - [Shodan — internet-wide scanner](https://www.shodan.io/)
 - [Censys — internet-wide scanner](https://search.censys.io/)
-- [HashiCorp Boundary — just-in-time bastion](https://www.boundaryproject.io/)
+- [HashiCorp Boundary — just-in-time bastion](https://developer.hashicorp.com/boundary)
 - [Tenable Nessus — credentialed vulnerability scanning](https://www.tenable.com/products/nessus)
 
 ---

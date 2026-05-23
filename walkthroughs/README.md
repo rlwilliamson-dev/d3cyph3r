@@ -127,12 +127,70 @@ section dividers when starting a new file.
 - [ ] Spoiler warning is the first content block (starts with `⚠`)
 - [ ] Every framework/cert cited in the in-game `lessons-learned.md`
       has a corresponding subsection
-- [ ] Real-world parallels are linked in §10
+- [ ] Real-world parallels are linked in §9 Further Reading
 - [ ] No raw HTML in the markdown — pure markdown only
 - [ ] Locally rendered via `python3 -m http.server` and visually
       reviewed for layout issues
+- [ ] **Link audit pass run via a general-purpose research agent**
+      (see "Link audit" section below). Apply any corrections; bump
+      the "Last reviewed" date at the top of §9.
 - [ ] Anti-spoiler exception: walkthrough is allowed to contain
       passwords / breadcrumb credentials (this is intentional). The
       anti-spoiler rule applies only to CHANGELOG, README, release
       notes, PR descriptions, and commit messages — NOT to
       walkthroughs themselves.
+
+## Link audit (required pre-merge, every walkthrough PR)
+
+Standards drift. OWASP refreshes every ~4 years (2017 → 2021 → 2025).
+NIST 800-63 refreshed Rev 3 → Rev 4 in 2025. CIS Controls v8 → v8.1
+in 2024. PCI-DSS v4.0 → v4.0.1 in 2024 (with v4.0 retired Dec 2024).
+CompTIA refreshes each cert on a ~3-year cycle. Breach disclosures
+grow over time — Change Healthcare's affected-individuals count
+tripled between October 2024 and July 2025. CWE entries get
+re-classified (CWE-668 became "Discouraged for mapping"; the
+old CWE-1051-as-credentials usage was actually wrong — the correct
+ID is CWE-1392).
+
+Every walkthrough PR — *including small edits to an existing
+walkthrough* — must run a link-audit pass before merge.
+
+**Procedure:**
+
+1. Spawn a general-purpose research agent (the `Agent` tool with
+   `subagent_type: general-purpose`) and give it the walkthrough
+   file path and today's date.
+2. Ask it to verify, for each item in §9 Further Reading: current
+   canonical version (is the version cited in the body still the
+   latest?), current canonical URL (does it still resolve to the
+   right thing?), and any body-text claims tied to those sources
+   (cert exam codes, control numbers, regulation citation IDs,
+   breach incident figures).
+3. The agent should report as a structured list — one entry per
+   item with status (✓ current / ⚠ needs update / ✗ broken),
+   corrected URL/version if needed, and a one-line "what to change"
+   recommendation when applicable.
+4. Apply the corrections.
+5. Update the "Last reviewed: <Month Year>" line at the top of §9
+   to the current month-year.
+6. Paste the agent's audit report (or a summary of it) into the PR
+   description so the review trail is preserved.
+
+The audit is cheap — typically 1–3 minutes of agent time + 5–10
+minutes of edit application — and catches drift that would
+otherwise embarrass us with a future reader.
+
+## "Last reviewed" footer convention
+
+Every §9 begins with an italic single-line footer:
+
+> *Last reviewed: <Month Year>. External standards versions and
+> incident facts verified against current canonical sources as of
+> this date. Report stale links via the project's GitHub issues
+> tracker.*
+
+The date is bumped at each link-audit pass (i.e., every walkthrough
+PR that touches the file, and on any standalone re-audit PR). When
+a walkthrough has been untouched for >12 months, schedule a
+re-audit PR even without other content changes — standards drift
+doesn't wait for PRs.
