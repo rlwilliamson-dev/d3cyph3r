@@ -49,13 +49,22 @@ const MANIFEST = {
   network: {
     title: "Network",
     blurb:
-      "Port scanning and perimeter audit. Client: Atlas Health — HIPAA.",
+      "Port scanning, perimeter audit, and DNS reconnaissance. " +
+      "Client: Atlas Health — HIPAA.",
     levels: {
       level0: {
         title: "Atlas Health Perimeter Check",
         blurb:
           "Quarterly verification of a healthcare client's claim that " +
           "their staging database is VPN-only. nmap finds it isn't.",
+      },
+      level1: {
+        title: "The Map Marcus Didn't Mean to Share",
+        blurb:
+          "Day two. With Priya's authorized blast-radius check, the " +
+          "staging-DB host's internal DNS resolver gives up the full " +
+          "data-center map plus a service-account credential stashed " +
+          "in a TXT record. CWE-306 + the sticky-account anti-pattern.",
       },
     },
   },

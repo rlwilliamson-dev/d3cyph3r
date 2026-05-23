@@ -60,6 +60,39 @@ export const networkCommands = {
       return { text: `dig: ${domain}: NXDOMAIN — no records found`, cls: "err" };
     }
     const records = level.dnsData[domain];
+
+    // AXFR is "transfer the whole zone." Real nameservers should restrict
+    // this via TSIG or IP ACL; when they don't, an attacker gets the full
+    // internal map. The level expresses an unrestricted zone by populating
+    // `dnsData[domain].AXFR` with pre-formatted zone-file lines (each line
+    // carries its own owner name, since AXFR returns subdomain records too
+    // — the standard ANSWER SECTION format we use for single-type queries
+    // doesn't fit). The handler dumps those lines verbatim between dig's
+    // standard zone-transfer header and footer. If AXFR isn't populated,
+    // simulate a properly-configured "REFUSED" response.
+    if (recType === "AXFR") {
+      if (!records.AXFR) {
+        return {
+          text: [
+            `; <<>> DiG 9.18.4 <<>> ${domain} AXFR`,
+            `;; Connection to ${domain}#53 failed: REFUSED`,
+            `; Transfer failed.`,
+          ].join("\n"),
+          cls: "err",
+        };
+      }
+      const out = [
+        `; <<>> DiG 9.18.4 <<>> ${domain} AXFR`,
+        `;; global options: +cmd`,
+        "",
+        ...records.AXFR,
+        "",
+        ";; Query time: 12 msec",
+        ";; XFR size: " + records.AXFR.length + " records",
+      ];
+      return { text: out.join("\n"), cls: "warn" };
+    }
+
     const lines = [
       `; <<>> DiG 9.18.4 <<>> ${domain} ${recType}`,
       `;; ANSWER SECTION:`,
@@ -68,6 +101,8 @@ export const networkCommands = {
     const types = recType === "ANY" ? Object.keys(records) : [recType];
     let found = false;
     types.forEach(t => {
+      // Skip AXFR pseudo-records when iterating real types (e.g., ANY).
+      if (t === "AXFR") return;
       const vals = records[t];
       if (!vals || vals.length === 0) return;
       found = true;

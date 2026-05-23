@@ -29,7 +29,8 @@ export const cryptoLevels = {
   // lesson is CWE-261 (Weak Encoding for Password) / CWE-326
   // (Inadequate Encryption Strength) via the classic
   // "base64 ≠ encryption" misconception, mapped to PCI-DSS 3.5 and
-  // OWASP A02 Cryptographic Failures. Introduces `base64` and
+  // OWASP A04 Cryptographic Failures (2025 edition; was A02 in 2021).
+  // Introduces `base64` and
   // `base64 -d`.
   "level0@crypto": {
     password: null,

@@ -255,12 +255,15 @@ consultants as a covered party.
 
 ─── THE BLUNT VERSION ────────────────────────────────────────
 
-Stolen credentials are, every year, the leading way attackers get
-into networks. Verizon's 2024 Data Breach Investigations Report put
-"use of stolen credentials" at 31% of breaches studied, even after
-excluding human-error cases. Insider incidents — including former
-employees and contractors — account for roughly one in five of all
-confirmed breaches.
+Stolen credentials remain one of the top initial-access vectors
+in real-world breach reports, year after year. Verizon's 2026
+Data Breach Investigations Report documented a notable reshuffle
+this cycle — vulnerability exploitation overtook credential abuse
+to claim the #1 slot at 31% of breaches studied — but
+credential-driven access remains the persistent runner-up and
+continues to dominate incident-response casework. Insider
+incidents, including former employees and contractors, continue
+to account for roughly one in five confirmed breaches.
 
 When the insider is a consultant, the blast radius expands: not
 just YOUR data, but every client whose environment they had access

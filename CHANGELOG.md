@@ -7,6 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-23
+
+The first level1 of a non-Linux track lands. With this release, two
+of the seven tracks (Linux + Network) have full level0 + level1
+chains — the rest still have level0 only. The engine grows `dig`'s
+surface to model DNS zone transfer (`dig <domain> AXFR`), a
+textbook recon technique that's been on every infrastructure-audit
+playbook since the 1990s. The walkthrough that ships in the same
+PR pulled an unusually rich set of audit corrections — including a
+fresh NIST Special Publication that superseded a 13-year-old guide
+in March of this year, while the walkthrough was being written.
+
+### Added
+
+- **`level1@network` — "The Map Marcus Didn't Mean to Share."**
+  Day-2 follow-up to the Atlas Health perimeter audit. The player
+  uses the default credential surfaced at the end of level0 to ssh
+  into the staging-db host (Priya has authorized a one-time,
+  documented blast-radius check), discovers the host can reach
+  Atlas's internal DNS resolver, and dumps the full internal zone
+  with one `dig` command. The zone reveals production / PHI tier
+  hostnames the staging tier shouldn't see, plus a free-form TXT
+  record someone left behind during a vendor audit dry-run that
+  carries a literal service-account credential. Lesson is CWE-306
+  Missing Authentication for Critical Function (the AXFR
+  misconfiguration) plus the sticky-vendor-account anti-pattern.
+- **`dig <domain> AXFR` support** in the network command surface.
+  Existing `dig` handler grows a new code branch — when AXFR is
+  requested, returns the level's pre-formatted zone-file lines (or
+  a `REFUSED` response when the level has no AXFR data). Models
+  the real-world technique without an unrealistic abstraction;
+  standard per-type `dig` queries (`A`, `NS`, `MX`, `ANY`) work
+  unchanged.
+- **`walkthroughs/network/level1.md`** — long-form companion to
+  the new level under the v0.7.0 walkthrough scaffolding. Walks
+  the five-failure compound stack, three real-world parallel
+  threads (the chronic AXFR pattern, healthcare-sector ransomware
+  enumeration phases, sticky vendor accounts), full framework +
+  cert tie-ins, BIND / Knot / PowerDNS hardening config examples,
+  and the standard "Last reviewed: Month Year" footer.
+- Playtest coverage for the new level — wrong-password rejection,
+  correct-password connection, file enumeration, AXFR dump
+  validation (asserts the breadcrumb credential appears, that
+  prod-db and phi-warehouse hostnames appear, and that the
+  standard zone-transfer footer is emitted).
+
+### Fixed (pre-merge link audit — both walkthrough and in-game)
+
+- **NIST SP 800-81-2 → NIST SP 800-81 Rev 3.** SP 800-81-2 was
+  withdrawn on 2026-03-19, the same day SP 800-81 Rev 3 was
+  published as final. The walkthrough was originally written
+  against the older guide; both walkthrough and in-game
+  references swapped to Rev 3, with notes that Rev 3 substantially
+  expands the older guide (Protective DNS, encrypted-DNS
+  transports DoT / DoH / DoQ, zero-trust integration, OT / IoT,
+  forensic logging).
+- **OWASP Top 10 (2025) category positions** corrected in the
+  walkthrough: A07 Authentication Failures (not "A04, elevated"),
+  A04 Cryptographic Failures (not "Authentication Failures"),
+  A03 Software Supply Chain Failures (with the word "Software"),
+  and A10 Mishandling of Exceptional Conditions noted as the
+  brand-new 2025 category.
+- **CWE-306 Top 25 ranking** — actually #25 on the 2024 edition
+  and #21 on the 2025 edition (not "in the upper third").
+- **NIST SP 800-63B retitle** — the current revision is 800-63B-4
+  (July 2025), retitled "Authentication and Authenticator
+  Management" (from the older "Authentication and Lifecycle
+  Management").
+- **Four healthcare-incident figures** corrected: Change
+  Healthcare 192.7M individuals per the July 2025 HHS OCR filing
+  (not 190M per the January 2025 filing); CommonSpirit Health 164
+  facilities + 623,774 patients (not ~150 / ~600k); UHS 400+
+  facilities in the US and UK (not 250+); Scripps Health 4
+  hospitals disrupted (not 24) with 147,267 patients confirmed.
+- **OWASP WSTG section identifier** — DNS zone-transfer testing
+  is documented under WSTG-INFO-04 (Enumerate Applications on
+  Webserver), not WSTG-INFO-10 (Map Application Architecture)
+  as the in-game text originally cited.
+- **CIS Controls URL** corrected from the generic `/controls/v8`
+  to the v8.1-specific `/controls/v8-1`.
+- **RFC 5936 framing** — updates RFC 1035 (per the "Updates:
+  1035" header) rather than replacing it; RFC 1035 §3.2.3,
+  §4.2.2, and §6.3 remain foundational.
+- **NIST SP 800-53 Rev. 5 SC-22(1) enhancement** annotated as
+  having been incorporated into the SC-22 base control in Rev 5
+  (was a separate enhancement in Rev 4).
+- **CISA SolarWinds advisory series** broadened from
+  AA20-352A-only to also reference the AR21-134A eviction
+  guidance, where the service-account hygiene framing is more
+  directly present.
+- **Sigma rule path** corrected — the AXFR detection lives under
+  `rules/windows/builtin/dns_server/`, not the nonexistent
+  `rules/network/dns/` path the walkthrough originally cited.
+
+### Fixed (cross-track sweep)
+
+- **Verizon DBIR figures updated** in `levels/linux.js`'s
+  lessons-learned: the 2024-edition "31% stolen credentials"
+  framing is replaced with the 2026-edition framing where
+  vulnerability exploitation overtook credential abuse to claim
+  the #1 initial-access slot at 31% of breaches. Credential
+  abuse remains the persistent runner-up.
+- **OWASP A04 not A02 for Cryptographic Failures** corrected in
+  one stale comment at the top of `levels/crypto.js` (the
+  player-facing lessons-learned was already correct).
+
 ## [0.7.7] - 2026-05-23
 
 The first level1 walkthrough lands. Eight walkthroughs total now
