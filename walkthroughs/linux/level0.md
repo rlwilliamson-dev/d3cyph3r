@@ -201,9 +201,9 @@ The credential `please-rotate-me` violates IA-5 on at least three counts: it was
 
 Audit evidence for IA-5: a credential inventory with rotation timestamps and a rotation policy with documented enforcement (automatic forced-rotation, ticket-driven manual rotation, or scanner-driven re-issuance). Common findings: credentials that have never been rotated since system creation; credentials documented in unencrypted files; service-account credentials with no defined owner ("who's supposed to rotate this?").
 
-### CIS Critical Security Controls v8 — Control 5: Account Management
+### CIS Critical Security Controls v8.1 — Control 5: Account Management
 
-The CIS Controls are an opinionated set of prioritized recommendations originally published by SANS, now maintained by the Center for Internet Security. Control 5 covers account management. Its safeguards include:
+The CIS Controls are an opinionated set of prioritized recommendations originally published by SANS, now maintained by the Center for Internet Security. The current version is **v8.1** (published 2024), which added explicit alignment with NIST CSF 2.0's new *Govern* function but preserved the v8 control and safeguard numbering. Control 5 covers account management. Its safeguards include:
 
 - **5.1**: Establish and Maintain an Inventory of Accounts
 - **5.2**: Use Unique Passwords (per account)
@@ -226,13 +226,13 @@ Daniel's `creds.txt` is a textbook CWE-798 instance. The credential is in a flat
 
 There are related CWEs worth knowing: **CWE-256 (Plaintext Storage of a Password)** is the narrower form specifically about credentials in cleartext; **CWE-312 (Cleartext Storage of Sensitive Information)** is the broader form covering any sensitive data. Auditors and security tools may cite any of the three depending on context. They all map to the same underlying mistake.
 
-### OWASP Top 10 (2021) — A07: Identification and Authentication Failures
+### OWASP Top 10 (2025) — A07: Authentication Failures
 
-The OWASP Top 10 is the most-cited application-security awareness document in the industry. The 2021 edition (the current one as of this writing) replaced 2017's `A02: Broken Authentication` with `A07: Identification and Authentication Failures`, broadening the category to include identification failures (knowing who the user is) as well as authentication failures (verifying it).
+The OWASP Top 10 is the most-cited application-security awareness document in the industry. The current edition is **OWASP Top 10:2025**, finalized in January 2026, which kept the auth slot at A07 but renamed it from the 2021 edition's *Identification and Authentication Failures* to simply *Authentication Failures*. The renaming reflects how the working group consolidated identification (knowing who the user is) under broader access-control concerns in A01, leaving A07 to focus specifically on credential and authentication lifecycle weaknesses. The 2025 edition also introduced a new A03 (Software Supply Chain Failures) and A10 (Mishandling of Exceptional Conditions); A01 Broken Access Control retained the #1 slot and absorbed SSRF from the previous edition.
 
 A07 includes weaknesses such as: permitting brute-force attacks, default or weak passwords, ineffective credential recovery, missing or ineffective multi-factor authentication, and **exposing session identifiers in the URL** (and, by extension, anywhere they can leak). The Daniel scenario sits inside A07 because the staging credential, once exposed in `creds.txt`, functions as a no-MFA, no-rate-limit authenticator that any reader of the file can use. It's effectively the same as a default password — the moment anyone reads it, the authentication is bypassed.
 
-The OWASP recommendation for A07 mitigations is layered: enforce multi-factor authentication, don't deploy with default credentials, implement weak-password checks, align password length/complexity/rotation policies with NIST SP 800-63B's modern guidelines (longer passwords, no forced periodic rotation unless there's evidence of compromise), and limit failed-login attempts.
+The OWASP recommendation for A07 mitigations is layered: enforce multi-factor authentication (and prefer phishing-resistant authenticators like FIDO2/passkeys, per NIST SP 800-63B-4), don't deploy with default credentials, implement weak-password checks, align password length/complexity/rotation policies with **NIST SP 800-63B-4**'s modern guidelines (15-character minimum, no forced periodic rotation unless there's evidence of compromise), and limit failed-login attempts.
 
 ### GLBA Safeguards Rule (16 CFR Part 314)
 
@@ -247,13 +247,13 @@ Several sections apply directly to level0@linux:
 
 The 2023 Safeguards Rule amendments added an explicit breach-notification requirement: financial institutions must report a security event affecting 500+ consumers to the FTC within 30 days. Driftwood as the service provider isn't directly subject to that 30-day requirement — but the MSA with Halton typically includes a contractual notification window measured in hours, designed so Halton can meet its 30-day clock.
 
-### PCI-DSS v4.0 — Requirement 12.8
+### PCI-DSS v4.0.1 — Requirement 12.8
 
 PCI-DSS (Payment Card Industry Data Security Standard) governs any organization that stores, processes, or transmits cardholder data. **Requirement 12.8** specifically covers third-party service providers: organizations must maintain a list of providers with cardholder data access, have a written agreement that acknowledges the provider's responsibility for the security of cardholder data, follow a documented due-diligence process before engaging, and monitor provider PCI-DSS compliance status at least annually.
 
 Halton Bank is a regional bank — payment-card data is in scope somewhere in its environment. To the extent Daniel's Halton engagement gave him access to systems that touch cardholder data, PCI-DSS Req 12.8 puts Driftwood on Halton's third-party-service-provider list and obligates contract terms covering credential handling.
 
-PCI-DSS v4.0 was published in March 2022 with a phased adoption deadline of March 31, 2024 (some requirements deferred to March 31, 2025). The current v4.0 strengthened Req 12.8 specifically — earlier versions required only a list and written agreement; v4.0 added explicit monitoring requirements and detailed expectations about what the agreement must cover.
+**PCI-DSS v4.0.1** is the only version currently supported by the PCI SSC. v4.0 was originally published in March 2022 and retired December 31, 2024; v4.0.1 (published June 2024) is a clarifying revision that did not change the requirements but tightened wording in several places. All of the future-dated requirements introduced in v4.0 — including the strengthened Req 12.8 expectations around explicit monitoring and documented agreements — became mandatory March 31, 2025. Driftwood's contractual posture with Halton is therefore evaluated against v4.0.1's full requirement set, not v3.2.1's lighter baseline.
 
 Audit evidence for Req 12.8: the third-party provider list, the executed agreement specifying security responsibilities, due-diligence reports from before engagement, and the most recent compliance attestation (typically a SAQ or RoC from the provider). Common findings: provider list missing entries; agreements that don't specify security responsibilities clearly; no monitoring of provider compliance after the initial engagement.
 
@@ -263,7 +263,7 @@ Equal-depth coverage for the four certifications cited in the in-game post-morte
 
 ### CompTIA Security+ — current version SY0-701
 
-CompTIA refreshed Security+ from SY0-601 to **SY0-701** in November 2023. SY0-601 will be retired July 31, 2024. Anyone studying for the cert today should be using SY0-701 study materials. The exam has five domains; level0@linux's material maps directly to two.
+CompTIA refreshed Security+ from SY0-601 to **SY0-701** in November 2023; SY0-601 was retired July 31, 2024. SY0-701 is the only version currently testable. Anyone studying for the cert today should be using SY0-701 study materials. The exam has five domains; level0@linux's material maps directly to two.
 
 - **Domain 4.1 — Apply common security techniques to computing resources.** This is the technical-controls domain. Within it, secrets management, configuration enforcement, and access management are tested directly. Expect a question asking which control would prevent credentials from being readable in a flat file (correct answer involves a secrets manager; common distractors include "encrypt the file" — which is technically also right but a worse answer because it doesn't address the root cause of credentials being on disk at all).
 - **Domain 5.3 — Explain the processes associated with third-party risk management.** This domain explicitly covers vendor agreements, vendor monitoring, and consulting-firm-style service provider relationships. GLBA-style notification requirements, MSA security clauses, and right-to-audit clauses all live here.
@@ -305,7 +305,7 @@ The CC exam is heavy on recognition of vocabulary. A student studying for it sho
 
 ### CISSP
 
-CISSP is the senior-level (ISC)² cert, intended for security professionals with 5+ years of experience. The current exam (as of 2024) follows the 2024 CBK update. CISSP has eight domains; level0@linux's material spans three of them, which makes it a high-value scenario for CISSP study.
+CISSP is the senior-level (ISC)² cert, intended for security professionals with 5+ years of experience. The current exam still follows the 2024 CBK refresh — (ISC)² runs the CBK on a roughly three-year cadence, with the next refresh expected in 2027. CISSP has eight domains; level0@linux's material spans three of them, which makes it a high-value scenario for CISSP study.
 
 - **Domain 1 — Security and Risk Management.** This is the broadest domain and includes compliance frameworks (GLBA, PCI-DSS), regulatory obligations, third-party assessments, and contractual obligations like MSAs. The Halton-Driftwood relationship is exactly the kind of vendor risk CISSP Domain 1 covers in detail.
 - **Domain 5 — Identity and Access Management.** Account lifecycle from provisioning through deprovisioning, federation, single sign-on, privileged access management. The IAM-lifecycle questions in CISSP go deep — expect questions about specific PAM tooling (CyberArk, BeyondTrust), Just-In-Time access patterns, and the difference between role-based, attribute-based, and discretionary access control.
@@ -418,28 +418,28 @@ This rule, tuned by replacing "medium" with "high" for service accounts and drop
 ## §8 — Key takeaways
 
 - **The credential file was the entire breach.** Three stacked failures (account lifecycle, plaintext storage, no rotation forcing function) combine into one finding that violates AC-2, IA-5, CWE-798, OWASP A07, GLBA, and PCI-DSS simultaneously.
-- **Verizon's annual DBIR consistently puts "use of stolen credentials" near the top of the leading initial-access vectors year over year.** This is not an obscure failure mode; it is the most common one.
+- **Verizon's annual DBIR consistently puts "use of stolen credentials" among the top three initial-access vectors year over year.** The 2026 DBIR documented a notable reshuffle — vulnerability exploitation overtook credential abuse to claim the #1 slot — but credential-driven access remains the persistent runner-up that dominates incident-response casework. This is not an obscure failure mode.
 - **The OSCP enumeration loop — `ls`, `cat`, `grep` — is also the attacker's first move post-foothold.** The same methodology that earns the cert is the methodology that drives breaches when defenders don't run it themselves first.
 - **For consulting firms specifically, the blast radius isn't your data — it's your clients' data.** That changes the legal, contractual, and reputational stakes by an order of magnitude.
 - **The fix isn't a new tool — it's the process around the tool.** Vault deployment without enforced use, scanner deployment without quarterly walks, JML automation without HR-system integration — all of these fail in predictable ways. The defender's job is to close the process loops.
 
 ## §9 — Further reading
 
-- [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final)
-- [NIST SP 800-63B — Digital Identity Guidelines: Authentication and Lifecycle Management](https://pages.nist.gov/800-63-3/sp800-63b.html)
-- [CIS Critical Security Controls v8](https://www.cisecurity.org/controls/v8)
+- [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final)
+- [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html)
+- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
 - [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html)
-- [OWASP Top 10 (2021)](https://owasp.org/Top10/)
+- [OWASP Top 10:2025](https://owasp.org/Top10/2025/)
 - [GLBA Safeguards Rule — Federal Register, 2021 final rule and 2023 amendments](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
-- [PCI-DSS v4.0 — PCI Security Standards Council](https://www.pcisecuritystandards.org/document_library/)
+- [PCI-DSS v4.0.1 — PCI Security Standards Council document library](https://www.pcisecuritystandards.org/document_library/)
 - [MITRE ATT&CK — T1552.001: Unsecured Credentials — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/)
 - [MITRE ATT&CK — T1083: File and Directory Discovery](https://attack.mitre.org/techniques/T1083/)
 - [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
-- [Block (Cash App Investing) — SEC Form 8-K filed April 4, 2022](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001512673&type=8-K&dateb=&owner=include&count=40)
+- [Block (Cash App Investing) — SEC Form 8-K filed April 4, 2022 (direct filing)](https://www.sec.gov/Archives/edgar/data/0001512673/000119312522095215/d343042d8k.htm)
 - [Peiter Zatko ("Mudge") whistleblower disclosure — Senate Judiciary Committee hearing, September 13, 2022](https://www.judiciary.senate.gov/committee-activity/hearings/data-security-at-risk-testimony-from-a-twitter-whistleblower)
 - [Uber September 2022 security incident — Uber official statement](https://www.uber.com/newsroom/security-update/)
 - [HashiCorp Vault — Getting Started](https://developer.hashicorp.com/vault/tutorials/getting-started)
-- [AWS Secrets Manager — User Guide](https://docs.aws.amazon.com/secretsmanager/latest/userguide/)
+- [AWS Secrets Manager — User Guide](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html)
 - [gitleaks — secret scanning](https://github.com/gitleaks/gitleaks)
 - [TruffleHog — secret scanning](https://github.com/trufflesecurity/trufflehog)
 - [Sigma — generic signature format for SIEM systems](https://github.com/SigmaHQ/sigma)
