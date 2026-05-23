@@ -290,6 +290,57 @@ async function termText(page) {
   await page.waitForTimeout(500);
   check("exit from level0@network returns to lobby",                  (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
+  // ── Level 1 — Atlas internal DNS (zone-transfer puzzle) ─────────
+  // Wrong password first to confirm the gate works.
+  await typeAndEnter(page, "ssh level1@network");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "wrong-password");
+  await page.waitForTimeout(200);
+  t = await termText(page);
+  check("Wrong password on level1@network prints 'Permission denied'", t.includes("Permission denied, please try again."));
+
+  await typeAndEnter(page, "ssh level1@network");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "atlas-default-2025");
+  await page.waitForTimeout(600);
+  t = await termText(page);
+  check("Correct password connects to level1@network",                t.includes("Connected: level1@network"));
+  check("Prompt host stays 'network' on level1",                      (await page.locator("#prompt-host").innerText()) === "network");
+  check("Prompt user shows in-world identity 'dbadmin'",              (await page.locator("#prompt-user").innerText()) === "dbadmin");
+  check("Objective references blast-radius / Marcus's team",          t.includes("blast radius") || t.includes("Marcus"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "priya-note.md", "atlas-internal.txt", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "dig atlas.internal AXFR");
+  t = await termText(page);
+  check("AXFR dump reveals prod-db internal hostname",                t.includes("prod-db.atlas.internal"));
+  check("AXFR dump reveals PHI-tier host (phi-warehouse)",            t.includes("phi-warehouse.atlas.internal"));
+  check("AXFR dump reveals the 'audit-bypass' shadow hostname",       t.includes("audit-bypass.atlas.internal"));
+  check("AXFR TXT record leaks level2 breadcrumb credential",         t.includes("atlas-audit-bypass-2026"));
+  check("AXFR footer prints standard zone-transfer XFR-size summary", t.includes("XFR size:"));
+
+  await typeAndEnter(page, "dig nonexistent.example AXFR");
+  t = await termText(page);
+  check("AXFR against a domain without records returns NXDOMAIN-style error",
+        t.includes("NXDOMAIN") || t.includes("REFUSED"));
+
+  await typeAndEnter(page, "cat priya-note.md");
+  t = await termText(page);
+  check("priya-note.md mentions Priya (continuity)",                  t.includes("Priya"));
+  check("priya-note.md states rules-of-engagement",                   t.toLowerCase().includes("rules of engagement"));
+
+  await typeAndEnter(page, "whoami");
+  t = await termText(page);
+  check("whoami prints 'dbadmin' on the Atlas staging-db host",       /\bdbadmin\b/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level1@network returns to lobby",                  (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
   // ── Level 0 — Theo's Safer API Key (crypto track) ───────────────
   // No password (level0 of each track is the entry point).
   await typeAndEnter(page, "ssh level0@crypto");
