@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-05-23
+
+The first level1 walkthrough lands. Eight walkthroughs total now
+published under the v0.7.0 documentation scaffolding — all 7
+level0s + level1@linux. No user-facing changes to the game itself.
+
+### Added
+
+- One additional long-form reference document under the v0.7.0
+  documentation scaffolding — the first level1 walkthrough (Linux
+  track). Picks up where level0's walkthrough ended; goes deeper
+  on the CWE-732 "shadow copy" pattern, with three real-world
+  parallels (LastPass 2022/2023, Uber September 2022, Snowflake
+  customer breach campaign 2024). Subsite client-router manifest
+  updated to register the new entry.
+- Pre-merge link-audit pass performed under the extended
+  procedure (walkthrough + in-game). Audit findings applied
+  before merge — including a corrected CWE-732 mapping-status
+  claim (ALLOWED-WITH-REVIEW, not ALLOWED), a corrected AT&T
+  Snowflake-breach record-count figure (~110M wireless customers,
+  not the conflated ~73M from a separate AT&T breach earlier in
+  2024), and a refreshed Snowflake-advisory URL.
+
 ## [0.7.6] - 2026-05-23
 
 The final level0 walkthrough lands. With this release, **all 7
@@ -753,7 +776,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.6...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.7...HEAD
+[0.7.7]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.3...v0.7.4
