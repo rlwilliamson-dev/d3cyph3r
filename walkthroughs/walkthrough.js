@@ -43,7 +43,14 @@ const MANIFEST = {
     title: "Network",
     blurb:
       "Port scanning and perimeter audit. Client: Atlas Health — HIPAA.",
-    levels: {},
+    levels: {
+      level0: {
+        title: "Atlas Health Perimeter Check",
+        blurb:
+          "Quarterly verification of a healthcare client's claim that " +
+          "their staging database is VPN-only. nmap finds it isn't.",
+      },
+    },
   },
   crypto: {
     title: "Crypto",
