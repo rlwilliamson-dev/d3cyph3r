@@ -45,16 +45,8 @@ async function termText(page) {
   check("Lobby lists Web track",                        t.includes("ssh level0@web"));
   check("Lobby lists Forensics track",                  t.includes("ssh level0@forensics"));
   check("Lobby lists OSINT track",                      t.includes("ssh level0@osint"));
-  check("Lobby lists Cloud track (scaffolded)",         t.includes("ssh level0@cloud"));
-  check("Lobby flags scaffolded tracks with (no levels yet)", t.includes("(no levels yet)"));
-
-  // ssh into a scaffolded-but-empty track (Cloud, the last remaining
-  // commands-wired-but-no-level track) should produce the friendly warm
-  // message, not a generic DNS-style "Could not resolve hostname".
-  await typeAndEnter(page, "ssh level0@cloud");
-  t = await termText(page);
-  check("ssh level0@cloud shows friendly scaffolded-track message", /This track is scaffolded but no levels are built yet/.test(t));
-  check("ssh level0@cloud still leaves player in the lobby",        (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("Lobby lists Cloud track",                      t.includes("ssh level0@cloud"));
+  check("Lobby shows no scaffolded-only tracks (all 7 have levels)", !t.includes("(no levels yet)"));
 
   // ── Engine command-surface smoke test ─────────────────────────────
   // Exercise every new command from the lobby (where no level data
@@ -489,6 +481,105 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@osint returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 0 — Coverline's Twelfth Bucket (cloud track) ──────────
+  // No password (level0 of each track is the entry point).
+  await typeAndEnter(page, "ssh level0@cloud");
+  await page.waitForTimeout(300);
+  t = await termText(page);
+  check("Connected to level0@cloud",                                  t.includes("Connected: level0@cloud"));
+  check("Prompt host updated to 'cloud'",                             (await page.locator("#prompt-host").innerText()) === "cloud");
+  check("Prompt user shows in-world identity 'cloudsec'",             (await page.locator("#prompt-user").innerText()) === "cloudsec");
+  check("Objective references Coverline (client)",                    t.includes("Coverline"));
+  check("Lesson mentions Jordan (new recurring character)",           t.includes("Jordan"));
+  check("Lesson mentions SOC 2 (compliance regime)",                  t.includes("SOC 2"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "audit-worksheet.txt", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "cat engagement-notes.md");
+  t = await termText(page);
+  check("engagement-notes.md mentions Priya (continuity)",            t.includes("Priya"));
+  check("engagement-notes.md cites SOC 2 Type II",                    t.includes("SOC 2 Type II"));
+  check("engagement-notes.md cites NAIC Insurance Data Security",     t.includes("NAIC"));
+  check("engagement-notes.md cites NYDFS 23 NYCRR 500",               t.includes("NYDFS"));
+
+  await typeAndEnter(page, "cat audit-worksheet.txt");
+  t = await termText(page);
+  check("audit-worksheet.txt lists all 6 buckets in scope",
+        t.includes("coverline-static-assets") &&
+        t.includes("coverline-backups-prod") &&
+        t.includes("coverline-marketing-public") &&
+        t.includes("coverline-terraform-state") &&
+        t.includes("coverline-customer-exports") &&
+        t.includes("coverline-claims-uploads-prod"));
+  check("audit-worksheet.txt flags marketing bucket as intentionally PUBLIC", /coverline-marketing-public\s+PUBLIC/.test(t));
+
+  // Walk the worksheet. The locked-down buckets should all return
+  // AccessDenied (the "correct" response for a private bucket).
+  await typeAndEnter(page, "aws s3 ls --no-sign-request s3://coverline-static-assets");
+  t = await termText(page);
+  check("static-assets bucket returns AccessDenied (correct)",        /An error occurred \(AccessDenied\)/.test(t));
+
+  await typeAndEnter(page, "aws s3 ls --no-sign-request s3://coverline-backups-prod");
+  t = await termText(page);
+  check("backups-prod bucket returns AccessDenied (correct)",         /An error occurred \(AccessDenied\)/.test(t));
+
+  await typeAndEnter(page, "aws s3 ls --no-sign-request s3://coverline-terraform-state");
+  t = await termText(page);
+  check("terraform-state bucket returns AccessDenied (correct)",      /An error occurred \(AccessDenied\)/.test(t));
+
+  await typeAndEnter(page, "aws s3 ls --no-sign-request s3://coverline-customer-exports");
+  t = await termText(page);
+  check("customer-exports bucket returns AccessDenied (correct)",     /An error occurred \(AccessDenied\)/.test(t));
+
+  // The marketing bucket is intentionally public — should list brochures.
+  await typeAndEnter(page, "aws s3 ls --no-sign-request s3://coverline-marketing-public");
+  t = await termText(page);
+  check("marketing bucket lists brochure PDFs (expected public)",     t.includes("brochures/coverline-overview-2024.pdf"));
+  check("marketing bucket lists partner-kit assets",                  t.includes("partner-kits/coverline-affiliate-deck-2024.pdf"));
+
+  // THE FIND — claims bucket should list (it shouldn't be public).
+  await typeAndEnter(page, "aws s3 ls --no-sign-request s3://coverline-claims-uploads-prod");
+  t = await termText(page);
+  check("claims-uploads bucket UNEXPECTEDLY lists (the finding)",     t.includes("2024-Q1-claims/claim-cl-019823.json"));
+  check("claims-uploads bucket lists the stale migration script",     t.includes("legacy-deploy/migrate-rds.sh"));
+  check("claims-uploads bucket lists the SQL dump artifact",          t.includes("legacy-migration-snapshot/coverline_claims.dump"));
+
+  // Read a claim file and the migration script for the credential.
+  await typeAndEnter(page, "aws s3 cp s3://coverline-claims-uploads-prod/2024-Q1-claims/claim-cl-019823.json -");
+  t = await termText(page);
+  check("claim JSON exposes claimant PII (name)",                     t.includes("Marcus") && t.includes("Reyes"));
+  check("claim JSON exposes masked SSN (NPI under GLBA / NAIC)",      /XXX-XX-\d{4}/.test(t));
+  check("claim JSON exposes residential address (PII)",               t.includes("Bridgeport") && t.includes("06604"));
+
+  await typeAndEnter(page, "aws s3 cp s3://coverline-claims-uploads-prod/legacy-deploy/migrate-rds.sh -");
+  t = await termText(page);
+  check("migration script leaks RDS host (cloud topology data)",      t.includes("coverline-prod.cluster-xyz.us-east-2.rds.amazonaws.com"));
+  check("migration script leaks level1@cloud breadcrumb password",    t.includes("Cl41ms-Pr0d-M4st3r-2024"));
+
+  // Verify the engine's GetObject AccessDenied path also fires on
+  // locked-down buckets (defense-in-depth — the engine doesn't let
+  // a player bypass the ls denial by going straight to cp).
+  await typeAndEnter(page, "aws s3 cp s3://coverline-backups-prod/some-key -");
+  t = await termText(page);
+  check("aws s3 cp on a denied bucket also returns AccessDenied",     /An error occurred \(AccessDenied\) when calling the GetObject/.test(t));
+
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("lessons-learned.md cites SOC 2 CC6.1 (the audit control)",   t.includes("CC6.1"));
+  check("lessons-learned.md cites CWE-200 (Info Exposure)",           t.includes("CWE-200"));
+  check("lessons-learned.md cites CWE-798 (Hard-Coded Credentials)",  t.includes("CWE-798"));
+  check("lessons-learned.md cites MITRE T1530 (Cloud Storage Object)",t.includes("T1530"));
+  check("lessons-learned.md cites CIS AWS Foundations Benchmark",     t.includes("CIS AWS Foundations Benchmark"));
+  check("lessons-learned.md cites AWS Block Public Access remediation", t.includes("Block Public Access"));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level0@cloud returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));

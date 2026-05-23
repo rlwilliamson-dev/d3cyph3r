@@ -72,6 +72,15 @@ function awsS3Ls(level, rest) {
   const m = target.match(/^s3:\/\/([^/]+)\/?(.*)/);
   if (!m) return { text: `aws: invalid S3 URI: ${target}`, cls: "err" };
   const [, bucket, prefix] = m;
+
+  // Locked-down bucket: real AWS returns AccessDenied (the bucket exists,
+  // but the caller's IAM / bucket policy / Public Access Block configuration
+  // denies the ListObjectsV2 operation). This is the "correct response" for
+  // a properly-secured bucket probed unauthenticated.
+  if (cloud.s3?.deniedBuckets?.includes(bucket)) {
+    return { text: `An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied`, cls: "err" };
+  }
+
   const contents = cloud.s3?.buckets?.[bucket];
   if (!contents) {
     return { text: `An error occurred (NoSuchBucket) when calling the ListObjectsV2 operation: The specified bucket does not exist`, cls: "err" };
@@ -96,6 +105,12 @@ function awsS3Cp(level, rest) {
   const m = src.match(/^s3:\/\/([^/]+)\/(.+)/);
   if (!m) return { text: `aws: invalid S3 URI: ${src}`, cls: "err" };
   const [, bucket, key] = m;
+
+  // Same access-denied path as ls: a locked-down bucket denies GetObject too.
+  if (level.cloud?.s3?.deniedBuckets?.includes(bucket)) {
+    return { text: `An error occurred (AccessDenied) when calling the GetObject operation: Access Denied`, cls: "err" };
+  }
+
   const obj = level.cloud?.s3?.buckets?.[bucket]?.[key];
   if (!obj) {
     return { text: `An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist`, cls: "err" };
