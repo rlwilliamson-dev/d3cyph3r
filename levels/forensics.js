@@ -173,7 +173,7 @@ Client counterpart (this case): Dana Reyes (in-house counsel,
                                 running the investigation)
 Compliance regime: CMMC Level 2 (Cybersecurity Maturity Model
                    Certification, the DoD acquisition-side
-                   framework). NIST SP 800-171 Rev. 2 maps
+                   framework). NIST SP 800-171 Rev. 3 maps
                    underneath. DFARS 252.204-7012 requires
                    incident reporting to DC3 within 72 hours
                    of discovery. CUI (Controlled Unclassified
@@ -454,17 +454,18 @@ proceeding. The MSA exists in part to protect chain of custody.
     reporting. The "examine metadata before content" sequence
     is named explicitly.
 
-  NIST SP 800-171 Rev. 2 — Protecting Controlled Unclassified
-  Information
-    3.6.1  Incident Handling — establish an operational
+  NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified
+  Information (finalized May 2024; supersedes Rev. 2)
+    03.06.01 Incident Handling — establish an operational
       incident-handling capability for organizational systems.
       Forensic competence is part of this.
-    3.6.2  Incident Tracking and Reporting — track, document,
-      and report incidents. Chain-of-custody documentation is
-      part of THIS, not optional.
-    3.14.1, 3.14.2 — System monitoring; insider-threat
+    03.06.02 Incident Monitoring, Reporting, and Response
+      Assistance — track, document, and report incidents.
+      Chain-of-custody documentation is part of THIS, not
+      optional.
+    03.14.06, 03.14.07 — System monitoring and unauthorized-use
       detection. The badge-log audit that opened this case is
-      the 3.14.x control working as designed.
+      the 03.14.x family working as designed.
 
   CMMC Level 2 (DoD CIO, 2024)
     The acquisition-side certification framework that maps to
@@ -473,7 +474,7 @@ proceeding. The MSA exists in part to protect chain of custody.
     finalized in 2024 with a phased contract-clause rollout
     through 2028.
 
-  CIS Critical Security Controls v8
+  CIS Critical Security Controls v8.1
     Control 17  Incident Response Management — establishes the
       foundation for forensic capability. 17.1 (designate
       personnel), 17.2 (define contact information), 17.3

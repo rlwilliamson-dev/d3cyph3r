@@ -268,13 +268,18 @@ to.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  NIST SP 800-53 Rev. 5 — AC-2 (Account Management)
-    Specifically AC-2(13): privileged accounts must be terminated
-    "immediately" on separation. The control violated whenever a
-    consultant's client access isn't fully revoked at engagement
-    end.
+  NIST SP 800-53 Rev. 5 — AC-2 (Account Management) + PS-4
+  (Personnel Termination)
+    AC-2(3) "Disable Accounts" requires accounts to be disabled
+    within an organization-defined time period when no longer
+    required (including separation). PS-4 "Personnel Termination"
+    requires disabling system access within an organization-defined
+    time period of termination and revoking authenticators
+    associated with the individual. Both controls are violated
+    whenever a consultant's client access isn't fully revoked at
+    engagement end.
 
-  CIS Critical Security Controls v8 — Control 5 (Account Management)
+  CIS Critical Security Controls v8.1 — Control 5 (Account Management)
     5.3: disable dormant accounts. 5.4: restrict administrator
     privileges. Both apply here.
 
@@ -283,8 +288,10 @@ to.
     password into a flat file instead of a secrets manager. One of
     the longest-standing entries in the CWE catalog.
 
-  OWASP Top 10 (2021) — A07: Identification and Authentication Failures
-    The umbrella category for the broader weakness class.
+  OWASP Top 10 (2025) — A07: Authentication Failures
+    The umbrella category for the broader weakness class
+    (renamed from "Identification and Authentication Failures"
+    in the 2021 edition).
 
   GLBA Safeguards Rule (16 CFR Part 314)
     For financial-services clients like Halton, mandates "service
@@ -293,7 +300,7 @@ to.
     to ensure their service providers safeguard customer data —
     which puts the burden on Driftwood to deserve that trust.
 
-  PCI-DSS v4.0 — Requirement 12.8
+  PCI-DSS v4.0.1 — Requirement 12.8
     Covers third-party / consultant obligations when payment-card
     data is in scope. Halton is a bank; payment data is always in
     scope somewhere.
@@ -645,17 +652,17 @@ forensically is much harder to answer cleanly.
       data at rest. The control requires either encryption or
       strict access control. Mode 644 is neither.
 
-  CIS Critical Security Controls v8
+  CIS Critical Security Controls v8.1
     3.3 (Configure Data Access Control Lists): the canonical
       defender play against this anti-pattern.
     4.7 (Restrict access to administrative interfaces): related,
       since the jumphost shouldn't have been giving service
       accounts an interactive shell in the first place.
 
-  OWASP Top 10 (2021) — A05: Security Misconfiguration
-    The umbrella category. "Improperly configured permissions on
-    cloud services / files / directories" is one of the named
-    examples.
+  OWASP Top 10 (2025) — A02: Security Misconfiguration
+    The umbrella category (A05 in the 2021 edition; moved up to
+    A02 in 2025). "Improperly configured permissions on cloud
+    services / files / directories" is one of the named examples.
 
   GLBA Safeguards Rule (16 CFR Part 314)
     For Halton specifically. Safeguards Rule 314.4(c)(1) requires
