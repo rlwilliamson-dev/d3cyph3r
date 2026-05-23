@@ -85,7 +85,15 @@ const MANIFEST = {
     blurb:
       "EXIF metadata and insider-threat analysis. Client: Polaris Defense " +
       "Systems — CMMC / NIST 800-171.",
-    levels: {},
+    levels: {
+      level0: {
+        title: "Reed's Soccer Alibi",
+        blurb:
+          "Internal investigation at a defense subcontractor. A cleared " +
+          "engineer's submitted alibi photo carries EXIF metadata placing " +
+          "it eight months earlier and 1,000 miles south.",
+      },
+    },
   },
   osint: {
     title: "OSINT",
