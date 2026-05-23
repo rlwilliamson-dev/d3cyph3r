@@ -478,7 +478,7 @@ threat model. The lookup we just ran is the first step.
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   NIST SP 800-63B (Rev. 4) — Digital Identity Guidelines:
-  Authentication and Lifecycle Management
+  Authentication and Authenticator Management
     5.1.1.2  Verifiers SHALL compare prospective secrets
       against a list of values known to be commonly used,
       expected, or compromised (this is "breach-list
@@ -594,10 +594,10 @@ threat model. The lookup we just ran is the first step.
     OSINT source. Identity pivoting, deconfliction, and
     reporting-to-counsel scope discipline are exam topics.
 
-  SANS SEC487 (Open-Source Intelligence Gathering and
-  Analysis)
-    The flagship OSINT course. Covers HIBP, IntelX, Dehashed,
-    Constella, and the broader breach-corpus ecosystem.
+  SANS SEC497 (Practical Open-Source Intelligence (OSINT))
+    The flagship OSINT practitioner course (replaced the
+    retired SEC487). Covers HIBP, IntelX, Dehashed, Constella,
+    and the broader breach-corpus ecosystem.
 
   OSCP / OSWE
     OSINT comes up in reporting and in the pre-engagement

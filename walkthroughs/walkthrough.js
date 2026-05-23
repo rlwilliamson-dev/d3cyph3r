@@ -100,7 +100,15 @@ const MANIFEST = {
     blurb:
       "Open-source breach corpus and identity reconnaissance. Client: " +
       "Veridian Analytics — HIPAA / HITRUST CSF.",
-    levels: {},
+    levels: {
+      level0: {
+        title: "Veridian's Open Letter",
+        blurb:
+          "Executive-protection OSINT for a newly-hired CMO at a HIPAA " +
+          "Business Associate. HIBP surfaces the same cleartext password " +
+          "in two breaches — the high-confidence credential-reuse signal.",
+      },
+    },
   },
   cloud: {
     title: "Cloud",

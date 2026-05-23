@@ -143,38 +143,61 @@ section dividers when starting a new file.
 ## Link audit (required pre-merge, every walkthrough PR)
 
 Standards drift. OWASP refreshes every ~4 years (2017 → 2021 → 2025).
-NIST 800-63 refreshed Rev 3 → Rev 4 in 2025. CIS Controls v8 → v8.1
-in 2024. PCI-DSS v4.0 → v4.0.1 in 2024 (with v4.0 retired Dec 2024).
-CompTIA refreshes each cert on a ~3-year cycle. Breach disclosures
-grow over time — Change Healthcare's affected-individuals count
-tripled between October 2024 and July 2025. CWE entries get
-re-classified (CWE-668 became "Discouraged for mapping"; the
-old CWE-1051-as-credentials usage was actually wrong — the correct
-ID is CWE-1392).
+NIST 800-63 refreshed Rev 3 → Rev 4 in 2025. NIST 800-171 refreshed
+Rev 2 → Rev 3 in May 2024. CIS Controls v8 → v8.1 in 2024. PCI-DSS
+v4.0 → v4.0.1 in 2024 (with v4.0 retired Dec 2024). PenTest+
+PT0-002 → PT0-003 in Dec 2024 (PT0-002 retired June 2025). CompTIA
+refreshes each cert on a ~3-year cycle. Breach disclosures grow
+over time — Change Healthcare's affected-individuals count tripled
+between October 2024 and July 2025. CWE entries get re-classified
+(CWE-668 became "Discouraged for mapping"; the old CWE-1051-as-
+credentials usage was actually wrong — the correct ID is CWE-1392).
+Historical-case attributions accumulate corrections over time
+(McAfee's hotel attribution, BTK's metadata-recovery attribution).
 
 Every walkthrough PR — *including small edits to an existing
 walkthrough* — must run a link-audit pass before merge.
 
+**The audit covers BOTH files:**
+
+- The walkthrough markdown (`walkthroughs/<track>/<level>.md`)
+- The corresponding in-game lessons-learned content in
+  `levels/<track>.js`
+
+These two files cite the same frameworks, certs, and standards.
+Both drift the same way. Both must stay current.
+
 **Procedure:**
 
 1. Spawn a general-purpose research agent (the `Agent` tool with
-   `subagent_type: general-purpose`) and give it the walkthrough
-   file path and today's date.
-2. Ask it to verify, for each item in §9 Further Reading: current
-   canonical version (is the version cited in the body still the
-   latest?), current canonical URL (does it still resolve to the
-   right thing?), and any body-text claims tied to those sources
-   (cert exam codes, control numbers, regulation citation IDs,
-   breach incident figures).
+   `subagent_type: general-purpose`) and give it BOTH file paths
+   (walkthrough + level), plus today's date.
+2. Ask it to verify, for each citation in both files: current
+   canonical version (is the version cited still the latest?),
+   current canonical URL (does it still resolve?), and any
+   body-text claims tied to those sources (cert exam codes,
+   control numbers, regulation citation IDs, breach incident
+   figures, historical-case dates and attributions).
 3. The agent should report as a structured list — one entry per
    item with status (✓ current / ⚠ needs update / ✗ broken),
    corrected URL/version if needed, and a one-line "what to change"
-   recommendation when applicable.
-4. Apply the corrections.
+   recommendation when applicable, with the specific file the
+   change belongs in.
+4. Apply the corrections. Use judgment on which annotations belong
+   in which file — the walkthrough is auditor-facing and can carry
+   MITRE meta-taxonomy caveats (e.g., "CWE-668 is Discouraged for
+   mapping"); the in-game post-mortem is player-facing and should
+   not be cluttered with framework-internal taxonomy debates.
 5. Update the "Last reviewed: <Month Year>" line at the top of §9
-   to the current month-year.
+   in the walkthrough to the current month-year.
 6. Paste the agent's audit report (or a summary of it) into the PR
    description so the review trail is preserved.
+
+**Cross-track propagation:** If the audit surfaces a finding that
+clearly propagates beyond the track in scope (e.g., an OWASP
+edition shift, a PCI-DSS version bump, a CWE re-classification
+that affects six tracks at once), do a cross-track sweep in the
+same PR rather than leaving per-track follow-ups.
 
 The audit is cheap — typically 1–3 minutes of agent time + 5–10
 minutes of edit application — and catches drift that would
