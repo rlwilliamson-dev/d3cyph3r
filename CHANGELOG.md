@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-05-23
+
+Another content addition under the documentation infrastructure
+introduced in v0.7.0. No user-facing changes to the game itself;
+the new content lives at the same non-indexable subpath and is not
+linked from anywhere player-visible.
+
+### Added
+
+- One additional long-form reference document under the v0.7.0
+  documentation scaffolding. Manifest in the subsite client
+  router updated to register the new entry.
+- Pre-merge link-audit pass performed before first push; audit
+  findings applied before the PR opened (a factual error on a
+  cited regulatory-settlement year, a moved SEC press-release
+  URL, and a primary-source link that had begun 403-ing for
+  automated fetchers).
+
 ## [0.7.2] - 2026-05-23
 
 Another content addition under the documentation infrastructure
@@ -591,7 +609,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.6.0...v0.7.0
