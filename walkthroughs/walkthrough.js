@@ -37,6 +37,13 @@ const MANIFEST = {
           "Audit an offboarded consultant's laptop before reimaging. " +
           "Find the client credential he left behind.",
       },
+      level1: {
+        title: "The Backup Daniel Forgot",
+        blurb:
+          "Day two. Using the leaked staging credential, walk Halton's " +
+          "jumphost. A debug copy of a properly-locked-down systemd " +
+          "override leaks the production DB password. CWE-732.",
+      },
     },
   },
   network: {
