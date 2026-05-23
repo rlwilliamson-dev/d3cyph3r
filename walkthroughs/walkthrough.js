@@ -70,7 +70,15 @@ const MANIFEST = {
     title: "Web",
     blurb:
       "HTTP directory enumeration. Client: Meridian State University — FERPA.",
-    levels: {},
+    levels: {
+      level0: {
+        title: "Meridian's Forgotten Backup Folder",
+        blurb:
+          "Pre-cyber-insurance-renewal web audit at a state university. " +
+          "A dismissed agency left a backup directory under DocumentRoot " +
+          "with autoindex on. 4,217 student records + a live DB credential.",
+      },
+    },
   },
   forensics: {
     title: "Forensics",
