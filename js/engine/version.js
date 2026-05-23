@@ -59,6 +59,6 @@
 // VERSION_DISPLAY is the major.minor form shown to the player in the
 // topbar and lobby tagline.
 
-export const VERSION = "0.7.3";
+export const VERSION = "0.7.4";
 
 export const VERSION_DISPLAY = "v" + VERSION.split(".").slice(0, 2).join(".");

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-05-23
+
+Another content addition under the documentation infrastructure
+introduced in v0.7.0. No user-facing changes to the game itself;
+the new content lives at the same non-indexable subpath and is not
+linked from anywhere player-visible.
+
+### Added
+
+- One additional long-form reference document under the v0.7.0
+  documentation scaffolding. Manifest in the subsite client
+  router updated to register the new entry.
+- Pre-merge link-audit pass performed before first push (per the
+  v0.7.1-established procedure). Ten findings applied — a notable
+  legal mischaracterization (the $5M cap on 18 USC §1832 fines
+  is the *organizational* maximum, not an individual cap), five
+  historical-case date/attribution corrections (McAfee, Ochoa,
+  BTK), and four URL/citation refreshes. Walkthroughs at this
+  level of historical-case density need this audit step.
+
 ## [0.7.3] - 2026-05-23
 
 Another content addition under the documentation infrastructure
@@ -609,7 +629,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.4...HEAD
+[0.7.4]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.0...v0.7.1
