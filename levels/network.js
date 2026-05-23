@@ -212,7 +212,7 @@ For a healthcare org specifically, "when" answers in two ways:
   1. Patient data on the wire. PHI is a high-value target for
      extortion and resale. Healthcare breaches command the
      highest per-record costs in industry-wide breach reports
-     ($429/record vs $164 cross-industry, IBM Cost of a Data
+     ($408/record vs $165 cross-industry, IBM Cost of a Data
      Breach 2024).
   2. HITECH notification timing. Atlas would have ~60 days from
      discovery to notify affected individuals, with reporting to

@@ -36,20 +36,36 @@
 //      LINK-AUDIT REQUIREMENT (pre-merge, every walkthrough PR —
 //      including small content edits to an existing walkthrough):
 //        a. Delegate a research agent (general-purpose Agent tool +
-//           WebFetch/WebSearch) to audit every URL in §9 Further
-//           Reading and every version-specific claim in §5 and §6
-//           (cert versions, framework revisions, regulation
-//           citation IDs, breach incident figures). Standards drift
-//           — OWASP, NIST 800-63, CIS Controls, PCI-DSS, certs all
-//           have multi-year refresh cycles. Breach disclosures grow
-//           (Change Healthcare's affected-individuals count tripled
-//           between Oct 2024 and Jul 2025 — these are the kinds of
-//           drifts to catch).
-//        b. Apply the corrections.
+//           WebFetch/WebSearch) to audit BOTH:
+//             - The walkthrough's §9 Further Reading URLs and the
+//               version-specific claims in §5 and §6 (cert versions,
+//               framework revisions, regulation citation IDs, breach
+//               incident figures, historical-case dates).
+//             - The CORRESPONDING in-game lessons-learned content in
+//               levels/<track>.js. The post-mortem players read at
+//               the end of each level cites the same frameworks and
+//               certs the walkthrough does; both files drift the
+//               same way and both must stay current.
+//           Standards drift — OWASP, NIST 800-63, CIS Controls,
+//           PCI-DSS, certs all have multi-year refresh cycles.
+//           Breach disclosures grow (Change Healthcare's affected-
+//           individuals count tripled between Oct 2024 and Jul
+//           2025). Historical-case attributions accumulate
+//           corrections over time (McAfee 2012, BTK 2005).
+//        b. Apply the corrections to both files. The audience
+//           differs — walkthroughs can carry MITRE meta-taxonomy
+//           caveats (e.g., "CWE-668 is Discouraged for mapping")
+//           that would be noise in the player-facing post-mortem,
+//           so use judgment on which annotations belong where.
 //        c. Bump the "Last reviewed: <Month Year>" line at the top
 //           of §9 to the current month.
 //        d. The audit report goes in the PR description so the
 //           review trail is preserved.
+//        Soft cross-track sweep: if the audit surfaces a finding
+//        that propagates beyond the track in scope (e.g., an
+//        OWASP-edition shift affecting six tracks at once), do a
+//        cross-track sweep in the same PR rather than tracking
+//        per-track follow-ups.
 //   5. Merge the release commit.
 //   6. Tag v<VERSION> on the merge commit (annotated tag).
 //   7. gh release create v<VERSION> with notes pulled from CHANGELOG.
@@ -59,6 +75,6 @@
 // VERSION_DISPLAY is the major.minor form shown to the player in the
 // topbar and lobby tagline.
 
-export const VERSION = "0.7.4";
+export const VERSION = "0.7.5";
 
 export const VERSION_DISPLAY = "v" + VERSION.split(".").slice(0, 2).join(".");

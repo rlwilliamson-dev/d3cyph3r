@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-05-23
+
+Three changes in one release: another content addition under the
+documentation infrastructure, a small in-game citation fix from a
+backfill audit, and a procedure extension so the link-audit step
+now covers both the walkthrough file AND the corresponding in-game
+lessons-learned content. The post-mortems players read at the end
+of each level are now in scope for every per-walkthrough audit
+going forward.
+
+### Added
+
+- One additional long-form reference document under the v0.7.0
+  documentation scaffolding. Manifest in the subsite client
+  router updated to register the new entry.
+- First pass under the new extended link-audit procedure caught
+  a stale SANS course code (SEC487 retired, replaced by SEC497
+  "Practical Open-Source Intelligence") that appeared in BOTH
+  the walkthrough and the in-game post-mortem — exactly the
+  kind of cross-file drift the extended procedure is designed
+  to catch.
+
+### Fixed (in-game post-mortem citations)
+
+- **In-game IBM Cost of a Data Breach 2024 figure** corrected.
+  The healthcare-vertical per-record figure was cited as $429
+  but the 2024 IBM report actually published $408. Backfill
+  audit caught the drift. Cross-industry figure also corrected
+  from $164 to $165 for the same report's published number.
+- **In-game SANS course citation** updated from SEC487 to SEC497
+  (SEC487 retired; SEC497 "Practical Open-Source Intelligence"
+  is the current SANS catalog entry).
+- **In-game NIST SP 800-63B-4 subtitle** corrected from the
+  old Rev. 3 subtitle ("Authentication and Lifecycle Management")
+  to the current Rev. 4 subtitle ("Authentication and
+  Authenticator Management"). The Rev. 4 citation itself was
+  already current from the v0.7.2 cross-track audit.
+
+### Changed
+
+- **Link-audit procedure extended to cover in-game content.**
+  Version-bump checklist in `js/engine/version.js` and the
+  walkthroughs author guide (`walkthroughs/README.md`) updated:
+  the pre-merge link-audit step now audits both the walkthrough
+  markdown AND the corresponding `levels/<track>.js`
+  lessons-learned content for the same drift categories.
+  Cross-track propagation is folded into the same PR when a
+  finding clearly affects multiple tracks. Walkthroughs are
+  auditor-facing and can carry MITRE-meta caveats; in-game is
+  player-facing and avoids framework-internal taxonomy
+  noise — the procedure documents this distinction.
+
 ## [0.7.4] - 2026-05-23
 
 Another content addition under the documentation infrastructure
@@ -629,7 +681,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.4...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.5...HEAD
+[0.7.5]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.1...v0.7.2
