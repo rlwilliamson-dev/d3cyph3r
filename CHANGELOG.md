@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-23
+
+Internal documentation infrastructure. No user-facing changes to the
+game itself in this release; the work scaffolds a long-form content
+surface that will be revealed in a later release. Game behavior is
+unchanged — the lobby, every existing track, and every existing level
+behave identically to v0.6.
+
+### Added
+
+- Documentation scaffolding under a non-indexable subpath. Not linked
+  from the main site, the lobby, the README, or anywhere else the
+  player can encounter it. `robots.txt` and a `noindex,nofollow,noarchive`
+  meta tag keep it out of search engines. Per-level content will land
+  here over time; user-facing surfacing waits for a later release.
+- Vendored markdown renderer (`marked` v12.0.2, MIT-licensed,
+  self-hosted) so the CSP `script-src 'self'` policy stays intact —
+  no CDN dependencies, no policy relaxation.
+- Hash-based client routing for the new subsite, so no Azure Static
+  Web Apps rewrite configuration is required.
+- Author guide for the new content surface, documenting format,
+  voice, length expectations, and sourcing rules for future
+  contributors (including a 10-section template with equal-depth
+  treatment of each cited certification).
+- First reference document published under the new scaffolding. Not
+  linked from anywhere player-visible.
+
+### Changed
+
+- Version-bump checklist (in `js/engine/version.js` header) extended
+  with a soft-gate step for the new content surface as part of the
+  per-level shipping process. The anti-spoiler rule from the existing
+  checklist explicitly does NOT apply to content under the new
+  subpath (which is designed to be the intended destination for full
+  solve detail).
+- `robots.txt` added at the repo root: main site stays indexable; the
+  new subpath is disallowed for all user-agents.
+
 ## [0.6.0] - 2026-05-22
 
 "All seven engagement slots playable." The Cloud track ships its
@@ -489,7 +527,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.3.0...v0.4.0

@@ -21,15 +21,27 @@
 //      e.g. a new credential breadcrumb shipped, a level1 actually
 //      built, or a "(Track not built)" note flipping to "Engine ready"
 //      because the commands shipped for a scaffolded track.
-//   4. Merge the release commit.
-//   5. Tag v<VERSION> on the merge commit (annotated tag).
-//   6. gh release create v<VERSION> with notes pulled from CHANGELOG.
+//   4. Author the level walkthrough at
+//      walkthroughs/<track>/<level>.md. Use level0@linux's walkthrough
+//      as the template (10 sections, 6000-8000 words). Update the
+//      MANIFEST in walkthroughs/walkthrough.js so the index lists it.
+//      Soft gate: the walkthrough MAY ship in a follow-up PR if the
+//      writing slows the level merge — but the level isn't considered
+//      "done" until its walkthrough exists.
+//      ANTI-SPOILER EXCEPTION: the anti-spoiler rule in step 1 does
+//      NOT apply to walkthrough content. Walkthroughs are the
+//      intended destination for full solve paths and credentials;
+//      spoilers belong there. Authors should still avoid copy-pasting
+//      passwords into anything outside walkthroughs/.
+//   5. Merge the release commit.
+//   6. Tag v<VERSION> on the merge commit (annotated tag).
+//   7. gh release create v<VERSION> with notes pulled from CHANGELOG.
 //      The release notes inherit the anti-spoiler rule from step 1.
 //
 // VERSION is the full semver string (used by tooling and the tag).
 // VERSION_DISPLAY is the major.minor form shown to the player in the
 // topbar and lobby tagline.
 
-export const VERSION = "0.6.0";
+export const VERSION = "0.7.0";
 
 export const VERSION_DISPLAY = "v" + VERSION.split(".").slice(0, 2).join(".");

@@ -1,0 +1,9 @@
+# D3CYPH3R — robots policy.
+#
+# The main site is indexable. The /walkthroughs/ subsite is a hidden
+# study companion not yet meant for public discovery; keep it out of
+# search engines until v1.0 launch flips the reveal.
+
+User-agent: *
+Allow: /
+Disallow: /walkthroughs/
