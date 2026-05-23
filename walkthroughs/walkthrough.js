@@ -115,7 +115,15 @@ const MANIFEST = {
     blurb:
       "AWS S3, IAM, EC2 auditing. Client: Coverline Insurance — SOC 2 / " +
       "NAIC / NYDFS / GLBA.",
-    levels: {},
+    levels: {
+      level0: {
+        title: "Coverline's Twelfth Bucket",
+        blurb:
+          "Mid-SOC-2-audit gap-fill at an insurtech carrier. A six-bucket " +
+          "worksheet walks cleanly until one — claims-uploads-prod — " +
+          "lists publicly with PII + a hardcoded RDS password.",
+      },
+    },
   },
 };
 
