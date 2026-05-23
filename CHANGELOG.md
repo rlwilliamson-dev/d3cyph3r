@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-05-23
+
+The final level0 walkthrough lands. With this release, **all 7
+tracks have a published reference document under the documentation
+scaffolding.** The pre-merge link audit on this one caught more
+than any prior walkthrough — including a fabricated citation that
+had been generated from training memory rather than a real source.
+This is exactly why the audit step exists.
+
+### Added
+
+- One additional long-form reference document under the v0.7.0
+  documentation scaffolding — completing the level0 series across
+  all 7 tracks. Manifest in the subsite client router updated to
+  register the new entry.
+
+### Fixed (factual errors, in both walkthrough and in-game)
+
+- **OWASP Cloud-Native Top 10 CNAS-7 misattribution** corrected in
+  both the new walkthrough AND in the pre-existing in-game post-
+  mortem (which has been shipping the wrong CNAS-7 definition
+  since v0.6.0). CNAS-7 is actually "Using components with known
+  vulnerabilities," not "Improper Authentication and Authorization."
+  The credential-leak scenario maps more precisely to **CNAS-5
+  Insecure Secrets Storage** in the OWASP CN Top 10's 2022
+  edition. Both files now cite CNAS-5.
+- **OWASP Cloud-Native Top 10 edition year** corrected from "2023"
+  to "2022" in both files. The list was published in 2022; the
+  GitHub project was archived in April 2025.
+- **CIS AWS Foundations Benchmark version** bumped from v3.0.0 to
+  v5.0.0 (the AWS Security Hub-supported version as of late 2025;
+  v7.0.0 is also published by CIS but tooling support is lagging).
+  v5.0.0 consolidated the legacy v3.0.0 §2.1.6 (KMS encryption)
+  into §2.1.3, so the S3 sub-control list is now five items
+  rather than six. Updated in both files.
+- **Capital One regulatory-cascade citation** corrected. An
+  earlier draft of the new walkthrough cited a "Capital One SEC
+  enforcement settlement ($4M, August 2024)" that does not exist
+  — the SEC release number referenced is unrelated to Capital
+  One. Removed entirely. Class-action settlement figure
+  corrected to the actual public number (~$190M, late 2022) and
+  the Federal Reserve's separate 2020 enforcement action (which
+  was terminated in 2023 without further penalty) added as a
+  more accurate adjacent citation.
+- **NAIC Model Law adoption count** updated from "~25 states" to
+  "~28 jurisdictions as of early 2026," reflecting continued
+  state-level adoption.
+
+### Changed (milestone definitions)
+
+- **CLAUDE.md milestone names section updated.** The v1.0.0
+  "Foundation" milestone now explicitly requires every track to
+  have at least level0 AND level1 playable, not just the Linux
+  track. The earlier track-specific milestone framing
+  ("v1.0 = Linux complete; v2.0 = Network + Crypto complete";
+  etc.) was abandoned once it became clear that shipping all 7
+  track level0s before any track's level1 produces a much more
+  compelling pre-v1.0 product than building any single track
+  deep first. The level-depth-per-track approach is now
+  documented in the file.
+
 ## [0.7.5] - 2026-05-23
 
 Four changes in one release: another content addition under the
@@ -692,7 +753,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.5...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.6...HEAD
+[0.7.6]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.2...v0.7.3

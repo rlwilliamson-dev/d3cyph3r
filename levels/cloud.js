@@ -95,7 +95,7 @@ export const cloudLevels = {
   // lesson is the public-S3-bucket-as-pwn-primitive — the single most
   // common cloud-data-exposure pattern in real consulting work —
   // mapped to SOC 2 Trust Services Criteria (CC6 / CC7), CIS AWS
-  // Foundations Benchmark v3.0.0 (§2.1), NIST SP 800-53 Rev. 5
+  // Foundations Benchmark v5.0.0 (§2.1), NIST SP 800-53 Rev. 5
   // (AC-3 / SC-7), NIST CSF 2.0 (PR.AA / PR.DS), ISO 27017 (Cloud
   // services security), NAIC Insurance Data Security Model Law, NYDFS
   // 23 NYCRR 500, CWE-200 / CWE-732 / CWE-285, OWASP Cloud-Native Top
@@ -850,17 +850,21 @@ travels far past the bucket itself.
     DE.CM  Continuous Monitoring — the detection layer
       Coverline was missing.
 
-  CIS AWS Foundations Benchmark v3.0.0 (2024)
+  CIS AWS Foundations Benchmark v5.0.0
+  (the Security Hub-supported version as of late 2025; CIS
+   has also published v7.0.0 but tooling support is lagging)
     §2.1.1  Ensure S3 Bucket Policy is set to deny HTTP
       requests (TLS-only). Tangential here but relevant
       hygiene.
     §2.1.2  Ensure MFA Delete is enabled on S3 buckets.
+    §2.1.3  Ensure all S3 buckets employ encryption-at-rest
+      with KMS (v5 consolidated the legacy v3 §2.1.6 KMS
+      requirement into §2.1.3).
     §2.1.4  Ensure S3 Block Public Access setting is enabled
       at the account level — the headline control that
       would have prevented this finding.
     §2.1.5  Ensure S3 Block Public Access setting is enabled
       at the bucket level (defense-in-depth).
-    §2.1.6  Ensure all S3 buckets employ encryption-at-rest.
 
   ISO/IEC 27017:2015 (Code of practice for information security
   controls based on ISO/IEC 27002 for cloud services)
@@ -869,14 +873,16 @@ travels far past the bucket itself.
     CLD.8.1.5  Removal of cloud service customer assets.
     CLD.9.5.1  Segregation in virtual computing environments.
 
-  OWASP Cloud-Native Top 10 (2023)
+  OWASP Cloud-Native Top 10 (2022)
     CNAS-1: Insecure Cloud, Container, or Orchestration
       Configuration — this finding is the canonical example.
     CNAS-2: Injection Flaws (cloud-native versions) — adjacent;
       the hardcoded RDS password would enable injection-style
       lateral movement.
-    CNAS-7: Improper Authentication and Authorization —
-      direct hit, public access to authenticated-only data.
+    CNAS-5: Insecure Secrets Storage — the hardcoded RDS
+      master password in migrate-rds.sh is the textbook
+      example of credentials stored in a non-secret-store
+      location.
 
   CWE
     CWE-200  Exposure of Sensitive Information to an
