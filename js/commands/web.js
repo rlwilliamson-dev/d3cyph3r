@@ -5,7 +5,13 @@ export const webCommands = {
     if (!arg) return { text: "Usage: curl <url>  OR  curl -I <url>", cls: "err" };
 
     const headerMode = arg.startsWith("-I ");
-    const url = headerMode ? arg.slice(3).trim() : arg.trim();
+    let url = headerMode ? arg.slice(3).trim() : arg.trim();
+    // Strip surrounding shell quotes if present — players (and walkthrough
+    // examples) often wrap URLs with `?` in single or double quotes the
+    // way they would in a real bash session. The terminal doesn't do
+    // bash-style word splitting, so the quotes survive into `arg`; we
+    // strip them here so the URL lookup matches level.web[url].
+    url = url.replace(/^(['"])(.*)\1$/, "$2");
 
     if (headerMode) {
       const headers = level.webHeaders?.[url];
