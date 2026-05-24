@@ -68,6 +68,7 @@ async function termText(page) {
   check("help lists `md5sum` (forensics)",  t.includes("md5sum <file>"));
   check("help lists `evtx` (forensics)",    t.includes("evtx [-id N] <file>"));
   check("help lists `github` (osint)",      t.includes("github <user>[/repo]"));
+  check("help lists `psql` (cloud)",        t.includes("psql [-d <db>]"));
 
   // Each new command with no args should print a usage string (or for
   // `ps`, a graceful empty-state). These calls happen from the lobby
@@ -83,6 +84,7 @@ async function termText(page) {
     ["md5sum",       "Usage: md5sum"],
     ["evtx",         "Usage: evtx"],
     ["github",       "Usage: github"],
+    ["psql",         "Usage: psql"],
     ["sherlock",     "Usage: sherlock"],
     ["hibp",         "Usage: hibp"],
     ["wayback",      "Usage: wayback"],
@@ -945,6 +947,119 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@cloud returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 1 — The Migration Table Nobody Dropped (cloud, psql) ───
+  // Wrong password first to confirm the gate works.
+  await typeAndEnter(page, "ssh level1@cloud");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "wrong-password");
+  await page.waitForTimeout(200);
+  t = await termText(page);
+  check("Wrong password on level1@cloud prints 'Permission denied'",  t.includes("Permission denied, please try again."));
+
+  await typeAndEnter(page, "ssh level1@cloud");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "Cl41ms-Pr0d-M4st3r-2024");
+  await page.waitForTimeout(600);
+  t = await termText(page);
+  check("Correct password connects to level1@cloud",                  t.includes("Connected: level1@cloud"));
+  check("Prompt host stays 'cloud' on level1",                        (await page.locator("#prompt-host").innerText()) === "cloud");
+  check("Prompt user stays 'cloudsec' on level1@cloud",               (await page.locator("#prompt-user").innerText()) === "cloudsec");
+  check("Objective references DB enumeration",                        /enumerate|database|psql/i.test(t));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "bastion-handoff.txt", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  // psql --version returns a version string.
+  await typeAndEnter(page, "psql --version");
+  t = await termText(page);
+  check("psql --version returns a PostgreSQL version string",         t.includes("PostgreSQL"));
+
+  // \l lists databases (Coverline's two DBs + 3 system DBs).
+  await typeAndEnter(page, "psql \"\\l\"");
+  t = await termText(page);
+  check("psql \\l lists the coverline_claims database",               t.includes("coverline_claims"));
+  check("psql \\l lists the coverline_billing database",              t.includes("coverline_billing"));
+  check("psql \\l shows the system DBs (template0/template1)",        t.includes("template0") && t.includes("template1"));
+
+  // \dt against coverline_claims shows the 7 tables.
+  await typeAndEnter(page, "psql -d coverline_claims \"\\dt\"");
+  t = await termText(page);
+  for (const tbl of ["claims", "customers", "policies", "adjusters", "integrations", "migration_artifacts", "users", "audit_log"]) {
+    check(`psql \\dt lists table ${tbl}`, t.includes(tbl));
+  }
+
+  // Read the integrations table — proves Coverline uses Secrets Manager.
+  await typeAndEnter(page, "psql -d coverline_claims \"SELECT * FROM integrations\"");
+  t = await termText(page);
+  check("integrations table shows Secrets Manager pointer pattern",   t.includes("secrets-manager:broker-portal-prod"));
+  check("integrations table shows the NAIC data-exchange integration",t.includes("naic-data-exchange"));
+
+  // THE SMOKING GUN — the migration_artifacts table has the broker-portal credential.
+  await typeAndEnter(page, "psql -d coverline_claims \"SELECT * FROM migration_artifacts\"");
+  t = await termText(page);
+  check("migration_artifacts table shows all 3 rows",                 t.includes("(3 rows)"));
+  check("migration_artifacts row 1: rds-migration-runner credential", t.includes("rds-mig-2024-svc-Tmp9pQ7rT"));
+  check("migration_artifacts row 2: broker-portal cred (level2 breadcrumb)", t.includes("Cv-BrokerSvc-Pr0d-2024-Migration"));
+  check("migration_artifacts row 3: NAIC SFTP (properly rotated)",    t.includes("naic-handoff-2024-Q1-7Kp9"));
+
+  // The users table reveals the dormant vikram.shah account.
+  await typeAndEnter(page, "psql -d coverline_claims \"SELECT * FROM users\"");
+  t = await termText(page);
+  check("users table includes terminated vikram.shah",                t.includes("vikram.shah") && t.includes("terminated"));
+  check("users table shows the coverline_admin rds_master row",       t.includes("coverline_admin") && t.includes("rds_master"));
+
+  // The audit_log has the anomalous schema_query entry.
+  await typeAndEnter(page, "psql -d coverline_claims \"SELECT * FROM audit_log\"");
+  t = await termText(page);
+  check("audit_log shows the 2026-05-20 anomalous schema query",      t.includes("schema_query_pg_catalog") && t.includes("2026-05-20"));
+  check("audit_log labels the actor as unrecognized source",          t.includes("unrecognized source"));
+
+  // SELECT with LIMIT.
+  await typeAndEnter(page, "psql -d coverline_claims \"SELECT * FROM claims LIMIT 2\"");
+  t = await termText(page);
+  check("SELECT LIMIT 2 returns exactly 2 rows",                      t.includes("(2 rows)"));
+
+  // Graceful error: unknown table.
+  await typeAndEnter(page, "psql -d coverline_claims \"SELECT * FROM nonexistent_table\"");
+  t = await termText(page);
+  check("psql on unknown table returns graceful 'does not exist'",    t.includes('relation "nonexistent_table" does not exist'));
+
+  // Graceful error: unknown database.
+  await typeAndEnter(page, "psql -d nonexistent_db \"\\dt\"");
+  t = await termText(page);
+  check("psql on unknown database returns graceful FATAL message",    t.includes('database "nonexistent_db" does not exist'));
+
+  // Graceful error: unsupported DML (read-only enforcement).
+  await typeAndEnter(page, "psql -d coverline_claims \"DELETE FROM claims\"");
+  t = await termText(page);
+  check("psql refuses DML (DELETE) with helpful error",               t.includes("SELECT and meta-commands only"));
+
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("lessons-learned.md cites CWE-798 (Hard-Coded Credentials)",  t.includes("CWE-798"));
+  check("lessons-learned.md cites CWE-540 (Sensitive Info in Source)",t.includes("CWE-540"));
+  check("lessons-learned.md cites NIST SP 800-53 IA-5(7)",            t.includes("IA-5(7)"));
+  check("lessons-learned.md cites MITRE T1078 (Valid Accounts)",      t.includes("T1078"));
+  check("lessons-learned.md cites MITRE T1213 (Info Repositories)",   t.includes("T1213"));
+  check("lessons-learned.md cites MITRE T1552.001",                   t.includes("T1552.001"));
+  check("lessons-learned.md cites SOC 2 CC6.2 (System User Mgmt)",    t.includes("CC6.2"));
+  check("lessons-learned.md cites NAIC §6 (72-hour clock)",           t.includes("NAIC") && t.includes("72"));
+  check("lessons-learned.md cites NYDFS 500.07 + 500.17",             t.includes("500.07") && t.includes("500.17"));
+  check("lessons-learned.md cites GLBA Safeguards 314.5",             t.includes("314.5"));
+  check("lessons-learned.md cites AWS Secrets Manager remediation",   t.includes("Secrets Manager"));
+  check("lessons-learned.md cites Database Activity Streams",         t.includes("Database Activity Streams"));
+
+  await typeAndEnter(page, "whoami");
+  t = await termText(page);
+  check("whoami prints 'cloudsec' on the bastion",                    /\bcloudsec\b/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level1@cloud returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));

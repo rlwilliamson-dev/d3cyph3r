@@ -7,6 +7,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-05-24
+
+The sixth level1 in six releases, and the last v1.0 "Foundation"
+level. **All seven tracks (Linux, Network, Crypto, Web, Forensics,
+OSINT, Cloud) now have level0 + level1 chains.** The v1.0 milestone
+criterion per CLAUDE.md — "every track has at least level0 AND
+level1 playable" — is technically met with this release; the actual
+v1.0.0 tag is held for a separate dedicated release.
+
+Introduces one new engine command — `psql` — a minimal PostgreSQL
+client (`\l`, `\dt`, SELECT with optional LIMIT) for RDS-adjacent
+database-enumeration puzzles. Level designers populate
+`level.postgres = { defaultDb, connection, databases: { <db>:
+{ tables: { <name>: { columns, rows } } } } }`.
+
+The walkthrough audit caught NIST CSF 2.0's URL slug change
+(`-csf-` segment), NAIC's MDL-668 PDF path move, the long-standing
+"PostgreSQL security.html" page that doesn't exist, an FFIEC vs OCC
+attribution error on the Capital One $80M consent order, the DBIR
+2024 "24% (year) vs 31% (10-year)" stolen-credentials distinction,
+the CIS AWS Foundations v5.0.0 actual release date (March 31, 2025,
+not December 2024) and v7.0.0 (April 2026, not "mid-2025"), and the
+recurring "Database Activity Streams is Aurora-only for MySQL /
+PostgreSQL" feature-scope error.
+
+### Added
+
+- **`level1@cloud` — "The Migration Table Nobody Dropped."** Day-3
+  continuation of the Coverline SOC 2 case. After Friday's S3 audit
+  closed the CC6.1 control gap and surfaced a hardcoded RDS master
+  credential, Sloane's IR triage triangle (CISO + GC + outside
+  counsel) wants the database enumerated before the credential is
+  rotated, so the breach-notification math can cover any secondary
+  exposures. Player SSHes onto Coverline's cloud-audit bastion
+  (`~/.pgpass` pre-staged with the leaked credential), walks the
+  `coverline_claims` schema with `psql`, and finds: a
+  `migration_artifacts` table from the 2024 us-east-1 → us-east-2
+  region cutover with explicit `ttl_expires_at` columns that
+  intended Q2 2024 deletion but were never honored; row 2
+  (broker-portal service credential) is the level2 breadcrumb —
+  Coverline migrated broker-portal to Secrets Manager last year
+  but kept the legacy migration credential as a "fallback in case
+  Secrets Manager lookup fails" that the broker-portal team never
+  confirmed could be removed. Plus a dormant terminated-employee
+  account (vikram.shah, rolled off Q1 2024) still in the
+  application's users table, and a single anomalous 2026-05-20
+  02:14 UTC schema-enumeration query in the audit log from an
+  unrecorded source IP (Coverline runs RDS audit logging in basic
+  mode without pgaudit). Lesson stack: CWE-798 (Hard-Coded
+  Credentials) + CWE-540 (Inclusion of Sensitive Information in
+  Source Code) + CWE-312 (Cleartext Storage of Sensitive
+  Information), mapped to SOC 2 CC6.1 / CC6.2 / CC6.6 / CC7.1 +
+  NIST SP 800-53 Rev. 5 IA-5(7) + NAIC §4.D / §5 / §6 (72-hour
+  clock) + NYDFS 23 NYCRR 500.07 / 500.13 / 500.17 + GLBA
+  Safeguards 314.4(c)(4) / 314.5 (30-day clock since May 2024).
+  AWS Secrets Manager + Database Activity Streams + GuardDuty RDS
+  Protection + IAM Database Authentication + pgaudit as the proper
+  remediation stack. MITRE T1078 (Valid Accounts) + T1213 (Data
+  from Information Repositories) + T1552.001 (Credentials In Files).
+- **New engine command: `psql [-d <db>] "<SQL or \\meta>"`.**
+  Minimal PostgreSQL client supporting `\l` (list databases), `\dt`
+  (list tables), `SELECT * FROM <table> [LIMIT N]`, and
+  `SELECT <cols> FROM <table>`. Also supports `--version`, `-c`,
+  and `-h` / `-U` (the connection flags are accepted for realism
+  but the engine uses the level's pre-configured connection).
+- **`walkthroughs/cloud/level1.md`** — long-form companion under
+  the v0.7.0 walkthrough scaffolding. ~7,000 words. Covers DB-row
+  credential storage as the modern source-control-credentials
+  anti-pattern equivalent, the universal migration-table-cleanup
+  failure mode, real-world parallels (Capital One March 2019 /
+  $80M OCC consent order, Microsoft SCCM database credential
+  observations, SolarWinds Orion database storing managed-device
+  credentials, Microsoft Power Apps August 2021 / UpGuard /
+  ~38M records across 47 portals, MOVEit / CL0P May 2023 /
+  ~2,800+ orgs / ~93M records, Snowflake May-June 2024 /
+  Ticketmaster ~560M / AT&T ~109M / Santander ~30M / UNC5537
+  attribution, DBIR 2024 vs 2026 stolen-credentials trends),
+  full framework + cert tie-ins (SOC 2 / NIST 800-53 / NIST CSF
+  2.0 / CIS AWS Foundations v5/v7 / CIS PostgreSQL v15-v18 /
+  NAIC / NYDFS / GLBA Safeguards), AWS-native remediation stack
+  (Secrets Manager / Parameter Store / IAM Database Auth /
+  Database Activity Streams / GuardDuty RDS Protection / pgaudit
+  configuration), and the credential-cascade through-line across
+  all six v1.0 level1s. Standard "Last reviewed: May 2026" footer.
+- Playtest coverage for the new level — wrong-password rejection,
+  psql `\l` / `\dt` / SELECT / LIMIT / cross-DB validation,
+  breadcrumb credential assertion, dormant-account finding
+  verification, anomalous-audit-log entry detection, the three
+  graceful-error paths (unknown table / unknown database / DML
+  refused), plus framework-citation checks in the in-game
+  post-mortem.
+- `help` reference entry for `psql` in the CLOUD SECURITY
+  section, plus `psql`-with-no-args usage probe in the lobby
+  smoke test.
+
 ## [0.12.0] - 2026-05-24
 
 The fifth level1 in five releases. Six of the seven tracks (Linux,

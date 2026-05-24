@@ -1,6 +1,7 @@
-// Cloud-track commands: fake AWS CLI surface.
+// Cloud-track commands: fake AWS CLI surface + a minimal PostgreSQL
+// client (`psql`) for RDS-adjacent puzzles.
 //
-// Single `aws` command with multi-service dispatch. Covers the
+// `aws` is a single command with multi-service dispatch. Covers the
 // subcommands a cloud-security audit actually uses:
 //
 //   aws s3 ls [s3://bucket]
@@ -15,6 +16,25 @@
 // Reads from `level.cloud = { s3, iam, ec2, sts }`. Treats
 // `--no-sign-request` and `--profile <name>` as no-ops (the player
 // can include them for realism without breaking the command).
+//
+// `psql` is a minimal PostgreSQL client supporting the meta-commands
+// and SELECT patterns a DB-enumeration puzzle needs:
+//
+//   psql                                  Usage
+//   psql --version                        Version string
+//   psql "\l"                             List databases
+//   psql -d <db> "\dt"                    List tables in <db>
+//   psql -d <db> "SELECT * FROM <table>"  Query table
+//   psql -d <db> "SELECT <cols> FROM <table> [LIMIT N]"
+//   psql -c "<SQL>"                       Same as positional SQL
+//   psql -h <host> -U <user> -d <db> "<SQL>"
+//                                         Explicit conn — host/user
+//                                         are ignored (engine uses
+//                                         the pre-configured
+//                                         connection); -d still
+//                                         honored.
+//
+// Reads from `level.postgres = { defaultDb, connection, databases }`.
 //
 // Schema for each subkey is documented in levels/cloud.js.
 
@@ -232,6 +252,207 @@ function awsStsGetCallerIdentity(level) {
   return { text: lines.join("\n"), cls: "out" };
 }
 
+// ── psql (PostgreSQL client) ──────────────────────────────────────
+
+const PSQL_VERSION_DEFAULT = "psql (PostgreSQL) 15.4";
+
+function psqlUsage() {
+  return { cls: "out", text:
+`Usage: psql [OPTION]... ["<SQL or meta-command>"]
+
+Connection options (host / user honored from the level's pre-
+configured connection; -d may override the default database):
+  -h, --host=HOSTNAME      database server host
+  -U, --username=USERNAME  database user name
+  -d, --dbname=DBNAME      database name to connect to
+  -c, --command=COMMAND    run only single command and exit
+
+Examples:
+  psql "\\l"                          # list databases
+  psql -d coverline_claims "\\dt"     # list tables in db
+  psql -d coverline_claims "SELECT * FROM claims LIMIT 5"
+  psql -h <host> -U <user> -d <db> "<SQL>"   # explicit conn` };
+}
+
+// Tokenize a psql command line, preserving "double-quoted" and
+// 'single-quoted' substrings as single tokens. Inside a quoted
+// string we only interpret \" / \' / \\ as escapes; everything else
+// (including \l, \dt, \d, and other psql meta-command leaders) is
+// passed through verbatim so the player can type `psql "\l"` and
+// have the engine see the literal `\l`.
+function psqlTokenize(s) {
+  const out = [];
+  let i = 0;
+  while (i < s.length) {
+    while (i < s.length && /\s/.test(s[i])) i++;
+    if (i >= s.length) break;
+    if (s[i] === '"' || s[i] === "'") {
+      const q = s[i++];
+      let buf = "";
+      while (i < s.length && s[i] !== q) {
+        if (s[i] === "\\" && i + 1 < s.length && (s[i + 1] === q || s[i + 1] === "\\")) {
+          // Only \" / \' / \\ are escapes inside the quoted string.
+          buf += s[i + 1];
+          i += 2;
+        } else {
+          buf += s[i++];
+        }
+      }
+      i++; // skip close quote
+      out.push(buf);
+    } else {
+      let buf = "";
+      while (i < s.length && !/\s/.test(s[i])) buf += s[i++];
+      out.push(buf);
+    }
+  }
+  return out;
+}
+
+function psqlFormatTable(cols, rows, title) {
+  const widths = cols.map((c, i) => Math.max(
+    String(c).length,
+    ...rows.map(r => String(r[i] ?? "").length),
+  ));
+  const header = cols.map((c, i) => " " + String(c).padEnd(widths[i] + 1)).join("|");
+  const sep    = widths.map(w => "-".repeat(w + 2)).join("+");
+  const data   = rows.map(r =>
+    r.map((v, i) => " " + String(v ?? "").padEnd(widths[i] + 1)).join("|")
+  );
+  const lines = [];
+  if (title) lines.push(title);
+  lines.push(header, sep, ...data, ``, `(${rows.length} row${rows.length === 1 ? "" : "s"})`);
+  return { text: lines.join("\n"), cls: "out" };
+}
+
+function psqlListDatabases(pg) {
+  const dbs = Object.keys(pg.databases || {});
+  const owner = pg.connection?.user || "postgres";
+  const rows = dbs.map(d =>
+    ["postgres", "template0", "template1"].includes(d)
+      ? [d, "rdsadmin", "UTF8"]
+      : [d, owner, "UTF8"]
+  );
+  return psqlFormatTable(["Name", "Owner", "Encoding"], rows, "                  List of databases");
+}
+
+function psqlListTables(dbObj) {
+  const tables = Object.keys(dbObj.tables || {});
+  if (tables.length === 0) {
+    return { text: "Did not find any relations.", cls: "dim" };
+  }
+  const owner = "coverline_admin"; // matched to the lore default
+  const rows = tables.map(t => ["public", t, "table", owner]);
+  return psqlFormatTable(["Schema", "Name", "Type", "Owner"], rows, "            List of relations");
+}
+
+function psqlSelect(dbObj, sql) {
+  // SELECT <cols> FROM <table> [LIMIT N] [;]
+  const m = sql.match(/^select\s+(.+?)\s+from\s+(\w+)(?:\s+limit\s+(\d+))?\s*;?\s*$/i);
+  if (!m) {
+    const firstWord = sql.trim().split(/\s+/)[0];
+    return { text: `ERROR: syntax error at or near "${firstWord}"\nLINE 1: ${sql}`, cls: "err" };
+  }
+  const [, colSpec, tableName, limitStr] = m;
+  const table = dbObj.tables?.[tableName];
+  if (!table) {
+    return { text: `ERROR: relation "${tableName}" does not exist\nLINE 1: ${sql}`, cls: "err" };
+  }
+  let cols, colIdx;
+  if (colSpec.trim() === "*") {
+    cols = table.columns;
+    colIdx = cols.map((_, i) => i);
+  } else {
+    cols = colSpec.split(",").map(c => c.trim());
+    colIdx = cols.map(c => table.columns.indexOf(c));
+    const badAt = colIdx.findIndex(i => i < 0);
+    if (badAt >= 0) {
+      return { text: `ERROR: column "${cols[badAt]}" does not exist\nLINE 1: ${sql}`, cls: "err" };
+    }
+  }
+  let rows = table.rows.map(r => colIdx.map(i => r[i]));
+  if (limitStr) rows = rows.slice(0, parseInt(limitStr, 10));
+  return psqlFormatTable(cols, rows);
+}
+
+function psqlCmd(level, arg) {
+  if (!arg) return psqlUsage();
+  if (arg === "-h" || arg === "--help") return psqlUsage();
+  if (arg === "--version") return { text: PSQL_VERSION_DEFAULT, cls: "out" };
+
+  if (!level.postgres) {
+    return { text: `psql: could not connect to server: Connection refused\n\tIs the server running and accepting TCP/IP connections?`, cls: "err" };
+  }
+
+  // Parse args: extract flag values, find the SQL string
+  const tokens = psqlTokenize(arg);
+  let db = level.postgres.defaultDb || "postgres";
+  let sql = "";
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t === "-h" || t === "--host" || t === "-U" || t === "--username") {
+      i++; continue; // value present, ignored (engine uses configured connection)
+    }
+    if (t.startsWith("--host=") || t.startsWith("--username=")) continue;
+    if (t === "-d" || t === "--dbname") { db = tokens[++i] || db; continue; }
+    if (t.startsWith("--dbname=")) { db = t.slice("--dbname=".length); continue; }
+    if (t === "-c" || t === "--command") { sql = tokens[++i] || ""; continue; }
+    if (t.startsWith("--command=")) { sql = t.slice("--command=".length); continue; }
+    // Anything else is the SQL / meta-command (positional). Join rest.
+    sql = tokens.slice(i).join(" ");
+    break;
+  }
+
+  if (!sql) {
+    // Real psql would drop into interactive mode here. Engine has
+    // no persistent shell, so give the player a hint.
+    return {
+      text: [
+        `psql (PostgreSQL) 15.4`,
+        `Connected to: ${level.postgres.connection?.host || "(unknown host)"}`,
+        `Database:     ${db}`,
+        `User:         ${level.postgres.connection?.user || "(unknown user)"}`,
+        ``,
+        `(no command provided — run \`psql -h\` for usage, or pass a SQL`,
+        ` string or meta-command like \`psql "\\\\l"\` to query)`,
+      ].join("\n"),
+      cls: "dim",
+    };
+  }
+
+  const trim = sql.trim();
+
+  // \l / \list — works regardless of -d (real psql ignores db context here)
+  if (trim === "\\l" || trim === "\\list") {
+    return psqlListDatabases(level.postgres);
+  }
+
+  // Need a valid db for everything below
+  const dbObj = level.postgres.databases?.[db];
+  if (!dbObj) {
+    return { text: `psql: FATAL:  database "${db}" does not exist`, cls: "err" };
+  }
+
+  // \dt / \dt+ / \d
+  if (trim === "\\dt" || trim === "\\dt+" || trim === "\\d") {
+    return psqlListTables(dbObj);
+  }
+
+  // SELECT version()
+  if (/^select\s+version\s*\(\s*\)\s*;?\s*$/i.test(trim)) {
+    return { text: " version\n----------------------------------------------------------------\n PostgreSQL 15.4 on x86_64-pc-linux-gnu, compiled by gcc 7.5.0\n(1 row)", cls: "out" };
+  }
+
+  // SELECT ... FROM ...
+  if (/^select\s/i.test(trim)) {
+    return psqlSelect(dbObj, trim);
+  }
+
+  // Unsupported (DDL, INSERT, etc.)
+  const firstWord = trim.split(/\s+/)[0];
+  return { text: `ERROR: psql in this environment supports SELECT and meta-commands only (got "${firstWord}")`, cls: "err" };
+}
+
 export const cloudCommands = {
   aws(level, arg) {
     if (!arg) return awsHelp();
@@ -252,4 +473,6 @@ export const cloudCommands = {
 
     return awsHelp();
   },
+
+  psql: psqlCmd,
 };

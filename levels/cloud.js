@@ -73,6 +73,35 @@
 //     },
 //   }
 //
+// For levels that need a PostgreSQL puzzle (e.g., RDS-adjacent
+// DB enumeration from a leaked master credential), populate the
+// separate `postgres` field used by the `psql` command:
+//
+//   postgres: {
+//     defaultDb: "<db>",                  // db used when -d isn't given
+//     connection: {
+//       host: "<rds-endpoint>",
+//       user: "<db-user>",
+//     },
+//     databases: {
+//       "<dbName>": {
+//         tables: {
+//           "<tableName>": {
+//             columns: ["col1", "col2", ...],
+//             rows: [
+//               [v1, v2, ...],
+//               ...
+//             ],
+//           },
+//           ...
+//         },
+//       },
+//       postgres:  { tables: {} },        // include the system DBs so
+//       template0: { tables: {} },        // `\l` looks like a real
+//       template1: { tables: {} },        // RDS instance
+//     },
+//   }
+//
 // Continuity: all levels are set at Driftwood Systems, a mid-sized tech
 // consulting firm. Each track introduces a new client engagement to
 // diversify the post-mortems' compliance contexts.
@@ -1151,6 +1180,950 @@ migration script that nobody got back to.
 
 The forensic finding is small. The system around it is what
 makes it consequential.
+
+Return to the lobby:    ssh guest@d3cyph3r`
+        },
+
+      },
+    },
+  },
+
+  // ── level 1 — "The Migration Table Nobody Dropped" ──────────────
+  // The credential-leak cascade continues. Friday's S3 audit closed
+  // the CC6.1 control gap but surfaced a hardcoded RDS master
+  // credential in the public bucket. Coverline's CISO + GC + outside
+  // counsel spent the weekend on the breach-notification math; before
+  // rotating the credential, they want Driftwood to enumerate the DB
+  // to identify any secondary exposures (other credentials in row
+  // data, dormant employee accounts, anomalous audit-log entries).
+  //
+  // The player SSHes into Coverline's cloud-audit bastion (jumpbox
+  // pre-staged with the leaked credential in ~/.pgpass), walks the
+  // coverline_claims schema with the new `psql` command, and finds:
+  //
+  //   1. An `integrations` table showing Coverline DOES use AWS
+  //      Secrets Manager for current creds — but the pattern is
+  //      partial, not complete.
+  //   2. A `migration_artifacts` table created on 2024-02-15 with
+  //      explicit TTL columns intending Q2 2024 deletion. Three
+  //      rows, two unrotated and live, one properly rotated. Row 2
+  //      (broker-portal service credential) is the level2 breadcrumb
+  //      — Coverline migrated the broker portal to Secrets Manager
+  //      but kept the legacy migration credential as a "fallback in
+  //      case Secrets Manager lookup fails" that nobody removed.
+  //   3. An `audit_log` with a single anomalous entry: an
+  //      unauthorized schema-enumeration query on 2026-05-20 02:14
+  //      UTC from an unrecorded source IP (Coverline's RDS audit
+  //      logging is basic-only, missing source-IP capture — its own
+  //      finding worth surfacing).
+  //   4. A `users` table with a terminated former employee
+  //      (vikram.shah, rolled off Q1 2024 per the level0 migration
+  //      script's comment) whose DB account is dormant but not
+  //      deleted.
+  //
+  // Lesson: credentials in DB row values are the same anti-pattern
+  // as credentials in source-control files. CWE-798 + CWE-540 +
+  // CWE-312. T1078 + T1213 + T1552.001 (DB rows as the credentials-
+  // in-files analog). SOC 2 CC6.1/CC6.2/CC6.6/CC7.1 +
+  // NIST SP 800-53 Rev. 5 IA-5(7) + NAIC §4.D/§6 + NYDFS 500.7/500.17
+  // + GLBA Safeguards 314.4(c)(4)/314.5. AWS Secrets Manager +
+  // Database Activity Streams + GuardDuty RDS Protection +
+  // IAM Database Authentication as the proper alternatives.
+  // Introduces `psql`.
+  "level1@cloud": {
+    password: "Cl41ms-Pr0d-M4st3r-2024",
+    track: "cloud",
+    playerUser: "cloudsec",
+    objective: "Enumerate the coverline_claims production database with the leaked RDS master credential. Identify any other credentials stored in row data, dormant employee accounts, or anomalous audit-log entries that change the breach-notification math. Read-only audit only — no INSERT/UPDATE/DELETE.",
+    lesson: "After Friday's S3 finding closed the CC6.1 control gap, Coverline's CISO (Sloane Becker) + GC + outside counsel spent the weekend on the breach-notification math. The leaked RDS master credential (Cl41ms-Pr0d-M4st3r-2024) is rotation-pending; before they rotate, Sloane wants Driftwood to enumerate what's actually in the database — every abandoned migration artifact, every dormant employee account, every credential stashed in row data — so the notification analysis can cover the full secondary-exposure surface. Jordan Nguyen authorized the follow-on engagement Monday morning and pre-staged the leaked credential in `~/.pgpass` on Coverline's cloud-audit bastion host (the shell you're on now). Read welcome.md first — it explains the new `psql` command. Then read engagement-notes.md and bastion-handoff.txt. Walk the coverline_claims schema with `psql`. Read lessons-learned.md once you've surfaced the findings.",
+    postgres: {
+      defaultDb: "coverline_claims",
+      connection: {
+        host: "coverline-prod.cluster-xyz.us-east-2.rds.amazonaws.com",
+        user: "coverline_admin",
+      },
+      databases: {
+        coverline_claims: {
+          tables: {
+            claims: {
+              columns: ["claim_id", "policy_number", "claimant_name", "ssn_last4", "status", "claim_amount_usd", "created_at"],
+              rows: [
+                ["CL-019823", "CV-SB-2023-87432", "Marcus Reyes",  "1847", "under_review",             42500, "2024-03-15"],
+                ["CL-019824", "CV-SB-2022-41187", "Aisha Patel",   "3392", "approved_pending_payment", 18750, "2024-03-15"],
+                ["CL-019825", "CV-SB-2024-11042", "Dmitri Volkov", "9981", "under_review",             64800, "2024-03-15"],
+                ["CL-019826", "CV-SB-2024-11043", "Joon Park",     "2114", "paid",                     12300, "2024-03-16"],
+                ["CL-019827", "CV-SB-2023-99821", "Hannah Liu",    "7732", "denied",                    8950, "2024-03-16"],
+              ],
+            },
+            customers: {
+              columns: ["customer_id", "business_name", "email", "state", "policies_count", "signup_date"],
+              rows: [
+                ["CUS-00001", "Reyes Consulting LLC",    "marcus.reyes.consulting@example.com", "CT", 1, "2023-04-12"],
+                ["CUS-00002", "Patel Logistics Inc.",    "a.patel@example.com",                 "CT", 2, "2022-08-09"],
+                ["CUS-00003", "Volkov Construction LLC", "dvolkov.work@example.com",            "CT", 3, "2024-01-15"],
+                ["CUS-00004", "Park Bakery Co",          "joon.park@example.com",               "CT", 1, "2024-02-01"],
+                ["CUS-00005", "Liu Strategy Partners",   "hannah.liu@example.com",              "CT", 1, "2023-11-20"],
+              ],
+            },
+            policies: {
+              columns: ["policy_number", "customer_id", "policy_type", "annual_premium_usd", "effective_date"],
+              rows: [
+                ["CV-SB-2023-87432", "CUS-00001", "general_liability",    2400, "2023-04-12"],
+                ["CV-SB-2022-41187", "CUS-00002", "commercial_auto",      4800, "2022-08-09"],
+                ["CV-SB-2024-11042", "CUS-00003", "workers_compensation", 8200, "2024-01-15"],
+                ["CV-SB-2024-11043", "CUS-00004", "business_owners",      1800, "2024-02-01"],
+                ["CV-SB-2023-99821", "CUS-00005", "general_liability",    2200, "2023-11-20"],
+              ],
+            },
+            adjusters: {
+              columns: ["adjuster_id", "name", "email", "region", "hired_at"],
+              rows: [
+                ["ADJ-001", "Kim Chen",       "kim.chen@coverline-insurance.com",       "Northeast",    "2022-06-15"],
+                ["ADJ-002", "Sarah Mitchell", "sarah.mitchell@coverline-insurance.com", "Northeast",    "2023-09-08"],
+                ["ADJ-003", "James Okafor",   "james.okafor@coverline-insurance.com",   "Mid-Atlantic", "2021-11-02"],
+              ],
+            },
+            integrations: {
+              columns: ["integration_id", "service_name", "api_endpoint", "status", "credential_ref", "updated_at"],
+              rows: [
+                ["INT-001", "naic-data-exchange", "https://api.naic.org/data-exchange/v2/",            "active",   "secrets-manager:naic-api-prod",         "2026-04-15"],
+                ["INT-002", "broker-portal",      "https://brokers.coverline-insurance.com/api/v1/",   "active",   "secrets-manager:broker-portal-prod",    "2026-05-10"],
+                ["INT-003", "mailchimp",          "https://us21.api.mailchimp.com/3.0/",               "active",   "secrets-manager:marketing-mailchimp",   "2026-03-20"],
+                ["INT-004", "stripe-payments",    "https://api.stripe.com/v1/",                        "active",   "secrets-manager:stripe-payments-prod",  "2026-05-01"],
+                ["INT-005", "polaris-payroll",    "(deprecated 2025-Q4 vendor change)",                "inactive", "secrets-manager:polaris-payroll-LEGACY","2025-12-01"],
+              ],
+            },
+            migration_artifacts: {
+              columns: ["id", "artifact_type", "artifact_name", "credential_value", "notes", "created_at", "ttl_expires_at"],
+              rows: [
+                [1, "service_account_password", "rds-migration-runner", "rds-mig-2024-svc-Tmp9pQ7rT",       "Service account for RDS Aurora us-east-1 -> us-east-2 migration. Used by vikram.shah's deploy pipeline. Delete after Q2 2024 once cutover is verified.",                                                "2024-02-15", "2024-06-30"],
+                [2, "broker_portal_credential", "broker-portal-svc",    "Cv-BrokerSvc-Pr0d-2024-Migration", "Used to seed broker-portal service accounts during data backfill phase of the migration. Migrate consumers to Secrets Manager and delete after broker reconciliation completes (target Q2 2024).", "2024-02-15", "2024-06-30"],
+                [3, "sftp_naic_handoff",        "naic-sftp-handoff",    "naic-handoff-2024-Q1-7Kp9",        "One-time SFTP credential for NAIC quarterly data handoff cutover. Rotated 2024-04-15 per NAIC quarterly schedule; this row is historical only.",                                                "2024-02-15", "2024-04-15"],
+              ],
+            },
+            users: {
+              columns: ["user_id", "username", "email", "role", "status", "last_login"],
+              rows: [
+                ["USR-001", "kim.chen",        "kim.chen@coverline-insurance.com",        "adjuster",       "active",     "2026-05-22 09:14:08"],
+                ["USR-002", "sarah.mitchell",  "sarah.mitchell@coverline-insurance.com",  "adjuster",       "active",     "2026-05-22 11:42:31"],
+                ["USR-003", "james.okafor",    "james.okafor@coverline-insurance.com",    "adjuster",       "active",     "2026-05-21 16:08:55"],
+                ["USR-004", "vikram.shah",     "vikram.shah@coverline-insurance.com",     "senior_devops",  "terminated", "2024-01-31 18:22:14"],
+                ["USR-005", "jordan.nguyen",   "jordan.nguyen@coverline-insurance.com",   "director",       "active",     "2026-05-22 14:55:18"],
+                ["USR-006", "coverline_admin", "rds-admin@no-email",                      "rds_master",     "active",     "2026-05-20 02:14:42"],
+              ],
+            },
+            audit_log: {
+              columns: ["event_id", "event_type", "actor", "target", "timestamp"],
+              rows: [
+                ["EVT-1029401", "claim_status_changed",       "kim.chen@coverline-insurance.com",         "CL-019824",            "2024-03-15 14:22:08"],
+                ["EVT-1029402", "policy_renewed",             "system",                                   "CV-SB-2022-41187",     "2024-03-16 02:00:00"],
+                ["EVT-1029403", "schema_query_pg_catalog",    "coverline_admin (unrecognized source)",   "pg_catalog.pg_tables", "2026-05-20 02:14:42"],
+              ],
+            },
+          },
+        },
+        coverline_billing: { tables: {} },
+        postgres:  { tables: {} },
+        template0: { tables: {} },
+        template1: { tables: {} },
+      },
+    },
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Driftwood Systems / Cloud Audit Workstation ───────────────
+
+Still \`cloudsec\`, but you're no longer on Driftwood's local
+workstation — your shell is on Coverline's cloud-audit bastion
+host (\`jumpbox-cloud-audit.coverline-internal\`). Jordan Nguyen
+authorized the move Monday morning so Driftwood could run psql
+against Coverline's RDS cluster from inside Coverline's VPC,
+where the security group allows it. The bastion's \`~/.pgpass\`
+is pre-staged with the credential you used to enter this shell;
+psql resolves the connection automatically.
+
+Day two of the Coverline engagement. Friday's S3 audit closed
+the CC6.1 control gap, but it surfaced a hardcoded RDS master
+credential in the public bucket. Coverline's CISO + GC + outside
+counsel spent the weekend on the breach-notification math.
+Before they rotate the credential, Sloane wants the DB enumerated
+to identify any secondary exposures — other credentials, dormant
+accounts, anomalous activity. That's today's task.
+
+
+─── NEW COMMAND ───────────────────────────────────────────────
+
+  psql                              Usage
+  psql --version                    psql version string
+  psql "\\l"                         List databases
+  psql -d <db> "\\dt"                List tables in <db>
+  psql -d <db> "SELECT * FROM <table>"
+                                    Read every row
+  psql -d <db> "SELECT * FROM <table> LIMIT N"
+                                    First N rows
+  psql -d <db> "SELECT <cols> FROM <table>"
+                                    Specific columns
+  psql -c "<SQL>"                   Same as positional SQL
+  psql -h <host> -U <user> -d <db>  Explicit conn (host/user are
+                                    ignored — engine uses the
+                                    bastion's pre-configured
+                                    connection)
+
+
+─── WHAT psql REVEALS ─────────────────────────────────────────
+
+When a database master credential leaks, the immediate question
+for any IR engagement is: what does the credential open, and
+what's inside? Databases are the highest-value target on most
+networks — they hold customer records, business state, audit
+history, and (often) other credentials that the application
+stack stashed "temporarily" during some prior migration.
+
+The standard enumeration pattern:
+
+  1. \`\\l\` — list databases. Confirms the connection and shows
+     the multi-tenant scope (some clusters host one database;
+     some host many).
+  2. \`\\dt\` — list tables in a database. Schema surface =
+     roadmap of what's in there.
+  3. \`SELECT * FROM <table>\` for each interesting table.
+
+Tables worth always looking at:
+  - \`users\` / \`accounts\` — terminated employees with active
+    DB credentials, dormant service accounts, role drift.
+  - \`integrations\` / \`api_keys\` / \`config\` — credentials
+    cached in schema rows (the anti-pattern).
+  - \`audit_log\` / \`events\` — historical access patterns,
+    looking for anomalies (off-hour activity, schema
+    enumeration queries, unusual actors).
+  - Anything named \`*_migration\`, \`*_legacy\`, \`*_temp\`,
+    \`*_backup\`, \`*_artifact\` — these accumulate cruft
+    from deployment cycles and rarely get cleaned up.
+
+Defensive controls Coverline should have (and partially does):
+  - AWS Secrets Manager + automatic rotation (RDS first-class
+    integration; rotation can be hands-off)
+  - AWS Systems Manager Parameter Store + KMS encryption
+  - IAM Database Authentication (no static password at all;
+    principals authenticate via short-lived IAM tokens)
+  - AWS GuardDuty RDS Protection (anomalous DB auth patterns)
+  - AWS Database Activity Streams (real-time per-query audit)
+  - HashiCorp Vault for multi-cloud / on-prem secret stores
+
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat engagement-notes.md     Coverline update + scope addendum
+  2.  cat bastion-handoff.txt     Jordan's connection brief
+  3.  psql "\\l"                   List databases. Confirms the
+                                  connection and shows what's
+                                  hosted on this cluster.
+  4.  psql -d coverline_claims "\\dt"
+                                  See the schema surface.
+  5.  psql -d coverline_claims "SELECT * FROM <table>"
+                                  Walk the tables. One of them
+                                  is named after what it holds.
+  6.  cat lessons-learned.md      Post-mortem (after step 5)`
+        },
+
+        "engagement-notes.md": {
+          type: "file",
+          content:
+`# Coverline Insurance — engagement notes (continued)
+
+Client: Coverline Insurance (SOC 2 Type II + NAIC + NYDFS + GLBA)
+Case ID: DW-CLOUD-COV-2026-008-FOLLOWUP-A (continuation of the
+         Friday S3 audit, DW-CLOUD-COV-2026-008)
+Driftwood handler: Priya
+Client counterpart: Jordan Nguyen (Sr. Director, Cloud
+                    Infrastructure & Platform); Sloane Becker
+                    (CISO); outside counsel via Sloane
+
+## What happened since the last task
+
+Friday afternoon 2026-05-22: We delivered the S3 audit findings
+to Jordan and to the audit firm. The deviation row
+(\`coverline-claims-uploads-prod\`) was real and material —
+three Q1 2024 claim files with claimant NPI plus a 2023
+migration script (\`legacy-deploy/migrate-rds.sh\`) with a
+hardcoded RDS master credential. The audit firm logged the
+finding; Coverline's containment kicked in within the hour.
+
+Friday evening 2026-05-22 16:42 ET: Bucket containment
+completed. Public Access Block enabled at the bucket level,
+bucket policy updated to deny all principals except the
+claims-app role. S3 server-access logs and CloudTrail data
+events pulled for the period 2023-11-08 (bucket creation date
+for the migration artifacts) through 2026-05-22 16:42 ET (when
+the bucket was locked down). That's ~30 months of potential
+exposure window for analysis.
+
+Saturday morning: Sloane convened the IR triage call. Jordan,
+the in-house GC, outside counsel. Question on the table: what's
+the breach-notification math, and what's the appropriate scope
+of disclosure under NAIC §6, NYDFS 500.17, GLBA Safeguards
+notification, and the state-by-state breach laws.
+
+Sunday: Outside counsel asked for "everything the leaked
+credential opens" before agreeing on the notification scope.
+If the database itself contains other credentials or other PII
+surfaces gated by the master credential, the notification
+analysis has to cover those secondary exposures too. That
+question requires walking the database.
+
+Monday morning 2026-05-25: Jordan signed authorization for the
+follow-on engagement (DW-CLOUD-COV-2026-008-FOLLOWUP-A) and
+pre-staged the leaked credential in a \`~/.pgpass\` file on the
+cloud-audit bastion host. RDS master credential rotation is
+queued in Coverline's change-management system, scheduled for
+execution as soon as the enumeration completes.
+
+## Scope for this engagement
+
+Sloane wants three things by COB Tuesday:
+
+  1. The list of tables in the production claims database
+     (\`coverline_claims\`) with row counts and a one-line
+     description of what each table holds.
+
+  2. Any credentials, API keys, or secrets stored in database
+     row values (the "we'll move it to Secrets Manager later"
+     anti-pattern). If found, document the credential type,
+     where it lives, and a recommended remediation timeline.
+
+  3. Any audit-log entries during the exposure window
+     (2023-11-08 through 2026-05-22) that look anomalous —
+     unexpected logins, schema-enumeration queries, off-hour
+     activity. This is the data Sloane needs to determine
+     whether the leaked credential was actually used by an
+     unauthorized party.
+
+## A note from Priya
+
+The bastion's pgpass is pre-staged with the leaked credential.
+The credential will be rotated within hours of your findings
+report. While it's live, do NOT run any modification queries —
+INSERT / UPDATE / DELETE / DROP / ALTER are all out of scope
+and would compromise the chain of custody on Coverline's
+evidence collection.
+
+The interesting table is named after what it holds. You'll
+recognize it when you see it. Don't get lost reading the
+claims / customers / policies / adjusters tables for too long
+— they're useful background but the actionable finding is
+elsewhere.
+
+If you find the category of credentials I'm expecting you'll
+find, the next-engagement credential is in there too — the
+broker-portal service credential, which Coverline migrated to
+Secrets Manager last year but kept the legacy migration-era
+copy as a "fallback in case Secrets Manager lookup fails."
+That fallback never gets removed because removing it requires
+the broker-portal team to confirm Secrets Manager is fully
+load-bearing, and that confirmation never happens. Surface it.
+
+— Priya`
+        },
+
+        "bastion-handoff.txt": {
+          type: "file",
+          content:
+`COVERLINE INSURANCE — BASTION-HOST IR-AUDIT CONNECTION DETAILS
+Issued by:        Jordan Nguyen (Sr. Director, Cloud Infrastructure)
+Date:             2026-05-25 08:00 ET (Monday)
+Coverline ref:    COV-SOC2-2026-EVID-014-FOLLOWUP-A
+Driftwood ref:    DW-CLOUD-COV-2026-008-FOLLOWUP-A
+
+PRIOR FINDING (FRIDAY)
+─────────────────────────────────────────────────────────────
+  S3 audit DW-CLOUD-COV-2026-008 closed the CC6.1 control gap
+  by walking the 6 worksheet buckets. One bucket
+  (\`coverline-claims-uploads-prod\`) was unexpectedly public,
+  containing 3 Q1 2024 claim files with claimant PII AND a
+  2023 migration script (\`legacy-deploy/migrate-rds.sh\`) with
+  a hardcoded RDS master password:
+
+      Cl41ms-Pr0d-M4st3r-2024
+
+  Status: bucket made private 2026-05-22 16:42 ET. S3 access
+  logs pulled and being analyzed. RDS master credential
+  rotation pending the enumeration work below.
+
+THIS ENGAGEMENT (TODAY)
+─────────────────────────────────────────────────────────────
+  Before the credential is rotated, Coverline needs to know
+  what's IN the database. Specifically:
+
+    1. Whether any OTHER credentials are stashed in database
+       rows (the universal "we'll move this to Secrets Manager
+       later" anti-pattern).
+    2. Whether the audit log shows any anomalous access during
+       the exposure window. The 2023 migration script has been
+       in the public bucket since 2023-11-08; the credential
+       has been recoverable from that bucket since then.
+    3. Any other abandoned-artifact categories — temporary
+       tables, sandbox schemas, backup copies — that expand
+       the exposure beyond the master credential itself.
+
+  Sloane + Jordan + outside counsel are using this enumeration
+  to inform the breach-notification math: what to disclose, to
+  whom, and on what timeline.
+
+CONNECTION DETAILS
+─────────────────────────────────────────────────────────────
+  Bastion host:     jumpbox-cloud-audit.coverline-internal
+                    (you're already on it — this shell)
+  PSQL config:      ~/.pgpass pre-populated with the leaked
+                    credential. The \`psql\` command on this
+                    host resolves the connection automatically;
+                    you don't need to pass -h / -U.
+  Target cluster:   coverline-prod.cluster-xyz.us-east-2.rds.amazonaws.com
+  Master user:      coverline_admin
+  Master password:  Cl41ms-Pr0d-M4st3r-2024 (the leaked one;
+                    will be rotated immediately after enum
+                    completes)
+  Default DB:       coverline_claims
+
+  Other databases visible from this user:
+                    coverline_billing (not in scope today —
+                    focus on coverline_claims)
+
+PROCEDURE
+─────────────────────────────────────────────────────────────
+  1. Confirm the connection: \`psql "\\l"\` — should list ~5
+     databases (the two Coverline DBs plus the PostgreSQL
+     system DBs).
+  2. List tables in coverline_claims:
+     \`psql -d coverline_claims "\\dt"\`
+  3. Read each table:
+     \`psql -d coverline_claims "SELECT * FROM <table>"\`
+  4. Document any credentials found in row data, any terminated-
+     employee accounts still active, any audit-log entries that
+     look anomalous.
+  5. Surface to Priya for the formal IR report.
+
+DELIVERABLE
+─────────────────────────────────────────────────────────────
+  Findings memo by COB Tuesday 2026-05-26. Sloane is on the
+  call with outside counsel Wednesday morning to decide the
+  breach-notification posture.
+
+OUT OF SCOPE
+─────────────────────────────────────────────────────────────
+  - INSERT / UPDATE / DELETE / DROP / ALTER. Read-only audit.
+  - The coverline_billing database (separate engagement if
+    needed).
+  - Cross-database queries.
+  - Any IAM / EC2 / S3 enumeration. This engagement is
+    psql-only.
+
+— Jordan Nguyen, on behalf of Sloane Becker (CISO)`
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+You walked the \`coverline_claims\` database (7 tables) and
+found:
+
+  1. Three tables of legitimate operational data — \`claims\`,
+     \`customers\`, \`policies\`, \`adjusters\` — containing
+     the claimant PII you'd expect for a P&C insurer. Same
+     data category as the JSON files exposed in Friday's S3
+     finding; the database is the canonical source for them.
+
+  2. An \`integrations\` table showing 5 external service
+     integrations, 4 active and 1 deprecated. All five
+     reference their credentials via
+     \`secrets-manager:<name>\` pointers rather than embedding
+     the credential in the row. Coverline IS using AWS Secrets
+     Manager for current credential storage; the pattern is
+     correct here.
+
+  3. A \`migration_artifacts\` table with 3 rows. THIS is the
+     interesting one. Created on 2024-02-15 to park credentials
+     temporarily during the us-east-1 → us-east-2 cutover, with
+     explicit \`ttl_expires_at\` columns intending deletion by
+     Q2 2024. ONE of the three credentials was rotated as
+     intended (the NAIC SFTP credential, rotated Q1 2024 per
+     the standard quarterly schedule). TWO were not:
+       - The RDS migration runner service account
+         (\`rds-mig-2024-svc-Tmp9pQ7rT\`).
+       - The broker-portal service credential
+         (\`Cv-BrokerSvc-Pr0d-2024-Migration\`). This one is
+         particularly notable: Coverline migrated the broker-
+         portal credential to Secrets Manager last year (see
+         the \`integrations\` row for broker-portal pointing
+         at \`secrets-manager:broker-portal-prod\`), but the
+         legacy migration credential was retained as a
+         "fallback in case Secrets Manager lookup fails."
+         That fallback was never removed because removing it
+         requires the broker-portal team to confirm Secrets
+         Manager is fully load-bearing, and that confirmation
+         never happens.
+
+  4. An \`audit_log\` with a single anomalous entry:
+       EVT-1029403 — schema_query_pg_catalog
+       Actor:  coverline_admin (unrecognized source)
+       Target: pg_catalog.pg_tables
+       When:   2026-05-20 02:14:42 UTC
+     The source IP wasn't captured at that timestamp because
+     Coverline's RDS audit logging is basic-only (no pgaudit
+     extension). This entry suggests someone used the leaked
+     credential to enumerate the schema on 2026-05-20, two
+     days before Coverline made the bucket private. Cross-
+     reference with CloudTrail + VPC Flow Logs to identify
+     the source IP.
+
+  5. The \`users\` table shows a terminated former employee
+     (\`vikram.shah\`, role \`senior_devops\`, terminated
+     2024-01-31) whose DB account is dormant but not deleted.
+     Unrelated to Friday's S3 finding directly but is its own
+     access-management lapse worth flagging.
+
+This is the second layer of the credential-leak cascade.
+Friday's S3 audit found the public bucket and the hardcoded
+RDS master credential. Today's psql walk used the master
+credential to enumerate the DB and found three more
+credentials embedded in database rows, one of which (the
+broker-portal credential) is actively in production use as
+the legacy fallback for the Secrets Manager-managed primary.
+The cascade can continue from there — a level2 engagement
+against the broker portal would use that credential.
+
+Your job ends here. The findings memo goes to Priya, who'll
+write the formal version that goes to Sloane, Jordan, the
+audit firm, outside counsel, and (depending on the breach-
+notification determination) the state insurance commissioners
+of every state of residence represented in the affected
+dataset.
+
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+Credentials stored in database row values are the modern
+equivalent of credentials stored in source-control config
+files. Different storage medium, identical anti-pattern:
+
+  1. A team needs a credential for a specific task — a
+     migration, a one-off backfill, a sandbox load.
+  2. The credential is "temporarily" stored in a database
+     row instead of going through the proper secret-store
+     process, because the proper process feels heavy and
+     the deadline is tight.
+  3. The task completes. The row is forgotten.
+  4. Months or years later, an audit / incident / curiosity-
+     driven query surfaces it.
+
+Coverline's \`migration_artifacts\` table is actually
+relatively well-designed for the anti-pattern: it has explicit
+\`ttl_expires_at\` columns intending deletion. The design
+acknowledged the risk. The execution failed — the rows past
+their TTL were not actually deleted, because nothing in the
+deployment pipeline enforces TTL enforcement, and quarterly
+manual review of the table was not on anyone's roadmap.
+
+The broker-portal credential is a particularly nasty subcase
+because Coverline DID complete the migration to Secrets
+Manager (the \`integrations\` table proves it). But the
+legacy migration credential was kept as a fallback, and
+"kept as a fallback" became "kept indefinitely" when no
+process ever removed it. The same pattern recurs across the
+D3CYPH3R credential-chain family — the network/level1 audit-
+bypass account, the crypto/level1 JWT handoff_token claim,
+the web/level1 BluePier demo account, the forensics/level1
+IR-team typed-password, the osint/level1 committed AWS keys.
+Different surfaces, identical anti-pattern: a credential
+created for a narrow purpose that outlived its narrow purpose.
+
+The defensive controls are well-known:
+
+  - AWS Secrets Manager with automatic rotation enabled.
+    RDS has first-class integration; rotation is hands-off
+    if you set it up that way.
+  - AWS Systems Manager Parameter Store with KMS encryption
+    for non-RDS secrets. Cheaper than Secrets Manager, same
+    auditability via CloudTrail.
+  - HashiCorp Vault for multi-cloud / on-prem.
+  - IAM Database Authentication for RDS — eliminates the
+    static password entirely; application principals
+    authenticate using short-lived IAM tokens.
+  - AWS GuardDuty RDS Protection — surfaces anomalous DB
+    auth patterns (suspicious source locations, credential
+    misuse signals).
+  - AWS Database Activity Streams — real-time audit of every
+    DB query, including source IP, query text, and result
+    row count. Complements RDS audit logs.
+
+The audit-log finding (the 2026-05-20 schema enumeration
+from an unrecorded source IP) is also a configuration gap
+worth calling out. RDS audit logging supports source-IP
+capture when the \`pgaudit\` extension is enabled at full
+granularity; Coverline runs basic logging only, which is
+why the source IP of the suspicious query isn't in the log.
+The fix is enabling pgaudit with the source-IP-capture
+settings — small effort, large forensic value.
+
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+Coverline is SOC 2 Type II + NAIC + NYDFS + GLBA bound. The
+findings stack from the two engagements:
+
+  - Friday: S3 misconfiguration + hardcoded credential in
+    public bucket. CC6.1 gap.
+  - Today: secondary credentials in DB rows, dormant employee
+    account, possible unauthorized schema-enumeration query.
+    CC6.2 (System User Management) gap; CC7.1 (Detection)
+    gap as well.
+
+The breach-notification math now turns on:
+
+  1. Whether the 2026-05-20 02:14:42 UTC schema-enumeration
+     query was followed by data exfiltration. The
+     \`pg_tables\` query alone is reconnaissance; if
+     subsequent queries SELECTed from claims / customers /
+     policies, that's a different story. CloudTrail + VPC
+     Flow Logs + (if enabled) Database Activity Streams
+     together determine this.
+
+  2. Whether the broker-portal migration credential
+     (\`Cv-BrokerSvc-Pr0d-2024-Migration\`) was used by any
+     unauthorized party to authenticate against the broker
+     portal during the credential's exposure window. That's
+     the level2-engagement question.
+
+  3. Whether the dormant \`vikram.shah\` account was used by
+     any party (legitimate Coverline IT, or anyone else)
+     post-termination. Audit question.
+
+The notification timelines in play:
+
+  - NAIC Insurance Data Security Model Law §6: 72 hours from
+    determination that NPI has been (or is likely to have
+    been) acquired by an unauthorized person.
+  - NYDFS 23 NYCRR 500.17(a): 72 hours from a "reasonable
+    belief" that nonpublic information was accessed or
+    acquired.
+  - GLBA Safeguards Rule 16 CFR 314.5 (Notification of
+    Security Events): 30 days from discovery for events
+    affecting 500+ consumers' information. (FTC amendment
+    in effect since May 2024.)
+  - State data-breach notification laws: 50 jurisdictions,
+    varying timelines.
+
+The notification CLOCK starts at Coverline's determination
+moment, not at Driftwood's finding moment. The CISO + GC +
+outside counsel triangle determines the start.
+
+For Driftwood, the engagement's value-add is the documented
+chain of custody. Every query we ran, every table we read,
+every credential we surfaced — recorded against the engagement
+file. If the case develops legal weight (insurance-
+commissioner enforcement, civil class action, regulatory
+fine), Driftwood's documentation supports Coverline's
+position that the breach response was procedurally sound.
+
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  SOC 2 Trust Services Criteria (2017, refreshed 2022)
+    CC6.1  Logical and Physical Access Controls — Coverline's
+      policy ("credentials shall not be embedded in source /
+      configuration / data rows") exists; the audit evidence
+      was the question.
+    CC6.2  System User Management — covers user-lifecycle
+      management. The dormant vikram.shah account is a CC6.2
+      gap.
+    CC6.6  Logical access security measures for outside
+      threats — the leaked-credential exposure window.
+    CC7.1  Detection of security events — the missing pgaudit
+      source-IP capture is a CC7.1 gap.
+
+  NIST SP 800-53 Rev. 5
+    IA-5(7)  Authenticator Management: No Embedded Unencrypted
+      Static Authenticators — the direct control. Database
+      rows count as an "embedded location" for this purpose.
+    AC-2     Account Management — covers the dormant-account
+      lifecycle gap.
+    AC-3     Access Enforcement — the credential is the
+      access-enforcement mechanism.
+    AU-12    Audit Generation — the missing source-IP capture
+      is an AU-12 implementation gap.
+
+  NIST Cybersecurity Framework 2.0
+    PR.AA  Identity Management, Authentication, and Access
+      Control — IA + AC family.
+    PR.DS  Data Security.
+    DE.CM  Continuous Monitoring — the missing detection
+      capability for the 2026-05-20 query.
+
+  CIS AWS Foundations Benchmark v5.0.0
+    §1.14  Ensure access keys are rotated every 90 days or
+      less — credentials in database rows have effectively
+      infinite rotation cadence.
+    §2.1.4 / §2.1.5  S3 Block Public Access (the level0
+      remediation that's already complete).
+
+  CIS PostgreSQL Benchmark v15 / v16
+    §3.x   Audit logging configuration including pgaudit
+      setup.
+    §5.x   Authentication configuration including IAM
+      database authentication.
+
+  CWE
+    CWE-798  Use of Hard-Coded Credentials — primary mapping.
+      Database rows count as "hard-coded" when the credential
+      is stored in cleartext and accessed via fixed lookup.
+    CWE-540  Inclusion of Sensitive Information in Source
+      Code — applies if you treat DB schema + rows as
+      "source" in the broad sense.
+    CWE-312  Cleartext Storage of Sensitive Information —
+      the credential rows are stored in plaintext varchar
+      columns with no application-layer encryption.
+    CWE-200  Exposure of Sensitive Information to an
+      Unauthorized Actor — umbrella parent (note: mapping-
+      Discouraged in current MITRE guidance; cite the more
+      specific child CWEs above for direct mappings).
+
+  NAIC Insurance Data Security Model Law (2017)
+    §4.D   Information Security Program — including ongoing
+      reassessment of risks. Credentials past their TTL in
+      a database row are a documented risk factor.
+    §5     Investigation of a Cybersecurity Event.
+    §6     Notification of a Cybersecurity Event — 72-hour
+      clock.
+
+  NYDFS 23 NYCRR 500 (2017, amended 2023)
+    500.07   Access Privileges and Management — covers
+      credential lifecycle including dormant-account
+      remediation.
+    500.13   Limitations on data retention — DB rows past
+      their stated TTL are a 500.13 violation.
+    500.17   Notices to Superintendent — 72-hour clock.
+
+  GLBA Safeguards Rule (16 CFR 314, amended December 2021,
+  enforcement effective June 2023; notification amendment
+  effective May 2024)
+    314.4(c)(4)  Encrypt customer information at rest — the
+      broker-portal credential row is unencrypted at rest.
+    314.5        Notification of security events affecting
+      500+ consumers (30-day clock from discovery).
+
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  AWS Certified Security – Specialty (SCS-C03)
+    AWS released SCS-C03 in late 2025 / early 2026 as the
+    successor to SCS-C02. Domain 1 (Threat Detection and
+    Incident Response) and Domain 4 (Identity and Access
+    Management) cover Secrets Manager, GuardDuty RDS
+    Protection, Database Activity Streams, and IAM database
+    authentication.
+
+  AWS Certified Database – Specialty (DBS-C01)
+    Retired April 30, 2024. Database-security content was
+    folded into Solutions Architect Professional and the
+    Security Specialty.
+
+  AWS Certified Solutions Architect (Professional) (SAP-C02)
+    Database security as part of the architecture domain.
+
+  ISC2 CCSP (Certified Cloud Security Professional)
+    Domain 2 (Cloud Data Security) and Domain 3 (Cloud
+    Platform & Infrastructure Security) cover database
+    encryption, key management, and secret management.
+
+  CSA CCSK (Certificate of Cloud Security Knowledge) v5
+    The CSA Cloud Controls Matrix has multiple controls for
+    credential lifecycle (CCM-CEK family).
+
+  GIAC GCPN (Cloud Penetration Tester)
+    Tests offensive cloud techniques including DB enumeration
+    from leaked credentials.
+
+  GIAC GCDA (Continuous Monitoring & Security Operations
+  Analyst)
+    Detection-engineering side for the kind of anomalous
+    query pattern we found at 2026-05-20 02:14.
+
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 1 (Security Operations)
+    covers credential-leak detection and response.
+
+  ISC2 CISSP
+    Domain 5 (Identity and Access Management) — credential
+    lifecycle, including the user-management gap.
+
+  PostgreSQL-specific: there's no formal vendor cert for
+    Postgres administration in the way Oracle has OCP, but
+    the EDB (EnterpriseDB) Postgres certifications include
+    Postgres security as a topic.
+
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+  What we just did:
+
+  T1078        Valid Accounts — using the leaked RDS master
+               credential to authenticate. Same technique as
+               the level0 finding's downstream exposure.
+  T1213        Data from Information Repositories — DB
+               enumeration as the modern equivalent of
+               wiki / SharePoint scrape. Reading the schema,
+               the integrations table, the migration_artifacts
+               table.
+  T1552.001    Unsecured Credentials: Credentials In Files —
+               DB rows are not literally "files" but the
+               technique's intent (credentials stored in
+               unprotected locations accessible via known
+               lookup) applies. Some practitioners argue for
+               treating DB-row credentials as a separate
+               sub-technique; T1552.001 is the closest match
+               in current ATT&CK.
+
+  What an adversary would do with the broker-portal
+  credential (level2 path):
+
+  T1078        Valid Accounts.
+  T1213        Data from Information Repositories — broker
+               portal would be the next info-repo.
+  T1090        Proxy — if the broker portal mediates access
+               to insurance-broker data, lateral movement
+               can chain further.
+
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. For Coverline today, in priority order:
+     - Rotate the RDS master credential IMMEDIATELY
+       (\`coverline_admin\`). Sloane's team has the rotation
+       queued; this engagement's findings are the green
+       light.
+     - Rotate the broker-portal migration credential
+       (\`Cv-BrokerSvc-Pr0d-2024-Migration\`). Confirm with
+       the broker-portal team that the Secrets Manager-
+       sourced credential is the only credential the portal
+       accepts; remove the legacy fallback. This is the
+       level2-engagement entry point — close it before
+       anyone outside Coverline enters it.
+     - Rotate the RDS migration runner credential
+       (\`rds-mig-2024-svc-Tmp9pQ7rT\`). Less urgent because
+       the service account is likely defunct, but rotate and
+       disable for completeness.
+     - DROP the \`migration_artifacts\` table entirely.
+       Legitimate purpose ended in Q2 2024. Preserve a
+       snapshot in cold storage for evidence retention.
+     - Disable / delete the dormant \`vikram.shah\` database
+       account.
+     - Pull the source IP for the 2026-05-20 02:14 anomalous
+       query from CloudTrail + VPC Flow Logs. Sloane's team
+       needs this for the breach-notification analysis.
+     - Enable pgaudit on the RDS cluster with source-IP
+       capture. The configuration gap that made the 2026-
+       05-20 finding hard to attribute should not persist.
+
+  2. For Coverline's broader secrets-handling posture, this
+     quarter:
+     - Audit every production database for credentials stored
+       in row values. Targeted SQL queries against columns
+       named like \`password\`, \`secret\`, \`credential\`,
+       \`token\`, \`key\`, \`api_*\`; entropy-based row-
+       content scanners (a custom Lambda is sufficient).
+     - Migrate all in-flight credentials to AWS Secrets
+       Manager. Enable automatic rotation on every secret.
+       Drop the "migration fallback" pattern as architectural
+       policy — Secrets Manager is the only source of truth.
+     - Adopt IAM Database Authentication for RDS where
+       feasible. Application-tier code uses temporary IAM
+       tokens rather than long-lived passwords; rotations
+       become structural.
+     - Enable AWS Database Activity Streams on production
+       Aurora clusters (Database Activity Streams supports
+       Aurora MySQL/PostgreSQL + RDS for Oracle/SQL Server,
+       but not RDS for PostgreSQL/MySQL). Real-time audit of
+       every query, with source IP, query text, and result
+       row count.
+     - Enable AWS GuardDuty RDS Protection — surfaces
+       anomalous DB authentication patterns.
+
+  3. For Coverline's user-lifecycle process:
+     - The dormant \`vikram.shah\` row is a user-management
+       gap. Coverline needs an automated quarterly review
+       that flags database accounts whose corresponding HR
+       record shows terminated employment. The standard
+       SaaS pattern (SCIM-based deprovisioning) doesn't
+       extend natively to RDS; a custom Lambda subscribed
+       to the HR-system termination event can deactivate
+       the RDS account.
+
+  4. For Driftwood's documentation:
+     - Every query we ran today, with the timestamp, the
+       database, the table queried, and the row count
+       returned. The audit trail supports Coverline's
+       chain of custody for the breach-notification
+       analysis.
+     - The findings memo for Sloane should explicitly
+       enumerate what we did NOT do (no INSERT / UPDATE /
+       DELETE; no cross-DB queries; no IAM enumeration);
+       the negative scope is as important as the positive
+       findings.
+
+  5. For the longer-arc lesson:
+     - Database rows are a credential-storage anti-pattern
+       organizations underestimate. The intuition is "the
+       database is protected by the application, so row
+       contents are safe." That intuition breaks the moment
+       any credential that opens the database leaks — at
+       which point every credential STORED IN the database
+       also leaks.
+
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+The two findings on this case — Friday's public S3 bucket
+with the hardcoded RDS credential, today's broker-portal
+credential and dormant employee account in the database —
+are the same finding twice. Both are about credentials that
+were created for a specific narrow purpose and survived past
+that purpose because no process actively removes them. The
+mechanism that creates these credentials is well-known and
+documented in every SDLC framework. The mechanism that
+cleans them up... mostly isn't.
+
+What separates an organization that gets through this kind
+of finding cleanly from one that gets through it badly is
+not the technical sophistication of the controls. Both
+Coverline and a hypothetical worse-positioned org could
+catch this with the same AWS-native tools (Macie, GuardDuty,
+Secrets Manager, Database Activity Streams). What separates
+them is whether someone actually owns "production secrets
+lifecycle" as a continuous responsibility, the way someone
+owns "production database availability" or "production deploy
+pipeline health." When secrets lifecycle is a quarterly audit
+deliverable instead of a continuous ownership, the failure
+mode is always "the migration script that nobody got back to."
+
+For Coverline specifically: this week's incident produces a
+budget line for next quarter — Secrets Manager rollout across
+every production credential surface, Database Activity Streams
+on every production RDS cluster, GuardDuty RDS Protection
+enabled, automated user-lifecycle deprovisioning, and
+quarterly automated review of database tables for
+credential-shaped row contents. That budget line is the price
+of avoiding the next version of this same finding in 2027.
+
+The forensic finding is small. The system around it is what
+makes it actionable.
 
 Return to the lobby:    ssh guest@d3cyph3r`
         },
