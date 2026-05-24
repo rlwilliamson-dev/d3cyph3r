@@ -33,6 +33,28 @@
                 'Consolas', monospace;
 }
 
+/* ─── Light theme ─────────────────────────────────────────────
+   Mirrors the main app's `body.light` overlay (same palette + same
+   localStorage key). Walkthroughs subsite reads the same preference
+   so toggling theme on either site applies to both. */
+body.light {
+  --bg:        #ffffff;
+  --bg-elev:   #f6f8fa;
+  --bg-card:   #f0f3f6;
+  --fg:        #1f2328;
+  --fg-bright: #000000;
+  --accent:    #0969da;
+  --green:     #1a7f37;
+  --cyan:      #1b7c83;
+  --red:       #cf222e;
+  --yellow:    #9a6700;
+  --dim:       #59636e;
+  --border:    #d0d7de;
+}
+body, #site-header, .footer-link {
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html { scroll-behavior: smooth; }
@@ -313,6 +335,32 @@ body {
 }
 #site-footer .footer-link svg { display: block; }
 #site-footer .footer-sep { color: var(--border); user-select: none; }
+
+/* ─── Theme toggle (mirrors the main app's topbar button) ─────── */
+
+#site-header .theme-toggle {
+  background: transparent;
+  border: 0;
+  padding: 4px 8px;
+  margin: 0 0 0 auto;
+  color: var(--dim);
+  cursor: pointer;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+#site-header .theme-toggle:hover,
+#site-header .theme-toggle:focus-visible {
+  color: var(--fg-bright);
+  background: var(--bg-card);
+  outline: none;
+}
+#site-header .theme-toggle .theme-icon { display: block; }
+#site-header .theme-toggle .theme-icon-sun  { display: none; }
+body.light #site-header .theme-toggle .theme-icon-moon { display: none; }
+body.light #site-header .theme-toggle .theme-icon-sun  { display: block; }
 
 /* ─── Mobile ─────────────────────────────────────────────────── */
 
