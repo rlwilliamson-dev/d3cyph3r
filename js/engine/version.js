@@ -75,6 +75,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.7.5").
 
-export const VERSION = "0.8.0";
+export const VERSION = "0.9.0";
 
 export const VERSION_DISPLAY = "v" + VERSION;

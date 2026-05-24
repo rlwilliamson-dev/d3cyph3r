@@ -7,6 +7,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-23
+
+The second level1 in two releases. With this release, three of the
+seven tracks have a level1 (Linux, Network, **Crypto**); four
+remain (Web, Forensics, OSINT, Cloud) on the path to v1.0
+"Foundation." No engine changes — `level1@crypto` uses the existing
+`jwt` command surface (already implemented but unused until now).
+The walkthrough audit on this one caught a rejected CVE I had
+treated as real, several CVE-to-attack mis-mappings, PCI-DSS
+legacy v3.2.1 numbering, and an Auth0/Okta attribution swap.
+
+### Added
+
+- **`level1@crypto` — "Theo's Signature That Wasn't."** Day-2
+  follow-up to the Vesta Retail base64-API-key finding. Theo
+  shipped a homegrown JWT auth middleware for Vesta's internal
+  admin API three weeks ago — `jwt.verify(token, SIGNING_SECRET)`
+  called without an algorithms whitelist. The access log captures
+  a token with `alg: none` in the header; the engine's `jwt`
+  decoder surfaces the algorithm + empty-signature red flags
+  automatically; the payload also carries the level2 breadcrumb
+  as a custom claim (JWT payloads are NOT confidential, which is
+  the secondary lesson). Lesson stack: CWE-347 *Improper
+  Verification of Cryptographic Signature* plus CWE-532 *Insertion
+  of Sensitive Information into Log File* for the debug logging
+  that captures Authorization headers.
+- **`walkthroughs/crypto/level1.md`** — long-form companion to
+  the new level under the v0.7.0 walkthrough scaffolding. ~7,800
+  words, 10-section template. Covers the algorithm-confusion
+  family (alg:none, RS→HS, key-injection via embedded-jwk / jku /
+  x5u), the McLean 2015 disclosure history, library-specific
+  remediation patterns (jsonwebtoken, PyJWT, jose, go-jwt), SIEM
+  detection patterns, and IdP-retrofit guidance. Standard "Last
+  reviewed: May 2026" footer.
+- Playtest coverage for the new level — wrong-password rejection,
+  correct-password connection, file enumeration, `jwt` decode
+  validation including assertions for the alg:none warning, the
+  empty-signature warning, the role=admin claim, and the level2
+  breadcrumb credential appearing in the decoded payload.
+
+### Fixed (pre-merge link audit — both walkthrough and in-game)
+
+- **CVE-2022-23529 cited as a real CVE — it was REJECTED by Mitre
+  in January 2023.** Replaced with CVE-2022-23539 (the correct
+  pre-v9 jsonwebtoken vulnerability paired with CVE-2022-23540).
+  The walkthrough and the in-game text now both correctly cite
+  the addressed-in-v9.0.0 pair and explicitly note that
+  CVE-2022-23529 is rejected so future readers don't repeat the
+  citation.
+- **The McLean 2015 disclosure was tracked across per-library
+  CVEs, not assigned a single multi-library CVE.** Earlier text
+  cited CVE-2015-9235 as the alg:none CVE; CVE-2015-9235 is
+  actually the node-jsonwebtoken RS→HS confusion CVE. Walkthrough
+  and in-game text now correctly cite CVE-2015-2951 (php-jwt
+  alg:none) alongside CVE-2015-9235 (node-jsonwebtoken RS→HS).
+  McLean's affiliation also clarified — he was an independent
+  researcher who guest-posted on the Auth0 blog, not an Auth0
+  employee.
+- **Auth0 ≠ Okta on the October 2023 support-system breach.**
+  Walkthrough originally attributed the October 2023 incident to
+  Auth0; the actual disclosure was Okta's, and Auth0's own support
+  case management system was explicitly reported unaffected.
+  Fixed; the framing now matches the (correct) Okta attribution
+  in network/level1's parallel passage.
+- **CVE-2018-0114 is the embedded-`jwk` key-injection
+  vulnerability, not specifically a jku/x5u URL-fetching CVE.**
+  Walkthrough §4 Thread 2 reframed to cover the full key-injection
+  family (embedded `jwk` in the header, plus the related `jku` and
+  `x5u` URL-fetching attacks tracked under their own per-library
+  CVEs) with CVE-2018-0114 correctly attributed to the embedded
+  variant.
+- **PCI-DSS requirement numbers updated to v4.0.1 numbering.**
+  Earlier text cited Req 10.5.2 (v3.2.1's audit-trail-protection
+  number); v4.0.1 renumbered the control family to 10.3.x. All
+  references swapped to Req 10.3.1 (read-access restriction) and
+  10.3.2 (modification protection). Req 6.4.3 was also wrong (it
+  covers payment-page script integrity, not public-facing app
+  protection); replaced with Req 6.4.1. Req 8.3 narrowed to Req
+  8.3.2 for the strong-cryptography-during-transmission framing
+  specifically.
+- **NIST SP 800-63B-4 Section 4 → Section 5.** Section 4 covers
+  authenticator-lifecycle events; the session-token / refresh
+  guidance the walkthrough was citing actually lives in Section 5
+  *Session Management*.
+- **CWE-347 "upper-middle bands of CWE Top 25" is wrong** — it
+  isn't on the 2023, 2024, or 2025 Top 25 lists. Reframed to
+  cite CWE-347 as the canonical ID with ALLOWED mapping status,
+  noting that the Top 25 weaknesses that most often fire on JWT
+  findings are CWE-287 and CWE-863.
+- **RFC misquotes corrected.** The MUST-language for "reject
+  unsupported algorithms" lives in RFC 8725 §3.1, not RFC 7519
+  §6 (which only defines the unsecured JWT form). RFC 7515 §5.2
+  paraphrase tightened to match the actual step-8 normative text.
+  RFC 8725 §3.1 quote replaced with the actual normative
+  language about libraries enabling caller-specified algorithms.
+- **OWASP JWT Cheat Sheet over-claim removed** — only the Java
+  version is published; the "equivalent versions exist for
+  Node.js and Python" claim has been removed. The WSTG JWT
+  testing chapter URL added as the language-agnostic companion.
+
 ## [0.8.0] - 2026-05-23
 
 The first level1 of a non-Linux track lands. With this release, two

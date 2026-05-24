@@ -8,19 +8,19 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-This is **v0.8.0** — **the first level1 of a non-Linux track ships: `level1@network`. Two tracks (Linux + Network) now have level0 + level1 chains; the rest still have level0 only.** The engine grows `dig`'s surface with zone-transfer support (`dig <domain> AXFR`). 9 levels shipped across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+This is **v0.9.0** — **a second level1 lands: `level1@crypto`. Three of the seven tracks (Linux, Network, Crypto) now have level0 + level1 chains; four remain on level0.** The engine work was done back in v0.4 (the `jwt` command shipped then); this release uses it for the first time. 10 levels shipped across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
 | Linux | `level0@linux` ("Daniel's Last Day"), `level1@linux` ("The Backup Daniel Forgot") | Halton Bank | GLBA |
 | Network | `level0@network` ("Atlas Health Perimeter Check"), `level1@network` ("The Map Marcus Didn't Mean to Share") | Atlas Health | HIPAA |
-| Crypto | `level0@crypto` ("Theo's Safer API Key") | Vesta Retail | PCI-DSS |
+| Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder") | Meridian State University | FERPA |
 | Forensics | `level0@forensics` ("Reed's Soccer Alibi") | Polaris Defense Systems | CMMC / NIST 800-171 |
 | OSINT | `level0@osint` ("Veridian's Open Letter") | Veridian Analytics | HIPAA / HITRUST CSF |
 | Cloud | `level0@cloud` ("Coverline's Twelfth Bucket") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
 
-The next phase is level1 across the remaining tracks — five tracks (Crypto, Web, Forensics, OSINT, Cloud) have their breadcrumb credentials staged from level0 and are waiting on level1 content. (Linux and Network are now at level1.) New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The next phase is level1 across the remaining tracks — four tracks (Web, Forensics, OSINT, Cloud) have their breadcrumb credentials staged from level0 and are waiting on level1 content. (Linux, Network, and Crypto are now at level1.) New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Running it locally
 
@@ -45,7 +45,7 @@ guest@d3cyph3r:~$ ssh level0@web          # HTTP directory enumeration
 guest@d3cyph3r:~$ ssh level0@forensics    # EXIF metadata / insider-threat
 ```
 
-Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. After level0 of the Linux track, follow the credential breadcrumb in Daniel's home directory to `ssh level1@linux` and walk a client jumphost. After level0 of the Network track, follow the unrotated default credential surfaced in the Atlas engagement notes to `ssh level1@network` and validate Atlas's internal blast radius via DNS zone transfer.
+Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. After level0 of the Linux track, follow the credential breadcrumb in Daniel's home directory to `ssh level1@linux` and walk a client jumphost. After level0 of the Network track, follow the unrotated default credential to `ssh level1@network` and validate Atlas's internal blast radius via DNS zone transfer. After level0 of the Crypto track, the decoded base64 API key gates `ssh level1@crypto` — where you'll audit a homegrown JWT auth that accepts `alg:none` and find what's hiding in the access log.
 
 ## How it's organized
 
