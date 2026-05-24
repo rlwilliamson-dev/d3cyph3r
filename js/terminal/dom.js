@@ -34,3 +34,4 @@ export const promptHost   = document.getElementById("prompt-host");
 export const levelBadge   = document.getElementById("level-badge");
 export const progressFill = document.getElementById("progress-fill");
 export const clockEl      = document.getElementById("clock");
+export const themeToggle  = document.getElementById("theme-toggle");

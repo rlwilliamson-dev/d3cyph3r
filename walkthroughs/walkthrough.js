@@ -384,3 +384,30 @@ function route() {
 
 window.addEventListener("hashchange", route);
 route();
+
+// ─── Theme toggle ─────────────────────────────────────────────
+//
+// Inline theme bootstrap (rather than importing the main app's
+// js/terminal/theme.js) keeps the walkthroughs subsite a fully
+// self-contained ES-module bundle. Same localStorage key as the
+// main app so the choice carries across the lobby ↔ walkthroughs
+// boundary.
+
+const THEME_KEY = "d3cyph3r-theme";
+
+(function initThemeWalkthroughs() {
+  try {
+    if (localStorage.getItem(THEME_KEY) === "light") {
+      document.body.classList.add("light");
+    }
+  } catch (_) { /* localStorage unavailable — default to dark */ }
+
+  const btn = document.getElementById("theme-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const isLight = document.body.classList.toggle("light");
+    try {
+      localStorage.setItem(THEME_KEY, isLight ? "light" : "dark");
+    } catch (_) { /* persistence failure non-fatal */ }
+  });
+})();

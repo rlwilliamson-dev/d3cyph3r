@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-24
+
+First feature drop after the v1.0 Foundation milestone. Three
+player-visible changes — a light / dark theme toggle, a revamped
+mobile-gate, and a stylesheet cache-bust so returning visitors get
+fresh styling immediately after every release.
+
+### Added
+
+- **Light / dark theme toggle.** New sun/moon icon button in the main
+  app's topbar and the walkthroughs subsite header. Dark stays
+  default. Choice persists in `localStorage` under the
+  `d3cyph3r-theme` key so it survives across sessions AND across the
+  main app ↔ walkthroughs subsite boundary (both share the
+  d3cyph3r.com origin). Light theme uses GitHub's light palette so
+  the visual identity stays consistent with the rest of the
+  audience's tooling. The lobby logo's hard-coded glyph colors get
+  matching light-mode variants — same five-color identity, darker
+  accent shades that stay readable on white.
+- **Revamped mobile-gate.** The old "ACCESS DENIED" wall-of-red is
+  replaced with a themed boot sequence including a 5-second progress
+  bar, a clear "Keyboard required" explanation, and a CTA to bookmark
+  the page and revisit from desktop. Inherits the user's saved theme
+  preference, so if a visitor toggled light on desktop and then
+  reopened the URL on mobile, the gate matches. Renders a
+  source-on-GitHub link as an escape hatch for mobile readers who
+  want to look at the code.
+- **`js/terminal/theme.js`** — small module owning the theme
+  persistence pattern (`initTheme()` reads localStorage on boot;
+  `toggleTheme()` flips the class and persists). An inline
+  equivalent is embedded in `walkthroughs/walkthrough.js` so the
+  subsite stays a self-contained ES-module bundle without
+  cross-subsite imports.
+
+### Changed
+
+- **Stylesheet links now carry a `?v=<version>` query-string** in
+  both `index.html` and `walkthroughs/index.html`. Browsers treat
+  the versioned URL as a new resource on each release, so returning
+  visitors get fresh CSS immediately rather than seeing up-to-4-hours
+  of stale styling from cached `style.css`. Bumped at every version
+  bump going forward.
+- **`staticwebapp.config.json`** — index.html files (main +
+  walkthroughs) now serve with `Cache-Control: no-cache,
+  must-revalidate` so the HTML revalidates on every visit (using
+  ETag for 304s). Combined with the versioned stylesheet links,
+  this makes post-release styling drift effectively impossible.
+- **`js/mobile-gate.js`** refactored to render structured HTML with
+  CSS classes instead of inline `style=""` attributes. Side benefit:
+  removes the CSP-violating inline styles the prior version had
+  been getting away with through browser leniency.
+- **README privacy note** updated to acknowledge the theme
+  preference is the one persistent piece of state beyond
+  sessionStorage progress tracking.
+
+### Fixed
+
+- Post-release stylesheet caching — see "Changed" above. Manifested
+  in the v1.0.0 launch as a broken-looking footer until the user
+  hard-refreshed.
+
 ## [1.0.0] - 2026-05-24
 
 **The Foundation milestone.**
@@ -1442,7 +1503,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.13.0...v1.0.0
 [0.13.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.11.0...v0.12.0

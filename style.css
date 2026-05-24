@@ -67,6 +67,43 @@
   --font:      'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
 }
 
+/* ─── Light theme ─────────────────────────────────────────────
+   Activated by adding `body.light` (toggled via js/terminal/theme.js,
+   persisted in localStorage). The CSS-variable overlay below inherits
+   from the dark base — every color that needs to flip for readability
+   on a light background is overridden here in one block. Colors are
+   based on GitHub's light palette so the visual identity stays
+   familiar for the same audience that lives in GitHub. */
+body.light {
+  --bg:        #ffffff;
+  --bg-elev:   #f6f8fa;
+  --fg:        #1f2328;
+  --fg-bright: #000000;
+  --dim:       #59636e;
+  --border:    #d0d7de;
+  --accent:    #0969da;
+  --green:     #1a7f37;
+  --cyan:      #1b7c83;
+  --red:       #cf222e;
+  --yellow:    #9a6700;
+}
+/* Smooth transition between themes — only on the colored properties
+   so layout-affecting transitions (width/height) aren't accidentally
+   animated. 180ms feels snappy without being jarring. */
+body, .line, #topbar, #site-footer, .theme-toggle, .footer-link {
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+/* The lobby logo glyphs use hardcoded brand colors. Provide a light-
+   mode variant set that maintains the same five-color identity but
+   stays readable on white. The greens, cyans, and accents shift to
+   their darker GitHub-light equivalents; bright white flips to black. */
+body.light .glyph-white  { color: #000000; }
+body.light .glyph-green  { color: #1a7f37; }
+body.light .glyph-cyan   { color: #1b7c83; }
+body.light .glyph-accent { color: #0969da; }
+body.light .glyph-red    { color: #cf222e; }
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
@@ -102,6 +139,44 @@ html, body {
 #topbar .title  { color: var(--fg-bright); font-weight: 500; }
 #topbar .status { color: var(--dim); }
 #topbar .clock  { color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* Right-side cluster: status badge, theme toggle, clock. Grouped so
+   the theme button sits between the existing items without disturbing
+   the title's left-alignment. */
+#topbar .topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Theme toggle button. Two icons in the same slot; CSS picks which to
+   show based on the current body class. Click handler in main.js
+   delegates to theme.js's toggleTheme(). */
+.theme-toggle {
+  background: transparent;
+  border: 0;
+  padding: 2px 6px;
+  margin: 0;
+  color: var(--dim);
+  cursor: pointer;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 3px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  color: var(--fg-bright);
+  background: var(--bg-elev);
+  outline: none;
+}
+.theme-toggle .theme-icon { display: block; }
+/* Default (dark mode): show the moon → click to go light. */
+.theme-toggle .theme-icon-sun  { display: none; }
+/* Light mode: show the sun → click to go back dark. */
+body.light .theme-toggle .theme-icon-moon { display: none; }
+body.light .theme-toggle .theme-icon-sun  { display: block; }
 
 #progress-bar  { height: 2px; background: var(--bg-elev); margin-bottom: 12px; flex-shrink: 0; }
 #progress-fill { height: 100%; width: 0; background: var(--green); transition: width 0.6s ease; }
@@ -336,3 +411,106 @@ body.error-404 {
 .error-btn-secondary { color: var(--dim); }
 .error-btn-secondary:hover,
 .error-btn-secondary:focus-visible { color: var(--fg); }
+
+/* ─── Mobile gate (js/mobile-gate.js renders this for any device
+   that fails the desktop check). All styling lives here, not inline,
+   so the CSP `style-src 'self'` enforcement stays clean. Uses the
+   same CSS variables as the main app, so if the visitor has the
+   `light` theme persisted from an earlier desktop visit, the gate
+   inherits the light palette automatically. ─────────────────────── */
+.mobile-gate {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+  padding: 32px 20px 48px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+}
+.mobile-gate-inner {
+  max-width: 480px;
+  width: 100%;
+  margin: 6vh auto 0;
+}
+.mobile-gate-brand {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 44px;
+  letter-spacing: 6px;
+  color: var(--fg-bright);
+  margin: 0 0 6px;
+  font-weight: 500;
+  line-height: 1;
+}
+.mobile-gate-tagline {
+  color: var(--dim);
+  font-size: 13px;
+  margin: 0 0 24px;
+}
+.mobile-gate-progress {
+  height: 4px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.mobile-gate-progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--green);
+  /* 5-second fill, linear, locks at 100% (forwards). Synced with
+     mobile-gate.js's BOOT_LINES timings + FINAL_DELAY. */
+  animation: mobile-gate-fill 5s linear forwards;
+}
+@keyframes mobile-gate-fill { to { width: 100%; } }
+
+.mobile-gate-log {
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 180px;
+}
+.mobile-gate-log-line {
+  color: var(--dim);
+  opacity: 0;
+  animation: mobile-gate-fade 0.3s ease forwards;
+}
+.mobile-gate-log-line.warn { color: var(--yellow); }
+.mobile-gate-log-line.err  { color: var(--red); font-weight: 500; }
+@keyframes mobile-gate-fade { to { opacity: 1; } }
+
+.mobile-gate-final {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+  animation: mobile-gate-fade 0.5s ease forwards;
+}
+.mobile-gate-final-title {
+  color: var(--fg-bright);
+  font-size: 17px;
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+.mobile-gate-final-body {
+  color: var(--fg);
+  font-size: 13px;
+  line-height: 1.65;
+  margin: 0 0 18px;
+}
+.mobile-gate-final-cta {
+  color: var(--accent);
+  font-size: 13px;
+  margin: 0 0 22px;
+  font-weight: 500;
+}
+.mobile-gate-final-links { margin: 0; }
+.mobile-gate-final-links a {
+  color: var(--dim);
+  font-size: 12px;
+  text-decoration: none;
+}
+.mobile-gate-final-links a:hover {
+  color: var(--fg-bright);
+  text-decoration: underline;
+}

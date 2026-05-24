@@ -10,6 +10,24 @@
     "Cross-Origin-Resource-Policy": "cross-origin",
     "X-Permitted-Cross-Domain-Policies": "none"
   },
+  "routes": [
+    {
+      "route": "/",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    },
+    {
+      "route": "/index.html",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    },
+    {
+      "route": "/walkthroughs/",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    },
+    {
+      "route": "/walkthroughs/index.html",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    }
+  ],
   "responseOverrides": {
     "404": {
       "rewrite": "/404.html",

@@ -57,6 +57,14 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
+    # GITHUB_TOKEN's default permissions since 2023 are `contents: read`
+    # only. The SWA action wants to post a preview-URL comment on PRs
+    # via the GitHub API — without `pull-requests: write` it gets a 403
+    # and the build log shows "Unexpectedly failed to add GitHub comment"
+    # (the deploy still succeeds; just the comment fails).
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v6
         with:

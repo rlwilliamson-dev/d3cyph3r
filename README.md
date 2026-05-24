@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-This is **v1.0.0 — the Foundation milestone.** All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) have level0 + level1 chains playable end-to-end, with per-track credential chains stitching each pair into a continuous client engagement. v1.0 is the dedicated polish release — no new gameplay this release; that's the v2.0 "Apprentice" milestone, which adds level2 across the tracks. Instead, v1.0 ships a comprehensive cross-track standards-drift audit, a code-comment pass for forkers, the walkthroughs subsite publicly indexable for the first time, and the project's first formal AI use disclosure + educational-use framing. 14 levels shipped across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+This is **v1.1.0** — the first feature drop after the v1.0 Foundation milestone. Adds a **light / dark theme toggle** (dark default; choice persists across sessions and across the main app ↔ walkthroughs subsite boundary), a **revamped mobile-gate** with a real boot-progress bar and a clear "bookmark this and revisit on desktop" CTA, and a **stylesheet cache-bust** so post-release visitors stop seeing stale styling for hours after each deploy. All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) still ship level0 + level1 chains playable end-to-end. 14 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -153,7 +153,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 D3CYPH3R is a cybersecurity learning tool. The puzzles teach defensive auditing skills in a safe sandbox — the techniques cited (MITRE ATT&CK, CWE, NIST 800-53, CIS Controls) are the same ones professional security teams use every day to *find* this kind of exposure on their own infrastructure. **Don't apply these techniques against systems you don't own or aren't authorized to test.** Unauthorized access is illegal in most jurisdictions (CFAA in the US, Computer Misuse Act in the UK, similar elsewhere).
 
-**Privacy.** D3CYPH3R uses `sessionStorage` for progress tracking only — no cookies, no analytics, no telemetry, no third-party scripts. Closing the tab clears state.
+**Privacy.** D3CYPH3R uses `sessionStorage` for progress tracking and `localStorage` for one item only — your theme preference (dark or light). No cookies, no analytics, no telemetry, no third-party scripts. Closing the tab clears progress; theme preference survives across sessions because that's what people expect from a theme toggle.
 
 ## Commands implemented
 

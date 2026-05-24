@@ -17,11 +17,19 @@ if (isMobile()) {
   // side effects are only triggered if we actually call into them.
   const { initInput, setCommandSet } = await import("./terminal/input.js");
   const { startClock }               = await import("./terminal/clock.js");
+  const { initTheme, toggleTheme }   = await import("./terminal/theme.js");
   const { boot }                     = await import("./engine/lobby.js");
   const { ALL_CMDS }                 = await import("./commands/index.js");
   const { VERSION_DISPLAY }          = await import("./engine/version.js");
+  const { themeToggle }              = await import("./terminal/dom.js");
+
+  // Apply saved theme BEFORE the boot sequence renders so the player
+  // doesn't see a flash of the wrong palette.
+  initTheme();
 
   document.getElementById("topbar-title").textContent = `D3CYPH3R ${VERSION_DISPLAY}`;
+
+  if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
 
   setCommandSet(ALL_CMDS);
   initInput();
