@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-05-24
+
+The third level1 in three releases. Four of the seven tracks (Linux,
+Network, Crypto, **Web**) now have level0 + level1 chains; three
+remain (Forensics, OSINT, Cloud) on the v1.0 "Foundation" path. No
+engine changes — `level1@web` uses the existing `curl` + `cookies`
+command surface. The walkthrough audit on this one caught CWE
+mapping-status drift, an Optus figure that had moved between
+disclosure and the OAIC's August 2025 civil-penalty filing, a wrong
+SEC filing URL, Casbin's move to the Apache Software Foundation,
+and Oso's strategic pivot toward AI-agent authorization.
+
+### Added
+
+- **`level1@web` — "Carlos's Login Wall."** Day-2 follow-up to
+  yesterday's Meridian backup-directory finding. Carlos shipped a
+  "quick transcript download" endpoint three weeks ago, gated by
+  Meridian SSO. The middleware confirms the requester has an active
+  session; the handler never checks that the requested `student_id`
+  matches the session's owning student. Any logged-in student can
+  pull any other student's transcript by changing one URL parameter
+  — IDOR via CWE-639 *Authorization Bypass Through User-Controlled
+  Key*. The blast radius extends to legacy BluePier-era system
+  accounts in the `M-000xxxx` ID range; one of them carries the
+  level2 breadcrumb credential in its `advisor_notes` field. Lesson
+  stack: CWE-639 plus CWE-862 *Missing Authorization* for the
+  primary failure, CWE-312 *Cleartext Storage* for the credential
+  in the free-form field, plus the sticky-account anti-pattern
+  (parallel to the audit-bypass account in `level1@network` and the
+  `handoff_token` JWT claim in `level1@crypto` — three different
+  "convenient places" engineers chose to stash credentials, three
+  different access-control failures that expose them).
+- **`walkthroughs/web/level1.md`** — long-form companion under the
+  v0.7.0 walkthrough scaffolding. ~7,000 words. Covers IDOR / BOLA
+  history, the OWASP API1-since-2019 standing, real-world parallels
+  (USPS Informed Visibility 2018 / ~60M, Optus 2022 / ~9.5M with
+  ~2.1M government-ID-exposed, T-Mobile 2023 / ~37M via BOLA), the
+  full framework + cert tie-ins, authorization tooling (OPA, Casbin,
+  Oso, framework-native primitives), schema-level defense in depth
+  (Postgres RLS, API-gateway authz, service-mesh policies). Standard
+  "Last reviewed: May 2026" footer.
+- Playtest coverage for the new level — wrong-password rejection,
+  IDOR validation via curl-ing two real student IDs from level0's
+  CSV (Aisha M-1872941 + Jordan M-1873041) plus the BluePier demo
+  M-0000001, the 404 case for an unknown ID, and the breadcrumb
+  credential assertion.
+
+### Fixed (pre-merge link audit — both walkthrough and in-game)
+
+- **Optus 2022 figures updated to the OAIC August 2025 filing**:
+  ~9.5 million Australians (per the OAIC civil-penalty proceeding,
+  superseding the earlier ~9.8M / "up to 10M" estimates), ~2.1M
+  with government-ID-exposed, and Optus's reserved breach-
+  remediation cost of approximately AUD $140 million (not the
+  earlier walkthrough draft's "multi-hundred-million-AUD"
+  framing). Civil-penalty proceeding corrected from "multiple
+  proceedings" to "single proceeding filed in August 2025."
+- **T-Mobile January 2023 SEC 8-K URL** corrected from a wrong
+  accession number to `000119312523010949/d641142d8k.htm`.
+- **CWE-862 MITRE mapping status** corrected from ALLOWED to
+  **ALLOWED-WITH-REVIEW** (CWE-862 is a Class-level weakness;
+  the catalog recommends reviewing Base-level children before
+  mapping). Top 25 ranking detail added: #11 in 2023, #9 in
+  2024, #4 in 2025.
+- **CWE-285 mapping status** corrected from a permissive "map
+  this when the question is high-level" framing to the actual
+  **DISCOURAGED** status, with MITRE's recommended alternatives
+  (CWE-862, CWE-863, CWE-639) cited explicitly.
+- **Casbin URL** updated from the legacy `casbin.org` to
+  `casbin.apache.org` (the project joined the Apache Software
+  Foundation; the old domain 301-redirects).
+- **Oso positioning** updated — Oso's company positioning shifted
+  toward AI-agent authorization in 2025; the application-
+  authorization product (Polar DSL with RBAC / ReBAC / ABAC)
+  remains available but is no longer the primary marketing
+  emphasis. Description softened accordingly.
+- **HackerOne *Hacker-Powered Security Report*** URL updated to
+  the evergreen landing page; the "Broken Access Control #1 or #2
+  every year the report has been published" claim softened to
+  "recent editions consistently place Broken Access Control among
+  the top vulnerability categories" (earlier editions ranked XSS
+  at #1 in some years).
+- **USPS Informed Visibility data categories** corrected to match
+  the Krebs source — email addresses, usernames, user IDs, account
+  numbers, street addresses, phone numbers, mailing-campaign data
+  (not "real-time package-tracking data" as the walkthrough
+  originally framed).
+- **MITRE T1530** dropped from the in-game lessons-learned + the
+  walkthrough's further reading — T1530 (Data from Cloud Storage
+  Object) is scoped to cloud storage and doesn't strictly apply to
+  Carlos's database-backed Express API. T1190 + T1213 cover the
+  case cleanly.
+
 ## [0.9.0] - 2026-05-23
 
 The second level1 in two releases. With this release, three of the
