@@ -154,6 +154,17 @@ const MANIFEST = {
           "Business Associate. HIBP surfaces the same cleartext password " +
           "in two breaches — the high-confidence credential-reuse signal.",
       },
+      level1: {
+        title: "Aaron's Weekend Project",
+        blurb:
+          "Day two. After Friday's HIBP finding, Marisol expands scope to " +
+          "Aaron's developer footprint. His public GitHub has a clinical-" +
+          "era personal project with a committed `.env` at HEAD carrying " +
+          "live AWS access keys, an OpenFDA personal API key, and a Flask " +
+          "secret — the .gitignore was added later (and lists `.env`) but " +
+          "doesn't retroactively untrack the file. CWE-798 + CWE-540, with " +
+          "the universal source-control credential-leak mechanic on display.",
+      },
     },
   },
   cloud: {

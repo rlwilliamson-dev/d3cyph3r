@@ -9,6 +9,10 @@
 //   harvesterResults — { domain: { emails, subdomains, hosts } }
 //   shodanResults    — { query: [{ ip, hostname, org, country, ports, banner }, ...] }
 //   ipinfoResults    — { ip: { hostname, city, region, country, loc, org, postal, timezone } }
+//   github           — { username: { profile: {...}, repos: { repoName: { meta, files: { path: content } } } } }
+//                      Source-control OSINT — see the github() command
+//                      below for the full schema. Files map keys can
+//                      include slashes for nested paths.
 //
 // Each handler returns the canonical "command not configured for this
 // target" message when no data is present, so the lobby smoke-test
@@ -166,5 +170,147 @@ export const osintCommands = {
     if (res.asn) lines.push(`  ASN:         ${res.asn}`);
     if (res.privacy) lines.push(`  Privacy:     ${res.privacy}`);
     return { text: lines.join("\n"), cls: "out" };
+  },
+
+  // github: source-control OSINT primitive. Three forms:
+  //
+  //   github <username>                    profile + public repos list
+  //   github <username>/<repo>             repo metadata + file tree
+  //   github <username>/<repo> file <path> show file contents at HEAD
+  //
+  // Level designers populate `level.github[username]` with:
+  //   {
+  //     profile: { name, bio, location, joined, publicRepos, followers,
+  //                following },
+  //     repos: {
+  //       <repoName>: {
+  //         description, language, created, updated, stars, forks,
+  //         license, files: { "<path>": "<content>", ... }
+  //       },
+  //     },
+  //   }
+  //
+  // The file map keys can include slashes for nested paths
+  // (e.g., "src/foo.py"); the tree-display sorts paths alphabetically.
+  github(level, arg) {
+    if (!arg || arg === "-h" || arg === "--help") {
+      return {
+        text: [
+          "Usage: github <user>",
+          "       github <user>/<repo>",
+          "       github <user>/<repo> file <path>",
+          "",
+          "Look up a GitHub user's public profile and repositories, then",
+          "drill into a repo's file tree and view file contents at HEAD.",
+          "",
+          "Examples:",
+          "  github octocat                            # profile + repos",
+          "  github octocat/hello-world                # repo metadata + tree",
+          "  github octocat/hello-world file README.md # file contents",
+        ].join("\n"),
+        cls: "out",
+      };
+    }
+
+    const trimmed = arg.trim();
+    const parts = trimmed.split(/\s+/).filter(Boolean);
+    const target = parts[0];
+
+    // Profile lookup: `github <user>`
+    if (!target.includes("/")) {
+      const username = target;
+      const userData = level.github?.[username];
+      if (!userData) {
+        return { text: `github: no GitHub profile for '${username}'`, cls: "dim" };
+      }
+      const p = userData.profile || {};
+      const repos = userData.repos || {};
+      const repoEntries = Object.entries(repos);
+
+      const lines = [
+        `github.com — user profile lookup`,
+        `──────────────────────────────────────────`,
+        `  Profile:        ${username}`,
+        `  Name:           ${p.name || "(not set)"}`,
+        `  Bio:            ${p.bio || "(no bio)"}`,
+        `  Location:       ${p.location || "(not set)"}`,
+        `  Joined:         ${p.joined || "(unknown)"}`,
+        `  Public repos:   ${p.publicRepos ?? repoEntries.length}`,
+        `  Followers:      ${p.followers ?? "(unknown)"}`,
+        `  Following:      ${p.following ?? "(unknown)"}`,
+      ];
+
+      if (repoEntries.length === 0) {
+        lines.push(``, `(no public repositories)`);
+      } else {
+        lines.push(``, `Public repositories:`);
+        lines.push(`  Updated      Stars   Language     Name                       Description`);
+        lines.push(`  ──────────   ─────   ──────────   ───────────────────────    ──────────────────────────────`);
+        // Sort by updated desc
+        const sorted = repoEntries.slice().sort((a, b) =>
+          String(b[1].updated || "").localeCompare(String(a[1].updated || ""))
+        );
+        for (const [repoName, meta] of sorted) {
+          const updated = String(meta.updated || "(unknown)").padEnd(11);
+          const stars = String(meta.stars ?? 0).padStart(4);
+          const lang = String(meta.language || "(none)").padEnd(11);
+          const name = repoName.padEnd(26);
+          const desc = meta.description || "";
+          lines.push(`  ${updated}  ${stars}   ${lang}  ${name} ${desc}`);
+        }
+      }
+      return { text: lines.join("\n"), cls: "out" };
+    }
+
+    // Split user/repo
+    const slashIdx = target.indexOf("/");
+    const username = target.slice(0, slashIdx);
+    const repoName = target.slice(slashIdx + 1);
+    const userData = level.github?.[username];
+    if (!userData) {
+      return { text: `github: no GitHub profile for '${username}'`, cls: "dim" };
+    }
+    const repo = userData.repos?.[repoName];
+    if (!repo) {
+      return { text: `github: repository '${username}/${repoName}' not found`, cls: "dim" };
+    }
+
+    // File-contents form: `github user/repo file <path>`
+    if (parts.length >= 3 && parts[1] === "file") {
+      const filepath = parts.slice(2).join(" ");
+      const content = repo.files?.[filepath];
+      if (content === undefined) {
+        return { text: `github: file '${filepath}' not found in ${username}/${repoName}`, cls: "dim" };
+      }
+      const header = [
+        `github.com — ${username}/${repoName} — ${filepath}`,
+        `──────────────────────────────────────────`,
+      ];
+      return { text: header.join("\n") + "\n" + content, cls: "out" };
+    }
+
+    // Repo metadata + tree form: `github user/repo`
+    const filesObj = repo.files || {};
+    const fileList = Object.keys(filesObj).sort();
+
+    const meta = [
+      `github.com — repository`,
+      `──────────────────────────────────────────`,
+      `  Repository:     ${username}/${repoName}`,
+      `  Description:    ${repo.description || "(no description)"}`,
+      `  Language:       ${repo.language || "(unknown)"}`,
+      `  Created:        ${repo.created || "(unknown)"}`,
+      `  Updated:        ${repo.updated || "(unknown)"}`,
+      `  Stars:          ${repo.stars ?? 0} · Forks: ${repo.forks ?? 0} · License: ${repo.license || "(none)"}`,
+      ``,
+      `Files at HEAD:`,
+    ];
+    if (fileList.length === 0) {
+      meta.push(`  (no files)`);
+    } else {
+      for (const f of fileList) meta.push(`  ${f}`);
+    }
+    meta.push(``, `To view a file: github ${username}/${repoName} file <path>`);
+    return { text: meta.join("\n"), cls: "out" };
   },
 };

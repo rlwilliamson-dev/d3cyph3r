@@ -71,6 +71,7 @@ const HELP_SECTIONS = [
     "theharvester <domain>      – harvest emails, subdomains, hosts",
     "shodan <query>             – Shodan host / service search",
     "ipinfo <ip>                – IP geolocation / ASN / org lookup",
+    "github <user>[/repo]       – GitHub profile, repos, file contents",
   ]},
   { track: "cloud", title: "CLOUD SECURITY", lines: [
     "aws s3 ls [s3://bucket]    – list buckets or bucket contents",

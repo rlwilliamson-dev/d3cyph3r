@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-05-24
+
+The fifth level1 in five releases. Six of the seven tracks (Linux,
+Network, Crypto, Web, Forensics, **OSINT**) now have level0 +
+level1 chains; one remains (Cloud) on the v1.0 "Foundation" path.
+Introduces one new engine command — `github` — for source-control
+OSINT, supporting profile lookup, repo metadata + file tree, and
+file contents at HEAD. The walkthrough audit caught some
+substantive standards drift this round: OWASP ASVS v5.0's
+Configuration chapter is V13 (not V14, which is Data Protection),
+ASVS v5.0 published May 2025 (not 2024), OMB rescinded both
+M-22-18 and M-23-16 on January 23, 2026 via M-26-05 (the CISA
+Common Form is now optional), AWS released SCS-C03 as the
+successor to SCS-C02, and CWE-798 fell off the 2025 CWE Top 25
+list entirely (MITRE changed methodology to remove normalization
+to abstract weaknesses). Also picked up the GitGuardian "State of
+Secrets Sprawl" 2026 figures (29M new secrets in 2025, 34% YoY),
+the Toyota disclosure date correction (October 2022, not March
+2023), the corrected Uber 2014 chronology (lawsuit 2015, settled
+2016), and the SANS SEC555 rename + Gitleaks maintenance-mode
+status from the prior release's audit.
+
+### Added
+
+- **`level1@osint` — "Aaron's Weekend Project."** Day-2
+  continuation of the Veridian executive-exposure case. Marisol
+  expands engagement scope over the weekend after Friday's HIBP
+  finding; sherlock + the new `github` command are now in scope
+  for Aaron Hines's public developer footprint. Aaron's clinical-
+  era personal-pgx-tool repo on GitHub has a committed `.env`
+  file at HEAD containing four secrets — most importantly a
+  live, never-rotated personal AWS access-key pair (the
+  `AKIAVDS...` prefix marks it as a long-lived IAM user access
+  key). The `.gitignore` was added two months after the initial
+  commit (and lists `.env`) but doesn't retroactively untrack
+  the pre-existing file — the universal source-control credential-
+  leak mechanic on display. The AWS secret access key becomes the
+  level2@osint breadcrumb. Lesson stack: CWE-798 (Hard-Coded
+  Credentials) + CWE-540 (Inclusion of Sensitive Information in
+  Source Code) + CWE-312 (Cleartext Storage), mapped to NIST SP
+  800-218 SSDF (PW.6 / PS.1 / PO.5), MITRE T1593.003 (Search Open
+  Websites/Domains: Code Repositories) on the recon side and
+  T1552.001 (Unsecured Credentials: Credentials In Files) on the
+  post-compromise side.
+- **New engine command: `github [<user>[/<repo>] [file <path>]]`.**
+  Source-control OSINT primitive. Three forms: profile + repos
+  list, repo metadata + file tree, file contents at HEAD. Level
+  designers populate `level.github[username]` with profile +
+  repos (each repo carrying description / language / created /
+  updated / stars / forks / license + a `files: { path: content }`
+  map; nested paths supported via slashes in the key).
+- **`walkthroughs/osint/level1.md`** — long-form companion under
+  the v0.7.0 walkthrough scaffolding. ~7,000 words. Covers
+  source-control credential leakage in depth, the universal
+  `.gitignore`-is-forward-only mechanic, real-world parallels
+  (Uber 2014/2015 AWS Gist, Toyota October 2022 T-Connect,
+  Mercedes-Benz January 2024 PAT, Microsoft AI Research 38TB
+  SAS, Samsung ChatGPT March 2023, Sysdig's EmeraldWhale
+  October 2024 campaign), the full framework + cert tie-ins
+  (NIST SP 800-218 with the OMB M-26-05 rescission framing,
+  800-53 IA-5(7), OWASP ASVS v5.0 §V13, CIS Controls v8.1
+  Control 16, HIPAA citations), GitHub Secret Scanning + Push
+  Protection coverage, TruffleHog / Gitleaks / GitGuardian /
+  detect-secrets / git-secrets tooling rundown, and AWS-specific
+  rotation + GuardDuty + CloudTrail audit guidance. Standard
+  "Last reviewed: May 2026" footer.
+- Playtest coverage for the new level — wrong-password
+  rejection, sherlock handle confirmation, github profile /
+  repo-tree / file-contents walk validation, breadcrumb
+  credential assertion, decoy-repo enumeration, and the three
+  graceful-error paths (unknown user / unknown repo / unknown
+  file path), plus framework-citation checks in the in-game
+  post-mortem.
+- `help` reference entry for `github` in the OPEN-SOURCE INTEL
+  section, plus `github`-with-no-args usage probe in the lobby
+  smoke test.
+
 ## [0.11.0] - 2026-05-24
 
 The fourth level1 in four releases. Five of the seven tracks (Linux,

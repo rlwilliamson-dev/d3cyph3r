@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-This is **v0.11.0** — **a fourth level1 lands: `level1@forensics`. Five of the seven tracks (Linux, Network, Crypto, Web, Forensics) now have level0 + level1 chains; two remain on level0.** One new engine command this release — `evtx`, a Windows Event Log query primitive modeled on EZ Tools' `EvtxECmd`. 12 levels shipped across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+This is **v0.12.0** — **a fifth level1 lands: `level1@osint`. Six of the seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT) now have level0 + level1 chains; one remains on level0.** One new engine command this release — `github`, a source-control OSINT primitive (profile lookup, repo metadata + file tree, file contents at HEAD). 13 levels shipped across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -17,10 +17,10 @@ This is **v0.11.0** — **a fourth level1 lands: `level1@forensics`. Five of the
 | Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall") | Meridian State University | FERPA |
 | Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
-| OSINT | `level0@osint` ("Veridian's Open Letter") | Veridian Analytics | HIPAA / HITRUST CSF |
+| OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project") | Veridian Analytics | HIPAA / HITRUST CSF |
 | Cloud | `level0@cloud` ("Coverline's Twelfth Bucket") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
 
-The next phase is level1 across the remaining tracks — two tracks (OSINT, Cloud) have their breadcrumb credentials staged from level0 and are waiting on level1 content. (Linux, Network, Crypto, Web, and Forensics are now at level1.) New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The next phase is the final level1 for v1.0 "Foundation" — Cloud is the only remaining track on level0, with its breadcrumb credential staged from level0 and waiting on level1 content. (Linux, Network, Crypto, Web, Forensics, and OSINT are now at level1.) New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Running it locally
 
@@ -45,7 +45,7 @@ guest@d3cyph3r:~$ ssh level0@web          # HTTP directory enumeration
 guest@d3cyph3r:~$ ssh level0@forensics    # EXIF metadata / insider-threat
 ```
 
-Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. After level0 of the Linux track, follow the credential breadcrumb in Daniel's home directory to `ssh level1@linux` and walk a client jumphost. After level0 of the Network track, follow the unrotated default credential to `ssh level1@network` and validate Atlas's internal blast radius via DNS zone transfer. After level0 of the Crypto track, the decoded base64 API key gates `ssh level1@crypto` — where you'll audit a homegrown JWT auth that accepts `alg:none` and find what's hiding in the access log. After level0 of the Web track, the leaked DB credential gates `ssh level1@web` — where Carlos's "SSO-is-enough" transcript endpoint demonstrates the difference between authentication and authorization. After level0 of the Forensics track, FSO Sgt. Chen's single-use handoff password gates `ssh level1@forensics` — where the new `evtx` command parses Reed's workstation Security event log and surfaces both his CUI-exfil chain and a separate credential-handling miss from the IR team's own response.
+Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. After level0 of the Linux track, follow the credential breadcrumb in Daniel's home directory to `ssh level1@linux` and walk a client jumphost. After level0 of the Network track, follow the unrotated default credential to `ssh level1@network` and validate Atlas's internal blast radius via DNS zone transfer. After level0 of the Crypto track, the decoded base64 API key gates `ssh level1@crypto` — where you'll audit a homegrown JWT auth that accepts `alg:none` and find what's hiding in the access log. After level0 of the Web track, the leaked DB credential gates `ssh level1@web` — where Carlos's "SSO-is-enough" transcript endpoint demonstrates the difference between authentication and authorization. After level0 of the Forensics track, FSO Sgt. Chen's single-use handoff password gates `ssh level1@forensics` — where the new `evtx` command parses Reed's workstation Security event log and surfaces both his CUI-exfil chain and a separate credential-handling miss from the IR team's own response. After level0 of the OSINT track, Aaron Hines's recovered reused password gates `ssh level1@osint` — where the new `github` command walks his developer footprint and finds a personal-project repo with committed AWS credentials at HEAD that the `.gitignore` (added later) doesn't retroactively untrack.
 
 ## How it's organized
 
@@ -68,17 +68,15 @@ d3cyph3r/
     ├── crypto.js           Crypto track (1 level)
     ├── web.js              Web track (1 level)
     ├── forensics.js        Forensics track (2 levels)
-    ├── osint.js            OSINT track (engine ready; no levels yet)
-    └── cloud.js            Cloud track (engine ready; no levels yet)
+    ├── osint.js            OSINT track (2 levels)
+    └── cloud.js            Cloud track (1 level)
 ```
 
 Adding a new level is a single object literal under `levels/<track>.js`. The schema is documented at the top of `levels/linux.js`.
 
-## Tracks scaffolded but no levels yet
+## Tracks remaining for v1.0 "Foundation"
 
-Both the **OSINT** and **Cloud** tracks have their command surfaces shipped (see "Commands implemented" below) but no level data yet. The next level0 for either track can land as pure content — no further engine work needed.
-
-The lobby auto-detects which tracks have level data and only lists those, so adding the first level0 for OSINT or Cloud will automatically un-dim their `help` sections and add them to the engagement list.
+All seven tracks now have level0 shipped. **Cloud** is the only track still missing level1 — its breadcrumb credential is staged from level0 (the hardcoded RDS master password in `migrate-rds.sh` on the public Coverline S3 bucket) and waits on level1 content. Six tracks (Linux, Network, Crypto, Web, Forensics, OSINT) are at level1; level2 for any of them is v2.0 "Apprentice" milestone work.
 
 ## Commands implemented
 
@@ -89,7 +87,7 @@ All commands from the original engine survive the refactor, with `exit` / `logou
 - **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
 - **Web:** `curl` (+ `-I`) / `gobuster` / `cookies`
 - **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sha256sum` / `md5sum`
-- **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo`
+- **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo` / `github` (+ `/repo` + `file <path>`)
 - **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`
 
