@@ -1,7 +1,40 @@
 // Network-recon commands: nmap, netstat, whois, dig.
-// All data is per-level static — no real network calls.
+//
+// Handler contract: every command exported here has the signature
+//   (level, arg) → { text, cls } | null
+// (See js/commands/linux.js for the broader contract description.)
+//
+// All data is per-level static — no real network calls happen. Levels
+// fabricate plausible scan / WHOIS / DNS output so the player can
+// pivot off the same information they would harvest in a real
+// engagement.
+//
+// Schema fields this module reads off the level object:
+//   level.net          { host: [{ port, state, service, version? }] }
+//                      Per-host port table. Drives nmap output.
+//                      Absent → nmap reports the host as down.
+//   level.netstatData  [{ proto, local, foreign, state, pid }]
+//                      Active-connection table for netstat. Absent →
+//                      dim empty-state message.
+//   level.whoisData    { domain: [line, line, ...] }
+//                      Pre-formatted WHOIS lines. The lookup is exact
+//                      string match — no zone-style fallback to a
+//                      parent domain.
+//   level.dnsData      { domain: { TYPE: [values], AXFR?: [lines] } }
+//                      Per-domain record table. TYPE is uppercase
+//                      (A / AAAA / MX / TXT / CNAME / NS / SOA / ...).
+//                      AXFR is a special pseudo-type: its value is
+//                      already-formatted zone-file lines (one per
+//                      record) rather than a list of RDATA values,
+//                      because zone transfers include subdomain rows
+//                      that the standard ANSWER-SECTION single-name
+//                      format can't represent.
 
 export const networkCommands = {
+  // nmap: simulated port scan. `-sV` enables version detection (renders
+  // an extra VERSION column when the level provides p.version strings).
+  // Header / footer are crafted to match Nmap 7.94 output closely so
+  // walkthrough screenshots look authentic.
   nmap(level, arg) {
     if (!arg)       return { text: "Usage: nmap [-sV] <host>", cls: "err" };
     if (!level.net) return { text: `nmap: Note: Host seems down. Try: nmap -sV ${arg}`, cls: "err" };
@@ -32,6 +65,10 @@ export const networkCommands = {
     return { text: [...header, ...rows, ...footer].join("\n"), cls: "warn" };
   },
 
+  // netstat: dump active connections as a fixed-width table. Mimics
+  // Linux netstat's "-ant" output (proto / local / foreign / state /
+  // PID). Levels that don't model running connections get a dim
+  // empty-state message rather than a misleading empty table.
   netstat(level) {
     if (!level.netstatData) return { text: "netstat: no network connections on this level", cls: "dim" };
     const header = "Proto  Local Address          Foreign Address        State        PID/Program";
@@ -42,6 +79,12 @@ export const networkCommands = {
     return { text: [header, sep, ...rows].join("\n"), cls: "warn" };
   },
 
+  // whois: exact-match lookup in level.whoisData. No suffix-strip /
+  // parent-domain fallback — if the level wants `whois sub.example.com`
+  // and `whois example.com` to both return data, both keys must be
+  // populated. Lines are joined verbatim, so levels control formatting
+  // (typical structure: registrar block / registrant block / nameserver
+  // block, separated by blank lines).
   whois(level, arg) {
     if (!arg) return { text: "Usage: whois <domain>", cls: "err" };
     if (!level.whoisData || !level.whoisData[arg]) {
@@ -50,6 +93,11 @@ export const networkCommands = {
     return { text: level.whoisData[arg].join("\n"), cls: "out" };
   },
 
+  // dig: DNS lookup. Without a type arg, defaults to A. ANY iterates
+  // every populated type for the domain (skipping the AXFR pseudo-type
+  // — it has a different output format). AXFR is handled specially
+  // because the zone-transfer output format includes subdomain owner
+  // names that the standard ANSWER-SECTION format can't represent.
   dig(level, arg) {
     if (!arg) return { text: "Usage: dig <domain> [record_type]", cls: "err" };
     const parts   = arg.trim().split(/\s+/);

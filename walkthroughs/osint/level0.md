@@ -283,9 +283,9 @@ PenTest+ PT0-003 (current; superseded PT0-002 on December 17, 2024, PT0-002 reti
 - **Domain 1 — Engagement Management.** Scoping and rules-of-engagement discipline. The Veridian engagement's narrow scope (one email address, read-only, no minors, no active testing) is the kind of constraint Domain 1 explicitly tests — *what can you legally do, given this authorization?*
 - **Domain 2 — Reconnaissance and Enumeration.** Objective 2.2 covers passive reconnaissance, including breach-data corpora, public-records pivoting, and identity enumeration. HIBP and the broader breach-aggregator ecosystem (Dehashed, IntelX, Constella, SpyCloud) are named tools in the curriculum.
 
-### CompTIA CySA+ — current version CS0-003
+### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA CySA+ CS0-003 (current as of May 2026; CS0-004 launching mid-2026 — anyone studying after June 2026 should check CompTIA's blueprint for the current code). The OSINT track maps to:
+CompTIA CySA+ — CS0-003 was the legacy exam revision (in market since June 2023); **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version. The OSINT track maps to:
 
 - **Domain 1 — Security Operations.** Objective 1.6 covers OSINT-driven threat intelligence, including breach-corpus enrichment for executive-protection use cases.
 - **Domain 3 — Incident Response and Management.** Credential-compromise detection and the response workflow when a personal-credential exposure is identified.

@@ -1,4 +1,18 @@
-// Shell built-ins: help, clear, report, exit.
+// Shell built-ins: help, clear, report, exit (+ logout alias).
+//
+// Handler contract: same (level, arg) → { text, cls } | null signature
+// as every other command module. (See js/commands/linux.js for the
+// broader contract description.)
+//
+// This module owns the "infrastructure" commands — the ones every
+// track shares, that the engine ships with rather than being defined
+// per-track. The `help` reference is the canonical surface a player
+// sees when running `help` from any prompt.
+//
+// Forkers note: the `report` command embeds a GitHub issues URL
+// pointing at this repo. When forking, update the URL below (or
+// disable `report` entirely) so reports don't land on upstream's
+// tracker.
 
 import { termEl } from "../terminal/dom.js";
 import { print } from "../terminal/output.js";
@@ -11,7 +25,14 @@ const LOBBY = "guest@d3cyph3r";
 // Help reference, grouped by track. Sections whose track has no level
 // data render dimmed with a "no levels yet" annotation, so the player
 // can see what the engine supports without thinking the unshipped
-// commands are broken.
+// commands are broken. To add a new track (see CONTRIBUTING.md for
+// the full walkthrough):
+//   1. Push level data under `levels/<track>.js`.
+//   2. Add a section here with `track:` matching that file's level
+//      `track:` field — the help dispatcher uses the value verbatim
+//      to test for "track has shipped levels".
+//   3. Add the same track key to `js/engine/tracks.js` (which the
+//      lobby reads to decide which tracks to list).
 const HELP_SECTIONS = [
   { track: "linux", title: "LINUX BASICS", lines: [
     "ls / ls -a / ls -l         – list files (all / long format)",
@@ -111,6 +132,11 @@ function exitToLobby() {
 }
 
 export const shellCommands = {
+  // help: dump the per-track command reference. Streams via print()
+  // rather than returning a single { text, cls } block because the
+  // output mixes CSS classes (per-section headers, body lines, the
+  // "no levels yet" annotation). Returns null to suppress the
+  // dispatcher's default print.
   help() {
     print("", "out");
     for (const section of HELP_SECTIONS) {
@@ -128,11 +154,18 @@ export const shellCommands = {
     return null;
   },
 
+  // clear: wipe the terminal viewport. Mutates DOM directly (cheaper
+  // than re-rendering through print()), then returns null so the
+  // dispatcher doesn't re-print anything afterwards.
   clear() {
     termEl.innerHTML = "";
     return null;
   },
 
+  // report: surface the bug-report destination. Forkers should change
+  // the URL to point at their own issues tracker — see file-header
+  // note. `cls: "info"` colors the message blue to distinguish from
+  // command output / errors.
   report() {
     return { cls: "info", text:
 `Found a bug or have feedback?

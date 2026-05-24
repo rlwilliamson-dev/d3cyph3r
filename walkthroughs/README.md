@@ -1,9 +1,10 @@
 # D3CYPH3R Walkthroughs — author guide
 
 This directory hosts the **walkthroughs subsite**: long-form study
-companions for D3CYPH3R levels. Hidden behind URL obscurity until
-v1.0 ships; meant to be the canonical destination for "I solved
-this level, now teach me everything around it."
+companions for D3CYPH3R levels. Publicly available at
+`https://www.d3cyph3r.com/walkthroughs/`. Meant to be the canonical
+destination for "I solved this level, now teach me everything
+around it."
 
 Read this file before writing a walkthrough.
 
@@ -36,10 +37,12 @@ in. The reader is here because they've solved the level (or has
 chosen to peek). The spoiler-warning callout at the top of every
 walkthrough makes that choice explicit.
 
-The walkthroughs subsite is itself **secret pre-v1.0** — do not link
-to it from the main site, the README, the CHANGELOG, release notes,
-or any social-share copy until v1.0 ships. `robots.txt` and the
-`noindex` meta keep search engines out.
+The walkthroughs subsite is **publicly indexable** as of v1.0.
+Search engines may surface walkthroughs directly. The spoiler-warning
+callout at the top of every walkthrough is the in-page guard against
+accidental spoilers; the subsite itself is intentionally discoverable
+so search-engine-driven traffic finds the material when they're
+ready for it.
 
 ## The 10-section template
 

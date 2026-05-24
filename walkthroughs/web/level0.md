@@ -274,7 +274,7 @@ The Common Weakness Enumeration catalog has four entries that map to Meridian's 
 
 **CWE-552 — Files or Directories Accessible to External Parties.** The underlying weakness: artifacts under DocumentRoot. CWE-552 captures the more general pattern — sensitive files placed where they are accessible to parties who should not have access. It is the parent weakness to CWE-548 and applies to Meridian's finding even with autoindex disabled, because the underlying artifacts would still be accessible at their guessable URLs.
 
-**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.** The student records themselves. The umbrella weakness for any exposure of sensitive data; CWE-200 has been in MITRE's annual Top 25 Most Dangerous Software Weaknesses for over a decade and is consistently in the top quartile.
+**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.** The student records themselves. The umbrella weakness for any exposure of sensitive data. Important caveat: CWE-200's MITRE mapping status is currently **Discouraged** — when filing a specific finding, MITRE recommends citing the narrower child weakness instead (here, CWE-548 for the directory listing and CWE-552 for the file-accessibility pattern). CWE-200 was a regular CWE Top 25 entry through 2024 but dropped off the 2025 list after MITRE changed its methodology (removed normalization to abstract weaknesses); the underlying weakness pattern remains widespread regardless of where it sits on the Top 25.
 
 **CWE-798 — Use of Hard-coded Credentials.** The DB password in `db-creds.txt`. The credential half of the finding. The closely-related **CWE-1392 (Use of Default Credentials)** would apply if `M3rid14n!2023-prod` had been the install-default; here it was the operator-chosen value never rotated, which fits CWE-798 more precisely.
 
@@ -338,7 +338,7 @@ PenTest+ rewards practical exam-canonical analysis. **C** is the most significan
 
 ### CompTIA CySA+ — current version CS0-003
 
-CompTIA's CySA+ is the analyst-track certification focused on threat-detection, vulnerability-management, and incident-response work. The current exam is **CS0-003** (launched June 2023); **CS0-004 is launching mid-2026** — multiple training providers cite a June 2026 release window. If you're reading this after June 2026, check CompTIA's exam blueprint page for the current exam code. The web-track material maps to two domains.
+CompTIA's CySA+ is the analyst-track certification focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The web-track material maps to two domains.
 
 - **Domain 2 — Vulnerability Management.** Objective 2.4 covers the vulnerability-identification → prioritization → remediation workflow. The Meridian scenario is a textbook example.
 - **Domain 1 — Security Operations.** Web-attack-surface monitoring and detection of reconnaissance against your own web servers.

@@ -915,7 +915,10 @@ travels far past the bucket itself.
 
   CWE
     CWE-200  Exposure of Sensitive Information to an
-      Unauthorized Actor — the headline.
+      Unauthorized Actor — the umbrella parent (note: CWE-200
+      is mapping-Discouraged in current MITRE guidance; cite
+      the more specific CWE-732 or CWE-285 below for direct
+      mappings).
     CWE-732  Incorrect Permission Assignment for Critical
       Resource — the bucket-policy / Public Access Block
       misconfiguration.
@@ -953,11 +956,12 @@ travels far past the bucket itself.
 
 ─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
-  AWS Certified Security – Specialty (SCS-C02)
-    Whole-cert relevant. Domain 1 (Threat Detection and
-    Incident Response) and Domain 4 (Identity and Access
-    Management) directly cover bucket policies, Public Access
-    Block, Macie, Config, GuardDuty.
+  AWS Certified Security – Specialty (SCS-C03)
+    AWS released SCS-C03 in late 2025 / early 2026 as the
+    successor to SCS-C02. Whole-cert relevant. Domain 1
+    (Threat Detection and Incident Response) and Domain 4
+    (Identity and Access Management) directly cover bucket
+    policies, Public Access Block, Macie, Config, GuardDuty.
 
   AWS Certified Solutions Architect (Associate / Professional)
     Storage and security sub-domains include S3 permission
@@ -973,11 +977,12 @@ travels far past the bucket itself.
     Domain 4 (Security Operations) — cloud-security baseline
     including misconfigurations.
 
-  CompTIA CySA+ (CS0-003)
-    Domain 1 (Security Operations) — cloud-misconfiguration
-    detection and response.
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 1 (Security Operations)
+    — cloud-misconfiguration detection and response.
 
-  ISC² CCSP (Certified Cloud Security Professional)
+  ISC2 CCSP (Certified Cloud Security Professional)
     Whole-cert relevant. Domains 2 (Cloud Data Security), 3
     (Cloud Platform & Infrastructure Security), and 6 (Legal,
     Risk, and Compliance) all cover this scenario.
@@ -1096,7 +1101,7 @@ travels far past the bucket itself.
        made this finding a finding. Cost is modest;
        comparable to a tier of GuardDuty.
      - Enable AWS Security Hub with the CIS AWS Foundations
-       Benchmark v3 + AWS Foundational Security Best
+       Benchmark v5.0.0 + AWS Foundational Security Best
        Practices standards. Continuous compliance scoring.
 
   3. For Coverline's credential-handling posture, this quarter:

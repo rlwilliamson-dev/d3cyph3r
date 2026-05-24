@@ -278,14 +278,41 @@ body {
 
 #site-footer {
   border-top: 1px solid var(--border);
-  padding: 18px 24px;
+  padding: 18px 24px 22px;
   text-align: center;
   color: var(--dim);
   font-size: 0.85em;
   font-family: var(--font-mono);
 }
-#site-footer a { color: var(--accent); text-decoration: none; }
-#site-footer a:hover { text-decoration: underline; }
+#site-footer .footer-disclaimer {
+  margin: 0 auto 10px;
+  max-width: 640px;
+  color: var(--dim);
+  font-style: italic;
+}
+#site-footer .footer-links {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+#site-footer .footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+#site-footer .footer-link:hover,
+#site-footer .footer-link:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+#site-footer .footer-link svg { display: block; }
+#site-footer .footer-sep { color: var(--border); user-select: none; }
 
 /* ─── Mobile ─────────────────────────────────────────────────── */
 

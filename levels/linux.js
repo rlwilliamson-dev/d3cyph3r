@@ -315,7 +315,7 @@ to.
     management. Domain 5.3 (third-party risk management) — directly
     relevant to consulting-firm security models.
 
-  (ISC)² Certified in Cybersecurity (CC)
+  ISC2 Certified in Cybersecurity (CC)
     Domain 5 (Security Operations) — account lifecycle.
 
   CISSP
@@ -678,7 +678,7 @@ forensically is much harder to answer cleanly.
     Domain 3.1 (Security architecture: hardening) — file system
     permissions and least privilege are tested directly.
 
-  (ISC)² CC / SSCP
+  ISC2 CC / SSCP
     Access control fundamentals — owner / group / other model.
 
   CISSP

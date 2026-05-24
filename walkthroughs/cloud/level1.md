@@ -414,7 +414,7 @@ Database rows are a credential-storage anti-pattern that organizations underesti
 - **NYDFS 23 NYCRR 500 (current text)**: <https://www.dfs.ny.gov/industry_guidance/cybersecurity>. November 2023 amendment is the current version.
 - **GLBA Safeguards Rule (16 CFR Part 314)**: <https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-314>. FTC amendments (December 2021, with notification provision §314.5 effective May 2024).
 - **CIS AWS Foundations Benchmark**: <https://www.cisecurity.org/benchmark/amazon_web_services>. v5.0.0 is the Security Hub-supported version as of late 2025.
-- **CIS PostgreSQL Benchmark**: <https://www.cisecurity.org/benchmark/postgresql>. Per-version (v15 / v16) hardening guides.
+- **CIS PostgreSQL Benchmark**: <https://www.cisecurity.org/benchmark/postgresql>. Per-version hardening guides for v15, v16, v17, and v18 (plus historical versions for legacy estates).
 
 ### CWE / MITRE ATT&CK
 
@@ -435,7 +435,7 @@ Database rows are a credential-storage anti-pattern that organizations underesti
 
 ### Incident references
 
-- **Capital One 2019 — Senate testimony and FFIEC consent order**: <https://www.senate.gov/>. Senate Committee on Banking, Housing, and Urban Affairs hearings.
+- **Capital One 2019 — Senate testimony and OCC consent order**: <https://www.senate.gov/>. Senate Committee on Banking, Housing, and Urban Affairs hearings. The $80M civil money penalty was issued by the OCC (Office of the Comptroller of the Currency); FFIEC is the parent interagency council and doesn't issue enforcement orders directly.
 - **MOVEit Transfer 2023 (CL0P) — CISA advisory**: <https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a>. The June 2023 CISA + FBI joint advisory.
 - **Snowflake customer compromises 2024 — Mandiant writeup**: <https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion/>. The UNC5537 threat-actor attribution.
 - **Verizon DBIR 2026** (latest edition as of the review date): <https://www.verizon.com/business/resources/reports/dbir/>.

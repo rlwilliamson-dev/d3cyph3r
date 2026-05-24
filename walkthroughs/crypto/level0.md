@@ -219,9 +219,9 @@ Security+ is the entry-level certification most commonly required for DoD 8570/8
 
 This question pattern is canonical Security+. The answer is **B**. The traps are A, C, D — all real cryptographic operations, none of which would produce a string with base64's distinctive alphabet and padding shape. Recognition of the alphabet is the testable skill. The exam wants you to know base64 by sight and to know that it is not cryptography.
 
-### CompTIA CySA+ — current version CS0-003
+### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA's CySA+ is the analyst-track cert focused on threat-detection, vulnerability-management, and incident-response work. The current exam is **CS0-003** (launched June 2023). **CS0-004 is launching in mid-2026** — multiple training providers cite a June 2026 release window. If you're reading this after June 2026, check CompTIA's exam blueprint page for the current exam code; CS0-003 will be retired on a schedule announced alongside the CS0-004 launch. The crypto-track material maps to Domain 1.
+CompTIA's CySA+ is the analyst-track cert focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The crypto-track material maps to Domain 1.
 
 - **Domain 1 — Security Operations.** Specifically the analyst's role in identifying credential-exposure events in code reviews, in CI/CD pipeline logs, and in incident-response casework. Secret-scanning tools (gitleaks, TruffleHog, GitHub Secret Scanning) are named tools in the domain.
 

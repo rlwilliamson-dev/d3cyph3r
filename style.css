@@ -1,17 +1,69 @@
+/*
+  D3CYPH3R — terminal stylesheet.
+
+  Palette philosophy:
+  ───────────────────
+  The base tones (--bg / --bg-elev / --fg / --fg-bright / --border /
+  --dim) match GitHub's dark theme. This is deliberate — most of the
+  target audience (DevOps / SRE / SysAdmin) lives in GitHub all day,
+  and the familiar color anchors make the terminal feel like home
+  rather than yet another novel UI.
+
+  The accent tones (--accent / --green / --cyan / --red / --yellow)
+  are louder than GitHub's — closer to early-2000s hacker terminal
+  aesthetics — because every output line in the engine carries a
+  semantic class ("cmd", "out", "err", "info", "warn", "dim",
+  "success", "ascii", "banner") and the player needs to distinguish
+  them at a glance during multi-line output dumps.
+
+  Semantic class map (terminal/output.js → CSS class on .line):
+    cmd      — the echoed command line itself        (fg-bright)
+    out      — normal command output                 (fg)
+    err      — error message                         (red)
+    info     — passive informational (blue accent)   (accent)
+    warn     — interesting find / breadcrumb         (yellow)
+    dim      — boot logs, footers, system chatter    (dim)
+    success  — operation succeeded / decoded payload (green)
+    ascii    — large/banner output (lobby logo etc.) (accent)
+    banner   — full-width wordmark                   (accent)
+
+  Every command handler in js/commands/*.js returns one of those
+  class names; this file is the only place that decides what each
+  one looks like.
+
+  Fonts:
+  ──────
+  JetBrains Mono is the body font — clean, legible, ligature-free.
+  Share Tech Mono and VT323 are only used by the lobby logo and the
+  mobile-gate "boot fail" screen for retro flavor; loading them
+  globally is cheap (one Google Fonts call) and avoids a FOUT
+  when the lobby renders.
+
+  The cursor-mirror trick (see index.html comment for the why):
+  the real <input> is opacity:0; the visible cursor and surrounding
+  text are spans (#mirror-before / #mirror-cursor / #mirror-after).
+  Styles for those spans live in the input-area block further down.
+*/
+
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Share+Tech+Mono&family=VT323&display=swap');
 
 :root {
-  --bg:        #06080b;
-  --bg-elev:   #0d1117;
-  --fg:        #c9d1d9;
-  --fg-bright: #f0f6fc;
-  --accent:    #58a6ff;
-  --green:     #3fb950;
-  --cyan:      #56d4dd;
-  --red:       #f85149;
-  --yellow:    #d29922;
-  --dim:       #6e7681;
-  --border:    #30363d;
+  /* Base tones — GitHub dark palette. */
+  --bg:        #06080b;   /* page background — slightly darker than GH for terminal feel */
+  --bg-elev:   #0d1117;   /* elevated surfaces (topbar separators, progress track) */
+  --fg:        #c9d1d9;   /* default foreground for command output */
+  --fg-bright: #f0f6fc;   /* echo of the command line itself; topbar title */
+
+  /* Semantic accents — color-coded by output meaning (see top-of-file map). */
+  --accent:    #58a6ff;   /* .info — passive info, links, ascii banners */
+  --green:     #3fb950;   /* .success — decoded payloads, "Access granted" */
+  --cyan:      #56d4dd;   /* logo glyph variant (lobby ASCII wordmark) */
+  --red:       #f85149;   /* .err — errors, "Permission denied" */
+  --yellow:    #d29922;   /* .warn — breadcrumbs, interesting findings */
+  --dim:       #6e7681;   /* .dim — boot logs, footers, low-priority chatter */
+
+  /* Structural */
+  --border:    #30363d;   /* hairline borders (topbar bottom, scrollbar thumb) */
   --font:      'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
 }
 
@@ -198,3 +250,89 @@ html, body {
 /* `.glitch` class is referenced in HTML but intentionally a no-op now —
    the old CRT glitch animation is incompatible with the modern aesthetic. */
 .glitch {}
+
+/* Footer: source + hosting attribution. Mirrors the topbar styling so
+   the page is visually bookended (top: title/level/clock; bottom:
+   source/hosting/license). Subtle/dim by default; brightens on hover. */
+#site-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0 2px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 0.2px;
+  flex-shrink: 0;
+}
+#site-footer .footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dim);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+#site-footer .footer-link:hover,
+#site-footer .footer-link:focus-visible {
+  color: var(--fg-bright);
+  outline: none;
+}
+#site-footer .footer-link svg { display: block; }
+#site-footer .footer-sep  { color: var(--border); user-select: none; }
+#site-footer .footer-meta { color: var(--dim); }
+
+/* ─── Custom 404 page (/404.html, served by Azure SWA on any
+   unmatched route). Standalone layout — does not reuse #screen /
+   #topbar / etc. Uses the same palette + variable system as the
+   main terminal so the page feels native. ────────────────────── */
+body.error-404 {
+  height: auto;
+  min-height: 100vh;
+  overflow: auto;
+  padding: 60px 32px;
+}
+.error-container { max-width: 720px; margin: 8vh auto 0; }
+.error-code {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 96px;
+  color: var(--red);
+  line-height: 1;
+  margin: 0 0 12px;
+  letter-spacing: 6px;
+}
+.error-msg {
+  font-size: 16px;
+  color: var(--fg-bright);
+  margin: 0 0 28px;
+}
+.error-prompt { color: var(--dim); }
+.error-detail {
+  color: var(--dim);
+  line-height: 1.7;
+  margin: 0 0 32px;
+  font-size: 14px;
+}
+.error-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.error-btn {
+  color: var(--green);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  padding: 9px 18px;
+  font-size: 13px;
+  display: inline-block;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.error-btn:hover,
+.error-btn:focus-visible {
+  color: var(--fg-bright);
+  border-color: var(--dim);
+  background: var(--bg-elev);
+  outline: none;
+}
+.error-btn-secondary { color: var(--dim); }
+.error-btn-secondary:hover,
+.error-btn-secondary:focus-visible { color: var(--fg); }

@@ -1,4 +1,19 @@
 // Hex helpers shared by xxd / decode-hex / xor.
+//
+// Three exported helpers + one internal one. All operate on string
+// input that may carry whitespace, newlines, or colon separators
+// (common in pcap / openssl / hex-dump output) — the cleaning step
+// strips those before parsing.
+//
+// Exports:
+//   isHexString(s)       — true if `s` is a valid even-length hex stream
+//                          after cleaning. Used by xxd to surface a
+//                          "Tip: decode-hex" hint when the file looks
+//                          like hex rather than raw bytes.
+//   hexToAscii(hex)      — decode hex pairs to ASCII; non-printable
+//                          bytes render as `.`
+//   formatHexDump(s)     — xxd-style dump: 16 bytes / row + address
+//                          column + ASCII gutter
 
 // Strip whitespace and colons, then test for a valid even-length hex stream.
 export function isHexString(content) {
@@ -7,7 +22,10 @@ export function isHexString(content) {
 }
 
 // Treat input as hex bytes if it looks like hex; otherwise as raw chars.
-// Returns an array of byte values.
+// Returns an array of byte values. The dual interpretation is what
+// makes formatHexDump useful both for "this file is hex" (xxd of a
+// .hex file) and "this file is binary" (xxd of an unknown file) — the
+// dump looks identical from the player's perspective either way.
 function bytesOf(content) {
   const clean = String(content).replace(/[\s:]/g, "");
   if (/^[0-9a-fA-F]+$/.test(clean) && clean.length % 2 === 0) {
@@ -20,6 +38,10 @@ function bytesOf(content) {
   return out;
 }
 
+// Decode hex pairs into ASCII. Non-printable bytes (outside the
+// 0x20-0x7E range) become `.` to mirror xxd's ASCII gutter and
+// `decode-hex`'s output — the player sees consistent rendering
+// regardless of which tool they reach for first.
 export function hexToAscii(hex) {
   const clean = String(hex).replace(/[\s:]/g, "");
   let out = "";

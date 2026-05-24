@@ -591,11 +591,12 @@ threat model. The lookup we just ran is the first step.
       Vulnerability Scanning) — passive recon, breach-data
       enumeration, public-records pivoting.
 
-  CompTIA CySA+ (CS0-003)
-    Domain 1 (Security Operations) — OSINT-driven threat
-      intelligence. Domain 3 (Incident Response and
-      Management) — credential-compromise detection and
-      response.
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 1 (Security Operations)
+      — OSINT-driven threat intelligence. Domain 3 (Incident
+      Response and Management) — credential-compromise
+      detection and response.
 
   SANS GOSI (GIAC Open Source Intelligence)
     Whole-cert relevant. Breach-data corpora are a covered

@@ -1,9 +1,48 @@
 // Linux-track commands: filesystem and text exploration.
-// Each handler: (level, arg) → { text, cls } | null
+//
+// Handler contract: every command exported here has the signature
+//   (level, arg) → { text, cls } | null
+// where the dispatcher (`js/engine/execute.js`) prints `text` with the
+// CSS class `cls`. Returning `null` suppresses output. `arg` is the raw
+// argument string after the command name (no parsing applied).
+//
+// Schema fields this module reads off the level object:
+//   level.fs              nested tree (dirs with .children, files with
+//                         .content). Source of truth for cwd-aware
+//                         commands (cd / ls / cat).
+//   level.files           flat map "path/to/file" → contents (or null
+//                         for dirs). Derived from level.fs by
+//                         `js/fs/flatten.js#initLevels`. Used by
+//                         legacy / cross-cutting commands (grep / find /
+//                         head / tail / stat / diff / ps).
+//   level.permissions     optional { basename: { mode, owner, group,
+//                         size } }. Drives `ls -l` rendering and the
+//                         `cat` read-permission check.
+//   level.statData        optional { basename: { mtime, atime, ctime,
+//                         uid, gid, inode, modeNumeric } }. Filled in
+//                         by stat() with sane defaults when missing.
+//   level.processes       optional [{ pid, tty, time, cmd }] surfaced
+//                         by `ps`. Absent → graceful empty state.
+//   level.diffOut         optional { "f1:f2": "curated output" } that
+//                         lets a level hand-author a teaching diff
+//                         instead of using the computed one.
+//   level.env_vars        optional { KEY: VALUE } surfaced by `env`.
+//   level.playerUser      optional in-world username override (e.g.
+//                         "secops"). Falls back to the engine slot
+//                         name (currentLevelKey.split("@")[0]).
+//   level.playerGroup     optional primary group override. Defaults
+//                         to playerUser when unset.
+//
+// Why two representations? `level.fs` is what level authors write
+// (nested + ergonomic). `level.files` is what cross-cutting commands
+// need (a flat enumeration with stable keys). Both are kept in sync
+// at module-init by flatten.js — never write to either at runtime.
 
 import { currentLevelKey, currentPath, setCurrentPath } from "../engine/state.js";
 
-// Walk the fs tree from level root, following path parts.
+// Walk the fs tree from level root, following path parts. Returns the
+// node (dir or file) at that path, or null if any segment is missing.
+// Used by every cwd-aware handler (cd / ls / cat).
 function getFSNode(level, pathParts) {
   if (!level.fs) return null;
   let node = level.fs;
@@ -26,6 +65,9 @@ function getCurrentGroup(level) {
   return level?.playerGroup || getCurrentUser(level);
 }
 
+// Compose the absolute path string shown to the player — never used
+// for filesystem lookups (those go through currentPath + level.fs).
+// Format: /home/<user>[/<currentPath joined with />]
 function buildDisplayPath(level) {
   const user = getCurrentUser(level);
   const base = `/home/${user}`;
@@ -54,6 +96,9 @@ function canReadFile(meta, currentUser, currentGroup) {
 }
 
 export const linuxCommands = {
+  // cd: change directory. `~` or empty arg resets to level root; `..`
+  // pops one segment. Other args resolve relative to currentPath (no
+  // absolute path support — levels are sandboxed to /home/<user>).
   cd(level, arg) {
     if (!arg || arg === "~") { setCurrentPath([]); return { text: "", cls: "out" }; }
     if (arg === "..") {
@@ -70,6 +115,11 @@ export const linuxCommands = {
     return null;
   },
 
+  // ls: list directory entries at currentPath. Flag parsing is a simple
+  // contains-check, so `-la` / `-al` / `-l -a` all work. `-a` shows
+  // dotfiles; `-l` switches to long format with mode/owner/group/size.
+  // Falls back to enumerating level.files when level.fs is absent
+  // (legacy levels — currently none in shipped content).
   ls(level, arg) {
     const flags      = (arg || "").split(" ").filter(a => a.startsWith("-")).join("");
     const showHidden = flags.includes("a");
@@ -109,6 +159,14 @@ export const linuxCommands = {
     return { text: names.join("  "), cls: "out" };
   },
 
+  // cat: print file contents. Two paths:
+  //   1. Modern (level.fs present): resolve via the nested tree, honor
+  //      currentPath, then optionally enforce a per-file permission
+  //      check from level.permissions.
+  //   2. Legacy (no level.fs): direct lookup in the flat level.files
+  //      map. No cwd resolution, no permission check.
+  // The legacy branch is retained for forward-compat with externally-
+  // authored levels; all shipped levels populate level.fs.
   cat(level, arg) {
     if (!arg) return { text: "Usage: cat <file>", cls: "err" };
     if (!level.fs) {
@@ -137,6 +195,9 @@ export const linuxCommands = {
     return { text: node.content, cls: "out" };
   },
 
+  // pwd / whoami / echo: trivial reflectors over engine state and
+  // level.playerUser. Included for muscle-memory completeness rather
+  // than because levels gate anything on them.
   pwd(level) {
     return { text: buildDisplayPath(level), cls: "out" };
   },
@@ -149,6 +210,11 @@ export const linuxCommands = {
     return { text: arg || "", cls: "out" };
   },
 
+  // grep: case-insensitive substring search across one file or all
+  // files (`*` or omitted target). Operates on the flat level.files
+  // map — does not honor currentPath, so a player can grep cross-
+  // directory from any cwd. Output is one match per line, prefixed
+  // with the file name (mimics GNU grep with multi-file inputs).
   grep(level, arg) {
     if (!arg) return { text: "Usage: grep <word> <file|*>", cls: "err" };
     const parts  = arg.trim().split(/\s+/);
@@ -174,6 +240,12 @@ export const linuxCommands = {
     return { text: results.join("\n"), cls: "warn" };
   },
 
+  // find: pattern-match basenames across level.files. Accepts `-name
+  // "pattern"` or `-name pattern`. Glob `*` becomes regex `.*`; `.`
+  // is escaped to literal. The leading <path> arg is parsed but not
+  // honored (search is always level-global) — kept in the usage
+  // string so players type the real-world syntax. Output formats
+  // each hit as /home/<user>/<path>.
   find(level, arg) {
     if (!arg) return { text: "Usage: find <path> -name <pattern>", cls: "err" };
     const nameMatch = arg.match(/-name\s+"?([^\s"]+)"?/);
@@ -193,6 +265,10 @@ export const linuxCommands = {
     return { text: found.map(f => `/home/${user}/` + f).join("\n"), cls: "out" };
   },
 
+  // env: dump level.env_vars. Levels use this to leak credentials /
+  // tokens / API keys in the same shape they appear in real engagements
+  // (LD_PRELOAD, AWS_*, DB_*, etc.). Levels without env_vars get a
+  // graceful empty-state message rather than empty output.
   env(level) {
     const vars = level.env_vars;
     if (!vars) return { text: "(no environment variables set on this level)", cls: "dim" };

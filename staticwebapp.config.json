@@ -9,5 +9,11 @@
     "Cross-Origin-Embedder-Policy": "require-corp",
     "Cross-Origin-Resource-Policy": "cross-origin",
     "X-Permitted-Cross-Domain-Policies": "none"
+  },
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/404.html",
+      "statusCode": 404
+    }
   }
 }
