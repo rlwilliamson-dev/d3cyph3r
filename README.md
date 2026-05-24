@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-This is **v1.2.0** — **brand refresh.** The wordmark across every surface (lobby, walkthroughs subsite, 404 page, mobile-gate, social-share image) is now a unified `[ D3CYPH3R ]` cascade: uniform VT323 terminal font with a three-level brightness cascade across the eight characters (`D` bright · 3 mid · C mid · `Y` bright · `P` dim · H mid · `3` dim · `R` bright), framed by dim JetBrains Mono brackets. Theme-aware — the cascade flips its brightness palette between dark and light mode automatically. Same v1.1 feature set otherwise: **light / dark theme toggle**, **revamped mobile-gate** with a real boot-progress bar, **stylesheet cache-bust** so post-release visitors get fresh styling, **CSP-blocks-Cloudflare-beacons** privacy posture documented in DevTools. All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) still ship level0 + level1 chains playable end-to-end. 14 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end — 14 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -19,8 +19,6 @@ This is **v1.2.0** — **brand refresh.** The wordmark across every surface (lob
 | Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
 | OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project") | Veridian Analytics | HIPAA / HITRUST CSF |
 | Cloud | `level0@cloud` ("Coverline's Twelfth Bucket"), `level1@cloud` ("The Migration Table Nobody Dropped") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
-
-**The v1.0 "Foundation" milestone shipped with this release** — all seven tracks have level0 + level1 playable. The next phase is the v2.0 "Apprentice" milestone, which adds level2 across the tracks. Every level1 leaks a breadcrumb credential staged for its level2; the credential-chain registry is the source of truth for what each level2 will gate. New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Running it locally
 
@@ -145,9 +143,9 @@ Adding a new level is a single object literal under `levels/<track>.js`. The bas
 
 For deeper context on the engine architecture, command-dispatch model, and per-track conventions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## v1.0 "Foundation" milestone status
+## Roadmap
 
-**Shipped with v1.0.0.** All seven tracks have level0 + level1 playable. The next milestone is v2.0 "Apprentice" — level2 across the tracks. Every level1 leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time.
+All seven tracks ship level0 + level1 today. The next phase adds level2 across the tracks. Every level1 already leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 
