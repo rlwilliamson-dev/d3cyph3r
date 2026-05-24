@@ -15,12 +15,20 @@
 <body>
 
   <header id="site-header">
-    <a href="/walkthroughs/" class="brand">
-      <span class="brand-mark">
-        <span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span>
-      </span>
-      <span class="brand-sub">walkthroughs</span>
-    </a>
+    <!-- Two separate links: the wordmark goes HOME (main site), the
+         "walkthroughs" sub-label goes to the walkthroughs index. The
+         logo serves as escape-hatch back to the playable site without
+         needing a separate "back" button. -->
+    <div class="brand">
+      <a href="/" class="brand-mark-link" aria-label="Back to d3cyph3r.com">
+        <span class="brand-mark">
+          <span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span>
+        </span>
+      </a>
+      <a href="/walkthroughs/" class="brand-sub-link">
+        <span class="brand-sub">walkthroughs</span>
+      </a>
+    </div>
     <nav id="crumbs" aria-label="Breadcrumb"></nav>
     <!-- Theme toggle — same control as the main app's topbar. State
          is shared via localStorage so toggling either site applies
