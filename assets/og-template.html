@@ -26,23 +26,30 @@
 
     .wordmark {
       font-size: 168px;
-      font-weight: 700;
-      letter-spacing: 18px;
+      letter-spacing: 10px;
       line-height: 1;
       margin-bottom: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .glyph-mono              { font-family: 'JetBrains Mono', ui-monospace, monospace; }
-    .glyph-courier           { font-family: 'Courier New', 'Courier', monospace;         font-size: 1.18em; }
-    .glyph-vt323             { font-family: 'VT323', 'Courier New', monospace;            font-size: 1.25em; }
-    .glyph-share-tech        { font-family: 'Share Tech Mono', 'Courier New', monospace;  font-size: 0.98em; }
-    .glyph-share-tech-italic { font-family: 'Share Tech Mono', 'Courier New', monospace;  font-size: 0.98em; font-style: italic; }
-
-    .glyph-white  { color: #ffffff; }
-    .glyph-green  { color: #00ff00; }
-    .glyph-cyan   { color: #00ffff; }
-    .glyph-accent { color: #5b8fff; }
-    .glyph-red    { color: #cc0000; }
+    /* Brightness-cascade glyph palette — matches the lobby + walkthroughs
+       brand. VT323 wordmark glyphs in three brightness levels, framed by
+       dim JetBrains Mono brackets. Hardcoded colors (no CSS-variable
+       theme flip) because the OG image is a single static export — dark
+       palette only. */
+    .glyph-vt323   { font-family: 'VT323', 'Courier New', monospace; font-size: 1.25em; }
+    .glyph-bright  { color: #ffffff; }
+    .glyph-mid     { color: #c9d1d9; }
+    .glyph-dim     { color: #6e7681; }
+    .glyph-bracket {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      color: #6e7681;
+      font-weight: 400;
+      font-size: 0.7em;
+      margin: 0 16px;
+    }
 
     .tagline {
       color: #c9d1d9;
@@ -67,7 +74,7 @@
 </head>
 <body>
   <div class="wordmark">
-    <span class="glyph-mono glyph-white">D</span><span class="glyph-vt323 glyph-green">3</span><span class="glyph-share-tech-italic glyph-cyan">C</span><span class="glyph-vt323 glyph-accent">Y</span><span class="glyph-courier glyph-red">P</span><span class="glyph-mono glyph-white">H</span><span class="glyph-vt323 glyph-green">3</span><span class="glyph-share-tech glyph-white">R</span>
+    <span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span>
   </div>
 
   <div class="tagline">Terminal CTF for infrastructure people</div>

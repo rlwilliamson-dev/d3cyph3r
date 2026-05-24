@@ -8,9 +8,36 @@
   <meta name="theme-color" content="#06080b">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css">
+  <script>
+    // Inline theme init so the 404 respects the visitor's saved
+    // dark/light preference. Same localStorage key as the main app
+    // (d3cyph3r-theme) and walkthroughs subsite. No toggle UI — the
+    // 404 is a short-stay dead-end; just honor the choice.
+    try {
+      if (localStorage.getItem("d3cyph3r-theme") === "light") {
+        document.documentElement.classList.add("light-preboot");
+      }
+    } catch (_) { /* localStorage unavailable — default dark */ }
+  </script>
+  <style>
+    /* Apply the class before <body> exists, then move it post-load. */
+    html.light-preboot body { color-scheme: light; }
+  </style>
 </head>
 <body class="error-404">
+  <script>
+    // Move the early-set preference onto body once it exists, so the
+    // body.light selectors in style.css apply.
+    try {
+      if (document.documentElement.classList.contains("light-preboot")) {
+        document.body.classList.add("light");
+      }
+    } catch (_) { /* no-op */ }
+  </script>
   <main class="error-container">
+    <p class="error-brand">
+      <span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span>
+    </p>
     <p class="error-code">404</p>
     <p class="error-msg">
       <span class="error-prompt">guest@d3cyph3r:~$</span>

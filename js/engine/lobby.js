@@ -10,29 +10,49 @@ import { connectTo } from "./ssh.js";
 import { VERSION_DISPLAY } from "./version.js";
 import { TRACKS } from "./tracks.js";
 
-// Wordmark rendered char-by-char in mixed fonts and colors — meant to read
-// like a partially-decrypted fragment, half hacker, half scratched-out.
-// Glyph classes are defined in style.css under `.glyph-*`.
+// Wordmark rendered char-by-char inside `[ ]` brackets — uniform VT323
+// font with a brightness cascade across the 8 characters (bright / mid /
+// dim) so the wordmark reads as a "decoded message coming through" with
+// fading character emphasis. Pure monochrome — no color accents.
+//
+// Glyph classes are defined in style.css under `.glyph-*`. Brightness
+// classes (.glyph-bright/.glyph-mid/.glyph-dim) use theme-flippable CSS
+// variables so the cascade reads correctly in both dark and light mode.
 const LOGO_GLYPHS = [
-  { ch: "D", cls: "glyph-mono glyph-white" },
-  { ch: "3", cls: "glyph-vt323 glyph-green" },
-  { ch: "C", cls: "glyph-share-tech-italic glyph-cyan" },
-  { ch: "Y", cls: "glyph-vt323 glyph-accent" },
-  { ch: "P", cls: "glyph-courier glyph-red" },
-  { ch: "H", cls: "glyph-mono glyph-white" },
-  { ch: "3", cls: "glyph-vt323 glyph-green" },
-  { ch: "R", cls: "glyph-share-tech glyph-white" },
+  { ch: "D", cls: "glyph-vt323 glyph-bright" },
+  { ch: "3", cls: "glyph-vt323 glyph-mid"    },
+  { ch: "C", cls: "glyph-vt323 glyph-mid"    },
+  { ch: "Y", cls: "glyph-vt323 glyph-bright" },
+  { ch: "P", cls: "glyph-vt323 glyph-dim"    },
+  { ch: "H", cls: "glyph-vt323 glyph-mid"    },
+  { ch: "3", cls: "glyph-vt323 glyph-dim"    },
+  { ch: "R", cls: "glyph-vt323 glyph-bright" },
 ];
 
 function renderLogo() {
   const banner = document.createElement("div");
   banner.className = "line banner";
+
+  // Opening bracket — JetBrains Mono dim, smaller than the wordmark for
+  // visual hierarchy (brand reads as the focus; brackets frame it).
+  const lbr = document.createElement("span");
+  lbr.className = "glyph-bracket";
+  lbr.textContent = "[";
+  banner.appendChild(lbr);
+
   for (const { ch, cls } of LOGO_GLYPHS) {
     const span = document.createElement("span");
     span.className = cls;
     span.textContent = ch;
     banner.appendChild(span);
   }
+
+  // Closing bracket
+  const rbr = document.createElement("span");
+  rbr.className = "glyph-bracket";
+  rbr.textContent = "]";
+  banner.appendChild(rbr);
+
   termEl.appendChild(banner);
   termEl.scrollTop = termEl.scrollHeight;
 }

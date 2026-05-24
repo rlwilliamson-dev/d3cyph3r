@@ -59,7 +59,9 @@ export function renderMobileGate() {
   document.body.innerHTML = `
     <div class="mobile-gate">
       <div class="mobile-gate-inner">
-        <h1 class="mobile-gate-brand">D3CYPH3R</h1>
+        <h1 class="mobile-gate-brand">
+          <span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span>
+        </h1>
         <p class="mobile-gate-tagline">Terminal CTF · starting up</p>
 
         <div class="mobile-gate-progress" role="progressbar" aria-label="Boot progress">

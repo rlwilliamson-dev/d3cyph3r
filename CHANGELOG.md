@@ -7,6 +7,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-24
+
+**Brand refresh.** The wordmark is now a unified `[ D3CYPH3R ]`
+cascade across every surface of the product — uniform VT323 terminal
+font with a three-level brightness cascade across the eight
+characters (D bright · 3 mid · C mid · Y bright · P dim · H mid · 3
+dim · R bright), framed by dim JetBrains Mono brackets. Replaces the
+prior mixed-font "partially decrypted fragment" wordmark that used
+five different fonts and five different brand colors per glyph. The
+cascade is theme-aware — brightness palette flips automatically
+between dark and light mode via CSS variables, with the bracket
+sitting between the dim and mid range as a frame rather than a
+wordmark character.
+
+The unified treatment fixes a long-standing visual inconsistency:
+the prior wordmark only appeared in the lobby; the walkthroughs
+subsite header used a plain bold "D3CYPH3R", the 404 page had no
+wordmark at all, the mobile-gate boot screen used a different
+Share Tech Mono treatment, and the social-share OG image used the
+old mixed-font style. v1.2.0 puts the same cascade on all five.
+
+### Changed
+
+- **Lobby wordmark** (`js/engine/lobby.js`) — `LOGO_GLYPHS` array
+  rewritten to use the brightness cascade instead of the mixed
+  font/color pattern. `renderLogo()` now wraps the wordmark in
+  `[ ]` brackets.
+- **Walkthroughs subsite header brand** (`walkthroughs/index.html`,
+  `walkthroughs/walkthrough.css`) — `.brand-mark` updated from
+  plain bold text to the cascade pattern. `walkthrough.css` gains
+  `VT323` to its Google Fonts import and the same theme-flippable
+  cascade CSS variables as the main app.
+- **Walkthroughs index hero title**
+  (`walkthroughs/walkthrough.js`) — `renderIndex()` now emits the
+  cascade brand as the h1 instead of plain "D3CYPH3R Walkthroughs"
+  text, with a "walkthroughs" sub-label in dim monospace.
+- **404 page** (`404.html`) — adds the cascade brand above the giant
+  404 number; gains an inline theme-init script so the page
+  respects the visitor's saved dark/light preference.
+- **Mobile-gate boot screen** (`js/mobile-gate.js`) — the
+  `.mobile-gate-brand` h1 now contains the cascade glyphs instead
+  of a plain "D3CYPH3R" string; size + letter-spacing tuned for
+  the mobile viewport.
+- **Open Graph image** (`assets/og-template.html` + `og-image.png`)
+  — wordmark updated to the cascade; PNG regenerated. Social-share
+  link previews on Twitter / LinkedIn / Slack / Discord / etc.
+  now show the new brand.
+- **`og:image:alt` text** (`index.html`) — rewritten to describe
+  the cascade wordmark for accessibility / screen readers /
+  spiders that read alt text.
+- **Stylesheet cache-bust** bumped to `?v=1.2.0` on both `index
+  .html` and `walkthroughs/index.html` since the cascade adds new
+  CSS that returning visitors need to fetch immediately.
+
+### Added
+
+- **CSS-variable cascade palette** in both `style.css` and
+  `walkthroughs/walkthrough.css`: `--glyph-bright`, `--glyph-mid`,
+  `--glyph-dim`, `--glyph-bracket`. Set in `:root` for the dark
+  palette and overridden in `body.light` for the light palette.
+  Letting the brightness levels flip via CSS variables (rather
+  than hardcoded per-class colors) is what makes the cascade
+  theme-aware in one declaration.
+- **`.glyph-bright` / `.glyph-mid` / `.glyph-dim` / `.glyph-bracket`
+  classes** in both stylesheets — the new brand primitives.
+  Legacy `.glyph-white` / `.glyph-green` / `.glyph-cyan` / `.glyph-
+  accent` / `.glyph-red` classes are kept in `style.css` for
+  future logo experiments but are no longer referenced by shipping
+  code.
+
+### Fixed
+
+- Walkthroughs subsite header brand was a plain bold "D3CYPH3R"
+  string — visually inconsistent with the main app's wordmark.
+- 404 page had no brand mark at all — a brand-less dead-end.
+- Mobile-gate boot screen used Share Tech Mono, not the lobby
+  font choice — visually disconnected from the playable site.
+- OG image alt text described the prior mixed-font wordmark
+  rather than the cascade.
+
 ## [1.1.1] - 2026-05-24
 
 Documentation patch. The site is proxied through Cloudflare, which
@@ -1541,7 +1621,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.13.0...v1.0.0

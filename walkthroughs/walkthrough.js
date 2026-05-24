@@ -250,7 +250,25 @@ function renderIndex() {
 
   const article = document.getElementById("article");
   const lines = [];
-  lines.push("<h1>D3CYPH3R Walkthroughs</h1>");
+  // Title uses the cascade brand to match the header. "Walkthroughs"
+  // continues in normal h1 styling alongside the wordmark.
+  lines.push(
+    '<h1 class="index-title">' +
+      '<span class="brand-cascade">' +
+        '<span class="glyph-bracket">[</span>' +
+        '<span class="glyph-vt323 glyph-bright">D</span>' +
+        '<span class="glyph-vt323 glyph-mid">3</span>' +
+        '<span class="glyph-vt323 glyph-mid">C</span>' +
+        '<span class="glyph-vt323 glyph-bright">Y</span>' +
+        '<span class="glyph-vt323 glyph-dim">P</span>' +
+        '<span class="glyph-vt323 glyph-mid">H</span>' +
+        '<span class="glyph-vt323 glyph-dim">3</span>' +
+        '<span class="glyph-vt323 glyph-bright">R</span>' +
+        '<span class="glyph-bracket">]</span>' +
+      '</span>' +
+      '<span class="index-title-sub">walkthroughs</span>' +
+    '</h1>'
+  );
   lines.push(
     "<p>Per-level deep dives — full solve paths plus extended " +
     "post-mortems tying each level back to the certifications, " +
