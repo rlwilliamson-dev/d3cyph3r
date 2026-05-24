@@ -95,7 +95,8 @@ const MANIFEST = {
   web: {
     title: "Web",
     blurb:
-      "HTTP directory enumeration. Client: Meridian State University — FERPA.",
+      "HTTP directory enumeration and broken access control. " +
+      "Client: Meridian State University — FERPA.",
     levels: {
       level0: {
         title: "Meridian's Forgotten Backup Folder",
@@ -103,6 +104,15 @@ const MANIFEST = {
           "Pre-cyber-insurance-renewal web audit at a state university. " +
           "A dismissed agency left a backup directory under DocumentRoot " +
           "with autoindex on. 4,217 student records + a live DB credential.",
+      },
+      level1: {
+        title: "Carlos's Login Wall",
+        blurb:
+          "Day two. Carlos's homegrown transcript-download endpoint is " +
+          "behind SSO but never checks per-student authorization. Any " +
+          "logged-in student can pull any other student's transcript. " +
+          "IDOR via CWE-639 + a BluePier-era demo account whose " +
+          "advisor_notes field carries the level2 breadcrumb.",
       },
     },
   },

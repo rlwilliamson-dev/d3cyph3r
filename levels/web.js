@@ -615,4 +615,667 @@ Return to the lobby:    ssh guest@d3cyph3r`
     },
   },
 
+  // ── level 1 — "Carlos's Login Wall" ──────────────────────────────
+  // Day 2 at Meridian State University. Yesterday's backup-directory
+  // finding closed within the hour (Carlos deleted the dir + notified
+  // Cedarwood Mutual proactively); the DB credential rotation is on
+  // the Friday change window. But Carlos mentioned a "quick transcript
+  // download" he shipped to the student portal three weeks ago. It's
+  // behind Meridian SSO. He believes that's enough. The player uses
+  // the still-live DB cred from level0 to ssh into the portal webapp
+  // host (with Carlos's authorization), reads Carlos's 15-line API
+  // handler, sees that SSO middleware confirms identity but never
+  // checks ownership of the requested student_id. Curl-ing the
+  // endpoint with the 8 student IDs from level0's CSV all return
+  // valid transcripts (the IDOR). A BluePier-era demo account at
+  // M-0000001 carries the level2 breadcrumb credential in its
+  // advisor_notes field. Lesson stack: CWE-639 (Authorization Bypass
+  // Through User-Controlled Key) plus OWASP A01 (Broken Access
+  // Control) and the OWASP API Security Top 10 API1 (Broken Object
+  // Level Authorization — IDOR is the canonical example). No engine
+  // changes — pure curl + level.web URL-map data + cookies command.
+  "level1@web": {
+    password: "M3rid14n!2023-prod",
+    track: "web",
+    playerUser: "webapp_admin",
+    objective: "Audit Carlos's transcript-download endpoint at Meridian — confirm whether the SSO wrapper is doing the authorization work Carlos thinks it's doing, and document the blast radius if it isn't.",
+    lesson: "Day two at Meridian. Yesterday's level0 backup-dir finding closed within the hour — Carlos deleted the directory and proactively notified Cedarwood Mutual (he is, increasingly, an A+ client). The `M3rid14n!2023-prod` DB credential is still live until Friday's rotation window; you used it to ssh into the student-portal webapp host with Carlos's standing authorization. You're now logged in as `webapp_admin` — the database user whose shell access was enabled six months ago for a debug session and never reverted. (That's a finding too, but not today's.) Carlos mentioned a 'quick transcript download' he shipped to the student portal last sprint — self-service for students to grab unofficial transcripts. It's behind Meridian SSO. He thinks that's enough. Priya, with Meridian's general counsel cc'd, has asked us to verify. Read welcome.md first; then priya-note.md for the day-2 context; then look at the code Carlos shipped and exercise the endpoint with curl.",
+    cookieData: {
+      "https://portal.meridian.edu": {
+        "MeridianSSO": "eyJzaWQiOiJ3ZWJhcHAtc3ZjLW1vbml0b3JpbmctMjAyNiIsImV4cCI6MjA5MTM0MTY0MH0",
+        "csrf": "Y2RmYTczNGItOWY4Yi00ZWQwLWFhMzgtZjQ4ZTQyZjZkM2Q0",
+      },
+    },
+    web: {
+      // Student portal home (the login page non-authenticated visitors hit).
+      "https://portal.meridian.edu":
+`<!DOCTYPE html>
+<html lang="en">
+<head><title>Meridian Student Portal — Sign in</title></head>
+<body>
+<h1>Meridian Student Portal</h1>
+<form method="POST" action="/sso/login">
+  <label>Meridian email <input type="email" name="email"></label>
+  <label>Password <input type="password" name="password"></label>
+  <button type="submit">Sign in via Meridian SSO</button>
+</form>
+<p><a href="/sso/forgot-password">Forgot password?</a></p>
+<p><small>Use of this system is restricted to currently-enrolled
+Meridian students and authorized staff. All activity is logged.</small></p>
+</body>
+</html>`,
+
+      // The transcript endpoint — requires the captured session for the
+      // narrative to make sense (the engine doesn't enforce cookies, but
+      // the in-world story is that webapp_admin has the captured session
+      // in session.txt and is making authenticated requests).
+      //
+      // The 8 IDs from level0's students_export_2023.csv all return
+      // valid transcripts — that's the IDOR demonstration. Any of these
+      // confirms the bug; the player only needs to try a few.
+      "https://portal.meridian.edu/api/transcript?student_id=M-1872941":
+`{
+  "student_id": "M-1872941",
+  "first_name": "Aisha",
+  "last_name": "Patel",
+  "email": "patel.a@meridian.edu",
+  "major": "Computer Science",
+  "gpa": 3.91,
+  "enrollment_status": "Active",
+  "courses_completed": [
+    {"code": "CS-301", "name": "Algorithms", "term": "Fall 2025", "grade": "A"},
+    {"code": "CS-340", "name": "Operating Systems", "term": "Fall 2025", "grade": "A-"},
+    {"code": "MATH-220", "name": "Linear Algebra", "term": "Spring 2026", "grade": "A"},
+    {"code": "ENGL-202", "name": "Advanced Composition", "term": "Spring 2026", "grade": "B+"}
+  ],
+  "advisor": "Dr. Maria Sanchez",
+  "advisor_notes": "On track for May 2026 graduation. Strong candidate for graduate study; encouraged to apply to CMU and UWashington.",
+  "issued_at": "2026-04-09T14:23:00Z"
+}`,
+
+      "https://portal.meridian.edu/api/transcript?student_id=M-1872995":
+`{
+  "student_id": "M-1872995",
+  "first_name": "Marcus",
+  "last_name": "Reyes",
+  "email": "reyes.m@meridian.edu",
+  "major": "Biology",
+  "gpa": 3.42,
+  "enrollment_status": "Active",
+  "courses_completed": [
+    {"code": "BIO-310", "name": "Cell Biology", "term": "Fall 2025", "grade": "B+"},
+    {"code": "CHEM-220", "name": "Organic Chemistry II", "term": "Spring 2026", "grade": "B"}
+  ],
+  "advisor": "Dr. Henry Park",
+  "advisor_notes": "Considering pre-med pathway; recommended additional volunteering hours at Cedarbrook Memorial.",
+  "issued_at": "2026-04-09T14:23:00Z"
+}`,
+
+      "https://portal.meridian.edu/api/transcript?student_id=M-1873041":
+`{
+  "student_id": "M-1873041",
+  "first_name": "Jordan",
+  "last_name": "Smith",
+  "email": "smith.j@meridian.edu",
+  "major": "Mechanical Engineering",
+  "gpa": 2.88,
+  "enrollment_status": "Active — Academic Probation (since Spring 2026)",
+  "courses_completed": [
+    {"code": "ME-301", "name": "Thermodynamics", "term": "Fall 2025", "grade": "C-"},
+    {"code": "ME-302", "name": "Fluid Mechanics", "term": "Spring 2026", "grade": "D+"}
+  ],
+  "advisor": "Dr. Henry Park",
+  "advisor_notes": "Academic probation as of Spring 2026 (GPA fell below 3.0). Recommend tutoring referral + check-in with student wellness.",
+  "issued_at": "2026-04-09T14:23:00Z"
+}`,
+
+      // The smoking gun: BluePier-era M-0000001 demo account whose
+      // advisor_notes field carries the level2 breadcrumb credential.
+      // BluePier set up this account during the 2023 transcript-portal
+      // acceptance-test phase, stashed the credential in a "note for
+      // handoff," never removed the account, and the student-facing UI
+      // hides system-account IDs but the API doesn't filter them out.
+      // Sticky-account anti-pattern (same shape as network/level1's
+      // audit-bypass account, different context).
+      "https://portal.meridian.edu/api/transcript?student_id=M-0000001":
+`{
+  "student_id": "M-0000001",
+  "first_name": "Test",
+  "last_name": "Student",
+  "email": "test@meridian.edu",
+  "major": "[SYSTEM ACCOUNT — NOT A REAL STUDENT]",
+  "gpa": 4.00,
+  "enrollment_status": "Service / QA Account",
+  "courses_completed": [],
+  "advisor": "BluePier Digital (legacy)",
+  "advisor_notes": "BLUEPIER DEMO ACCOUNT — DO NOT DELETE. Created 2023-08-12 by James for transcript-portal acceptance testing. Service account for end-to-end QA: portal-svc / pw=meridian-portal-svc-2026 / used by the automated nightly check that validates the registrar integration. Carlos: don't decommission this yet, the cutover to the new check is scheduled Q4 2024. — James, BluePier 2023-08-12",
+  "issued_at": "2026-04-09T14:23:00Z"
+}`,
+
+      // 404 example — proves the API does distinguish valid-but-missing
+      // from valid-and-served. Helps the player understand the model.
+      "https://portal.meridian.edu/api/transcript?student_id=M-9999999":
+`{"error":"not found"}`,
+    },
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Meridian Student Portal / portal.meridian.edu (webapp_admin) ──
+
+Day two at Meridian. Yesterday's level0 finding (the BluePier
+backup directory) closed within the hour — Carlos deleted the
+directory the moment Priya's report landed and proactively
+notified Cedarwood Mutual. He's earning his salary. The
+\`M3rid14n!2023-prod\` DB credential is still live until Friday's
+rotation window; you used it to ssh into the student-portal
+webapp host with Carlos's standing authorization. You're logged
+in as \`webapp_admin\` — the database user whose shell access
+was enabled six months ago for a debug session and never
+reverted. (That's a finding too, but not today's.)
+
+During yesterday's conversation Carlos mentioned a "quick
+transcript download" he'd shipped to the student portal last
+sprint. Students can self-service-fetch their unofficial
+transcripts. It's behind Meridian SSO. Carlos believes that's
+enough. Priya — with Meridian's general counsel cc'd — has
+asked us to verify.
+
+
+─── COMMANDS YOU'LL USE TODAY ─────────────────────────────────
+
+  curl <url>           Fetch a URL and print the response body.
+                       (You met this in level0.)
+  cookies <url>        Print the cookies your shell has set for
+                       that URL. Useful for confirming the
+                       authentication material you're presenting.
+
+(No new commands; the puzzle is in how you use the ones you
+already know.)
+
+
+─── WHAT TO LOOK FOR ──────────────────────────────────────────
+
+When you read transcript-api.js you'll see Carlos's verification
+logic. The middleware confirms you have an active Meridian SSO
+session. Once that confirmation passes, the API hands you
+whatever transcript record matches the \`student_id\` URL
+parameter. The middleware does not check that the student_id
+matches the session's owner.
+
+That distinction is the lesson:
+
+  AUTHENTICATION:  "Are you a logged-in user?"
+                   The SSO middleware answers this. Correctly.
+
+  AUTHORIZATION:   "Is this record yours to access?"
+                   Carlos's code never asks this question.
+
+The vulnerability class is IDOR — Insecure Direct Object
+Reference. The fix is one extra line in the handler. The blast
+radius without the fix is everything in the database's
+\`transcripts\` table — every currently-enrolled student, every
+formerly-enrolled student, every legacy account that predates
+the current enrollment system.
+
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat priya-note.md           Day-two context + rules.
+  2.  cat transcript-api.js       Carlos's endpoint handler.
+  3.  cat session.txt             The captured SSO session.
+  4.  cat id-conventions.md       Meridian's student-ID format.
+  5.  cookies https://portal.meridian.edu        Confirm the session.
+  6.  curl 'https://portal.meridian.edu/api/transcript?student_id=M-1872941'
+       Test against student IDs you already have from level0's
+       CSV. If the responses come back as transcripts, IDOR is
+       confirmed. Try a few. Then try a legacy ID per
+       id-conventions.md.
+  7.  cat lessons-learned.md      Post-mortem (after step 6).
+`
+        },
+
+        "priya-note.md": {
+          type: "file",
+          content:
+`# Meridian State University — engagement update (day two)
+
+Yesterday's finding closed clean. Carlos deleted the BluePier
+backup dir within the hour and proactively notified Cedarwood
+Mutual — both moves were faster than I expected, and both
+helped. Cedarwood's renewal review now has "Meridian discovered
+and remediated within audit window" as the headline note, which
+is the best possible framing.
+
+But Carlos mentioned something during the conversation I want
+us to look at. He shipped a "quick transcript download" to the
+student portal three weeks ago — self-service for students to
+grab unofficial transcripts without going through the registrar.
+He believes it's safe because it's behind Meridian SSO.
+
+I asked him to send me the endpoint code and a captured SSO
+session we can use for testing. Both are in this directory,
+along with a note on Meridian's student-ID conventions.
+
+## What I want you to check
+
+Read transcript-api.js. It's short. Then read the captured
+session in session.txt and confirm what the middleware does:
+
+  - Does the SSO middleware confirm the request is from a
+    logged-in Meridian user? (Yes — the cookie name is real,
+    the format is standard, the validator works.)
+  - Does the SSO middleware confirm the request is from the
+    *student whose transcript is being requested*? (Read the
+    code carefully.)
+
+If the answer to the second question is no, that's IDOR — the
+endpoint trusts the \`student_id\` URL parameter without
+checking ownership. Verify by curl-ing a few of the student IDs
+you already have from yesterday's CSV (Aisha Patel, Marcus
+Reyes, etc.) and seeing whether the responses come back.
+
+## Rules of engagement
+
+Same as yesterday's controlled-exception authorization, with
+one addition: do NOT iterate the API at scale (no scripted
+enumeration of the M-187xxxx range, no concurrent requests).
+We have written authorization from Carlos for targeted
+validation of known IDs — anything beyond that turns this from
+"audit" into "unauthorized access to PII at scale" regardless
+of the underlying vulnerability.
+
+Specifically:
+  - Curl a handful of IDs from yesterday's CSV to confirm IDOR.
+  - Read id-conventions.md and try ONE or two low-numbered
+    legacy IDs to confirm the pattern extends to system
+    accounts.
+  - Stop. Document. Send to Carlos.
+
+## Compliance angle
+
+This is a FERPA violation if exploited — transcripts are the
+canonical example of an "education record" under 34 CFR §99.3.
+An IDOR vulnerability that allows any logged-in student to
+pull any other student's transcript is a §99.31 ("conditions
+for disclosure") and §99.32 ("recordkeeping requirements")
+failure in one move. Same federal-funding existential risk as
+yesterday's finding.
+
+Cedarwood Mutual also needs to know if this is real.
+
+— Priya
+  2026-04-09, 9:42am
+`
+        },
+
+        "transcript-api.js": {
+          type: "file",
+          content:
+`// Meridian Student Portal — transcript download endpoint
+// Owner: Carlos
+// Last updated: 2026-03-26
+
+import express from "express";
+import { requireMeridianSSO } from "./middleware/sso.js";
+import { db } from "./db.js";
+
+export const router = express.Router();
+
+// Require an active Meridian SSO session for ALL routes in
+// this router. The SSO middleware reads the session cookie,
+// validates it against the SSO provider, populates req.session
+// with { studentId, email, name, sessionExpires }, and 401s
+// if any of that fails.
+router.use(requireMeridianSSO);
+
+router.get("/api/transcript", async (req, res) => {
+  const studentId = req.query.student_id;
+  if (!studentId) {
+    return res.status(400).json({ error: "missing student_id" });
+  }
+
+  // Pull the transcript record for the requested student.
+  const transcript = await db.transcripts.findOne({
+    student_id: studentId,
+  });
+  if (!transcript) {
+    return res.status(404).json({ error: "not found" });
+  }
+
+  return res.json(transcript);
+});
+`
+        },
+
+        "session.txt": {
+          type: "file",
+          content:
+`# Captured Meridian SSO session for audit testing
+# Issued to: webapp-svc-monitoring (synthetic account Carlos
+# created for the nightly health-check job that pings the
+# transcript endpoint to confirm uptime)
+# Captured by: Carlos, 2026-04-08 (sent to Priya for the audit)
+
+Cookie: MeridianSSO=eyJzaWQiOiJ3ZWJhcHAtc3ZjLW1vbml0b3JpbmctMjAyNiIsImV4cCI6MjA5MTM0MTY0MH0=; csrf=Y2RmYTczNGItOWY4Yi00ZWQwLWFhMzgtZjQ4ZTQyZjZkM2Q0
+
+# Decoded session payload (base64-decode the value half of the
+# MeridianSSO cookie to confirm):
+#   sid: webapp-svc-monitoring-2026
+#   exp: 2036-04-09T08:14:00Z   (long-lived service-account
+#                                token — itself a finding)
+#
+# This session passes Carlos's requireMeridianSSO middleware,
+# which is all the transcript endpoint checks before serving
+# the requested transcript. The middleware never compares the
+# session's identity against the student_id URL parameter.
+#
+# That's the bug.
+`
+        },
+
+        "id-conventions.md": {
+          type: "file",
+          content:
+`# Meridian State University — student-ID conventions
+# Carlos sent these over with the audit materials so we'd know
+# what's in scope.
+
+Current students:      M-187xxxx   (issued 2018-onward, sequential
+                                    by enrollment date)
+Former students:       M-XXXXXXX   (range varies — 100000-999999
+                                    depending on enrollment year)
+Legacy / system:       M-000xxxx   (BluePier-era, created 2021-2023
+                                    for testing, demo accounts,
+                                    acceptance-QA scripts, etc.)
+
+# The 8 IDs from yesterday's students_export_2023.csv are good
+# starting points for confirming the IDOR — pick a handful and
+# curl them. Aisha Patel M-1872941, Marcus Reyes M-1872995,
+# Jordan Smith M-1873041, etc.
+#
+# Carlos noted: "We never finished migrating off the legacy
+# M-000xxxx range. They're still in the database. The student-
+# facing UI hides them but the API doesn't filter."
+#
+# That's its own finding — once IDOR is confirmed, try a low-
+# numbered legacy ID. Whatever BluePier left behind is fair
+# game for documenting the blast radius.
+#
+# — Priya
+`
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+You just confirmed that Carlos's transcript-download endpoint
+hands out any student's transcript to any logged-in Meridian
+user. The SSO middleware confirms the requester is authenticated;
+it never confirms the requester is the *student whose record
+is being requested*. Any current Meridian student — and, by
+extension, any attacker with a valid student session — can
+pull any other student's transcript by varying the
+\`student_id\` URL parameter.
+
+You also found, by curl-ing a legacy account ID, that
+BluePier Digital left a system account in the database (the
+"M-0000001" demo) whose advisor_notes field carries a live
+service-account credential in plain text. The student-facing
+UI hides system accounts; the API does not. The credential is
+the level2 breadcrumb, and it lives there because BluePier
+needed somewhere to stash it during 2023 acceptance testing
+and decided an advisor_notes field on a demo account was a
+reasonable choice. It was not.
+
+Two distinct failures stack here:
+
+  1. The transcript endpoint trusts the \`student_id\` URL
+     parameter without checking ownership. Authentication
+     ≠ authorization. The middleware does the first; nothing
+     does the second.
+  2. The student-record schema includes a free-form notes
+     field, and the field carries data that should never have
+     been written there in the first place — a credential
+     "stashed for later" by a vendor who never came back to
+     clean up.
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+Insecure Direct Object Reference (IDOR) is, by the count of
+several published bug-bounty reports, the most-disclosed
+vulnerability class on modern web applications. The pattern
+is consistent: an endpoint takes a resource identifier as an
+input (a URL parameter, a JSON body field, a path segment),
+looks the resource up in the database, and returns it —
+without checking that the authenticated caller has any
+relationship to the resource being returned.
+
+The vulnerability has been on the OWASP Top 10 in some form
+since 2007 (when "Insecure Direct Object References" was
+A04:2007 in its own right). In the 2017 reshuffle it was
+folded into the broader A05:2017 Broken Access Control
+category, which moved to the #1 slot in OWASP Top 10:2021
+and stayed at #1 in the 2025 edition. The OWASP API Security
+Top 10 (a separate list focused on API-specific failures)
+has had "Broken Object Level Authorization" as its API1 since
+the list was created in 2019 — IDOR's API expression.
+
+The reason the bug keeps showing up is that frameworks make
+authentication easy ("add this middleware to require a logged-
+in user") and authorization hard ("you have to write per-route
+logic that maps the authenticated identity to the resource
+being requested"). Carlos used the framework's authentication
+middleware correctly. He just stopped there.
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+For Meridian specifically, this is a FERPA-grade finding on
+top of an insurance-renewal-grade finding. Transcripts are
+the textbook example of an "education record" under 34 CFR
+§99.3. An IDOR vulnerability that allows any logged-in
+student to pull any other student's transcript fails both
+§99.31 (conditions for disclosure of PII from education
+records) and §99.32 (recordkeeping for disclosures) — the
+disclosed records have no audit trail, no consent
+documentation, and no logged recipient list.
+
+The federal-funding question (FERPA's enforcement mechanism
+is "the federal government can withdraw your funding," which
+for a public university is existential) puts this in the
+"general counsel needs to know today" category.
+
+For Cedarwood Mutual: yesterday's finding played as
+"discovered + remediated within audit window." Today's, if
+remediated equally fast, can play the same way. The same
+24-hour-fix mechanic applies — the code change is genuinely
+small.
+
+For Driftwood: Carlos is the easiest client we have. He
+takes feedback well; he ships fixes fast; he proactively
+loops in the right stakeholders. The pattern here is "junior
+developer who needs the layered model articulated, not
+junior developer who's bad at this." The conversation today
+is one whiteboard diagram (authn vs authz) and one code
+review.
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  CWE-639: Authorization Bypass Through User-Controlled Key
+    The most precise weakness ID. The endpoint takes a key
+    (\`student_id\`) from user-controlled input (the URL
+    parameter), looks up the corresponding record, and
+    returns it without verifying the caller's relationship
+    to the record. CWE-639 is on the CWE catalog's
+    Access-Control category.
+
+  CWE-285: Improper Authorization
+    The parent weakness — broader umbrella for any case
+    where the authorization decision is wrong or missing.
+
+  CWE-862: Missing Authorization
+    The variant where the authorization check is entirely
+    absent (vs. CWE-863 Incorrect Authorization, where a
+    check exists but is wrong). Carlos's case fits CWE-862
+    — the check on student_id ownership is missing
+    entirely. CWE-862 is a recurring CWE Top 25 entry.
+
+  FERPA (20 U.S.C. § 1232g; 34 CFR Part 99)
+    §99.3   Definition of "education records" — includes
+      transcripts, grades, enrollment status, advisor notes.
+    §99.31  Conditions under which prior consent is not
+      required to disclose. Anonymous IDOR exposure is not
+      among them.
+    §99.32  Recordkeeping requirements. The exposed records
+      created an undocumented, undated disclosure to an
+      unknown recipient set.
+
+  NIST SP 800-171 Rev. 3 (Protecting CUI in non-federal
+  systems — the standard most US universities map to)
+    03.01.01  Account Management — the demo account
+      shouldn't have outlived its purpose.
+    03.01.02  Access Enforcement — the system shall enforce
+      approved authorizations.
+    03.01.05  Least Privilege — the SSO middleware's
+      authorization scope is too broad.
+
+  NIST SP 800-53 Rev. 5
+    AC-3 (Access Enforcement) — system enforces approved
+      authorizations.
+    AC-6 (Least Privilege) — the SSO-authenticated user has
+      more access than the user's role justifies.
+    AC-4 (Information Flow Enforcement) — student records
+      are flowing to recipients who weren't authorized to
+      receive them.
+
+  CIS Critical Security Controls v8.1
+    6.7   Centralize Access Control — covers the principle
+      that authorization decisions should not be ad-hoc.
+    16.10 Apply Secure Design Principles in Application
+      Architectures — covers the layered model (authn vs
+      authz, defense in depth).
+
+  OWASP Top 10 (2025) — A01: Broken Access Control
+    The umbrella category. A01 has been the #1 web security
+    risk in both the 2021 and 2025 editions. IDOR is the
+    most-cited example in the category description.
+
+  OWASP API Security Top 10 (2023) — API1: Broken Object
+  Level Authorization (BOLA)
+    The API-specific expression of IDOR. API1 has been the
+    #1 entry on the API Security Top 10 since the list was
+    created in 2019.
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  CompTIA Security+ (SY0-701)
+    Domain 2 (Threats, Vulnerabilities, and Mitigations) —
+    application-layer vulnerabilities including IDOR are
+    directly tested.
+
+  CompTIA PenTest+ (PT0-003)
+    Domain 3 (Attacks and Exploits) — IDOR is in the named
+    web-application-attack taxonomy.
+
+  CompTIA CySA+ (CS0-003)
+    Domain 2 (Threat Intelligence) — IDOR detection patterns
+    are part of the threat-hunting modules.
+
+  (ISC)² CISSP
+    Domain 3 (Security Architecture and Engineering) — the
+    authentication/authorization distinction is a CISSP
+    fundamental.
+
+  Offensive Security OSWA / OSWE / OSCP
+    OffSec's web certs cover IDOR explicitly. The OSWE
+    exam includes IDOR-style challenges as a recurring
+    test of the candidate's ability to find authorization
+    failures.
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+  T1190     — Exploit Public-Facing Application. IDOR-style
+              exploitation against a public-facing API.
+  T1213     — Data from Information Repositories. The
+              transcripts database is the information
+              repository being mined.
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. Fix the endpoint. One line of code: check that
+     \`req.query.student_id === req.session.studentId\`
+     before serving (or, for non-self queries by registrar
+     staff, gate by role). The fix is genuinely
+     one-liner-sized for the self-service case; a
+     more-complete fix uses a centralized authz helper.
+
+  2. Switch to centralized authorization. Per-route
+     ownership checks are fragile because every new route
+     needs the check added. Centralize with an OPA-style
+     policy engine, casbin, oso, or the framework's own
+     authorization primitives. Define authz as data, not
+     scattered code.
+
+  3. Replace predictable IDs with unguessable identifiers.
+     UUIDv4 / ULID / NanoID. Predictable IDs aren't the
+     vulnerability (the authz check is), but unguessable
+     IDs make exploitation substantially more expensive
+     even if the authz check fails. Defense in depth.
+
+  4. Audit the entire codebase for sibling endpoints with
+     the same pattern. The shape "endpoint takes ID as
+     input, looks up record, returns record" repeats many
+     times in any application of size. Each instance needs
+     the authz check. Semgrep and CodeQL both have rule
+     packs for this pattern (search for "IDOR" or "BOLA"
+     in their rule registries).
+
+  5. Decommission the BluePier demo account. The advisor_
+     notes field should not contain credentials; the demo
+     account itself should not exist; the system-account
+     name space should be filtered at the schema or query
+     layer so it never leaks via APIs. Rotate the
+     credential the advisor_notes field exposed.
+
+  6. Add SIEM detection for transcript-API access patterns
+     that don't match the session's owning student. The
+     telemetry needed is "for each request to /api/
+     transcript, log (session.studentId, query.student_id,
+     match)." Any row where the two don't match is, post-
+     remediation, either a registrar action (legitimate)
+     or an exploitation attempt (alert-worthy).
+
+  7. For the long term: assume the data is going to be
+     accessed by the wrong user eventually. Apply
+     row-level security at the database layer (PostgreSQL's
+     RLS, MySQL with views, MongoDB's field-level
+     redaction). Treat application-level authz as one
+     layer, not the only one.
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+Authentication asks "who are you?" Authorization asks "are
+you allowed to do this?" Frameworks make the first question
+easy. The second question is yours to answer, every time, on
+every route, on every resource. Carlos's mistake is the most
+common version of this mistake. The fix is small. The
+diagnostic — "the middleware exists, the check inside the
+handler doesn't" — is the lesson worth remembering.
+
+Return to the lobby:    ssh guest@d3cyph3r
+`
+        },
+
+      },
+    },
+  },
+
 };

@@ -484,6 +484,72 @@ async function termText(page) {
   await page.waitForTimeout(500);
   check("exit from level0@web returns to lobby",                      (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
+  // ── Level 1 — Carlos's Login Wall (web track, IDOR) ──────────────
+  // Wrong password first to confirm the gate works.
+  await typeAndEnter(page, "ssh level1@web");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "wrong-password");
+  await page.waitForTimeout(200);
+  t = await termText(page);
+  check("Wrong password on level1@web prints 'Permission denied'",    t.includes("Permission denied, please try again."));
+
+  await typeAndEnter(page, "ssh level1@web");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "M3rid14n!2023-prod");
+  await page.waitForTimeout(600);
+  t = await termText(page);
+  check("Correct password connects to level1@web",                    t.includes("Connected: level1@web"));
+  check("Prompt host stays 'web' on level1",                          (await page.locator("#prompt-host").innerText()) === "web");
+  check("Prompt user shows in-world identity 'webapp_admin'",         (await page.locator("#prompt-user").innerText()) === "webapp_admin");
+  check("Objective references the transcript audit",                  /transcript/i.test(t));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "priya-note.md", "transcript-api.js", "session.txt", "id-conventions.md", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "cat transcript-api.js");
+  t = await termText(page);
+  check("transcript-api.js shows the SSO require",                    t.includes("requireMeridianSSO"));
+  check("transcript-api.js reads student_id from req.query (the bug)", /req\.query\.student_id/.test(t));
+
+  await typeAndEnter(page, "cookies https://portal.meridian.edu");
+  t = await termText(page);
+  check("cookies surfaces the MeridianSSO session cookie",            t.includes("MeridianSSO"));
+
+  // Curl two real-student transcript IDs from level0's CSV — both return
+  // valid transcripts, demonstrating the IDOR (the SSO middleware passes
+  // any authenticated request through regardless of student_id owner).
+  await typeAndEnter(page, "curl 'https://portal.meridian.edu/api/transcript?student_id=M-1872941'");
+  t = await termText(page);
+  check("IDOR: curl on Aisha's student_id returns her transcript",    t.includes("Aisha") && t.includes("patel.a@meridian.edu"));
+
+  await typeAndEnter(page, "curl 'https://portal.meridian.edu/api/transcript?student_id=M-1873041'");
+  t = await termText(page);
+  check("IDOR: curl on Jordan's student_id returns his transcript",   t.includes("Jordan") && /Academic Probation/.test(t));
+
+  // The BluePier demo M-0000001 carries the level2 breadcrumb in its
+  // advisor_notes field. Confirms IDOR extends to legacy system accounts.
+  await typeAndEnter(page, "curl 'https://portal.meridian.edu/api/transcript?student_id=M-0000001'");
+  t = await termText(page);
+  check("IDOR extends to legacy system accounts (BLUEPIER DEMO)",     t.includes("BLUEPIER DEMO ACCOUNT"));
+  check("Demo account's advisor_notes carries level2 breadcrumb cred", t.includes("meridian-portal-svc-2026"));
+
+  // 404 case proves the API differentiates found-vs-not (so prior
+  // responses were genuine database hits, not generic stubs).
+  await typeAndEnter(page, "curl 'https://portal.meridian.edu/api/transcript?student_id=M-9999999'");
+  t = await termText(page);
+  check("Unknown student_id returns a clean 404 not-found",           t.includes("\"error\":\"not found\""));
+
+  await typeAndEnter(page, "whoami");
+  t = await termText(page);
+  check("whoami prints 'webapp_admin' on Meridian's portal host",     /\bwebapp_admin\b/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level1@web returns to lobby",                      (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
   // ── Level 0 — Reed's Soccer Alibi (forensics track) ─────────────
   // No password (level0 of each track is the entry point).
   await typeAndEnter(page, "ssh level0@forensics");
