@@ -82,6 +82,7 @@ const HELP_SECTIONS = [
     "aws ec2 describe-instances",
     "aws ec2 describe-security-groups",
     "aws sts get-caller-identity",
+    "psql [-d <db>] \"<SQL or \\meta>\"  – PostgreSQL client",
   ]},
 ];
 

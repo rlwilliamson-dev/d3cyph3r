@@ -170,8 +170,8 @@ const MANIFEST = {
   cloud: {
     title: "Cloud",
     blurb:
-      "AWS S3, IAM, EC2 auditing. Client: Coverline Insurance — SOC 2 / " +
-      "NAIC / NYDFS / GLBA.",
+      "AWS S3, IAM, EC2 auditing + RDS-adjacent psql enumeration. " +
+      "Client: Coverline Insurance — SOC 2 / NAIC / NYDFS / GLBA.",
     levels: {
       level0: {
         title: "Coverline's Twelfth Bucket",
@@ -179,6 +179,20 @@ const MANIFEST = {
           "Mid-SOC-2-audit gap-fill at an insurtech carrier. A six-bucket " +
           "worksheet walks cleanly until one — claims-uploads-prod — " +
           "lists publicly with PII + a hardcoded RDS password.",
+      },
+      level1: {
+        title: "The Migration Table Nobody Dropped",
+        blurb:
+          "Day three. With Friday's leaked RDS master credential, " +
+          "Driftwood enumerates the coverline_claims production DB to " +
+          "inform Sloane's breach-notification math. A `migration_artifacts` " +
+          "table from the 2024 region cutover has explicit TTL columns " +
+          "intending Q2 2024 deletion that never happened — the " +
+          "broker-portal service credential is the level2 breadcrumb. The " +
+          "audit log also has a single anomalous schema-enumeration query " +
+          "from 2026-05-20 02:14 UTC with no captured source IP " +
+          "(`pgaudit` was never enabled). CWE-798 + CWE-540 + the " +
+          "credentials-in-DB-rows anti-pattern.",
       },
     },
   },
