@@ -16,13 +16,18 @@
 //      for users (new level count, new commands, etc.). Same anti-
 //      spoiler rule applies — no passwords in the README.
 //
-//   2b. Bump the `?v=<version>` cache-bust query-string on the
+//   2b. If style.css or walkthrough.css changed in this release,
+//       bump the `?v=<version>` cache-bust query-string on the
 //       stylesheet `<link>` tags — one in `index.html` and one in
 //       `walkthroughs/index.html`. Without this bump, returning
 //       visitors see up to 4 hours of stale CSS after the deploy
 //       (browser cache TTL). The HTML itself revalidates on every
 //       visit per `staticwebapp.config.json`'s no-cache headers, so
 //       the version bump in the link href immediately takes effect.
+//       If neither stylesheet changed, leave the query-string at the
+//       previous version so the cached CSS stays valid for returning
+//       visitors — bumping unnecessarily forces a re-fetch of
+//       identical bytes.
 //
 //   3. Author the level walkthrough at
 //      walkthroughs/<track>/<level>.md. Use level0@linux's walkthrough
@@ -79,6 +84,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "1.1.0";
+export const VERSION = "1.1.1";
 
 export const VERSION_DISPLAY = "v" + VERSION;

@@ -2,11 +2,28 @@
 // imports resolve before this file's top-level code runs.
 //
 // Order matters at runtime:
-//   1. Check mobile → render gate and stop if true
-//   2. Wire up the autocomplete word list
-//   3. Bind input handlers
-//   4. Start clock
-//   5. Boot the terminal (prints kernel msgs, then drops into the lobby)
+//   1. Greet anyone reading the console (privacy-posture credibility)
+//   2. Check mobile → render gate and stop if true
+//   3. Wire up the autocomplete word list
+//   4. Bind input handlers
+//   5. Start clock
+//   6. Boot the terminal (prints kernel msgs, then drops into the lobby)
+
+// Privacy-posture credibility for the DevTools-opening minority. The
+// site's CSP correctly blocks any third-party scripts Cloudflare auto-
+// injects onto the proxied domain (an analytics beacon and a bot-
+// detection challenge). Those rejections show up as CSP errors in the
+// console, which looks like a problem at first glance. This info line
+// explains they're the security policy enforcing the README's
+// "no third-party scripts" claim — visible proof, not just a promise.
+console.info(
+  "%cD3CYPH3R%c — no analytics, no telemetry, no third-party scripts.\n" +
+  "Any CSP errors above from static.cloudflareinsights.com or /cdn-cgi/* " +
+  "are Cloudflare auto-injections that our security policy correctly blocks. " +
+  "Privacy posture working as designed. → https://github.com/rlwilliamson-dev/d3cyph3r#about-this-project",
+  "color: #58a6ff; font-weight: 700; font-family: 'JetBrains Mono', monospace;",
+  "color: inherit;"
+);
 
 import { isMobile, renderMobileGate } from "./mobile-gate.js";
 

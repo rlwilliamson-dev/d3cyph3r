@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-24
+
+Documentation patch. The site is proxied through Cloudflare, which
+auto-injects an analytics beacon (`static.cloudflareinsights.com/
+beacon.min.js`) and a bot-detection script (`/cdn-cgi/challenge-
+platform/scripts/jsd/main.js`) onto the served HTML. Both are
+correctly blocked by the existing CSP (`script-src 'self'`) — the
+site continues to work — but the rejections show up as CSP errors
+in browser DevTools, which an audience-of-cybersecurity-people will
+notice and may misread as actual breakage. This patch documents the
+posture in the README and adds a one-line `console.info` on page
+load so DevTools openers see the explanation immediately.
+
+### Added
+
+- **`console.info` on page load** explaining that any CSP errors
+  from `static.cloudflareinsights.com` or `/cdn-cgi/*` are
+  Cloudflare auto-injections being correctly blocked by the site's
+  security policy. Styled with the project's accent color on the
+  "D3CYPH3R" prefix so it reads as part of the brand, not as a
+  debug log. Visible to anyone who opens the browser console;
+  invisible to everyone else.
+- **README "Privacy" section paragraph** describing the same: which
+  third-party scripts Cloudflare attempts to inject, why we don't
+  control that without changing CDNs, and that the CSP rejection is
+  the privacy promise being enforced by the browser. Frames visible
+  CSP errors as proof-of-posture rather than a defect.
+
+### Changed
+
+- **`js/engine/version.js` release checklist** refined: the
+  cache-bust query-string bump in step 2b is now conditional on
+  whether `style.css` or `walkthrough.css` actually changed in the
+  release. Bumping unnecessarily forces returning visitors to
+  re-fetch identical bytes; leaving the prior version preserves
+  cache validity. The smarter rule is "bump when CSS changes," not
+  "bump every release."
+
 ## [1.1.0] - 2026-05-24
 
 First feature drop after the v1.0 Foundation milestone. Three
@@ -1503,7 +1541,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.13.0...v1.0.0
 [0.13.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.12.0...v0.13.0
