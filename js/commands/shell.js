@@ -59,6 +59,7 @@ const HELP_SECTIONS = [
     "file *                     – identify all files at once",
     "strings <file>             – extract printable strings",
     "exif <file>                – read EXIF metadata",
+    "evtx [-id N] <file>        – Windows Event Log query (4624/4625/4688)",
     "sha256sum <file>           – print SHA-256 hash of a file",
     "md5sum <file>              – print MD5 hash of a file",
   ]},

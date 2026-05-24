@@ -66,6 +66,7 @@ async function termText(page) {
   check("help lists `jwt` (crypto)",        t.includes("jwt <token>"));
   check("help lists `sha256sum` (forensics)", t.includes("sha256sum <file>"));
   check("help lists `md5sum` (forensics)",  t.includes("md5sum <file>"));
+  check("help lists `evtx` (forensics)",    t.includes("evtx [-id N] <file>"));
 
   // Each new command with no args should print a usage string (or for
   // `ps`, a graceful empty-state). These calls happen from the lobby
@@ -79,6 +80,7 @@ async function termText(page) {
     ["jwt",          "Usage: jwt"],
     ["sha256sum",    "Usage: sha256sum"],
     ["md5sum",       "Usage: md5sum"],
+    ["evtx",         "Usage: evtx"],
     ["sherlock",     "Usage: sherlock"],
     ["hibp",         "Usage: hibp"],
     ["wayback",      "Usage: wayback"],
@@ -595,6 +597,94 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@forensics returns to lobby",                (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 1 — What the Logs Saw (forensics track, evtx) ──────────
+  // Wrong password first to confirm the gate works.
+  await typeAndEnter(page, "ssh level1@forensics");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "wrong-password");
+  await page.waitForTimeout(200);
+  t = await termText(page);
+  check("Wrong password on level1@forensics prints 'Permission denied'", t.includes("Permission denied, please try again."));
+
+  await typeAndEnter(page, "ssh level1@forensics");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "POL-IIS-2026-0007-handoff");
+  await page.waitForTimeout(600);
+  t = await termText(page);
+  check("Correct password connects to level1@forensics",              t.includes("Connected: level1@forensics"));
+  check("Prompt host stays 'forensics' on level1",                    (await page.locator("#prompt-host").innerText()) === "forensics");
+  check("Prompt user stays 'secops' on level1@forensics",             (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Objective references event-log triage",                      /event log/i.test(t) || /Security event/i.test(t));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "case-summary.txt", "Security.evtx", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  await typeAndEnter(page, "file Security.evtx");
+  t = await termText(page);
+  check("file Security.evtx identifies as Microsoft Windows Event Log", t.includes("Microsoft Windows Event Log"));
+
+  // evtx -h prints usage with the five common Security-channel IDs.
+  await typeAndEnter(page, "evtx -h");
+  t = await termText(page);
+  check("evtx -h prints usage with Event ID reference",               t.includes("4624") && t.includes("4625") && t.includes("4688"));
+
+  // Full dump confirms all 16 events parse cleanly.
+  await typeAndEnter(page, "evtx Security.evtx");
+  t = await termText(page);
+  check("evtx dump shows total event count of 16",                    t.includes("Total events: 16"));
+  check("evtx dump shows Reed's interactive logon (4624)",            t.includes("rconnolly"));
+  check("evtx dump shows the IR jumpbox source IP",                   t.includes("10.42.7.18"));
+
+  // Filter to 4625 — the smoking gun: one event, with the typed
+  // password leaked into TargetUserName.
+  await typeAndEnter(page, "evtx -id 4625 Security.evtx");
+  t = await termText(page);
+  check("evtx -id 4625 filters to a single match",                    t.includes("filtered to ID 4625: 1 match"));
+  check("4625 event reveals SubStatus 0xC0000064 (no such user)",     t.includes("0xC0000064"));
+  check("4625 TargetUserName field carries level2 breadcrumb cred",   t.includes("P0l4r1s-IR-L3ad-2026!"));
+
+  // Filter to 4688 — Reed's exfil chain (PowerShell + certutil + chrome).
+  await typeAndEnter(page, "evtx -id 4688 Security.evtx");
+  t = await termText(page);
+  check("4688 events include PowerShell Compress-Archive cmdline",    t.includes("Compress-Archive"));
+  check("4688 events include certutil -encode (LOLBin pattern)",      t.includes("certutil.exe -encode"));
+  check("4688 events include chrome upload to mega.nz",               t.includes("mega.nz/upload"));
+
+  // Filter to 4663 — Reed's CUI reads from D:\CUI\Subsystem-A\.
+  await typeAndEnter(page, "evtx -id 4663 Security.evtx");
+  t = await termText(page);
+  check("4663 events show Reed reading the CUI schematic",            t.includes("subsystem-a-schematics.pdf"));
+  check("4663 events show Reed reading the CUI BOM spreadsheet",      t.includes("subsystem-a-bom.xlsx"));
+
+  // Filter for a non-existent Event ID returns the empty-state message.
+  await typeAndEnter(page, "evtx -id 9999 Security.evtx");
+  t = await termText(page);
+  check("evtx -id 9999 returns graceful empty-state",                 t.includes("no events with Event ID 9999"));
+
+  await typeAndEnter(page, "cat case-summary.txt");
+  t = await termText(page);
+  check("case-summary.txt cites the FTK Imager acquisition tool",     t.includes("FTK Imager"));
+  check("case-summary.txt cites the EnCase E01 split image format",   t.includes("E01 split"));
+
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("lessons-learned.md cites CWE-532 (Sensitive Info in Log)",   t.includes("CWE-532"));
+  check("lessons-learned.md cites NIST SP 800-53 AU family",          t.includes("AU-2") || t.includes("AU-6"));
+  check("lessons-learned.md cites MITRE T1078 (Valid Accounts)",      t.includes("T1078"));
+  check("lessons-learned.md cites MITRE T1567.002 (Cloud Exfil)",     t.includes("T1567.002"));
+  check("lessons-learned.md cites the LOLBAS project",                t.includes("LOLBAS"));
+
+  await typeAndEnter(page, "whoami");
+  t = await termText(page);
+  check("whoami prints 'secops' on the forensics workstation",        /\bsecops\b/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level1@forensics returns to lobby",                (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   // ── Level 0 — Veridian's Open Letter (OSINT track) ──────────────
   // No password (level0 of each track is the entry point).
