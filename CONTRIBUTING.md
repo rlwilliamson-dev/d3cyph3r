@@ -1,0 +1,298 @@
+# Contributing to D3CYPH3R
+
+Thanks for the interest. D3CYPH3R is deliberately fork-friendly — pure
+static ES modules, no build step, MIT-licensed engine, and a content
+schema that's documented inline. This guide covers what you need to
+know to extend it: adding a level, adding a command, writing a
+walkthrough, or running the test harness.
+
+## Run it locally
+
+ES modules need an HTTP origin (opening `index.html` via `file://` won't
+work). From the repo root:
+
+```bash
+python3 -m http.server 8000
+# open http://localhost:8000
+```
+
+Any other static server works too — `npx serve`, `live-server`, Caddy.
+The app is desktop-only by design; mobile devices get a "device not
+supported" gate.
+
+To run the headless playtest:
+
+```bash
+cd tests
+npm install
+npx playwright install chromium    # first time only
+node playtest.cjs                   # against http://localhost:8000
+```
+
+CI runs this on every PR (`.github/workflows/azure-static-web-apps-*.yml`,
+the `playtest_job`). A red playtest blocks the Azure SWA deploy.
+
+## Read these first
+
+Two files carry the lore + content context every contributor needs:
+
+1. **[README.md](README.md)** — the file-structure map under "How
+   it's organized" + the per-track command inventory.
+2. **`levels/linux.js` header comment** — the canonical level schema
+   doc. Every level on every track follows this schema with optional
+   track-specific extensions (which are documented at the top of each
+   track's file — see `levels/forensics.js`, `levels/cloud.js`,
+   `levels/osint.js` for examples).
+
+Once you've read those, the section below covers everything you need
+to know about the engine itself.
+
+## Architecture in one screen
+
+**Lobby ↔ level model.** The entire game is a map of "levels" keyed
+by `"<user>@<host>"` strings (e.g. `"level0@linux"`,
+`"guest@d3cyph3r"`). `guest@d3cyph3r` is the lobby — the user lands
+there at boot and returns there between tracks. Switching levels is
+modelled as `ssh user@host` (see `js/engine/ssh.js`); levels with a
+`password` field gate entry behind a masked prompt.
+
+**Two parallel registries, both keyed by track.** Adding a track
+requires touching both:
+
+- **Level data**: `levels/<track>.js` exports a `<track>Levels`
+  object → imported and spread into `LEVELS` in `levels/index.js`.
+- **Commands**: `js/commands/<track>.js` exports a `<track>Commands`
+  object → imported and spread into `COMMANDS` in
+  `js/commands/index.js`.
+
+The lobby's track list (`js/engine/tracks.js`) is the third place —
+it's the canonical track registry that both the lobby and the
+"scaffolded but no levels yet" warm-message code read from.
+
+**Filesystem dual representation.** Level content lives as a nested
+tree under `level.fs` (dirs with `children`, files with `content`).
+At module init, `js/fs/flatten.js#initLevels` walks every level's
+`fs` tree and produces a flat `level.files` map
+(`"path/to/file": "contents"`, dirs as `"path/": null`). Most newer
+commands (`ls`, `cd`, `cat`) read the tree; legacy/cross-cutting
+commands (`grep`, `find`, `base64`, `xxd`, etc.) read the flat map.
+When adding new commands, prefer the tree via
+`getFSNode(level, pathParts)` for cwd-aware behavior; reach for
+`level.files` only when you genuinely need a flat enumeration.
+
+**Engine state lives in one module.** `js/engine/state.js` exports
+`currentLevelKey`, `currentPath`, `awaitingPassword` as live
+bindings, plus `setX` functions. ES module live bindings let
+importers *read* the current value, but only the owning module can
+reassign — so every write goes through a setter. Don't try to mutate
+these from outside the module.
+
+**Command dispatch.** `js/engine/execute.js` is the single
+dispatcher called per Enter press. Order:
+
+1. Echo the line.
+2. Password mode (route to `handlePasswordInput`).
+3. `ssh` (route to `handleSSH`).
+4. `COMMANDS[cmd]` lookup.
+5. "command not found."
+
+Each command handler has the signature
+`(level, arg) → { text, cls } | null`. Returning `null` suppresses
+output; otherwise the dispatcher prints with the given CSS class
+(`out`, `err`, `dim`, `warn`, `success`, `info`, `cmd`, `ascii`,
+`banner`).
+
+**Boot order matters.** `js/main.js` short-circuits on mobile
+*before* importing engine modules (dynamic `await import()`), so the
+engine never executes on mobile. On desktop the order is: command
+set → input handlers → clock → boot. `boot()` prints the fake
+kernel sequence and then `connectTo("guest@d3cyph3r")` drops the
+user into the lobby.
+
+**Per-track credential chain.** Every level leaks a credential that
+the next level in its track consumes as its entry gate (`password`
+field). The chain is intentional — a track feels like a continuous
+engagement rather than disconnected vignettes. No cross-track
+chains — `level0@network`'s credential doesn't gate `level1@web`,
+by design. Players can pick tracks in any order; chains are
+per-track only.
+
+**Walkthroughs subsite.** A separate static subsite under
+`/walkthroughs/` hosts long-form solve guides — one markdown file
+per shipped level. It's a self-contained reader
+(`walkthroughs/index.html` + `walkthrough.css` + `walkthrough.js`)
+using a vendored `marked.js` for rendering and hash-based routing
+(`#/track/levelN`). The `MANIFEST` constant in
+`walkthroughs/walkthrough.js` lists every available walkthrough;
+adding a new walkthrough means dropping the markdown file in the
+right path AND adding the entry to `MANIFEST`. The subsite is
+excluded from search-engine indexing via `robots.txt` and shares
+Azure Static Web Apps hosting with the main app (routes documented
+in `staticwebapp.config.json`).
+
+## How to add a new level to an existing track
+
+The minimum-viable level is a single object literal added to
+`levels/<track>.js`:
+
+```js
+"level2@linux": {
+  password: "the-credential-leaked-in-level1",  // null for level0s
+  track: "linux",
+  playerUser: "in-world-username",              // the prompt user shown
+  objective: "One-sentence description of the player's task.",
+  lesson:    "Multi-sentence intro shown on ssh-in. Sets the scene.",
+  fs: {
+    type: "dir",
+    children: {
+      "welcome.md":         { type: "file", content: "..." },
+      "engagement-notes.md":{ type: "file", content: "..." },
+      "lessons-learned.md": { type: "file", content: "..." },
+      // ...puzzle artifacts...
+    },
+  },
+},
+```
+
+The full schema is at the top of `levels/linux.js`. Key invariants:
+
+- `password` matches the credential leaked by the prior level in the
+  same track. The credential is the chain.
+- `track` must match an entry in `js/engine/tracks.js` (which the
+  lobby reads to decide which tracks to list).
+- The `fs.children` tree is the source of truth; the engine flattens
+  it to a `level.files` map at module init via `js/fs/flatten.js`.
+- `welcome.md` and `lessons-learned.md` follow a shared visual
+  template — box-drawing dividers (`─── HEADER ───`), no markdown
+  headers (`#` / `##` render as literal text in the terminal). Use
+  `level0@web` as the canonical reference.
+
+After adding the level, append a playtest block in
+`tests/playtest.cjs` covering the wrong-password gate, correct-password
+entry, expected files listed by `ls`, the puzzle steps, and the
+breadcrumb-extraction assertion. Pattern-match an existing
+level1 block.
+
+## How to add a new command
+
+Three places to touch:
+
+1. **Per-track command file** (`js/commands/<track>.js`) — add an
+   entry to the exported `<track>Commands` object with the signature
+   `(level, arg) => { text, cls } | null`. `text` is the output
+   string; `cls` is a CSS class (`out`, `err`, `dim`, `warn`,
+   `success`, `info`, `cmd`, `ascii`, `banner`). Returning `null`
+   suppresses output.
+
+2. **Help reference** (`js/commands/shell.js`) — add a line to the
+   appropriate track section of `HELP_SECTIONS`. The `help` command
+   reads from this list at runtime.
+
+3. **Playtest lobby usage probe** (`tests/playtest.cjs`) — add the
+   new command to the `usageProbes` array so the lobby smoke test
+   verifies it returns its usage string when called with no args.
+
+If the command reads per-level data, document the schema at the top
+of `levels/<track>.js` so the next person knows what to populate.
+Example: `levels/forensics.js` documents `evtxLogs`, `levels/osint.js`
+documents `github`, `levels/cloud.js` documents `postgres`.
+
+## How to add a new track
+
+Five places:
+
+1. `levels/<newtrack>.js` — exports `<newtrack>Levels` object.
+2. `levels/index.js` — import and spread into `LEVELS`.
+3. `js/commands/<newtrack>.js` — exports `<newtrack>Commands` object.
+4. `js/commands/index.js` — import and spread into `COMMANDS`.
+5. `js/engine/tracks.js` — add the track to the `tracks` array
+   (lobby uses this to decide which to list).
+
+The lobby auto-detects which tracks have at least one level and
+dims/hides the others, so the new track stays out of the lobby
+until you ship its first level. The `help` command will still list
+the new track's commands; sections without any level data render
+dimmed.
+
+## How to write a walkthrough
+
+Each shipped level has a long-form companion walkthrough under
+`walkthroughs/<track>/<level>.md`. Use any existing walkthrough as a
+template — they all follow the same 9-section structure:
+
+1. **§1 The setup** — narrative continuation from the prior level
+2. **§2 The solve** — step-by-step solution path
+3. **§3 The vulnerability** — vulnerability-class deep-dive
+4. **§4 Real-world parallels** — historical incidents that hit the
+   same pattern
+5. **§5 Frameworks that cover this** — NIST / SOC 2 / CIS / OWASP /
+   CWE / regulator-specific (HIPAA / GLBA / NAIC / NYDFS / FERPA /
+   CMMC / etc.)
+6. **§6 Where this shows up on certifications** — SANS GIAC / CompTIA
+   / ISC2 / EC-Council / vendor-specific
+7. **§7 What a defender should actually do** — remediation
+   prioritization
+8. **§8 Further reading** — curated link list with a "Last reviewed:
+   <Month Year>" footer
+9. **§9 Key takeaways** — bullet-list summary
+
+Target length: ~7,000-9,000 words. The §8 "Last reviewed" footer
+matters — it lets readers know when the citations were verified
+against the regulatory + tooling landscape (which drifts year over
+year).
+
+After writing the walkthrough, register it in
+`walkthroughs/walkthrough.js`'s `MANIFEST` constant with a track
+blurb + per-level title + summary. The walkthrough subsite reads from
+`MANIFEST` to render its index page.
+
+**Anti-spoiler rule:** walkthroughs are the *only* sanctioned
+destination for full solve paths and actual credential values. Never
+paste actual passwords, breadcrumb credentials, or API keys into
+CHANGELOG.md, README.md, PR descriptions, GitHub Release notes, or
+commit messages. Describe the mechanism, not the value.
+
+## Worldbuilding continuity
+
+All current levels are set at **Driftwood Systems**, a fictional
+mid-sized tech consulting firm (~600 consultants, ~80 client
+engagements). Recurring characters carry across levels (Priya is the
+Driftwood handler; Marcus, Theo, Carlos, Dana, Marisol, Jordan are
+client counterparts). Each track has a specific client + compliance
+regime:
+
+| Track | Client | Compliance |
+|---|---|---|
+| Linux | Halton Bank | GLBA |
+| Network | Atlas Health | HIPAA |
+| Crypto | Vesta Retail | PCI-DSS |
+| Web | Meridian State University | FERPA |
+| Forensics | Polaris Defense Systems | CMMC / NIST 800-171 |
+| OSINT | Veridian Analytics | HIPAA / HITRUST CSF |
+| Cloud | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
+
+When adding a new level, preserve the worldbuilding rather than
+introducing a generic scenario. The continuity is part of what makes
+the post-mortems land — the compliance regime is bound to the client.
+
+## Submitting changes
+
+This is a hobby project; there's no formal review process. If you're
+adding content (a new level, a new walkthrough, a content fix):
+
+1. Fork the repo.
+2. Branch off `main` with a descriptive name.
+3. Run the playtest locally and confirm it passes.
+4. Open a PR with a clear description of what changed and why.
+
+If you're adding engine surface (new commands, schema changes,
+infrastructure), match the conventions in the existing files — header
+comments, schema docs, playtest coverage, and the per-track
+registration pattern.
+
+## License
+
+MIT — see [LICENSE](LICENSE). All level content in this repo is
+original; the engine architecture is a refactor of
+[Shellscape](https://github.com/5H4RV1L/shellscape) by Sharvil
+Sagalgile (also MIT-licensed) and credits Shellscape in the README.

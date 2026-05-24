@@ -495,7 +495,10 @@ ongoing work with Meridian and not landing it.
     CWE-552  Files or Directories Accessible to External Parties
       — the underlying weakness: artifacts under DocumentRoot.
     CWE-200  Exposure of Sensitive Information to an Unauthorized
-      Actor — the student records.
+      Actor — the umbrella parent for the student records (note:
+      CWE-200 is mapping-Discouraged in current MITRE guidance;
+      cite the more specific CWE-548 / CWE-552 above for direct
+      mappings).
     CWE-798  Use of Hard-coded Credentials — the DB password in
       db-creds.txt.
 
@@ -518,8 +521,10 @@ ongoing work with Meridian and not landing it.
     named technique. Domain 2 (Reconnaissance and Enumeration) —
     web reconnaissance with gobuster / ffuf / dirb is on the exam.
 
-  CompTIA CySA+ (CS0-003)
-    Domain 2 — reconnaissance detection.
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 2 — reconnaissance
+    detection.
 
   CISSP
     Domain 3 (Security Architecture and Engineering) — secure
@@ -1185,11 +1190,13 @@ review.
     Domain 3 (Attacks and Exploits) — IDOR is in the named
     web-application-attack taxonomy.
 
-  CompTIA CySA+ (CS0-003)
-    Domain 2 (Threat Intelligence) — IDOR detection patterns
-    are part of the threat-hunting modules.
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 2 (Threat Intelligence)
+    — IDOR detection patterns are part of the threat-hunting
+    modules.
 
-  (ISC)² CISSP
+  ISC2 CISSP
     Domain 3 (Security Architecture and Engineering) — the
     authentication/authorization distinction is a CISSP
     fundamental.

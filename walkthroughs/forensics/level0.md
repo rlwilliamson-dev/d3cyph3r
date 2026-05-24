@@ -275,9 +275,9 @@ The 18 U.S.C. § 1832 citation in the in-game post-mortem is forward-looking: it
 
 Equal-depth coverage for the six certifications cited in the in-game post-mortem. The forensics track is unusual in that several certs are *whole-cert relevant* to this scenario — most notably the GIAC forensics family.
 
-### CompTIA CySA+ — current version CS0-003
+### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA's CySA+ is the analyst-track certification focused on threat-detection, vulnerability-management, and incident-response work. The current exam is **CS0-003** (launched June 2023); **CS0-004 is launching mid-2026**, so anyone reading this after June 2026 should check CompTIA's exam blueprint page for the current code. The forensics-track material maps to two domains.
+CompTIA's CySA+ is the analyst-track certification focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The forensics-track material maps to two domains.
 
 - **Domain 3 — Incident Response and Management.** Objective 3.2 covers incident-response procedures including chain of custody, evidence handling, and the analyst's role in the IR cycle. The Reed case is the textbook example of a CySA+ incident-response scenario.
 - **Domain 4 — Reporting and Communication.** Objective 4.1 covers technical communication for security incidents. The forensic-finding-as-written-report discipline lives here.

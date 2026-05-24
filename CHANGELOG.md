@@ -7,14 +7,147 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-05-24
+
+**The Foundation milestone.**
+
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT,
+Cloud) ship with level0 + level1 chains playable end-to-end. The
+per-track credential chain works on every track — each level1 is
+gated by a credential the player recovers during the corresponding
+level0, and every level1 in turn leaks a credential staged for the
+eventual level2. The minimum bar for a coherent v1.0 — a player can
+enter any of the seven engagement slots from the lobby and progress
+through at least two levels per track — is met.
+
+v1.0.0 itself is the dedicated polish release. No new gameplay this
+release; that's the v2.0 "Apprentice" milestone, which adds level2
+across the tracks. Instead, this release is a comprehensive audit,
+documentation, and contributor-accessibility pass to coronate the
+Foundation milestone moment.
+
+### Added
+
+- **`CONTRIBUTING.md`** — fork-friendly contributor guide with an
+  "Architecture in one screen" section covering the lobby↔level
+  model, parallel per-track registries, filesystem dual
+  representation, engine state and setters, command dispatch order,
+  boot order, the walkthroughs subsite, and the per-track
+  credential chain pattern. Includes how-to sections for adding a
+  level, command, track, or walkthrough.
+- **`SECURITY.md`** — vulnerability disclosure policy. Private
+  reports via GitHub's private vulnerability advisory feature;
+  public bug reports via the issue tracker. In-scope vs out-of-
+  scope clarified (in-game fictional infrastructure is explicitly
+  out of scope — it's all simulated).
+- **`404.html`** — themed custom 404 page wired through Azure SWA's
+  `responseOverrides` config. Offers "return to lobby" + "browse
+  walkthroughs" buttons. Catches stale deep-links and typos
+  cleanly rather than serving Azure's generic 404 — relevant now
+  that the walkthroughs subsite is publicly discoverable.
+- **`sitemap.xml`** — search-engine site index covering the main
+  site and the walkthroughs subsite. Referenced from `robots.txt`.
+- **Site footer** on both the main app and the walkthroughs
+  subsite — GitHub source link with the official mark, "Hosted on
+  Microsoft Azure" attribution, and MIT license badge. Players
+  who want the source can now reach it from the UI in one click;
+  previously the only path was typing `report` in the terminal.
+- **AI use disclosure** in README — Claude (Anthropic) was used
+  as a coding and writing assistant for code audits, automated
+  test playthroughs before each commit, walkthrough drafting,
+  and technical documentation. All level design (scenarios,
+  recurring characters, puzzle mechanics, narrative arcs, the
+  Driftwood Systems setting) is original to the project.
+- **"About this project" section** in README — educational-use
+  framing with explicit "don't apply these techniques against
+  systems you don't own or aren't authorized to test" guidance
+  citing CFAA and Computer Misuse Act jurisdictions.
+- **Educational disclaimer** in the walkthroughs subsite footer —
+  short version of the README disclaimer, catches readers who
+  land on a walkthrough deep-link without reading the README.
+- **Privacy note** in README — explicit statement that D3CYPH3R
+  uses `sessionStorage` for progress tracking only, with no
+  cookies, no analytics, no telemetry, and no third-party scripts.
+  Closing the tab clears state.
+- **Walkthroughs subsite is now publicly indexable.** The
+  `noindex,nofollow,noarchive` meta and `robots.txt` Disallow
+  line are removed. The in-page spoiler-warning callout at the
+  top of every walkthrough remains as the in-content guard
+  against accidental spoilers for players who haven't solved the
+  level yet.
+- **`responseOverrides` block** in `staticwebapp.config.json` to
+  wire the custom 404 page.
+
+### Changed
+
+- **Comprehensive cross-track standards-drift refresh** across all
+  seven level files. CompTIA CySA+ updated from CS0-003 to
+  "CS0-003 / CS0-004" with the early-2026 launch and June-2026
+  CS0-003 retirement context (10 occurrences across all tracks).
+  ISC2 citation standardized — dropped `(ISC)²` and `ISC²`
+  formats in favor of `ISC2` to reflect the org's late-2023
+  rebrand (6 occurrences). CWE-200 "mapping-Discouraged" caveat
+  added to 5 citations across level0/level1 files where the
+  Discouraged note was missing. AWS Security Specialty bumped
+  SCS-C02 → SCS-C03 (late-2025 / early-2026 release). Internal-
+  consistency cleanup on CIS AWS Foundations Benchmark v5.0.0 in
+  cloud/level0 (one residual v3 reference fixed). Internal-
+  consistency cleanup on NIST SP 800-171 §03.03 (Rev. 3) numbering
+  in forensics/level1. PCI-DSS bumped v4.0 → v4.0.1 in crypto/
+  level0 engagement notes. IBM Cost of a Data Breach citation
+  refreshed 2024 → 2025 in network/level0.
+- **Cross-track walkthrough audit** — 15 corrections applied
+  across 9 walkthrough files for standards, URL, and citation
+  drift, including intra-file contradictions caught during the
+  audit sweep.
+- **Code-comment pass for forker readability.** Eight thinly-
+  commented source files thickened with header comments
+  documenting the module's schema field dependencies, function
+  docstrings, and WHY-comments for subtle behavior. Coverage
+  includes the cwd-aware command resolution helper, the dual
+  fs-tree-vs-flat-files representation invariant, and the
+  cursor-mirror trick that gives the terminal its custom-font
+  blinking cursor. `index.html` and `style.css` now carry full
+  top-of-file documentation for the DOM contract and the
+  palette / semantic-class system.
+- **README rewrite** — full file-tree under "How it's organized"
+  (corrects the prior stale tree, adds the new top-level files),
+  expanded "What you can do today" listing all 7 tracks, new
+  dedicated Walkthroughs section now that the subsite is public.
+- **`robots.txt`** updated — removed the `/walkthroughs/`
+  Disallow line, added a Sitemap reference.
+- **CHANGELOG / `shell.js` / `version.js`** — removed references
+  to local-only files (maintainer cheat sheets and AI memory
+  files) that forkers wouldn't have, so the public-facing
+  surface doesn't point at files that don't exist in a clean
+  checkout.
+- **`version.js` release checklist** simplified and rewritten so
+  it reads cleanly without requiring local-only context. The
+  anti-spoiler rule and the link-audit requirement are
+  preserved.
+
+### Fixed
+
+- Two stale "CRT terminal theme" references in README updated to
+  "Dark terminal theme" — the visual moved off the CRT aesthetic
+  some releases ago and the README description hadn't been
+  refreshed.
+- Walkthroughs subsite footer updated — replaced the stale
+  "Hidden pre-v1.0 — do not share the URL" copy with the new
+  educational disclaimer + source/hosting footer.
+- `walkthroughs/README.md` author guide updated — removed
+  "hidden behind URL obscurity until v1.0 ships" and "secret
+  pre-v1.0" framing now that the subsite is public.
+
 ## [0.13.0] - 2026-05-24
 
 The sixth level1 in six releases, and the last v1.0 "Foundation"
 level. **All seven tracks (Linux, Network, Crypto, Web, Forensics,
-OSINT, Cloud) now have level0 + level1 chains.** The v1.0 milestone
-criterion per CLAUDE.md — "every track has at least level0 AND
-level1 playable" — is technically met with this release; the actual
-v1.0.0 tag is held for a separate dedicated release.
+OSINT, Cloud) now have level0 + level1 chains.** The v1.0
+"Foundation" milestone criterion — "every track has at least
+level0 AND level1 playable" — is technically met with this
+release; the actual v1.0.0 tag is held for a separate dedicated
+release.
 
 Introduces one new engine command — `psql` — a minimal PostgreSQL
 client (`\l`, `\dt`, SELECT with optional LIMIT) for RDS-adjacent
@@ -613,16 +746,16 @@ This is exactly why the audit step exists.
 
 ### Changed (milestone definitions)
 
-- **CLAUDE.md milestone names section updated.** The v1.0.0
-  "Foundation" milestone now explicitly requires every track to
-  have at least level0 AND level1 playable, not just the Linux
-  track. The earlier track-specific milestone framing
-  ("v1.0 = Linux complete; v2.0 = Network + Crypto complete";
-  etc.) was abandoned once it became clear that shipping all 7
-  track level0s before any track's level1 produces a much more
+- **Milestone-name definitions updated.** The v1.0.0 "Foundation"
+  milestone now explicitly requires every track to have at least
+  level0 AND level1 playable, not just the Linux track. The
+  earlier track-specific milestone framing ("v1.0 = Linux
+  complete; v2.0 = Network + Crypto complete"; etc.) was
+  abandoned once it became clear that shipping all 7 track
+  level0s before any track's level1 produces a much more
   compelling pre-v1.0 product than building any single track
-  deep first. The level-depth-per-track approach is now
-  documented in the file.
+  deep first. The level-depth-per-track approach now drives the
+  release plan.
 
 ## [0.7.5] - 2026-05-23
 
@@ -955,7 +1088,7 @@ a handful of cross-cutting utility commands (`head`, `tail`, `stat`,
 `ps`, `diff`, `sha256sum`, `md5sum`, `jwt`) that will be useful across
 the rest of the existing tracks.
 
-This release also clarifies the bump rules in CLAUDE.md: MINOR now
+This release also clarifies the versioning policy: MINOR now
 explicitly covers "new engine surface that meaningfully expands
 player-callable commands or per-level schema fields," not just new
 levels. Engine-surface expansion is a real category that the rules
@@ -1309,7 +1442,14 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.13.0...v1.0.0
+[0.13.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.7...v0.8.0
 [0.7.7]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v0.7.4...v0.7.5

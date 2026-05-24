@@ -1497,9 +1497,10 @@ in §X."
 
   CMMC Level 2 (DoD CIO, finalized 2024)
     Domain AU — Audit and Accountability practices map 1:1
-    to NIST 800-171 §3.3. Polaris's CMMC posture is what
-    funds the SOC capacity that runs these audits in the
-    first place.
+    to NIST 800-171 §03.03 (Rev. 3 numbering; §3.3 in the
+    Rev. 2 form CMMC tooling still surfaces alongside the
+    update). Polaris's CMMC posture is what funds the SOC
+    capacity that runs these audits in the first place.
 
   CIS Critical Security Controls v8.1
     Control 8  Audit Log Management — the whole control.

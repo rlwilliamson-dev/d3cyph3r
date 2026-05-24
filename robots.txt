@@ -1,9 +1,13 @@
 # D3CYPH3R — robots policy.
 #
-# The main site is indexable. The /walkthroughs/ subsite is a hidden
-# study companion not yet meant for public discovery; keep it out of
-# search engines until v1.0 launch flips the reveal.
+# Both the main site and the /walkthroughs/ subsite are indexable as
+# of v1.0. The walkthroughs subsite is intentionally discoverable —
+# search-engine traffic finding the material is desired behavior, and
+# the spoiler-warning callout at the top of each walkthrough guards
+# against accidental spoilers for players who haven't solved the
+# level yet.
 
 User-agent: *
 Allow: /
-Disallow: /walkthroughs/
+
+Sitemap: https://www.d3cyph3r.com/sitemap.xml

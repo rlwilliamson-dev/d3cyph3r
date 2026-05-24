@@ -106,7 +106,7 @@ Engagement: ~9 months, ongoing
 Driftwood handler: Priya
 Client counterparts: Theo (backend engineer, ~18 months at Vesta)
                      Saanvi (CTO)
-Compliance regime: PCI-DSS v4.0. Vesta is a Level 2 merchant
+Compliance regime: PCI-DSS v4.0.1. Vesta is a Level 2 merchant
                    (1M-6M transactions/year, scaled up from
                    Level 3 in 2024). Annual Self-Assessment
                    Questionnaire (SAQ D); QSA on-site review
@@ -316,10 +316,12 @@ than to add a finding to a remediation plan.
     including the distinction between encoding, encryption, and
     hashing. Tested directly.
 
-  CompTIA CySA+ (CS0-003)
-    Domain 1 — credential exposure patterns.
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 1 — credential exposure
+    patterns.
 
-  (ISC)² CC / SSCP
+  ISC2 CC / SSCP
     Domain 5 (Cryptography) — encoding vs encryption is a
     foundational distinction.
 
@@ -776,15 +778,17 @@ tomorrow.
     primitives and their failure modes. JWT-specific
     examples appear in the secure-coding sub-domain.
 
-  CompTIA CySA+ (CS0-003)
-    Domain 2 (Threat Intelligence) — algorithm-confusion
-    attacks are in the catalog of techniques covered.
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 2 (Threat Intelligence)
+    — algorithm-confusion attacks are in the catalog of
+    techniques covered.
 
   CompTIA PenTest+ (PT0-003)
     Domain 3 (Vulnerability Discovery and Analysis) — JWT
     misconfigurations are a directly-named test target.
 
-  (ISC)² CISSP
+  ISC2 CISSP
     Domain 3 (Security Architecture and Engineering) —
     digital signatures and the verifier's responsibility
     to enforce algorithm constraints.

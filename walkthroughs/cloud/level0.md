@@ -405,9 +405,9 @@ The Coverline finding implicates (c) specifically — the bucket exposed NPI wit
 
 Equal-depth coverage for the twelve cert families cited in the in-game post-mortem. Cloud touches more certs than any other track because the cloud-security cert market has fragmented across vendor-specific (AWS, Azure, GCP), vendor-neutral (CCSP, CCSK), pentest-oriented (GCPN, OSCP), and traditional-track (Security+, CySA+, CISSP) lines.
 
-### AWS Certified Security – Specialty — current exam code SCS-C02
+### AWS Certified Security – Specialty — current exam code SCS-C03
 
-The AWS Security Specialty cert is the AWS ecosystem's flagship security certification. The current exam is **SCS-C02** (in market since July 2023; superseded SCS-C01). The Coverline finding maps directly to two domains.
+The AWS Security Specialty cert is the AWS ecosystem's flagship security certification. AWS released **SCS-C03** in late 2025 / early 2026 as the successor to SCS-C02 (which had been in market since July 2023, itself superseding SCS-C01). The Coverline finding maps directly to two domains.
 
 - **Domain 1 — Threat Detection and Incident Response.** Includes the AWS Config / Macie / GuardDuty / Security Hub detection layer that would have caught the bucket misconfiguration before the audit walk.
 - **Domain 4 — Identity and Access Management.** Bucket policies, the Public Access Block, IAM-based access control to S3.
@@ -437,9 +437,9 @@ Security+ SY0-701 (current; superseded SY0-601 November 2023, SY0-601 retired Ju
 
 - **Domain 4 — Security Operations.** Cloud-security baseline including misconfigurations, MFA enforcement, audit logging.
 
-### CompTIA CySA+ — current exam code CS0-003
+### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA CySA+ CS0-003 (current as of May 2026; CS0-004 launching mid-2026). The cloud track maps to:
+CompTIA CySA+ — CS0-003 is the legacy exam revision (in market since June 2023), and **CS0-004 launched in early 2026 for parallel availability**; CS0-003 retires June 2026, so by the time anyone reads this much past the review date, CS0-004 will be the only sittable version. The cloud track maps to:
 
 - **Domain 1 — Security Operations.** Cloud-misconfiguration detection and response.
 
@@ -559,7 +559,7 @@ The rule, fed into Coverline's SIEM, would alert on the next attempt to create a
 - [CWE-285 — Improper Authorization](https://cwe.mitre.org/data/definitions/285.html)
 - [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html)
 - [CWE-540 — Inclusion of Sensitive Information in Source Code](https://cwe.mitre.org/data/definitions/540.html)
-- [NAIC Insurance Data Security Model Law (#668)](https://content.naic.org/sites/default/files/inline-files/MDL-668.pdf)
+- [NAIC Insurance Data Security Model Law (#668)](https://content.naic.org/sites/default/files/model-law-668.pdf)
 - [NYDFS 23 NYCRR 500 — Cybersecurity Requirements (2017, amended November 2023)](https://www.dfs.ny.gov/industry_guidance/cybersecurity)
 - [GLBA Safeguards Rule — 16 CFR Part 314](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
 - [MITRE ATT&CK — T1530: Data from Cloud Storage Object](https://attack.mitre.org/techniques/T1530/)

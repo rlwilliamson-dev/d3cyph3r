@@ -212,8 +212,9 @@ For a healthcare org specifically, "when" answers in two ways:
   1. Patient data on the wire. PHI is a high-value target for
      extortion and resale. Healthcare breaches command the
      highest per-record costs in industry-wide breach reports
-     ($408/record vs $165 cross-industry, IBM Cost of a Data
-     Breach 2024).
+     ($408/record vs $165 cross-industry baseline, IBM Cost
+     of a Data Breach 2025; healthcare remains the highest-
+     cost industry per the report's 2025 edition).
   2. HITECH notification timing. Atlas would have ~60 days from
      discovery to notify affected individuals, with reporting to
      HHS Office for Civil Rights, and — for breaches affecting
@@ -277,7 +278,10 @@ Marcus — the conversation goes better when there's no surprise.
 
   CWE
     CWE-200 Exposure of Sensitive Information to an
-      Unauthorized Actor — the database itself.
+      Unauthorized Actor — the umbrella parent for the
+      database exposure (note: CWE-200 is mapping-Discouraged
+      in current MITRE guidance; cite the more specific
+      CWE-668 / CWE-1392 below for direct mappings).
     CWE-668 Exposure of Resource to Wrong Sphere — the network
       perimeter mistake.
     CWE-1392 Use of Default Credentials — the unrotated
@@ -293,9 +297,11 @@ Marcus — the conversation goes better when there's no surprise.
     Domain 4 (Security Operations) — vulnerability scanning,
     network reconnaissance tools. nmap is named directly.
 
-  CompTIA CySA+ (CS0-003)
-    Domain 2 (Threat Intelligence & Threat Hunting) — active
-    recon. Domain 1 (Security Operations) — perimeter monitoring.
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 2 (Threat Intelligence
+    & Threat Hunting) — active recon. Domain 1 (Security
+    Operations) — perimeter monitoring.
 
   CompTIA PenTest+ (PT0-003)
     Domain 2 (Reconnaissance and Enumeration).
@@ -755,10 +761,12 @@ the next quarterly review. Priya is already drafting.
     DNS hardening. Domain 3 (Security Architecture) — secure
     network services.
 
-  CompTIA CySA+ (CS0-003)
-    Domain 2 (Threat Intelligence & Threat Hunting) — covers
-    the "what does the adversary see from outside?" question
-    that AXFR answers in one query.
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    CS0-004 launched in early 2026 for parallel availability;
+    CS0-003 retires June 2026. Domain 2 (Threat Intelligence
+    & Threat Hunting) — covers the "what does the adversary
+    see from outside?" question that AXFR answers in one
+    query.
 
   CompTIA PenTest+ (PT0-003)
     Domain 2 (Reconnaissance and Enumeration) — DNS enumeration

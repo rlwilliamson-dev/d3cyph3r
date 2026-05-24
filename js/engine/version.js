@@ -1,4 +1,5 @@
 // Canonical version source. Bump VERSION on release, then:
+//
 //   1. Update CHANGELOG.md ([Unreleased] → [<VERSION>] - <date>);
 //      add a new empty [Unreleased] section; update the comparison
 //      links at the bottom.
@@ -8,22 +9,16 @@
 //      the mechanism ("the credential leaked in `db-creds.txt`",
 //      "the password recovered from the LinkedIn 2012 corpus") — not
 //      the value. The public-facing changelog should be readable by
-//      a future player without burning the puzzle. The canonical
-//      registry of actual passwords lives in the local
-//      PASSWORDS.md cheat sheet (gitignored) and in the
-//      `feedback-level-credential-chain.md` memory.
+//      a future player without burning the puzzle.
+//
 //   2. Update README.md's "This is **vX.Y** — ..." line in the intro
 //      with the new version and a one-clause summary of what changed
 //      for users (new level count, new commands, etc.). Same anti-
 //      spoiler rule applies — no passwords in the README.
-//   3. Review the local PASSWORDS.md cheat sheet (gitignored, repo
-//      root) and update any rows that changed in this release —
-//      e.g. a new credential breadcrumb shipped, a level1 actually
-//      built, or a "(Track not built)" note flipping to "Engine ready"
-//      because the commands shipped for a scaffolded track.
-//   4. Author the level walkthrough at
+//
+//   3. Author the level walkthrough at
 //      walkthroughs/<track>/<level>.md. Use level0@linux's walkthrough
-//      as the template (10 sections, 6000-8000 words). Update the
+//      as the template (9 sections, 7000-9000 words). Update the
 //      MANIFEST in walkthroughs/walkthrough.js so the index lists it.
 //      Soft gate: the walkthrough MAY ship in a follow-up PR if the
 //      writing slows the level merge — but the level isn't considered
@@ -33,11 +28,11 @@
 //      intended destination for full solve paths and credentials;
 //      spoilers belong there. Authors should still avoid copy-pasting
 //      passwords into anything outside walkthroughs/.
+//
 //      LINK-AUDIT REQUIREMENT (pre-merge, every walkthrough PR —
 //      including small content edits to an existing walkthrough):
-//        a. Delegate a research agent (general-purpose Agent tool +
-//           WebFetch/WebSearch) to audit BOTH:
-//             - The walkthrough's §9 Further Reading URLs and the
+//        a. Audit BOTH:
+//             - The walkthrough's §8 Further Reading URLs and the
 //               version-specific claims in §5 and §6 (cert versions,
 //               framework revisions, regulation citation IDs, breach
 //               incident figures, historical-case dates).
@@ -54,11 +49,11 @@
 //           corrections over time (McAfee 2012, BTK 2005).
 //        b. Apply the corrections to both files. The audience
 //           differs — walkthroughs can carry MITRE meta-taxonomy
-//           caveats (e.g., "CWE-668 is Discouraged for mapping")
+//           caveats (e.g., "CWE-200 is Discouraged for mapping")
 //           that would be noise in the player-facing post-mortem,
 //           so use judgment on which annotations belong where.
 //        c. Bump the "Last reviewed: <Month Year>" line at the top
-//           of §9 to the current month.
+//           of §8 to the current month.
 //        d. The audit report goes in the PR description so the
 //           review trail is preserved.
 //        Soft cross-track sweep: if the audit surfaces a finding
@@ -66,15 +61,16 @@
 //        OWASP-edition shift affecting six tracks at once), do a
 //        cross-track sweep in the same PR rather than tracking
 //        per-track follow-ups.
-//   5. Merge the release commit.
-//   6. Tag v<VERSION> on the merge commit (annotated tag).
-//   7. gh release create v<VERSION> with notes pulled from CHANGELOG.
+//
+//   4. Merge the release commit.
+//   5. Tag v<VERSION> on the merge commit (annotated tag).
+//   6. gh release create v<VERSION> with notes pulled from CHANGELOG.
 //      The release notes inherit the anti-spoiler rule from step 1.
 //
 // VERSION is the full semver string (used by tooling and the tag).
 // VERSION_DISPLAY is the player-visible form shown in the topbar
-// and lobby tagline — full semver with a leading "v" (e.g. "v0.7.5").
+// and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "0.13.0";
+export const VERSION = "1.0.0";
 
 export const VERSION_DISPLAY = "v" + VERSION;

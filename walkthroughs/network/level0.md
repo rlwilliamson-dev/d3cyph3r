@@ -258,9 +258,9 @@ Security+ is the entry-level certification most commonly required for DoD 8570/8
 
 The trap is A — rotating the credential is necessary but does not address the *primary* issue (the exposure itself). C is operationally inappropriate (penetration testing is for confirmation after exposure is closed, not before). D is documentation-of-failure, which is the wrong direction. **B** is the correct answer: closing the perimeter is the primary remediation, and the credential rotation (A) is a necessary secondary remediation. Security+ is comfortable with "the question has two reasonable answers, pick the one that addresses the *primary* root cause."
 
-### CompTIA CySA+ — current version CS0-003
+### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA's CySA+ (Cybersecurity Analyst) is the analyst-track cert, focused on threat-detection, vulnerability-management, and incident-response work. The current exam is **CS0-003** (in market since June 2023; CS0-004 is expected to supersede it around mid-2026 — anyone starting a study plan today should check CompTIA's exam blueprint page first). Atlas Health's material maps to two domains.
+CompTIA's CySA+ (Cybersecurity Analyst) is the analyst-track cert, focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. Atlas Health's material maps to two domains.
 
 - **Domain 1 — Security Operations.** Objective 1.4 covers vulnerability scanning interpretation, including nmap output, Nessus output, and the workflow for prioritizing findings. Objective 1.6 covers active and passive reconnaissance — Driftwood's quarterly verification is exactly the activity this objective tests.
 - **Domain 2 — Threat Intelligence and Threat Hunting.** Objective 2.2 covers threat-intelligence sources, including Shodan and Censys (the tools an attacker would use to find Atlas Health's exposed postgres before Driftwood's check found it).
