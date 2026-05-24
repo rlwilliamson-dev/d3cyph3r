@@ -67,6 +67,7 @@ async function termText(page) {
   check("help lists `sha256sum` (forensics)", t.includes("sha256sum <file>"));
   check("help lists `md5sum` (forensics)",  t.includes("md5sum <file>"));
   check("help lists `evtx` (forensics)",    t.includes("evtx [-id N] <file>"));
+  check("help lists `github` (osint)",      t.includes("github <user>[/repo]"));
 
   // Each new command with no args should print a usage string (or for
   // `ps`, a graceful empty-state). These calls happen from the lobby
@@ -81,6 +82,7 @@ async function termText(page) {
     ["sha256sum",    "Usage: sha256sum"],
     ["md5sum",       "Usage: md5sum"],
     ["evtx",         "Usage: evtx"],
+    ["github",       "Usage: github"],
     ["sherlock",     "Usage: sherlock"],
     ["hibp",         "Usage: hibp"],
     ["wayback",      "Usage: wayback"],
@@ -741,6 +743,109 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@osint returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
+  // ── Level 1 — Aaron's Weekend Project (osint, github OSINT) ──────
+  // Wrong password first to confirm the gate works.
+  await typeAndEnter(page, "ssh level1@osint");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "wrong-password");
+  await page.waitForTimeout(200);
+  t = await termText(page);
+  check("Wrong password on level1@osint prints 'Permission denied'",  t.includes("Permission denied, please try again."));
+
+  await typeAndEnter(page, "ssh level1@osint");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "BostonStrong#2013");
+  await page.waitForTimeout(600);
+  t = await termText(page);
+  check("Correct password connects to level1@osint",                  t.includes("Connected: level1@osint"));
+  check("Prompt host stays 'osint' on level1",                        (await page.locator("#prompt-host").innerText()) === "osint");
+  check("Prompt user stays 'intel' on level1@osint",                  (await page.locator("#prompt-user").innerText()) === "intel");
+  check("Objective references the developer footprint task",          /developer footprint/i.test(t) || /github/i.test(t));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "engagement-notes.md", "subject-update.txt", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  // sherlock confirms Aaron's GitHub handle is reachable.
+  await typeAndEnter(page, "sherlock aaron-hines-md");
+  t = await termText(page);
+  check("sherlock shows Aaron's GitHub profile URL",                  t.includes("github.com/aaron-hines-md"));
+  check("sherlock shows Aaron's Strava profile URL",                  t.includes("strava.com/athletes/aaron-hines-md"));
+
+  // github -h prints usage with all three forms.
+  await typeAndEnter(page, "github -h");
+  t = await termText(page);
+  check("github -h prints usage with all three forms",                t.includes("github <user>") && t.includes("file <path>"));
+
+  // github profile lookup — 4 public repos.
+  await typeAndEnter(page, "github aaron-hines-md");
+  t = await termText(page);
+  check("github profile shows Aaron's name",                          t.includes("Aaron Hines, MD"));
+  check("github profile shows Boston location",                       t.includes("Boston, MA"));
+  check("github profile lists personal-pgx-tool repo",                t.includes("personal-pgx-tool"));
+  check("github profile lists marathon-pacer-log decoy",              t.includes("marathon-pacer-log"));
+  check("github profile lists pgx-residency-notes decoy",             t.includes("pgx-residency-notes"));
+  check("github profile lists dotfiles decoy",                        t.includes("dotfiles"));
+
+  // github repo metadata + file tree — .env visible in spite of being gitignored.
+  await typeAndEnter(page, "github aaron-hines-md/personal-pgx-tool");
+  t = await termText(page);
+  check("github repo metadata shows MIT license",                     t.includes("License: MIT"));
+  check("github repo file tree includes .env (committed before .gitignore)", t.includes(".env"));
+  check("github repo file tree includes app.py",                      t.includes("app.py"));
+  check("github repo file tree includes src/pgx_lookup.py",           t.includes("src/pgx_lookup.py"));
+
+  // The smoking gun — .env contents include the AWS secret.
+  await typeAndEnter(page, "github aaron-hines-md/personal-pgx-tool file .env");
+  t = await termText(page);
+  check(".env shows the OpenFDA personal API key",                    t.includes("OPENFDA_API_KEY=oFDA-aaron-personal-2023"));
+  check(".env shows the AWS_ACCESS_KEY_ID",                           t.includes("AWS_ACCESS_KEY_ID=AKIAVDS3IAARONHINES23"));
+  check(".env reveals the level2 breadcrumb (AWS secret)",            t.includes("AaronHinesMD/Pers0nal+AWS/2024+BrightBlu"));
+  check(".env shows the S3 cache bucket name",                        t.includes("ahines-pgx-cache"));
+
+  // .gitignore listing .env is the ironic detail (drives the lesson).
+  await typeAndEnter(page, "github aaron-hines-md/personal-pgx-tool file .gitignore");
+  t = await termText(page);
+  check(".gitignore lists .env (added AFTER the first commit)",       /^\.env$/m.test(t));
+
+  // Read a decoy repo to confirm those are also enumerable but innocuous.
+  await typeAndEnter(page, "github aaron-hines-md/marathon-pacer-log file README.md");
+  t = await termText(page);
+  check("marathon-pacer-log README mentions Boston Marathon",         t.includes("Boston Marathon"));
+
+  // Unknown user / repo / file return graceful error messages.
+  await typeAndEnter(page, "github nonexistent-user");
+  t = await termText(page);
+  check("github on unknown user returns graceful 'no profile' error", t.includes("no GitHub profile for 'nonexistent-user'"));
+
+  await typeAndEnter(page, "github aaron-hines-md/nonexistent-repo");
+  t = await termText(page);
+  check("github on unknown repo returns graceful 'not found' error",  t.includes("repository 'aaron-hines-md/nonexistent-repo' not found"));
+
+  await typeAndEnter(page, "github aaron-hines-md/personal-pgx-tool file nonexistent.py");
+  t = await termText(page);
+  check("github file on unknown path returns graceful 'not found' error", t.includes("file 'nonexistent.py' not found"));
+
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("lessons-learned.md cites CWE-798 (Hard-Coded Credentials)",  t.includes("CWE-798"));
+  check("lessons-learned.md cites CWE-540 (Sensitive Info in Source)",t.includes("CWE-540"));
+  check("lessons-learned.md cites NIST SP 800-218 SSDF",              t.includes("800-218"));
+  check("lessons-learned.md cites MITRE T1593.003 (Code Repositories)", t.includes("T1593.003"));
+  check("lessons-learned.md cites MITRE T1552.001 (Credentials In Files)", t.includes("T1552.001"));
+  check("lessons-learned.md cites TruffleHog (defender tooling)",     t.includes("TruffleHog"));
+  check("lessons-learned.md cites GitHub Secret Scanning",            t.includes("Secret Scanning"));
+
+  await typeAndEnter(page, "whoami");
+  t = await termText(page);
+  check("whoami prints 'intel' on the OSINT workstation",             /\bintel\b/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level1@osint returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
   // ── Level 0 — Coverline's Twelfth Bucket (cloud track) ──────────
   // No password (level0 of each track is the entry point).
