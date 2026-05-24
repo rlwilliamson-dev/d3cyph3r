@@ -380,6 +380,59 @@ async function termText(page) {
   await page.waitForTimeout(500);
   check("exit from level0@crypto returns to lobby",                   (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
+  // ── Level 1 — Theo's Signature That Wasn't (crypto track) ────────
+  // Wrong password first to confirm the gate works.
+  await typeAndEnter(page, "ssh level1@crypto");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "wrong-password");
+  await page.waitForTimeout(200);
+  t = await termText(page);
+  check("Wrong password on level1@crypto prints 'Permission denied'", t.includes("Permission denied, please try again."));
+
+  await typeAndEnter(page, "ssh level1@crypto");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3");
+  await page.waitForTimeout(600);
+  t = await termText(page);
+  check("Correct password connects to level1@crypto",                 t.includes("Connected: level1@crypto"));
+  check("Prompt host stays 'crypto' on level1",                       (await page.locator("#prompt-host").innerText()) === "crypto");
+  check("Prompt user shows in-world identity 'vesta-deploy'",         (await page.locator("#prompt-user").innerText()) === "vesta-deploy");
+  check("Objective references Vesta admin API JWT auth",              t.includes("JWT") || t.includes("token"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "priya-note.md", "verify-middleware.js", "admin-access.log", "lessons-learned.md"]) {
+    check(`ls shows ${f}`, t.includes(f));
+  }
+
+  // Extract the JWT from the log and decode it via the jwt command.
+  await typeAndEnter(page, "cat admin-access.log");
+  t = await termText(page);
+  check("admin-access.log carries the alg:none JWT header",           t.includes("eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0"));
+
+  // The full JWT is long; the test injects it directly rather than
+  // copy-pasting from the rendered terminal output.
+  const algNoneJwt = "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJ2ZXN0YS1hZG1pbi1zdmMiLCJzdWIiOiJhZG1pbi1zdmMtZGVwbG95IiwiYXVkIjoidmVzdGEtYWRtaW4tYXBpIiwiaWF0IjoxNzc1NzIyNDQwLCJleHAiOjIwOTEzNDE2NDAsInJvbGUiOiJhZG1pbiIsInNjb3BlIjoiKiIsImFjdG9yIjoidGhlb0B2ZXN0YS5leGFtcGxlIiwiaGFuZG9mZl90b2tlbiI6InZlc3RhLWFkbWluLWhhbmRvZmYtMjAyNiJ9.";
+  await typeAndEnter(page, "jwt " + algNoneJwt);
+  t = await termText(page);
+  check("jwt decoder prints the alg:none red flag",                   t.includes("alg: 'none'") || t.includes('alg: "none"'));
+  check("jwt decoder flags the empty signature",                      t.includes("Signature is empty"));
+  check("jwt decoded payload reveals the level2 breadcrumb",          t.includes("vesta-admin-handoff-2026"));
+  check("jwt decoded payload shows role=admin claim",                 t.includes("\"role\": \"admin\""));
+
+  await typeAndEnter(page, "cat verify-middleware.js");
+  t = await termText(page);
+  check("verify-middleware.js shows jwt.verify without algorithms whitelist",
+        /jwt\.verify\(token,\s*SIGNING_SECRET\)/.test(t));
+
+  await typeAndEnter(page, "whoami");
+  t = await termText(page);
+  check("whoami prints 'vesta-deploy' on Vesta's deploy host",        /\bvesta-deploy\b/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("exit from level1@crypto returns to lobby",                   (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+
   // ── Level 0 — Meridian's Forgotten Backup Folder (web track) ────
   // No password (level0 of each track is the entry point).
   await typeAndEnter(page, "ssh level0@web");

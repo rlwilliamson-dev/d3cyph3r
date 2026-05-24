@@ -71,7 +71,8 @@ const MANIFEST = {
   crypto: {
     title: "Crypto",
     blurb:
-      "Encoding ≠ encryption. Client: Vesta Retail — PCI-DSS.",
+      "Encoding ≠ encryption, and signing ≠ verifying. " +
+      "Client: Vesta Retail — PCI-DSS.",
     levels: {
       level0: {
         title: "Theo's Safer API Key",
@@ -79,6 +80,15 @@ const MANIFEST = {
           "Pre-PCI-DSS-audit review at a retailer. A junior engineer " +
           "base64-encoded a payment-processor API key and called it " +
           "protection. base64 is not protection.",
+      },
+      level1: {
+        title: "Theo's Signature That Wasn't",
+        blurb:
+          "Day two. Same engineer shipped a homegrown JWT auth for " +
+          "Vesta's internal admin API — verify-middleware calls " +
+          "jwt.verify without an algorithms whitelist. Tokens with " +
+          "alg:none get accepted. CWE-347 + CWE-532 for the secrets " +
+          "in the debug log.",
       },
     },
   },
