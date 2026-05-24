@@ -232,13 +232,46 @@ body.light .theme-toggle .theme-icon-sun  { display: block; }
 
 /* Glyph color palette — saturated ANSI console colors, deliberately
    bolder than the GitHub-Dark --green/--cyan/etc the rest of the UI
-   uses. Only applies to the logo wordmark. */
+   uses. Only applies to the logo wordmark. (Legacy mixed-color
+   variants — current logo uses the brightness-cascade classes below
+   instead, but these are kept available for future logo experiments.) */
 .glyph-white             { color: #ffffff; }
 .glyph-green             { color: #00ff00; }
 .glyph-cyan              { color: #00ffff; }
 .glyph-accent            { color: #5b8fff; }
 .glyph-yellow            { color: #ffff00; }
 .glyph-red               { color: #cc0000; }
+
+/* Brightness-cascade palette — the current logo style. Each character
+   in the wordmark is one of three brightness levels (bright/mid/dim)
+   creating a "decoded message" cadence. Theme-flippable via CSS vars
+   so the cascade reads correctly in both dark and light modes (dark:
+   white→light-gray→mid-gray; light: black→dark-gray→medium-gray).
+   The bracket sits between the dim and mid range — a frame, not a
+   wordmark character. */
+:root {
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #c9d1d9;
+  --glyph-dim:     #6e7681;
+  --glyph-bracket: #6e7681;
+}
+body.light {
+  --glyph-bright:  #000000;
+  --glyph-mid:     #444444;
+  --glyph-dim:     #99a0aa;
+  --glyph-bracket: #888e9a;
+}
+.glyph-bright  { color: var(--glyph-bright); }
+.glyph-mid     { color: var(--glyph-mid);    }
+.glyph-dim     { color: var(--glyph-dim);    }
+.glyph-bracket {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--glyph-bracket);
+  font-weight: 400;
+  font-size: 0.7em;
+  margin: 0 6px;
+  vertical-align: 4px;
+}
 
 #input-area {
   display: flex;
@@ -371,6 +404,12 @@ body.error-404 {
   padding: 60px 32px;
 }
 .error-container { max-width: 720px; margin: 8vh auto 0; }
+.error-brand {
+  font-size: 28px;
+  letter-spacing: 3px;
+  margin: 0 0 24px;
+  line-height: 1;
+}
 .error-code {
   font-family: 'Share Tech Mono', monospace;
   font-size: 96px;
@@ -435,12 +474,15 @@ body.error-404 {
   margin: 6vh auto 0;
 }
 .mobile-gate-brand {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 44px;
-  letter-spacing: 6px;
+  /* Acts as the wordmark size anchor — the inner .glyph-* spans
+     scale relative to this. Share Tech Mono / color / weight here
+     only affect the brand "shell"; the cascade glyphs override
+     font-family + color. */
+  font-size: 32px;
+  letter-spacing: 3px;
   color: var(--fg-bright);
   margin: 0 0 6px;
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1;
 }
 .mobile-gate-tagline {

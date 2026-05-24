@@ -11,7 +11,7 @@
  *   - Spoiler-warning callout is impossible to miss.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=VT323&display=swap');
 
 :root {
   --bg:        #06080b;
@@ -92,9 +92,68 @@ body {
   align-items: baseline;
   gap: 10px;
 }
-.brand-mark { font-weight: 700; letter-spacing: 1px; }
+.brand-mark {
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 2px;
+  display: inline-flex;
+  align-items: center;
+}
 .brand-sub  { color: var(--dim); font-size: 12px; text-transform: lowercase; }
 .brand:hover .brand-sub { color: var(--accent); }
+
+/* Brightness-cascade glyph classes — mirrors the main app's lobby logo
+   (style.css) so the [D3CYPH3R] wordmark renders consistently across
+   both subsites. Theme-flippable via CSS vars so the cascade reads
+   correctly in dark and light mode. */
+:root {
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #c9d1d9;
+  --glyph-dim:     #6e7681;
+  --glyph-bracket: #6e7681;
+}
+body.light {
+  --glyph-bright:  #000000;
+  --glyph-mid:     #444444;
+  --glyph-dim:     #99a0aa;
+  --glyph-bracket: #888e9a;
+}
+.glyph-vt323   { font-family: 'VT323', 'Courier New', monospace; font-size: 1.25em; }
+.glyph-bright  { color: var(--glyph-bright); }
+.glyph-mid     { color: var(--glyph-mid);    }
+.glyph-dim     { color: var(--glyph-dim);    }
+.glyph-bracket {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--glyph-bracket);
+  font-weight: 400;
+  font-size: 0.7em;
+  margin: 0 4px;
+}
+
+/* Index-page hero title — the cascade brand at full size + a
+   "walkthroughs" sub-label. Replaces the prior plain-text
+   "D3CYPH3R Walkthroughs" h1. */
+.index-title {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.index-title .brand-cascade {
+  display: inline-flex;
+  align-items: center;
+  font-size: 56px;
+  letter-spacing: 4px;
+  line-height: 1;
+}
+.index-title-sub {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  color: var(--dim);
+  text-transform: lowercase;
+  font-weight: 400;
+  letter-spacing: 2px;
+}
 
 #crumbs {
   color: var(--dim);
