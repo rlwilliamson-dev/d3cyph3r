@@ -129,6 +129,16 @@ const MANIFEST = {
           "engineer's submitted alibi photo carries EXIF metadata placing " +
           "it eight months earlier and 1,000 miles south.",
       },
+      level1: {
+        title: "What the Logs Saw",
+        blurb:
+          "Day two. Polaris IR imaged Reed's workstation; the Security " +
+          "event log carries his Saturday-morning CUI-exfil chain " +
+          "(PowerShell Compress-Archive → certutil -encode → chrome → " +
+          "mega.nz) AND an IR responder's password mistyped into the " +
+          "TargetUserName field of a 4625 failed-logon record. " +
+          "CWE-532 + the LOLBin / Valid-Accounts insider-threat pattern.",
+      },
     },
   },
   osint: {

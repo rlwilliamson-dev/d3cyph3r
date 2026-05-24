@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-This is **v0.10.0** — **a third level1 lands: `level1@web`. Four of the seven tracks (Linux, Network, Crypto, Web) now have level0 + level1 chains; three remain on level0.** No engine work this release — the level uses the existing `curl` + `cookies` command surface. 11 levels shipped across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+This is **v0.11.0** — **a fourth level1 lands: `level1@forensics`. Five of the seven tracks (Linux, Network, Crypto, Web, Forensics) now have level0 + level1 chains; two remain on level0.** One new engine command this release — `evtx`, a Windows Event Log query primitive modeled on EZ Tools' `EvtxECmd`. 12 levels shipped across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -16,11 +16,11 @@ This is **v0.10.0** — **a third level1 lands: `level1@web`. Four of the seven 
 | Network | `level0@network` ("Atlas Health Perimeter Check"), `level1@network` ("The Map Marcus Didn't Mean to Share") | Atlas Health | HIPAA |
 | Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall") | Meridian State University | FERPA |
-| Forensics | `level0@forensics` ("Reed's Soccer Alibi") | Polaris Defense Systems | CMMC / NIST 800-171 |
+| Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
 | OSINT | `level0@osint` ("Veridian's Open Letter") | Veridian Analytics | HIPAA / HITRUST CSF |
 | Cloud | `level0@cloud` ("Coverline's Twelfth Bucket") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
 
-The next phase is level1 across the remaining tracks — three tracks (Forensics, OSINT, Cloud) have their breadcrumb credentials staged from level0 and are waiting on level1 content. (Linux, Network, Crypto, and Web are now at level1.) New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
+The next phase is level1 across the remaining tracks — two tracks (OSINT, Cloud) have their breadcrumb credentials staged from level0 and are waiting on level1 content. (Linux, Network, Crypto, Web, and Forensics are now at level1.) New levels land one PR at a time. See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Running it locally
 
@@ -45,7 +45,7 @@ guest@d3cyph3r:~$ ssh level0@web          # HTTP directory enumeration
 guest@d3cyph3r:~$ ssh level0@forensics    # EXIF metadata / insider-threat
 ```
 
-Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. After level0 of the Linux track, follow the credential breadcrumb in Daniel's home directory to `ssh level1@linux` and walk a client jumphost. After level0 of the Network track, follow the unrotated default credential to `ssh level1@network` and validate Atlas's internal blast radius via DNS zone transfer. After level0 of the Crypto track, the decoded base64 API key gates `ssh level1@crypto` — where you'll audit a homegrown JWT auth that accepts `alg:none` and find what's hiding in the access log. After level0 of the Web track, the leaked DB credential gates `ssh level1@web` — where Carlos's "SSO-is-enough" transcript endpoint demonstrates the difference between authentication and authorization.
+Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. After level0 of the Linux track, follow the credential breadcrumb in Daniel's home directory to `ssh level1@linux` and walk a client jumphost. After level0 of the Network track, follow the unrotated default credential to `ssh level1@network` and validate Atlas's internal blast radius via DNS zone transfer. After level0 of the Crypto track, the decoded base64 API key gates `ssh level1@crypto` — where you'll audit a homegrown JWT auth that accepts `alg:none` and find what's hiding in the access log. After level0 of the Web track, the leaked DB credential gates `ssh level1@web` — where Carlos's "SSO-is-enough" transcript endpoint demonstrates the difference between authentication and authorization. After level0 of the Forensics track, FSO Sgt. Chen's single-use handoff password gates `ssh level1@forensics` — where the new `evtx` command parses Reed's workstation Security event log and surfaces both his CUI-exfil chain and a separate credential-handling miss from the IR team's own response.
 
 ## How it's organized
 
@@ -67,7 +67,7 @@ d3cyph3r/
     ├── network.js          Network track (1 level)
     ├── crypto.js           Crypto track (1 level)
     ├── web.js              Web track (1 level)
-    ├── forensics.js        Forensics track (1 level)
+    ├── forensics.js        Forensics track (2 levels)
     ├── osint.js            OSINT track (engine ready; no levels yet)
     └── cloud.js            Cloud track (engine ready; no levels yet)
 ```
@@ -88,7 +88,7 @@ All commands from the original engine survive the refactor, with `exit` / `logou
 - **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `AXFR`)
 - **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
 - **Web:** `curl` (+ `-I`) / `gobuster` / `cookies`
-- **Forensics:** `file` (+ `*`) / `strings` / `exif` / `sha256sum` / `md5sum`
+- **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sha256sum` / `md5sum`
 - **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo`
 - **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`

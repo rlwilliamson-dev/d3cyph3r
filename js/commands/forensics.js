@@ -1,4 +1,5 @@
-// Forensics commands: file (magic byte ID), strings, exif, sha256sum, md5sum.
+// Forensics commands: file (magic byte ID), strings, exif, evtx (Windows
+// Event Log query), sha256sum, md5sum.
 
 import { resolveFile } from "../fs/resolve.js";
 import { currentPath } from "../engine/state.js";
@@ -61,6 +62,88 @@ export const forensicsCommands = {
     if (!(file in level.files))    return { text: `exif: ${arg}: No such file`, cls: "err" };
     if (!level.exifData?.[file])   return { text: `exif: ${arg}: No EXIF data found (not an image, or metadata was stripped)`, cls: "dim" };
     return { text: level.exifData[file].join("\n"), cls: "out" };
+  },
+
+  // evtx: Windows Event Log query. Models the EZ Tools `EvtxECmd`-style
+  // workflow without trying to parse a real .evtx binary. Pre-formatted
+  // event blocks live in `level.evtxLogs[file]` as an array of
+  // `{ id, body }` records. The command dumps everything by default; with
+  // `-id <N>` it filters to a single Event ID.
+  //
+  // Common Security-channel IDs the level designer might use:
+  //   4624  An account was successfully logged on
+  //   4625  An account failed to log on
+  //   4634  An account was logged off
+  //   4663  An attempt was made to access an object
+  //   4688  A new process has been created
+  evtx(level, arg) {
+    if (!arg || arg === "-h" || arg === "--help") {
+      return {
+        text: [
+          "Usage: evtx [-id <EventID>] <file>",
+          "",
+          "Parse a Windows Event Log (.evtx) and print structured event",
+          "records. With no flag, dumps every event in chronological order.",
+          "With -id, filters to a single Event ID.",
+          "",
+          "Common Security-channel Event IDs:",
+          "  4624   An account was successfully logged on",
+          "  4625   An account failed to log on",
+          "  4634   An account was logged off",
+          "  4663   An attempt was made to access an object",
+          "  4688   A new process has been created",
+          "",
+          "Examples:",
+          "  evtx Security.evtx                # dump everything",
+          "  evtx -id 4625 Security.evtx       # only failed logons",
+          "  evtx -id 4688 Security.evtx       # only process creations",
+        ].join("\n"),
+        cls: "out",
+      };
+    }
+
+    let filterId = null;
+    let fileArg = arg;
+    const parts = arg.trim().split(/\s+/).filter(Boolean);
+    if (parts[0] === "-id") {
+      if (parts.length < 3) {
+        return { text: "evtx: -id requires both an Event ID and a file (try `evtx -h`)", cls: "err" };
+      }
+      const idVal = parseInt(parts[1], 10);
+      if (Number.isNaN(idVal)) {
+        return { text: `evtx: -id: "${parts[1]}" is not a valid Event ID`, cls: "err" };
+      }
+      filterId = idVal;
+      fileArg = parts.slice(2).join(" ");
+    }
+
+    const file = resolveFile(level, fileArg, currentPath);
+    if (!(file in level.files)) {
+      return { text: `evtx: ${fileArg}: No such file or directory`, cls: "err" };
+    }
+    if (!level.evtxLogs?.[file]) {
+      return { text: `evtx: ${fileArg}: not a recognized event log (no EVTX structure parsed)`, cls: "err" };
+    }
+
+    const events = level.evtxLogs[file];
+    const matched = filterId === null ? events : events.filter(e => e.id === filterId);
+
+    if (matched.length === 0) {
+      return {
+        text: `evtx: ${file}: no events with Event ID ${filterId} (${events.length} total events in file)`,
+        cls: "dim",
+      };
+    }
+
+    const sep = "═".repeat(67);
+    const header = `Event log: ${file}\nTotal events: ${events.length}` +
+      (filterId !== null
+        ? `   (filtered to ID ${filterId}: ${matched.length} match${matched.length === 1 ? "" : "es"})`
+        : "") +
+      "\n";
+
+    const blocks = matched.map(e => sep + "\n" + e.body).join("\n");
+    return { text: header + blocks + "\n" + sep, cls: "out" };
   },
 
   // sha256sum / md5sum: chain-of-custody hashing. Levels can override the

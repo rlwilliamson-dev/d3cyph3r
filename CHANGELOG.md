@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-05-24
+
+The fourth level1 in four releases. Five of the seven tracks (Linux,
+Network, Crypto, Web, **Forensics**) now have level0 + level1 chains;
+two remain (OSINT, Cloud) on the v1.0 "Foundation" path. Introduces
+one new engine command — `evtx` — for Windows Event Log triage,
+matching the EZ Tools `EvtxECmd` workflow. The walkthrough audit
+caught NIST SP 800-171 Rev. 3's numbering scheme change (`§3.3.x` →
+`§03.03.0x`), tightened NIST SP 800-92's revision status (Rev. 1 IPD
+out for comment since Oct 2023, still no Final as of May 2026),
+corrected a DFARS 252.204-7012 paragraph attribution (90-day media-
+preservation lives in (e), not (m)), surfaced the CWE-200 mapping-
+status downgrade to Discouraged, and noted the SANS SEC555 rename
+from "SIEM with Tactical Analytics" to "Detection Engineering and
+SIEM Analytics" plus the CompTIA CS0-004 launch for parallel
+availability with the retiring CS0-003.
+
+### Added
+
+- **`level1@forensics` — "What the Logs Saw."** Day-2 continuation
+  of the Reed Connolly insider-threat case. Polaris IR live-imaged
+  Reed's workstation Tuesday night under FSO authority; today's
+  task is triage of the extracted Windows Security event log. The
+  4688 process-creation records reconstruct Reed's CUI-exfil chain
+  (PowerShell `Compress-Archive` → `certutil -encode` → chrome →
+  mega.nz upload), the 4663 file-access records identify the
+  specific covered-defense-information artifacts he read, and a
+  separate finding in the Tuesday-night IR-team activity surfaces
+  a credential-handling miss documented as CWE-532 (Insertion of
+  Sensitive Information into Log File). The credential leaked in
+  that 4625 failed-logon event becomes the level2 breadcrumb.
+  Lesson stack: CWE-532 + the LOLBin / Valid-Accounts insider-
+  threat pattern, mapped to NIST 800-53 AU family controls, CMMC
+  AU.L2-3.3.x practices, and DFARS 252.204-7012's 72-hour
+  reporting clock to DoD (via DIBNET / DC3).
+- **New engine command: `evtx [-id <ID>] <file>`.** Windows Event
+  Log query primitive, modeling the EZ Tools `EvtxECmd` workflow.
+  Filters by Event ID (4624 / 4625 / 4634 / 4663 / 4688 most
+  commonly); dumps everything when no filter is set. Level
+  designers populate `level.evtxLogs[file]` with an array of
+  `{id, body}` records — pre-formatted body blocks keep the level
+  designer in control of display while the command handles
+  filtering and pagination headers.
+- **`walkthroughs/forensics/level1.md`** — long-form companion
+  under the v0.7.0 walkthrough scaffolding. ~7,700 words. Covers
+  Windows event-log forensics in depth, the CMMC AU control
+  family, real-world parallels (TJX, Target, Sony, OPM, SolarWinds,
+  Twitter), the full framework + cert tie-ins (NIST 800-53 AU,
+  800-92 Rev. 1 IPD status, 800-86, 800-171 Rev. 3 §03.03.x, CIS
+  Controls v8.1 Control 8, DFARS 252.204-7012, NISPOM 32 CFR
+  Part 117), LOLBAS project reference, Sysmon / Hayabusa /
+  Chainsaw / EvtxECmd / KAPE tooling rundown, and a Sigma
+  detection-rule example for the 4625-typed-password-as-username
+  pattern. Standard "Last reviewed: May 2026" footer.
+- Playtest coverage for the new level — wrong-password rejection,
+  filter-by-Event-ID workflow validation (4624 / 4625 / 4688 /
+  4663 / 9999-empty-state), `evtx` dump-all sanity, breadcrumb
+  credential assertion, and framework-citation checks in the
+  in-game post-mortem.
+- `help` reference entry for `evtx` in the FORENSICS section, plus
+  `evtx`-with-no-args usage probe in the lobby smoke test.
+
 ## [0.10.0] - 2026-05-24
 
 The third level1 in three releases. Four of the seven tracks (Linux,
