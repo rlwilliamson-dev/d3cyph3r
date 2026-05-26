@@ -70,6 +70,31 @@ jobs:
         with:
           submodules: true
           lfs: false
+      - name: Prune dev/docs files from deploy payload
+        # SWA's `app_location: "/"` ships the entire repo to the CDN.
+        # That accidentally publishes ~300 KB of contributor docs and
+        # CI artifacts that have no business being on the edge:
+        #   - tests/                 — CI-only (Playwright suite + deps)
+        #   - CHANGELOG.md           — public on GitHub already
+        #   - README.md              — same; GitHub renders it natively
+        #   - CONTRIBUTING.md        — same
+        #   - walkthroughs/README.md — author guide for new walkthroughs,
+        #                              not the player-facing /walkthroughs/
+        #   - .gitignore             — exposes repo layout, no consumer
+        #
+        # KEPT on purpose:
+        #   - LICENSE / SECURITY.md  — legal + security-disclosure
+        #                              conventions (security researchers
+        #                              look for /SECURITY.md)
+        #   - 404.html / robots.txt /
+        #     sitemap.xml /
+        #     favicon.svg / og-image.png — required for the site to work
+        #
+        # If you fork: trim or expand this list to taste. Anything not
+        # rm'd here ends up on the CDN.
+        run: |
+          rm -rf tests/
+          rm -f CHANGELOG.md README.md CONTRIBUTING.md walkthroughs/README.md .gitignore
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1

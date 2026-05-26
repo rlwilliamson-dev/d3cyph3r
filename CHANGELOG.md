@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-05-26
+
+**Docs catch-up + dead-code purge.** Patch release covering
+documentation surfaces that landed in v1.10.0's later commits but
+didn't propagate to the contributor-facing docs, plus a swept
+dead-code audit that removed ~90 lines of code unreachable since
+the v1.10.0 tier system + cross-track bonus rollout settled.
+
+### Changed (docs)
+
+- **CONTRIBUTING.md** — Added sections covering the v1.10.0 tier
+  system (Routine / Live / Escalated / Critical / Crisis computed
+  from level number), the cold-start gate hint + future-level tip
+  three-way ssh routing logic, the cross-track bonus-finds rollout,
+  and the §7.5 walkthrough author pattern.
+- **walkthroughs/README.md** — Added an `§7.5 Optional exploration`
+  row to the section template plus a dedicated author guide
+  explaining the pattern (anti-spoiler discipline applies to
+  `progress --detail`, NOT to walkthroughs; structure each §7.5
+  intro paragraph + per-bonus subsection with trigger and expanded
+  lesson + real-world pattern reference).
+
+### Removed (dead code)
+
+- **`js/engine/validate.js`** — Dropped the `DIFFICULTY_LEVELS`
+  constant + the `level.difficulty` enum-validation block + the
+  header-comment bullet documenting them. v1.10.0 removed the
+  manual `difficulty:` field from every shipped level; tier is
+  computed via `tierForLevel(N)`, so the validator's enum check
+  was misleading any forker who read the source.
+- **`js/terminal/output.js`** — Dropped unused `printAscii()` and
+  `printBanner()` exports (no callers; the lobby wordmark uses
+  direct DOM in `js/engine/lobby.js#renderLogo`).
+- **`js/engine/tiers.js`** — Dropped unused `tierDescription()`
+  helper (the `tiers` command iterates `TIERS` directly).
+- **`js/engine/state.js`** — Dropped unused `getEnvVar()` export
+  (all reads go through `getEnv()` in expand.js for the merged
+  3-layer view).
+- **`js/commands/env.js`** — Dropped the unused `processEnv` import.
+- **`js/commands/sysinspect.js`** — Dropped the unused `parseArgs()`
+  helper (~33 lines). Defined but never called; every handler in
+  the module does its own ad-hoc token split, as the function's
+  own comment admitted.
+- **`js/commands/linux.js`** — Dropped the legacy `env` handler
+  that v1.9.0's `envCommands.env` had been silently shadowing
+  since the v1.9.0 spread order in `js/commands/index.js`.
+
+### Changed (refactor)
+
+- **Lobby-expand state is now single-sourced.** `EXPAND_STORAGE_KEY`
+  + `readExpandedTracks()` + `writeExpandedTracks()` all live in
+  `js/engine/lobby.js` and are imported by `js/commands/lobby.js`.
+  Previously the storage key and a parallel reader were duplicated
+  across the two modules; they could drift on rename.
+
+### Fixed (docs)
+
+- **`js/terminal/dom.js`** — Corrected stale comment on the
+  `levelBadge` element ("level + difficulty" → "current level
+  key" — the badge never showed difficulty/tier).
+- **`js/engine/bonus.js`** — Corrected stale comment claiming
+  `progress` reads `state.foundBonuses` directly (it queries
+  through `isBonusFound`).
+
+Playtest: 654/654 (unchanged from v1.10.0 — purge had no behavioral
+impact, all changes were dead-code paths).
+
+### Changed (CI/deploy hygiene)
+
+- **Prune dev/docs files from the CDN deploy** — Added a step to
+  `.github/workflows/azure-static-web-apps-…yml` that removes the
+  following from the deploy payload before SWA uploads it:
+  `tests/`, `CHANGELOG.md`, `README.md`, `CONTRIBUTING.md`,
+  `walkthroughs/README.md`, `.gitignore`. These were accidentally
+  CDN-served because SWA's `app_location: "/"` ships the entire
+  repo. Expected ~14% reduction in deployed size (~313 KB) without
+  affecting any player-facing surface. `LICENSE` and `SECURITY.md`
+  remain served (legal + security-disclosure conventions).
+
 ## [1.10.0] - 2026-05-26
 
 **Lobby polish + cold-start UX + cross-track bonus finds.** The first
@@ -2462,7 +2541,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.0...v1.8.1

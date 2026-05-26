@@ -487,17 +487,6 @@ export const linuxCommands = {
     return { text: p.slice(0, idx), cls: "out" };
   },
 
-  // env: dump level.env_vars. Levels use this to leak credentials /
-  // tokens / API keys in the same shape they appear in real engagements
-  // (LD_PRELOAD, AWS_*, DB_*, etc.). Levels without env_vars get a
-  // graceful empty-state message rather than empty output.
-  env(level) {
-    const vars = level.env_vars;
-    if (!vars) return { text: "(no environment variables set on this level)", cls: "dim" };
-    const lines = Object.entries(vars).map(([k, v]) => `${k}=${v}`);
-    return { text: lines.join("\n"), cls: "warn" };
-  },
-
   // head / tail share the same -n parsing: `head [-n N] <file>`.
   // If -n is given as a separate token it's parsed; otherwise N defaults
   // to 10. Both commands are pipe-friendly — feed them stdin without a

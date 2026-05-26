@@ -83,18 +83,6 @@ export function tierForLevel(n) {
 }
 
 /**
- * Lookup the descriptive sentence for a tier by name. Returns the
- * empty string if the name doesn't match a known tier.
- *
- * @param {string} tierName
- * @returns {string}
- */
-export function tierDescription(tierName) {
-  const t = TIERS.find(x => x.name === tierName);
-  return t ? t.description : "";
-}
-
-/**
  * Helper: extract the numeric level ordinal from a level key like
  * "level3@linux". Returns null if the key isn't in that shape (e.g.
  * pivot hosts, lobby, anything non-numbered).

@@ -27,7 +27,8 @@
 //   - state.markBonusFound(levelKey, id) (sessionStorage-backed)
 //   - print a dim ✦ banner with the name
 //
-// `progress` reads `state.foundBonuses` to show X/Y per level.
+// `progress` queries `state.isBonusFound(levelKey, id)` to show
+// X/Y per level + names the discovered finds in --detail mode.
 
 import { print } from "../terminal/output.js";
 import { currentLevelKey, markBonusFound, isBonusFound } from "./state.js";

@@ -17,7 +17,6 @@
 //                                   sometimes appear with surrounding
 //                                   quotes or in TXT records.
 //   - hints shape                 — array of non-empty strings
-//   - difficulty enum             — Easy | Medium | Hard | Expert
 //   - estimatedMinutes numeric    — positive integer
 //   - permissions reference real  — every key in level.permissions has
 //     files                       a matching file/dir in level.fs
@@ -36,8 +35,6 @@
 // additional invariants your fork enforces.
 
 import { TRACKS } from "./tracks.js";
-
-const DIFFICULTY_LEVELS = ["Easy", "Medium", "Hard", "Expert"];
 
 function warn(levelKey, msg) {
   console.warn(`[level-validator] ${levelKey}: ${msg}`);
@@ -103,12 +100,6 @@ export function validateLevels(levels) {
           }
         });
       }
-    }
-
-    // Difficulty enum
-    if (level.difficulty !== undefined && !DIFFICULTY_LEVELS.includes(level.difficulty)) {
-      warn(key, `unknown difficulty '${level.difficulty}' — expected one of: ${DIFFICULTY_LEVELS.join(", ")}`);
-      warnings++;
     }
 
     // Estimated minutes

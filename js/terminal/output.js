@@ -20,16 +20,6 @@ export function print(text, cls = "out") {
   termEl.scrollTop = termEl.scrollHeight;
 }
 
-export function printAscii(text) {
-  print(text, "ascii");
-}
-
-// Large wordmark — used for the lobby logo. Renders one line through the
-// normal print path but with a banner class for big, bold styling.
-export function printBanner(text) {
-  print(text, "banner");
-}
-
 // Type out an array of lines with a fixed delay between each. Resolves
 // when the full sequence is on screen. Used for the boot sequence.
 export function printSlow(lines, cls = "dim", delayMs = 55) {

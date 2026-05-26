@@ -75,12 +75,67 @@ expanded.
 **Lobby tree (v1.10.0).** The lobby's AVAILABLE ENGAGEMENTS list
 is rendered as a collapsible tree by `js/engine/lobby.js`:
 collapsed tracks show a one-liner (entry-point ssh command + label
-+ visited count + level0's difficulty); expanded tracks show the
-track's `description` plus per-level rows with the level's `title`,
-visited mark, and estimated time. The `tracks` command (in
-`js/commands/lobby.js`) toggles state, persisted in
++ visited count + tier); expanded tracks show the track's
+`description` plus per-level rows with the level's `title`,
+visited mark, computed tier, and estimated time. The `tracks`
+command (in `js/commands/lobby.js`) toggles state, persisted in
 `sessionStorage("lobbyExpanded")`. Smart default: tracks with any
 visited level auto-expand on the first lobby render of a session.
+
+**Tier system (v1.10.0).** Difficulty is COMPUTED from the level
+number — no manual `difficulty:` field. Single source of truth in
+`js/engine/tiers.js`:
+
+  - `Routine` (level 0–5) — standard quarterly audit work
+  - `Live` (level 6–10) — active engagement, real contractual stakes
+  - `Escalated` (level 11–15) — incident response in progress
+  - `Critical` (level 16–20) — notification clocks running
+  - `Crisis` (level 21+) — public-statement-grade engagement
+
+The label describes the **operational state** of the engagement,
+not raw puzzle complexity. The new `tiers` command prints the
+legend in-game; the lobby footer points players at it. The
+connection banner reads `Tier: Routine · Est. time: ~10 min`.
+Pivot hosts (non-numbered) sit off the curve and get no tier
+label in either the lobby tree or the connection banner. When
+designing a new level, **match the tone to the tier** — a
+Routine-tier level reads as a routine audit; an Escalated-tier
+level reads as active IR.
+
+**Cold-start gate hint + future-level tip (v1.10.0).**
+`js/engine/ssh.js` routes the "level lookup miss" three ways. (1)
+Scaffolded track with NO levels yet → warm "track scaffolded"
+message. (2) Well-formed `level<N>@<known-host>` where N hasn't
+shipped → red DNS error PLUS a yellow tip naming the track's
+current shipped ceiling ("level0 through level1 currently
+shipped; check back later"). (3) Anything else (typos, wrong
+host, malformed user) → plain DNS error. Separately, when a
+player attempts a gated `level<N>@<host>` without having visited
+`level<N-1>@<host>`, the red `Permission denied` line is followed
+by a yellow tip pointing at the prerequisite. Both yellow tips
+mirror the same UX pattern: red error stays, friendly hint
+layers underneath.
+
+**Bonus finds on every level (v1.10.0).** `level.bonusFinds`
+introduced in v1.9.0 is now seeded on all 14 shipped levels
+(linux + the 12 non-linux tracks). Each level has at least one
+bonus find, computed against `js/engine/bonus.js#checkBonusFinds`,
+that surfaces an orthogonal lesson distinct from the credential-
+chain solve. Triggers use existing in-level content (file reads,
+command outputs, log entries) — no new fs nodes or schema
+needed. `progress --detail` lists discovered bonuses by name
+with an anti-spoiler render for un-found and unvisited cases.
+
+**Walkthrough §7.5 Optional exploration pattern (v1.10.0).** Every
+walkthrough under `walkthroughs/<track>/level<N>.md` gains a
+§7.5 section between §7 (defender's playbook) and §8 (key
+takeaways). The section names the level's bonus find(s), gives
+the trigger command, and expands the hint into a real-world
+pattern reference. This is the documented destination for
+bonus-find spoilers — anti-spoiler discipline applies to
+`progress --detail` (in-game) but walkthroughs are spoiler-
+tolerant by design. See `walkthroughs/README.md` for the
+author template.
 
 **Filesystem tri-representation.** Level content lives as a nested
 tree under `level.fs`. Three node types:
