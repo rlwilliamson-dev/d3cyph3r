@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-05-26
+
+**Docs catch-up.** Patch release covering documentation surfaces that
+landed in v1.10.0's later commits but didn't propagate back to the
+contributor-facing docs.
+
+### Changed
+
+- **CONTRIBUTING.md** — Added sections covering the v1.10.0 tier
+  system (Routine / Live / Escalated / Critical / Crisis computed
+  from level number), the cold-start gate hint + future-level tip
+  three-way ssh routing logic, the cross-track bonus-finds rollout,
+  and the §7.5 walkthrough author pattern.
+- **walkthroughs/README.md** — Added an `§7.5 Optional exploration`
+  row to the section template plus a dedicated author guide
+  explaining the pattern (anti-spoiler discipline applies to
+  `progress --detail`, NOT to walkthroughs; structure each §7.5
+  intro paragraph + per-bonus subsection with trigger and expanded
+  lesson + real-world pattern reference).
+
+No engine, level, walkthrough-content, or playtest changes. Pure
+documentation cleanup.
+
 ## [1.10.0] - 2026-05-26
 
 **Lobby polish + cold-start UX + cross-track bonus finds.** The first
@@ -2462,7 +2485,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.0...v1.8.1

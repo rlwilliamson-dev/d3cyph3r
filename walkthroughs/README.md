@@ -44,24 +44,55 @@ accidental spoilers; the subsite itself is intentionally discoverable
 so search-engine-driven traffic finds the material when they're
 ready for it.
 
-## The 10-section template
+## The 11-section template
 
 Every walkthrough follows the same structure. Use
 `walkthroughs/linux/level0.md` as the reference; copy-paste its
 section dividers when starting a new file.
 
-| § | Section                | Purpose                                                                  |
-|---|------------------------|--------------------------------------------------------------------------|
-| 1 | Spoiler warning        | A blockquote starting with `⚠` — auto-styled as a red callout            |
-| 2 | The setup (in-world)   | Driftwood + client + character context. Sets the stage                   |
-| 3 | The solve (mechanical) | Step-by-step commands with outputs. Include "If you got stuck" sub-note  |
-| 4 | The vulnerability      | Name the stacked failures. Why each is independently a finding           |
-| 5 | Real-world parallels   | 2–3 named, well-documented incidents. Include the *response* angle       |
-| 6 | Framework deep dive    | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
-| 7 | Cert exam relevance    | Equal-depth treatment of every cert cited. Sample exam-question framings |
-| 8 | What a defender does   | Concrete tools, sample detection rules, audit evidence                   |
-| 9 | Key takeaways          | 3–5 bullet study-guide summary                                           |
-| 10 | Further reading       | Primary sources, vendor docs, books — links only, no commentary needed   |
+| § | Section                       | Purpose                                                                  |
+|---|-------------------------------|--------------------------------------------------------------------------|
+| 1 | Spoiler warning               | A blockquote starting with `⚠` — auto-styled as a red callout            |
+| 2 | The setup (in-world)          | Driftwood + client + character context. Sets the stage                   |
+| 3 | The solve (mechanical)        | Step-by-step commands with outputs. Include "If you got stuck" sub-note  |
+| 4 | The vulnerability             | Name the stacked failures. Why each is independently a finding           |
+| 5 | Real-world parallels          | 2–3 named, well-documented incidents. Include the *response* angle       |
+| 6 | Framework deep dive           | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
+| 7 | Cert exam relevance           | Equal-depth treatment of every cert cited. Sample exam-question framings |
+| 8 | What a defender does          | Concrete tools, sample detection rules, audit evidence                   |
+| 8.5 | Optional exploration (§7.5) | Bonus finds + any optional content (pivot hosts, verification commands). Spoiler-tolerant section; see template below |
+| 9 | Key takeaways                 | 3–5 bullet study-guide summary                                           |
+| 10 | Further reading              | Primary sources, vendor docs, books — links only, no commentary needed   |
+
+### §7.5 Optional exploration — author guide (v1.10.0)
+
+Every shipped level has at least one `bonusFinds` entry that fires
+on a deterministic command pattern. The walkthrough's §7.5 is the
+documented destination for spoiling those bonuses:
+
+- **Anti-spoiler discipline applies to `progress --detail`, NOT to
+  walkthroughs.** Walkthroughs are intended to be read after solving
+  the credential chain; once a player is in §7.5 they've earned the
+  spoiler.
+- **Structure each §7.5:**
+  1. One-paragraph intro: "The credential chain works without this
+     section. The level seeds N hidden bonus find(s) that fire if
+     you happen to run a specific command pattern — `progress
+     --detail` from any prompt lists what you've unlocked."
+  2. Per bonus, a `### <Bonus name>` subsection with:
+     - **Trigger**: exact command + arg pattern + a note on where in
+       the solve flow it naturally fires (if applicable)
+     - **What it teaches**: expanded hint (3–5 paragraphs) including
+       a real-world pattern reference (MITRE ATT&CK technique,
+       LOLBAS entry, named incident, framework control) that
+       contextualizes the bonus
+- **Also covers non-bonus optional content** when relevant — e.g.
+  `walkthroughs/linux/level1.md` §7.5 documents both the multi-host
+  pivot demo AND the level's two bonus finds; `walkthroughs/network/
+  level1.md` §7.5 documents optional ip/arp/ping/nslookup
+  verification commands that aren't part of the solve.
+- **Section anchor is literally `## §7.5 — Optional exploration`**,
+  placed between §7 (What a defender does) and §8 (Key takeaways).
 
 ### Section formatting
 
