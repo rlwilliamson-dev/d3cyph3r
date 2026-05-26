@@ -27,8 +27,31 @@ let commandSet = [];
 export function setCommandSet(cmds) { commandSet = cmds; }
 
 let blinkResetTimer = null;
-const cmdHistory   = [];
-let   histIndex    = -1;
+let cmdHistory      = [];
+let histIndex       = -1;
+
+// Persistent history (v1.8.0): commands survive across tab close. We
+// use localStorage rather than sessionStorage for this because the
+// shell-history experience users expect from bash IS cross-session.
+// Capped at 200 entries to stay well under the 5 MB localStorage
+// budget on every browser. Stored as a JSON array, newest-first to
+// match cmdHistory's in-memory shape.
+const HIST_KEY    = "d3cyph3r-history";
+const HIST_LIMIT  = 200;
+
+function loadHistory() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
+    if (Array.isArray(stored)) return stored.slice(0, HIST_LIMIT);
+  } catch (_) { /* corrupt → start fresh */ }
+  return [];
+}
+
+function persistHistory() {
+  try {
+    localStorage.setItem(HIST_KEY, JSON.stringify(cmdHistory.slice(0, HIST_LIMIT)));
+  } catch (_) { /* quota / private mode → silent */ }
+}
 
 function updateCursor() {
   const pos = cmdInput.selectionStart;
@@ -134,11 +157,15 @@ function updateTabHint() {
 
 function pushHistory(cmd) {
   if (cmd && cmdHistory[0] !== cmd) cmdHistory.unshift(cmd);
-  if (cmdHistory.length > 100) cmdHistory.pop();
+  if (cmdHistory.length > HIST_LIMIT) cmdHistory.pop();
   histIndex = -1;
+  persistHistory();
 }
 
 export function initInput() {
+  // Restore prior session's command history on boot — the first
+  // ArrowUp recalls the last command the user typed last time.
+  cmdHistory = loadHistory();
   cmdInput.addEventListener("input", () => {
     onTyping();
     updateTabHint();
@@ -150,6 +177,59 @@ export function initInput() {
   cmdInput.addEventListener("keydown", () => setTimeout(updateCursor, 0));
 
   cmdInput.addEventListener("keydown", e => {
+    // Emacs-style line-editing shortcuts (bash readline defaults):
+    //   Ctrl-A   move to start of line
+    //   Ctrl-E   move to end of line
+    //   Ctrl-W   delete word to the left
+    //   Ctrl-U   clear line
+    //   Ctrl-K   kill to end of line
+    //   Ctrl-L   clear screen (handled at the dispatcher level via the `clear` command)
+    if (e.ctrlKey || e.metaKey) {
+      const pos = cmdInput.selectionStart;
+      const val = cmdInput.value;
+      if (e.key === "a" || e.key === "A") {
+        e.preventDefault();
+        cmdInput.setSelectionRange(0, 0);
+        updateCursor();
+        return;
+      }
+      if (e.key === "e" || e.key === "E") {
+        e.preventDefault();
+        cmdInput.setSelectionRange(val.length, val.length);
+        updateCursor();
+        return;
+      }
+      if (e.key === "w" || e.key === "W") {
+        // Delete previous word (whitespace-aware).
+        e.preventDefault();
+        let i = pos;
+        while (i > 0 && /\s/.test(val[i - 1])) i--;       // skip trailing whitespace
+        while (i > 0 && !/\s/.test(val[i - 1])) i--;       // delete to start of word
+        cmdInput.value = val.slice(0, i) + val.slice(pos);
+        cmdInput.setSelectionRange(i, i);
+        updateCursor();
+        updateTabHint();
+        return;
+      }
+      if (e.key === "u" || e.key === "U") {
+        // Delete from cursor to start of line.
+        e.preventDefault();
+        cmdInput.value = val.slice(pos);
+        cmdInput.setSelectionRange(0, 0);
+        updateCursor();
+        updateTabHint();
+        return;
+      }
+      if (e.key === "k" || e.key === "K") {
+        // Delete from cursor to end of line.
+        e.preventDefault();
+        cmdInput.value = val.slice(0, pos);
+        updateCursor();
+        updateTabHint();
+        return;
+      }
+    }
+
     switch (e.key) {
       case "Enter": {
         e.preventDefault();

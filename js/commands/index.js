@@ -25,6 +25,9 @@ import { systemCommands }    from "./system.js";
 import { sysInspectCommands } from "./sysinspect.js";
 import { netInspectCommands } from "./netinspect.js";
 import { formatCommands }     from "./format.js";
+import { structuredCommands } from "./structured.js";
+import { gitCommands }        from "./git.js";
+import { readonlyStubCommands } from "./readonly-stubs.js";
 import { learningCommands }  from "./learning.js";
 
 export const COMMANDS = {
@@ -41,6 +44,9 @@ export const COMMANDS = {
   ...sysInspectCommands,
   ...netInspectCommands,
   ...formatCommands,
+  ...structuredCommands,  // also overrides openssl with the multi-subcommand version
+  ...gitCommands,
+  ...readonlyStubCommands,
   ...learningCommands,
 };
 

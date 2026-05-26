@@ -26,6 +26,12 @@
 // and `ls -la` owner columns show. Without this override the engine
 // falls back to the level key's user prefix.
 //
+// Optional player-orientation fields (v1.8.0):
+//   level.difficulty       : "Easy" | "Medium" | "Hard" | "Expert"
+//   level.estimatedMinutes : positive integer — typical solve time
+// Surfaced in the connection banner ("Difficulty: Easy · Est. time:
+// ~10 min") so players can pick where to spend a session.
+//
 // Optional: NETWORK INSPECTION schema (surfaced by the v1.7.0
 // commands — ip addr / ip route / arp / ping / traceroute /
 // nslookup). All sub-fields are independent; every command degrades
@@ -131,6 +137,8 @@ export const linuxLevels = {
   "level0@linux": {
     password: null,
     track: "linux",
+    difficulty: "Easy",
+    estimatedMinutes: 10,
     playerUser: "daniel",
     objective: "Audit Daniel's laptop and find the client credential he left behind before IT reimages the box on Wednesday.",
     lesson: "Day one at Driftwood. A senior consultant whose engagement at Halton Bank ended Friday left his work laptop with IT for reimaging. His client access was revoked over the weekend, but the laptop hasn't been wiped yet, and his home directory hasn't been audited. Sweep it before Wednesday. Anything that looks like a client credential, you flag. Read every file. Then read lessons-learned.md.",
@@ -487,6 +495,8 @@ Return to the lobby:    ssh guest@d3cyph3r
   "level1@linux": {
     password: "please-rotate-me",
     track: "linux",
+    difficulty: "Easy",
+    estimatedMinutes: 10,
     playerUser: "app_admin",
     objective: "Find the production database credential a misconfigured backup is leaking — and document the blast radius before Priya rotates it.",
     lesson: "Day two. You used the credential from Daniel's creds.txt to ssh into Halton Bank's jumphost — and Halton's ops team left the staging service account with a login shell. You're now logged in as app_admin, sitting on a client production bastion. A real attacker who pulled the same trick would be exactly here. Walk the home directory and find the production credential a careless backup has left exposed. Read welcome.md first; it explains the new permission columns you'll use today. Then lessons-learned.md once you've found it.",

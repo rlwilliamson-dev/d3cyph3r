@@ -7,6 +7,167 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-05-26
+
+**Author polish + realism.** The largest single engine release since
+the Foundation milestone. Shell composition (`&&` / `||` / `;`), real
+quoting + `$(...)` command substitution + `$?` exit code, brace
+expansion, schema validator, level metadata fields, replay mode,
+and ~25 new commands across git / jq / gpg / openssl extensions /
+small bash standards / read-only-fs stubs / structural helpers.
+
+After this release, every command a defender would reach for at a
+real Linux shell — filesystem, text processing, shell features,
+introspection at every layer, learning aids, and the major
+out-of-the-box tools (git / jq / gpg / openssl / awk / sed) — is
+present in the engine. Level authoring before v1.8.0 was already
+viable; after v1.8.0 it's pleasant.
+
+### Added — Shell composition (engine)
+
+- **Real parser** (`js/engine/parse.js`) — quote-aware tokenizer +
+  statement chain splitter. Replaces the v1.3.0 ad-hoc whitespace
+  split that didn't preserve quoted args.
+- **`cmd1 && cmd2` / `cmd1 || cmd2` / `cmd1 ; cmd2`** — chain
+  operators. `&&` runs the right side only if the left side
+  succeeded (exit 0), `||` only if it failed.
+- **`$(cmd)` command substitution** — runs the inner command and
+  substitutes its captured stdout. Works inside double quotes
+  and unquoted (skipped inside single quotes).
+- **`$?` exit code** — last command's exit code. 0 on success,
+  1 on error, 127 on command-not-found.
+- **Brace expansion** — `cat {a,b,c}.txt` expands to `cat a.txt
+  b.txt c.txt`. Quote-aware (braces inside `'...'` or `"..."`
+  are literal — bash behavior).
+- **Quote-aware tokenization** — `cut -d ' '`, `awk '{print $1}'`,
+  `grep "needle in haystack"` all preserve quoted args with
+  spaces. Quote markers stripped before reaching command handlers.
+
+### Added — Author quality
+
+- **Schema validator** (`js/engine/validate.js`) — runs at module
+  init. Surfaces missing required fields, unknown track values,
+  orphaned `permissions` / `certs` / `tarArchives` / `gzipArchives`
+  entries that don't reference real files, malformed hints arrays,
+  bad `difficulty` enum values, non-positive `estimatedMinutes`,
+  invalid usernames in `playerUser`, broken credential-chain
+  breadcrumbs (`level<N>.password` not appearing in `level<N-1>`'s
+  content). Warnings emit to `console.warn` — site keeps booting
+  even on authoring bugs.
+- **`level.difficulty`** + **`level.estimatedMinutes`** schema
+  fields — surface in the connection banner so players can pick
+  where to spend a session. Both optional.
+- **`level.gitRepos`**, **`level.gpg`**, **`level.opensslEnc`**,
+  **`level.opensslSClient`**, **`level.opensslHash`**,
+  **`level.ncResults`**, **`level.df` / `level.du` / `level.free`**
+  schema fields — drive the new commands.
+
+### Added — Commands (~25 new)
+
+- **`git`** (`js/commands/git.js`) — log / show / diff / status /
+  blame / config / remote / branch. Reads `level.gitRepos`.
+  Unlocks the "credential committed to git history" puzzle pattern
+  that future levels can use. Repo lookup is cwd-aware (longest-
+  prefix match against gitRepos keys).
+- **`jq`** (`js/commands/structured.js`) — JSON path queries. Supports
+  `.`, `.key`, `.key.nested`, `.arr[N]`, `.arr[]`, filter pipes
+  (`. | .foo`), `-r` raw output, `-c` compact output. Stdin or
+  file. Should have been in v1.6 — cloud / API / log puzzles
+  produce JSON.
+- **`gpg`** (`js/commands/structured.js`) — `--list-keys` /
+  `--list-secret-keys` / `--verify` / `--decrypt` / `--fingerprint`
+  / `--import`. Reads `level.gpg`. Unlocks asymmetric-crypto puzzle
+  shapes the crypto track never had.
+- **`openssl` extensions** — `rand -hex N`, `dgst -sha256 <file>`,
+  `enc -d -<cipher> -in <file>`, `s_client -connect <host:port>`.
+  Joins the v1.7.0 `x509` subcommand. All in `js/commands/structured.js`
+  (overriding the format.js openssl since v1.8.0).
+- **`printf`** (`js/commands/text.js`) — `%s`/`%d`/`%x`/`%%` format
+  specifiers, `\n`/`\t` escapes.
+- **`sed`** (`js/commands/text.js`) — `s/pat/repl/[g]` substitution
+  + `-n 'Np'` / `-n 'M,Np'` print-by-line-number.
+- **`history`** (`js/commands/shell.js`) — print the level's
+  `.bash_history` file in `history`-shape numbered format.
+- **`nc -zv HOST PORT`** (`js/commands/netinspect.js`) — TCP
+  port-reachability check. Reads `level.ncResults`.
+- **`host`** (`js/commands/netinspect.js`) — friendlier DNS lookup
+  (companion to nslookup, shares `level.nslookupResults` schema).
+- **`df`** / **`du`** / **`free`** (`js/commands/sysinspect.js`) —
+  disk + memory introspection.
+- **Read-only-fs stubs** (`js/commands/readonly-stubs.js`) — `chmod`,
+  `chown`, `mv`, `cp`, `rm`, `mkdir`, `rmdir`, `touch`, `ln`,
+  `sudo`, `su`, `useradd`, `passwd`. All return the canonical
+  bash error for "Read-only file system" / "incorrect password
+  attempt". Players type these from muscle memory; better to error
+  cleanly than 404.
+- **`walkthrough`** (`js/commands/learning.js`) — open the matching
+  walkthrough URL in a new tab. Quick path from in-game to the
+  long-form solve guide.
+- **`progress`** (`js/commands/learning.js`) — list every visited
+  level this session (per-track checklist) + overall solve count.
+- **`search <term>`** (`js/commands/learning.js`) — cross-level
+  content search across visited levels' lessons-learned + welcome
+  + handoff files. Case-insensitive. Spoiler-safe (only searches
+  levels the player has entered).
+
+### Added — UX
+
+- **Persistent command history** (localStorage). Survives tab close.
+  Capped at 200 entries.
+- **Bash readline shortcuts** (`js/terminal/input.js`):
+  - **Ctrl-A** — jump to start of line
+  - **Ctrl-E** — jump to end of line
+  - **Ctrl-W** — delete word back (whitespace-aware)
+  - **Ctrl-U** — clear from cursor to start
+  - **Ctrl-K** — kill from cursor to end
+- **Replay mode** (`js/engine/ssh.js`) — re-entering a level you've
+  already visited this session skips the password gate. The
+  credential discovery is the puzzle; making players re-do it on
+  every revisit punishes exploration. Tab close resets.
+
+### Added — Docs
+
+- **Manpages** for all 25+ new commands (`js/commands/man-pages.js`).
+- **Glossary entries** for `jq`, `gpg`, `sed`, `bash`, `ANSI`
+  (`js/commands/glossary.js`).
+- **`help` reference** reorganized: new VERSION CONTROL section,
+  expanded TEXT PROCESSING / SYSTEM INSPECTION / FORMAT INSPECTION /
+  NETWORK RECON / LEARNING AIDS with the new commands, and a
+  "Shell features (v1.8.0)" block under LINUX BASICS covering
+  pipes / chaining / wildcards / brace / vars / substitution /
+  exit code / quoting / readline shortcuts.
+
+### Changed
+
+- **Command handler signature** extends to `(level, arg, stdin, argv)`
+  — fourth param is the expanded, quote-stripped token array.
+  Handlers that need quote-aware parsing (like `awk`) now use
+  `argv`. Existing handlers using `arg` keep working.
+- **Parser refactor** consumed `js/engine/expand.js` — the previous
+  whole-line `expandVars` is gone, replaced by per-token quote-aware
+  `expandTokenVars`. Single-quoted regions are literal; double-quoted
+  and unquoted regions expand `$VAR` / `${VAR}` / `$?` / `$(...)`.
+- **Brace expansion** runs BEFORE variable expansion, only on tokens
+  without any quote marks (so `cat 'file{a,b}'` is literal but
+  `cat file{a,b}` expands).
+- **Engine state**: `lastExitCode` added (with setter), tracking
+  `$?` across the statement chain.
+
+### Playtest
+
+542 → 563 checks (+21 new). Shell composition + quoting + `$(...)` +
+brace + read-only stubs + git/jq/gpg/openssl-rand/printf/sed/nc/host/df/free
+empty-state + walkthrough/search at lobby.
+
+### Deferred to v1.9.0 (still pre-level2)
+
+- `ls --color` / `grep --color` — needs ANSI escape interpretation
+  in output.js. Bigger output-renderer refactor.
+- Ctrl-R reverse-i-search — input-mode toggle. Medium effort.
+- Extended `dig +short/+trace`, `curl -X POST/-d/-H`, `gobuster dns/vhost`.
+- Multi-host pivoting (ssh-from-shell within a track).
+- Bonus-finds / side quests per level.
+
 ## [1.7.0] - 2026-05-26
 
 **Network + Format tools + cross-doc audit.** Eleven new commands
@@ -2042,7 +2203,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.4.0...v1.5.0

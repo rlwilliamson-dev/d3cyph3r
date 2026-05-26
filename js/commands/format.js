@@ -53,86 +53,69 @@ function locateFile(level, name) {
   return null;
 }
 
+/**
+ * Render an X.509 certificate's parsed fields in canonical openssl
+ * output. Exported so the structured.js `openssl` handler (which
+ * owns all subcommands as of v1.8.0) can delegate to it.
+ */
+export function renderX509(level, file) {
+  const resolved = locateFile(level, file);
+  if (!resolved) {
+    return { text: `Can't open ${file} for reading, No such file or directory`, cls: "err" };
+  }
+  const cert = level?.certs?.[file] || level?.certs?.[resolved];
+  if (!cert) {
+    return { text: `unable to load certificate\n140000000000000:error:0908F066:PEM routines:get_name:bad end line:`, cls: "err" };
+  }
+  const v = cert.version ?? 3;
+  const lines = [
+    "Certificate:",
+    "    Data:",
+    `        Version: ${v} (0x${(v - 1).toString(16)})`,
+    `        Serial Number:`,
+    `            ${cert.serial || "00:00:00:00"}`,
+    `        Signature Algorithm: ${cert.sigAlgorithm || "sha256WithRSAEncryption"}`,
+    `        Issuer: ${cert.issuer || "(unknown)"}`,
+    "        Validity",
+    `            Not Before: ${cert.notBefore || ""}`,
+    `            Not After : ${cert.notAfter || ""}`,
+    `        Subject: ${cert.subject || "(unknown)"}`,
+  ];
+  if (cert.publicKey) {
+    lines.push("        Subject Public Key Info:");
+    lines.push(`            ${cert.publicKey}`);
+  }
+  if (cert.san || cert.keyUsage || cert.extKeyUsage || cert.crlDistributionPoints || cert.authorityInfoAccess) {
+    lines.push("        X509v3 extensions:");
+    if (cert.san) {
+      lines.push("            X509v3 Subject Alternative Name:");
+      lines.push(`                ${cert.san.join(", ")}`);
+    }
+    if (cert.keyUsage) {
+      lines.push("            X509v3 Key Usage: critical");
+      lines.push(`                ${cert.keyUsage.join(", ")}`);
+    }
+    if (cert.extKeyUsage) {
+      lines.push("            X509v3 Extended Key Usage:");
+      lines.push(`                ${cert.extKeyUsage.join(", ")}`);
+    }
+    if (cert.crlDistributionPoints) {
+      lines.push("            X509v3 CRL Distribution Points:");
+      for (const cdp of cert.crlDistributionPoints) lines.push(`                ${cdp}`);
+    }
+    if (cert.authorityInfoAccess) {
+      lines.push("            Authority Information Access:");
+      for (const aia of cert.authorityInfoAccess) lines.push(`                ${aia}`);
+    }
+  }
+  if (cert.sctList) {
+    lines.push("        CT Precertificate SCTs:");
+    for (const sct of cert.sctList) lines.push(`            ${sct}`);
+  }
+  return { text: lines.join("\n"), cls: "out" };
+}
+
 export const formatCommands = {
-  // openssl: real openssl is huge; the engine implements one common
-  // form — `openssl x509 -text -noout -in <file>`. Renders certificate
-  // metadata in canonical openssl output, including SAN entries,
-  // key usage flags, and validity dates.
-  openssl(level, arg) {
-    const tokens = (arg || "").trim().split(/\s+/).filter(Boolean);
-
-    if (tokens.length === 0) {
-      return { text: "Usage: openssl x509 -text -noout -in <file>", cls: "err" };
-    }
-    if (tokens[0] !== "x509") {
-      return { text: "openssl: only the 'x509' subcommand is supported in this sandbox", cls: "err" };
-    }
-
-    // Find -in <file>; the flag may appear anywhere after `x509`.
-    const inIdx = tokens.indexOf("-in");
-    const file  = inIdx !== -1 ? tokens[inIdx + 1] : null;
-    if (!file) {
-      return { text: "Usage: openssl x509 -text -noout -in <file>", cls: "err" };
-    }
-
-    const resolved = locateFile(level, file);
-    if (!resolved) {
-      return { text: `Can't open ${file} for reading, No such file or directory`, cls: "err" };
-    }
-
-    const cert = level?.certs?.[file] || level?.certs?.[resolved];
-    if (!cert) {
-      return { text: `unable to load certificate\n140000000000000:error:0908F066:PEM routines:get_name:bad end line:`, cls: "err" };
-    }
-
-    const v = cert.version ?? 3;
-    const lines = [
-      "Certificate:",
-      "    Data:",
-      `        Version: ${v} (0x${(v - 1).toString(16)})`,
-      `        Serial Number:`,
-      `            ${cert.serial || "00:00:00:00"}`,
-      `        Signature Algorithm: ${cert.sigAlgorithm || "sha256WithRSAEncryption"}`,
-      `        Issuer: ${cert.issuer || "(unknown)"}`,
-      "        Validity",
-      `            Not Before: ${cert.notBefore || ""}`,
-      `            Not After : ${cert.notAfter || ""}`,
-      `        Subject: ${cert.subject || "(unknown)"}`,
-    ];
-    if (cert.publicKey) {
-      lines.push("        Subject Public Key Info:");
-      lines.push(`            ${cert.publicKey}`);
-    }
-    if (cert.san || cert.keyUsage || cert.extKeyUsage || cert.crlDistributionPoints || cert.authorityInfoAccess) {
-      lines.push("        X509v3 extensions:");
-      if (cert.san) {
-        lines.push("            X509v3 Subject Alternative Name:");
-        lines.push(`                ${cert.san.join(", ")}`);
-      }
-      if (cert.keyUsage) {
-        lines.push("            X509v3 Key Usage: critical");
-        lines.push(`                ${cert.keyUsage.join(", ")}`);
-      }
-      if (cert.extKeyUsage) {
-        lines.push("            X509v3 Extended Key Usage:");
-        lines.push(`                ${cert.extKeyUsage.join(", ")}`);
-      }
-      if (cert.crlDistributionPoints) {
-        lines.push("            X509v3 CRL Distribution Points:");
-        for (const cdp of cert.crlDistributionPoints) lines.push(`                ${cdp}`);
-      }
-      if (cert.authorityInfoAccess) {
-        lines.push("            Authority Information Access:");
-        for (const aia of cert.authorityInfoAccess) lines.push(`                ${aia}`);
-      }
-    }
-    if (cert.sctList) {
-      lines.push("        CT Precertificate SCTs:");
-      for (const sct of cert.sctList) lines.push(`            ${sct}`);
-    }
-    return { text: lines.join("\n"), cls: "out" };
-  },
-
   // tar: archive operations. Two modes supported:
   //   tar tvf <file>    list contents (long format with permissions)
   //   tar xvf <file>    list with `x ` extraction prefix

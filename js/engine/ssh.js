@@ -37,6 +37,21 @@ ${host}; check the lobby's AVAILABLE ENGAGEMENTS list as new ones ship.`,
   }
   if (!level.password) { connectTo(target); return null; }
 
+  // Replay mode (v1.8.0): if the player has already visited this
+  // level in the current session, skip the password gate. The
+  // credential discovery is the puzzle; making them re-do it on
+  // every revisit punishes exploration. New session (tab close)
+  // resets visited state, so the gate works fresh again.
+  let visited;
+  try { visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]")); }
+  catch (_) { visited = new Set(); }
+  if (visited.has(target)) {
+    print(`Connecting to ${target}...`, "dim");
+    print(`(replay mode — skipping password gate; you've already entered this level this session)`, "dim");
+    setTimeout(() => connectTo(target), 200);
+    return null;
+  }
+
   print(`Connecting to ${target}...`, "dim");
   print(`${target}'s password:`, "info");
   cmdInput.classList.add("password");
@@ -69,6 +84,17 @@ export function connectTo(key) {
 
   print("", "out");
   print(`── Connected: ${key}`, "dim");
+
+  // Difficulty + estimated time (v1.8.0 schema fields). Both are
+  // optional; render the line only if at least one is present so
+  // pre-v1.8 levels stay clean.
+  if (level.difficulty || level.estimatedMinutes) {
+    const bits = [];
+    if (level.difficulty)       bits.push(`Difficulty: ${level.difficulty}`);
+    if (level.estimatedMinutes) bits.push(`Est. time: ~${level.estimatedMinutes} min`);
+    print(bits.join("   ·   "), "dim");
+  }
+
   print("", "out");
   if (level.lesson) {
     print(level.lesson, "dim");

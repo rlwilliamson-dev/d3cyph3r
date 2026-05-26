@@ -362,6 +362,40 @@ export const sysInspectCommands = {
     return { text: lines.join("\n"), cls: "out" };
   },
 
+  // df: disk free. Reads level.df (a pre-formatted multi-line string)
+  // and prints it. `-h` is accepted but cosmetic — the level decides
+  // how to format the numbers. No data → graceful empty-state.
+  df(level) {
+    const data = level?.df;
+    if (!data) {
+      return { text: "(disk-usage data unavailable from this shell)", cls: "dim" };
+    }
+    return { text: String(data).trimEnd(), cls: "out" };
+  },
+
+  // du: directory usage. `du -sh <path>` looks up the path in
+  // level.du[path] (a pre-formatted line like "1.4G  /var/log").
+  du(level, _arg, _stdin, argv) {
+    const tokens = (argv || []).slice();
+    const positional = tokens.filter(t => !t.startsWith("-"));
+    const path = positional[0] || ".";
+    const data = level?.du?.[path];
+    if (data === undefined) {
+      return { text: `(no du data for ${path})`, cls: "dim" };
+    }
+    return { text: String(data).trimEnd(), cls: "out" };
+  },
+
+  // free: memory + swap usage. Reads level.free (pre-formatted
+  // string) and prints it. `-h` cosmetic.
+  free(level) {
+    const data = level?.free;
+    if (!data) {
+      return { text: "(memory usage data unavailable from this shell)", cls: "dim" };
+    }
+    return { text: String(data).trimEnd(), cls: "out" };
+  },
+
   // dmesg: kernel ring buffer. Each entry has a bracketed seconds-
   // since-boot timestamp + a message. `-T` would humanize the time
   // but our level data is already friendly; we accept the flag and

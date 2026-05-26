@@ -143,7 +143,7 @@ async function termText(page) {
     ["ping example.com",                    "Name or service not known"],
     ["traceroute example.com",              "Name or service not known"],
     ["nslookup example.com",                "NXDOMAIN"],
-    ["openssl",                             "Usage: openssl x509"],
+    ["openssl",                             "Usage: openssl"],
     ["openssl x509 -text -noout -in foo",   "No such file or directory"],
     ["tar",                                 "Usage: tar"],
     ["tar tvf nonexistent.tar",             "Cannot open"],
@@ -155,6 +155,107 @@ async function termText(page) {
     t = await termText(page);
     check(`${cmd} → '${expected}'`, t.includes(expected));
   }
+
+  // ── v1.8.0 shell composition + commands ──────────────────────────
+  // Shell composition: && / || / ; + quoting + $(...) + $?
+  await typeAndEnter(page, "echo a && echo b");
+  t = await termText(page);
+  check("&&: both commands run when first succeeds",                /\ba\b[\s\S]*\bb\b/.test(t.split("echo a && echo b")[1] || ""));
+
+  await typeAndEnter(page, "echo 'hello world'");
+  t = await termText(page);
+  check("single-quoted args preserve internal spaces",              /hello world/.test(t.split("echo 'hello world'")[1] || ""));
+
+  await typeAndEnter(page, "echo \"user: $(whoami)\"");
+  t = await termText(page);
+  check("command substitution $(whoami) expands inside double-quotes", t.includes("user: guest"));
+
+  await typeAndEnter(page, "echo {a,b,c}.txt");
+  t = await termText(page);
+  check("brace expansion produces 3 entries",                       /a\.txt b\.txt c\.txt/.test(t.split("echo {a,b,c}.txt")[1] || ""));
+
+  await typeAndEnter(page, "echo 'has $USER'");
+  t = await termText(page);
+  // After the echo of the typed command, the output line should be "has $USER".
+  // Check that "has $USER" appears more than once in the terminal (once in the
+  // command echo, once in the output) and that "has guest" never appears.
+  check("single-quoted $USER does NOT expand",                      (t.match(/has \$USER/g) || []).length >= 2 && !t.includes("has guest"));
+
+  // git: lobby has no level.gitRepos
+  await typeAndEnter(page, "git log");
+  t = await termText(page);
+  check("git outside a repo prints 'not a git repository'",         t.includes("not a git repository"));
+
+  // jq: usage probe
+  await typeAndEnter(page, "jq");
+  t = await termText(page);
+  check("jq with no args prints usage",                             t.includes("Usage: jq"));
+
+  // jq from stdin
+  await typeAndEnter(page, "echo '{\"a\":1}' | jq .a");
+  t = await termText(page);
+  check("jq .a on stdin JSON returns the value",                    /^\s*1\s*$/m.test(t.split("jq .a")[1] || ""));
+
+  // gpg: --list-keys with no level data
+  await typeAndEnter(page, "gpg --list-keys");
+  t = await termText(page);
+  check("gpg --list-keys with no data prints '(no keys)'",          t.includes("(no keys)"));
+
+  // openssl extensions
+  await typeAndEnter(page, "openssl rand -hex 8");
+  t = await termText(page);
+  check("openssl rand -hex 8 prints 16 hex chars",                  /[0-9a-f]{16}/.test(t.split("openssl rand -hex 8")[1] || ""));
+
+  // printf
+  await typeAndEnter(page, "printf 'host=%s\\n' atlas");
+  t = await termText(page);
+  check("printf %s substitutes the arg",                            /host=atlas/.test(t.split("printf 'host=")[1] || ""));
+
+  // sed via pipe
+  await typeAndEnter(page, "echo hello | sed 's/hello/world/'");
+  t = await termText(page);
+  check("sed substitutes pattern on stdin",                         /\bworld\b/.test(t.split("sed 's/hello/world/'")[1] || ""));
+
+  // nc / host — should degrade gracefully at lobby
+  await typeAndEnter(page, "nc -zv example.com 443");
+  t = await termText(page);
+  check("nc on unconfigured target: 'Connection refused'",          t.includes("Connection refused"));
+
+  await typeAndEnter(page, "host example.com");
+  t = await termText(page);
+  check("host on unknown name: NXDOMAIN",                           t.includes("NXDOMAIN"));
+
+  // df / du / free
+  await typeAndEnter(page, "df -h");
+  t = await termText(page);
+  check("df on lobby: graceful empty-state",                        t.includes("disk-usage data unavailable"));
+
+  await typeAndEnter(page, "free -h");
+  t = await termText(page);
+  check("free on lobby: graceful empty-state",                      t.includes("memory usage data unavailable"));
+
+  // Read-only-fs stubs
+  await typeAndEnter(page, "chmod 600 foo");
+  t = await termText(page);
+  check("chmod returns 'Read-only file system'",                    t.includes("Read-only file system"));
+
+  await typeAndEnter(page, "rm important.txt");
+  t = await termText(page);
+  check("rm returns 'Read-only file system'",                       t.includes("Read-only file system"));
+
+  await typeAndEnter(page, "sudo cat /etc/shadow");
+  t = await termText(page);
+  check("sudo prints 'incorrect password attempt'",                 t.includes("incorrect password attempt"));
+
+  // walkthrough at lobby → graceful refusal
+  await typeAndEnter(page, "walkthrough");
+  t = await termText(page);
+  check("walkthrough at lobby: 'ssh into a level first'",           t.includes("ssh into a level first"));
+
+  // search with no visits
+  await typeAndEnter(page, "search foo");
+  t = await termText(page);
+  check("search with no visited levels prompts to visit one",       t.includes("visit at least one level"));
 
   // basename / dirname — pure string ops, work everywhere.
   await typeAndEnter(page, "basename /home/daniel/notes.txt");

@@ -1363,6 +1363,406 @@ EXAMPLES
     dmesg
     dmesg | tail -n 20`,
 
+  // ─── Version control ──────────────────────────────────────────────
+  git: `NAME
+    git — local git-repo inspection (read-only)
+
+SYNOPSIS
+    git log [--oneline]
+    git show <commit>
+    git diff [<commit>]
+    git status
+    git blame <file>
+    git config [--list] [<key>]
+    git remote -v
+    git branch
+
+DESCRIPTION
+    The sandbox supports read-only git operations against
+    level-defined repo data (level.gitRepos). The classic "credential
+    committed to git history" puzzle uses this: \`git log --oneline\`
+    surfaces the suspect commit, \`git show <hash>\` reveals what was
+    actually committed, \`git blame <file>\` traces authorship.
+
+EXAMPLES
+    git log --oneline
+    git show 3a4f2e1
+    git blame app.py
+    git config user.email`,
+
+  // ─── Structured data / crypto ────────────────────────────────────
+  jq: `NAME
+    jq — JSON path query (simplified)
+
+SYNOPSIS
+    jq [-r] [-c] 'FILTER' [FILE]
+    <stdin> | jq [...] 'FILTER'
+
+DESCRIPTION
+    Apply a JSON filter to FILE (or stdin) and print the matched
+    values. Supported filter syntax:
+
+      .            identity (whole input)
+      .key         object key access
+      .key.nested  chained access
+      .arr[N]      array index
+      .arr[]       array iteration (emit each element)
+      a | b        pipe filters
+
+    -r   raw output (strip quotes on string results)
+    -c   compact output (no pretty-print)
+
+EXAMPLES
+    cat audit.json | jq '.events[]'
+    jq '.users[0].email' members.json
+    aws s3 ls --json | jq '.buckets[] | .Name'`,
+
+  gpg: `NAME
+    gpg — GnuPG (key inspection / signature verify / decrypt)
+
+SYNOPSIS
+    gpg --list-keys        (alias: -k)
+    gpg --list-secret-keys (alias: -K)
+    gpg --verify <signed-file>
+    gpg --decrypt <file>   (alias: -d)
+    gpg --fingerprint
+    gpg --import <keyfile>
+
+DESCRIPTION
+    Inspect the GPG keyring or verify / decrypt files. Read-only —
+    no real cryptographic ops; level data is the source of truth.
+    Useful for the "verify this signed log" or "decrypt this
+    private-key-encrypted file" puzzle shapes.
+
+EXAMPLES
+    gpg --list-keys
+    gpg --verify advisory.asc
+    gpg --decrypt staging.env.gpg`,
+
+  // ─── Small commands ──────────────────────────────────────────────
+  printf: `NAME
+    printf — formatted output
+
+SYNOPSIS
+    printf 'FORMAT' [ARG ...]
+
+DESCRIPTION
+    Print formatted output. Format specifiers: %s (string), %d (int),
+    %x / %X (hex), %% (literal %). Escapes \\n and \\t are honored.
+
+EXAMPLES
+    printf '%s\\n' hello
+    printf 'host=%s port=%d\\n' localhost 5432`,
+
+  sed: `NAME
+    sed — simplified stream editor
+
+SYNOPSIS
+    sed 's/PAT/REPL/[g]' [FILE]
+    sed -n 'Np' [FILE]
+    sed -n 'M,Np' [FILE]
+    <stdin> | sed [...]
+
+DESCRIPTION
+    Per-line substitution or print-by-line-number. Real sed is much
+    richer (multiple commands via -e, hold space, addresses) — the
+    sandbox supports the two most common forms.
+
+EXAMPLES
+    cat log | sed 's/ERROR/WARN/g'
+    sed -n '5,10p' /etc/passwd`,
+
+  history: `NAME
+    history — print command history
+
+SYNOPSIS
+    history
+
+DESCRIPTION
+    Print the current user's .bash_history (numbered). On the
+    sandbox, this surfaces level-pre-populated history rather than
+    the current session's typed commands.
+
+EXAMPLES
+    history`,
+
+  nc: `NAME
+    nc — netcat (TCP port reachability)
+
+SYNOPSIS
+    nc -zv HOST PORT
+
+DESCRIPTION
+    Test whether HOST:PORT accepts TCP connections. The sandbox
+    supports the -zv form only (zero-I/O scan, verbose output).
+    Real nc can pipe arbitrary data; the sandbox doesn't support
+    interactive I/O.
+
+EXAMPLES
+    nc -zv staging.atlas.health 5432
+    nc -zv 10.40.10.5 22`,
+
+  host: `NAME
+    host — friendly DNS lookup
+
+SYNOPSIS
+    host NAME
+
+DESCRIPTION
+    Look up NAME and print resolved IP(s) in a compact format.
+    Shares schema with nslookup but renders fewer lines.
+
+EXAMPLES
+    host atlas.health
+    host prod-db.atlas.internal`,
+
+  df: `NAME
+    df — disk free
+
+SYNOPSIS
+    df [-h]
+
+DESCRIPTION
+    Print disk-space usage per filesystem. -h is cosmetic (level
+    data is pre-formatted).
+
+EXAMPLES
+    df -h`,
+
+  du: `NAME
+    du — disk usage
+
+SYNOPSIS
+    du [-sh] PATH
+
+DESCRIPTION
+    Print disk usage for PATH. -s reports a total (not per-file
+    breakdown); -h humanizes the numbers.
+
+EXAMPLES
+    du -sh /var/log
+    du -sh .`,
+
+  free: `NAME
+    free — memory + swap usage
+
+SYNOPSIS
+    free [-h]
+
+DESCRIPTION
+    Print system memory + swap usage. -h cosmetic.
+
+EXAMPLES
+    free -h`,
+
+  // ─── Read-only-fs stubs ──────────────────────────────────────────
+  chmod: `NAME
+    chmod — change file permissions (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    chmod MODE FILE
+
+DESCRIPTION
+    The sandbox's filesystem is intentionally read-only (this is an
+    audit context, not a live system). \`chmod\` prints the bash
+    "Read-only file system" error. To change a file's effective
+    permission for a puzzle, the LEVEL AUTHOR sets
+    \`level.permissions[FILE]\`.
+
+EXAMPLES
+    chmod 600 secrets.env`,
+
+  chown: `NAME
+    chown — change file owner (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    chown OWNER FILE
+
+DESCRIPTION
+    Read-only sandbox — returns "Read-only file system". The level
+    author controls file ownership via \`level.permissions[FILE]\`.
+
+EXAMPLES
+    chown root creds.txt`,
+
+  mv: `NAME
+    mv — move / rename (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    mv SOURCE DEST
+
+DESCRIPTION
+    Read-only sandbox — returns "Read-only file system". The level
+    fs is fixed at module init.
+
+EXAMPLES
+    mv old.txt new.txt`,
+
+  cp: `NAME
+    cp — copy (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    cp SOURCE DEST
+
+DESCRIPTION
+    Read-only sandbox — returns "Read-only file system".
+
+EXAMPLES
+    cp file.bak file.new`,
+
+  rm: `NAME
+    rm — remove (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    rm FILE
+
+DESCRIPTION
+    Read-only sandbox — returns "Read-only file system".
+
+EXAMPLES
+    rm scratch.tmp`,
+
+  mkdir: `NAME
+    mkdir — create directory (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    mkdir DIR
+
+DESCRIPTION
+    Read-only sandbox — returns "Read-only file system".
+
+EXAMPLES
+    mkdir new`,
+
+  rmdir: `NAME
+    rmdir — remove empty directory (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    rmdir DIR
+
+DESCRIPTION
+    Read-only sandbox — returns "Read-only file system".
+
+EXAMPLES
+    rmdir empty`,
+
+  touch: `NAME
+    touch — change file timestamps / create empty file (READ-ONLY)
+
+SYNOPSIS
+    touch FILE
+
+DESCRIPTION
+    Read-only sandbox — returns "Read-only file system".
+
+EXAMPLES
+    touch new.txt`,
+
+  ln: `NAME
+    ln — create link (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    ln [-s] TARGET LINK
+
+DESCRIPTION
+    Read-only sandbox — returns "Read-only file system". Pre-existing
+    symlinks defined in level.fs work normally; new ones can't be
+    created at runtime.
+
+EXAMPLES
+    ln -s notes.txt shortcut`,
+
+  sudo: `NAME
+    sudo — execute a command as another user (NO REAL ESCALATION)
+
+SYNOPSIS
+    sudo COMMAND [ARGS ...]
+
+DESCRIPTION
+    The sandbox has no privilege model. \`sudo <anything>\` prints
+    the "incorrect password" error pattern. The terminal exists
+    inside an audit context; players who think a level needs root
+    have likely misread the puzzle.
+
+EXAMPLES
+    sudo cat /etc/shadow`,
+
+  su: `NAME
+    su — switch user (NO REAL ESCALATION)
+
+SYNOPSIS
+    su [-] [USER]
+
+DESCRIPTION
+    Same disposition as \`sudo\` — no real auth, no real shell
+    switch. Returns "Authentication failure".`,
+
+  useradd: `NAME
+    useradd — create a new user (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    useradd USERNAME
+
+DESCRIPTION
+    Read-only sandbox — returns the canonical /etc/passwd-lock
+    error.`,
+
+  passwd: `NAME
+    passwd — change password (READ-ONLY in this sandbox)
+
+SYNOPSIS
+    passwd [USERNAME]
+
+DESCRIPTION
+    Read-only sandbox — returns the canonical token-manipulation
+    error.`,
+
+  // ─── Structural / learning extensions ────────────────────────────
+  walkthrough: `NAME
+    walkthrough — open the current level's walkthrough in a new tab
+
+SYNOPSIS
+    walkthrough
+
+DESCRIPTION
+    Open the matching markdown walkthrough at /walkthroughs/#/track/level
+    in a new tab. Walkthroughs are spoiler-bearing — only read them
+    after solving the level.
+
+EXAMPLES
+    walkthrough`,
+
+  progress: `NAME
+    progress — list levels you've visited this session
+
+SYNOPSIS
+    progress
+
+DESCRIPTION
+    Print a per-track checklist of every level, marked with ✓ for
+    visited or · for not-yet-visited. Progress is per-tab; closing
+    the tab resets the list.
+
+EXAMPLES
+    progress`,
+
+  search: `NAME
+    search — search visited levels' content for a term
+
+SYNOPSIS
+    search TERM
+
+DESCRIPTION
+    Search every file in every level you've visited this session
+    for TERM (case-insensitive). Prints up to 50 matching lines
+    with file path + line number. Spoiler-safe: unvisited levels
+    are NOT scanned, so the search doesn't leak content from
+    levels you haven't entered.
+
+EXAMPLES
+    search CWE-798
+    search "Halton"`,
+
   // ─── Learning aids ────────────────────────────────────────────────
   hint: `NAME
     hint — get a nudge on the current level
