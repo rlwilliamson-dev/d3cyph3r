@@ -134,6 +134,45 @@ async function termText(page) {
   t = await termText(page);
   check("systemctl without subcommand prints usage", t.includes("Usage: systemctl status"));
 
+  // v1.7.0 NETWORK / FORMAT / PATH smoke tests at lobby (no level data).
+  const v17Probes = [
+    ["ip",                                  "Usage: ip {addr|route}"],
+    ["ip addr",                             "lo:"],                          // auto-injected loopback
+    ["ip route",                            "(routing table empty)"],
+    ["arp -a",                              "(arp cache empty)"],
+    ["ping example.com",                    "Name or service not known"],
+    ["traceroute example.com",              "Name or service not known"],
+    ["nslookup example.com",                "NXDOMAIN"],
+    ["openssl",                             "Usage: openssl x509"],
+    ["openssl x509 -text -noout -in foo",   "No such file or directory"],
+    ["tar",                                 "Usage: tar"],
+    ["tar tvf nonexistent.tar",             "Cannot open"],
+    ["gunzip nonexistent.gz",               "No such file or directory"],
+    ["zcat nonexistent.gz",                 "No such file or directory"],
+  ];
+  for (const [cmd, expected] of v17Probes) {
+    await typeAndEnter(page, cmd);
+    t = await termText(page);
+    check(`${cmd} → '${expected}'`, t.includes(expected));
+  }
+
+  // basename / dirname — pure string ops, work everywhere.
+  await typeAndEnter(page, "basename /home/daniel/notes.txt");
+  t = await termText(page);
+  check("basename strips dir portion",                    /\bnotes\.txt\b/.test(t.split("basename /home/daniel/notes.txt")[1] || ""));
+
+  await typeAndEnter(page, "basename /home/daniel/notes.txt .txt");
+  t = await termText(page);
+  check("basename strips trailing suffix",                /\bnotes\b/.test(t.split("basename /home/daniel/notes.txt .txt")[1] || ""));
+
+  await typeAndEnter(page, "dirname /home/daniel/notes.txt");
+  t = await termText(page);
+  check("dirname returns the parent path",                /\/home\/daniel/.test(t.split("dirname /home/daniel/notes.txt")[1] || ""));
+
+  await typeAndEnter(page, "dirname justafile.txt");
+  t = await termText(page);
+  check("dirname on a bare filename returns '.'",         /^\s*\.\s*$/m.test(t.split("dirname justafile.txt")[1] || ""));
+
   // `aws` (no args) prints its own multi-service usage block.
   await typeAndEnter(page, "aws");
   t = await termText(page);
@@ -459,6 +498,49 @@ async function termText(page) {
   await typeAndEnter(page, "whoami");
   t = await termText(page);
   check("whoami prints 'dbadmin' on the Atlas staging-db host",       /\bdbadmin\b/.test(t));
+
+  // v1.7.0 NETWORK INSPECTION — exercise the new commands against
+  // the demo data seeded on level1@network. The reachable hosts
+  // here are the same internal-zone targets the AXFR puzzle just
+  // surfaced; ping / traceroute let the player verify reachability
+  // before reporting blast radius.
+  await typeAndEnter(page, "ip addr");
+  t = await termText(page);
+  check("ip addr lists eth0 with the staging-db IPv4",                /eth0.*10\.40\.10\.5/s.test(t));
+  check("ip addr auto-injects the loopback interface",                t.includes("lo:"));
+
+  await typeAndEnter(page, "ip route");
+  t = await termText(page);
+  check("ip route shows the default gateway",                         /default\s+via\s+10\.40\.10\.1/.test(t));
+  check("ip route shows the connected /24 subnet",                    /10\.40\.10\.0\/24/.test(t));
+
+  await typeAndEnter(page, "arp -a");
+  t = await termText(page);
+  check("arp -a shows the gateway entry",                             /gateway\s+\(10\.40\.10\.1\)/.test(t));
+  check("arp -a shows the staging-web host",                          t.includes("staging-web.atlas.internal"));
+
+  await typeAndEnter(page, "ping prod-db.atlas.internal");
+  t = await termText(page);
+  check("ping reaches the prod-db host (4 ECHO replies)",             /icmp_seq=4 ttl=64/.test(t));
+  check("ping prints the standard stats summary",                     t.includes("packets transmitted") && t.includes("rtt min/avg/max"));
+
+  await typeAndEnter(page, "ping nonexistent.host.example");
+  t = await termText(page);
+  check("ping on unresolvable host prints 'Name or service not known'", t.includes("Name or service not known"));
+
+  await typeAndEnter(page, "traceroute audit-bypass.atlas.internal");
+  t = await termText(page);
+  check("traceroute shows the gateway hop",                           /\s1\s+gateway\s+\(10\.40\.10\.1\)/.test(t));
+  check("traceroute shows the final hop to the audit-bypass host",    /audit-bypass|deprecated-bypass-host/.test(t));
+
+  await typeAndEnter(page, "nslookup prod-db.atlas.internal");
+  t = await termText(page);
+  check("nslookup resolves prod-db to its internal IP",               t.includes("10.40.20.5"));
+  check("nslookup prints the resolver address line",                  t.includes("Server:") && t.includes("Address:"));
+
+  await typeAndEnter(page, "nslookup nonexistent.host.example");
+  t = await termText(page);
+  check("nslookup on unknown host prints NXDOMAIN",                   t.includes("NXDOMAIN"));
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);

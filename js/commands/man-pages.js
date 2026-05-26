@@ -1023,6 +1023,189 @@ DESCRIPTION
 EXAMPLES
     hostname`,
 
+  // ─── Network inspection ───────────────────────────────────────────
+  ip: `NAME
+    ip — show local interfaces and routes (subset)
+
+SYNOPSIS
+    ip addr        (alias: ip a)
+    ip route       (alias: ip r)
+
+DESCRIPTION
+    Modern iproute2 family — we implement two subcommands:
+
+    addr / a   List network interfaces with their IPv4 addresses,
+               MTU, state, and link-layer info.
+    route / r  Print the kernel routing table.
+
+    Replaces the legacy \`ifconfig\` and \`route\` commands which
+    are deprecated on modern systems.
+
+EXAMPLES
+    ip addr
+    ip a
+    ip route`,
+
+  arp: `NAME
+    arp — display the kernel ARP cache (-a form)
+
+SYNOPSIS
+    arp -a
+
+DESCRIPTION
+    Lists entries in the BSD-style ARP cache (hostname / IP / MAC /
+    interface). The modern equivalent on Linux is \`ip neigh\`, but
+    \`arp -a\` survives in muscle memory and documentation.
+
+EXAMPLES
+    arp -a`,
+
+  ping: `NAME
+    ping — send ICMP ECHO_REQUEST to a host
+
+SYNOPSIS
+    ping HOST
+
+DESCRIPTION
+    Sends 4 ICMP echo requests and prints the replies + a summary
+    block with min/avg/max/mdev RTTs. Without a name-resolution
+    entry, prints "Name or service not known". For unreachable
+    hosts, level data can model "Destination Host Unreachable".
+
+EXAMPLES
+    ping staging.atlas.health
+    ping 10.40.10.5`,
+
+  traceroute: `NAME
+    traceroute — print the route packets take to a network host
+
+SYNOPSIS
+    traceroute HOST
+
+DESCRIPTION
+    Prints the IP hop sequence to HOST with three RTT samples per
+    hop. Silent hops render as "* * *". Unresolvable hosts get the
+    standard name-resolution error.
+
+EXAMPLES
+    traceroute prod-db.atlas.internal
+    traceroute 10.40.20.5`,
+
+  nslookup: `NAME
+    nslookup — query the DNS resolver
+
+SYNOPSIS
+    nslookup HOST
+
+DESCRIPTION
+    Prints the resolver address followed by the A record(s) for
+    HOST. Companion to the network-track \`dig\` command (which
+    supports more record types + zone-transfer queries via AXFR).
+    Without a resolver entry for HOST, returns NXDOMAIN.
+
+EXAMPLES
+    nslookup atlas.health
+    nslookup prod-db.atlas.internal`,
+
+  // ─── Format inspection ────────────────────────────────────────────
+  openssl: `NAME
+    openssl — cryptography toolkit (x509 subset)
+
+SYNOPSIS
+    openssl x509 -text -noout -in FILE
+
+DESCRIPTION
+    Real openssl supports dozens of subcommands; the sandbox
+    implements one common form: parsing a certificate file and
+    printing its fields in human-readable form. Useful for
+    inspecting validity dates, subject / issuer DNs, Subject
+    Alternative Names (SAN), and X.509v3 extensions.
+
+EXAMPLES
+    openssl x509 -text -noout -in portal.crt
+    openssl x509 -text -noout -in /etc/ssl/certs/server.pem`,
+
+  tar: `NAME
+    tar — archive listing / extraction
+
+SYNOPSIS
+    tar tvf FILE     (list contents, verbose)
+    tar xvf FILE     (extract — verbose, listing only in this sandbox)
+
+DESCRIPTION
+    Real tar manages tape archives — packing, unpacking, listing.
+    The sandbox supports two read-only forms: tvf (list every entry
+    in the archive with permissions / size / mtime / name) and xvf
+    (the same list with an "x " extraction prefix; no actual
+    extraction since the level fs is read-only).
+
+EXAMPLES
+    tar tvf backup-2026-05-22.tar
+    tar xvf staging-export.tar`,
+
+  gunzip: `NAME
+    gunzip — decompress a gzip file (sandbox version: prints to stdout)
+
+SYNOPSIS
+    gunzip FILE
+
+DESCRIPTION
+    Decompress FILE and print the contents. Real gunzip writes a
+    new file alongside the original; the sandbox is read-only, so
+    this command behaves like zcat — prints decompressed data to
+    stdout.
+
+EXAMPLES
+    gunzip access.log.gz
+    gunzip backup.sql.gz | head -n 10`,
+
+  zcat: `NAME
+    zcat — print decompressed contents of a gzip file
+
+SYNOPSIS
+    zcat FILE
+
+DESCRIPTION
+    Identical to \`gunzip\` in this sandbox — prints the decompressed
+    contents of FILE to stdout. Pipe it into grep / head / awk for
+    inline analysis without staging the decompressed file on disk.
+
+EXAMPLES
+    zcat access.log.gz | grep ERROR
+    zcat backup.sql.gz | wc -l`,
+
+  basename: `NAME
+    basename — strip directory and suffix from a path
+
+SYNOPSIS
+    basename PATH [SUFFIX]
+
+DESCRIPTION
+    Prints the final path segment. With an optional SUFFIX arg,
+    additionally strips that suffix from the end (typically used to
+    drop an extension).
+
+EXAMPLES
+    basename /home/daniel/notes.txt          # → notes.txt
+    basename /home/daniel/notes.txt .txt     # → notes
+    basename src/utils/helper.js .js         # → helper`,
+
+  dirname: `NAME
+    dirname — strip the final path segment
+
+SYNOPSIS
+    dirname PATH
+
+DESCRIPTION
+    Prints the path with its final component removed. Useful in
+    shell scripts that need to operate on the directory containing
+    a file argument.
+
+EXAMPLES
+    dirname /home/daniel/notes.txt   # → /home/daniel
+    dirname src/utils/helper.js      # → src/utils
+    dirname helper.js                # → .`,
+
   // ─── System inspection ────────────────────────────────────────────
   crontab: `NAME
     crontab — list a user's cron jobs

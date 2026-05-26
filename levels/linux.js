@@ -26,6 +26,39 @@
 // and `ls -la` owner columns show. Without this override the engine
 // falls back to the level key's user prefix.
 //
+// Optional: NETWORK INSPECTION schema (surfaced by the v1.7.0
+// commands — ip addr / ip route / arp / ping / traceroute /
+// nslookup). All sub-fields are independent; every command degrades
+// to a graceful empty-state message when its data is absent. See the
+// per-field shape docs at the top of `js/commands/netinspect.js`.
+//
+//   level.netInterfaces      : [{ name, mac, ipv4, ipv4Prefix,
+//                                  broadcast?, mtu?, state?, flags?,
+//                                  linkType? }]
+//   level.routes             : [{ destination, via?, dev, proto?,
+//                                  scope?, src?, metric? }]
+//   level.arpCache           : [{ hostname?, ip, mac, type?, dev }]
+//   level.pingResults        : { [host]: { resolvedIp?, rtts: [n],
+//                                  ttl?, packetLoss?, reachable?,
+//                                  error? } }
+//   level.tracerouteResults  : { [host]: { resolvedIp?, hops: [{ n,
+//                                  hostname?, ip, rtts: [n] }] } }
+//   level.nslookupResults    : { [host]: { server?, addresses: [string],
+//                                  canonical?, error? } }
+//
+// Optional: FORMAT-INSPECTION schema (v1.7.0 — openssl x509, tar,
+// gunzip/zcat). See `js/commands/format.js` for the full shapes.
+//
+//   level.certs        : { [filename]: { version?, serial?,
+//                            sigAlgorithm?, issuer, subject,
+//                            notBefore, notAfter, publicKey?,
+//                            san?, keyUsage?, extKeyUsage?,
+//                            crlDistributionPoints?,
+//                            authorityInfoAccess?, sctList? } }
+//   level.tarArchives  : { [filename]: { entries: [{ mode, owner,
+//                            group, size, mtime, name, type? }] } }
+//   level.gzipArchives : { [filename]: "decompressed content" }
+//
 // Optional: SYSTEM INSPECTION schema (surfaced by the v1.6.0 commands —
 // crontab, last, who, w, lsof, ss, journalctl, systemctl, dmesg).
 // All sub-fields are independent; every command degrades to a polite

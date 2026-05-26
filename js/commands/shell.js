@@ -51,6 +51,8 @@ const HELP_SECTIONS = [
     "find <path> -name <pat>    – find files matching pattern",
     "readlink <path>            – print a symlink's literal target",
     "realpath <path>            – resolve symlinks → canonical absolute path",
+    "basename <path> [suffix]   – strip directory portion from a path",
+    "dirname <path>             – strip basename from a path",
     "env                        – list environment variables",
     "",
     "  Shell features:",
@@ -64,6 +66,12 @@ const HELP_SECTIONS = [
     "netstat                    – list active connections",
     "whois <domain>             – WHOIS domain lookup",
     "dig <domain> [type]        – DNS record lookup",
+    "nslookup <host>            – DNS lookup (friendlier output)",
+    "ping <host>                – ICMP echo",
+    "traceroute <host>          – print hop sequence",
+    "ip addr / ip a             – list interfaces + IPv4 addresses",
+    "ip route / ip r            – kernel routing table",
+    "arp -a                     – ARP cache (hostname / IP / MAC / dev)",
   ]},
   { track: "crypto", title: "CRYPTOGRAPHY", lines: [
     "base64 <file>              – decode base64 file",
@@ -148,6 +156,12 @@ const HELP_INFRA = [
     "journalctl [-u <unit>] [-n N] [-r] – systemd journal",
     "systemctl status <unit>    – service unit status",
     "dmesg                      – kernel ring buffer",
+  ]},
+  { title: "FORMAT INSPECTION", lines: [
+    "openssl x509 -text -noout -in <file>  – parse + dump X.509 cert",
+    "tar tvf <file>             – list contents of a tar archive",
+    "tar xvf <file>             – list contents (sandbox: no actual extract)",
+    "gunzip <file> | zcat <file>  – decompress a .gz file to stdout",
   ]},
 ];
 

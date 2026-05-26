@@ -7,6 +7,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-05-26
+
+**Network + Format tools + cross-doc audit.** Eleven new commands
+across three categories (network inspection, format inspection, path
+utilities) and a cross-doc audit pass over `README.md`, `CONTRIBUTING.md`,
+and `CLAUDE.md` to catch staleness from the v1.3-v1.6 engine
+expansion era.
+
+### Added — Network inspection (`js/commands/netinspect.js`)
+
+- **`ip addr` / `ip a`** — list local interfaces + IPv4 addresses,
+  MTU, state, link-layer info. Loopback is auto-injected if the
+  level doesn't define one. Reads `level.netInterfaces`.
+- **`ip route` / `ip r`** — kernel routing table. Reads `level.routes`.
+- **`arp -a`** — print the ARP cache (hostname / IP / MAC / dev).
+  Reads `level.arpCache`.
+- **`ping HOST`** — simulated ICMP echo (4 packets + min/avg/max/mdev
+  stats summary). Reads `level.pingResults`. Unresolvable hosts
+  return the standard name-resolution error.
+- **`traceroute HOST`** — IP hop sequence with three RTT samples per
+  hop. Silent hops render as `* * *`. Reads `level.tracerouteResults`.
+- **`nslookup HOST`** — friendlier DNS lookup (companion to the
+  network-track `dig` command). Reads `level.nslookupResults`.
+
+### Added — Format inspection (`js/commands/format.js`)
+
+- **`openssl x509 -text -noout -in <file>`** — parse and dump
+  X.509 certificate fields: Version, Serial, Signature Algorithm,
+  Issuer, Subject, validity dates, X.509v3 extensions including
+  SAN / Key Usage / Extended Key Usage / CRL Distribution Points /
+  Authority Information Access / SCT list. Reads `level.certs`.
+- **`tar tvf FILE`** / **`tar xvf FILE`** — list contents of a tar
+  archive in real-tar verbose format. Reads `level.tarArchives`.
+  Note: the sandbox is read-only, so `xvf` lists with an `x ` prefix
+  but doesn't actually write the extracted files.
+- **`gunzip FILE`** / **`zcat FILE`** — decompress a `.gz` file to
+  stdout. Both aliases behave identically in the sandbox (the
+  sandbox is read-only, so we can't write the decompressed file
+  alongside the original). Reads `level.gzipArchives`.
+
+### Added — Path utilities (`js/commands/linux.js`)
+
+- **`basename PATH [SUFFIX]`** — strip the directory portion of a
+  path. Optional suffix trims a trailing extension.
+- **`dirname PATH`** — strip the final path segment.
+
+### Added — Schema + content
+
+- **Six new schema fields** documented at the top of `levels/linux.js`:
+  `netInterfaces`, `routes`, `arpCache`, `pingResults`,
+  `tracerouteResults`, `nslookupResults`. Plus three format-related
+  fields: `certs`, `tarArchives`, `gzipArchives`.
+- **Demo data on level1@network** — staging-db's eth0 interface,
+  default-gateway route, ARP cache including the gateway and two
+  internal hosts, pingable / traceroute-able reachability to the
+  same internal-zone targets the AXFR puzzle surfaced.
+- **Manpages** for all 11 new commands.
+- **Glossary entries** for `ARP`, `ICMP`, `X.509`, `TLS`, `gzip`,
+  `CIDR`. Available via `what-is <term>`.
+- **Help reference** gains a new FORMAT INSPECTION section and
+  extends NETWORK RECON with the inspection commands; LINUX BASICS
+  gains `basename` and `dirname`.
+
+### Changed — Cross-doc audit
+
+- **`CLAUDE.md`** — handler signature corrected to
+  `(level, arg, stdin?)` (was `(level, arg)`); filesystem
+  representation updated from dual to tri (adds symlinks); track
+  registry location corrected from `js/engine/lobby.js` to
+  `js/engine/tracks.js`; dispatch order updated to mention
+  shell-var expansion + pipe-splitting; infrastructure command
+  modules (`text.js`, `system.js`, `sysinspect.js`, `netinspect.js`,
+  `format.js`, `learning.js`) explicitly enumerated so the
+  "all commands live in per-track files" implication doesn't
+  mislead. Removed dead references to two local-only files
+  (`feedback-level-credential-chain.md`, `PASSWORDS.md`) that
+  the v1.0.0 cleanup missed.
+- **`CONTRIBUTING.md`** — same handler-signature + filesystem-tri
+  updates as CLAUDE.md. The "How to add a new command" section
+  rewritten to cover both track-specific files and the
+  infrastructure modules, plus the new manpage-and-playtest steps.
+  Dispatch order updated to mention shell vars + pipes.
+- **`README.md`** — file tree and Commands Implemented section
+  updated with `netinspect.js`, `format.js`, and the 11 new
+  commands.
+
+### Playtest
+
+- 511 → 542 checks (+31 new). Lobby smoke (graceful empty-state)
+  for the format / network commands; level1@network real-data
+  assertions for `ip addr` / `ip route` / `arp -a` / `ping` /
+  `traceroute` / `nslookup`; pure-string verification of
+  `basename` and `dirname` from the lobby.
+
 ## [1.6.0] - 2026-05-26
 
 **Forensics expansion.** Nine new system-inspection commands —
@@ -1948,7 +2042,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.3.0...v1.4.0

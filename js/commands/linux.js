@@ -456,6 +456,37 @@ export const linuxCommands = {
     return { text: path, cls: "out" };
   },
 
+  // basename: strip the directory portion of a path. Optional second
+  // arg trims a trailing suffix:
+  //   basename /a/b/c.txt        → c.txt
+  //   basename /a/b/c.txt .txt   → c
+  basename(_level, arg) {
+    const parts = (arg || "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return { text: "Usage: basename <path> [suffix]", cls: "err" };
+    let name = parts[0].replace(/\/+$/, "");                 // strip trailing /
+    const idx = name.lastIndexOf("/");
+    if (idx >= 0) name = name.slice(idx + 1);
+    if (parts[1] && name.endsWith(parts[1]) && name !== parts[1]) {
+      name = name.slice(0, -parts[1].length);
+    }
+    return { text: name, cls: "out" };
+  },
+
+  // dirname: strip the basename of a path:
+  //   dirname /a/b/c.txt   → /a/b
+  //   dirname c.txt        → .
+  //   dirname /            → /
+  dirname(_level, arg) {
+    const raw = (arg || "").trim().split(/\s+/)[0];
+    if (!raw) return { text: "Usage: dirname <path>", cls: "err" };
+    let p = raw.replace(/\/+$/, "");                         // strip trailing /
+    if (p === "") return { text: "/", cls: "out" };          // root after strip
+    const idx = p.lastIndexOf("/");
+    if (idx < 0)  return { text: ".", cls: "out" };          // no /, current dir
+    if (idx === 0) return { text: "/", cls: "out" };         // top-level child
+    return { text: p.slice(0, idx), cls: "out" };
+  },
+
   // env: dump level.env_vars. Levels use this to leak credentials /
   // tokens / API keys in the same shape they appear in real engagements
   // (LD_PRELOAD, AWS_*, DB_*, etc.). Levels without env_vars get a

@@ -702,6 +702,88 @@ source options.
 The "detection engineering" discipline writes and tunes the rules
 that fire on the SIEM stream.`,
 
+  ARP: `ARP — Address Resolution Protocol
+
+The Layer-2 protocol that maps IPv4 addresses to MAC addresses on
+a local network. When a host needs to send a packet to an IP on
+the same broadcast domain, it ARP-broadcasts "who has <ip>?" and
+the owner replies with its MAC.
+
+The ARP cache (\`arp -a\` / \`ip neigh\`) shows the recent
+hostname / IP / MAC mappings the kernel learned. ARP spoofing
+attacks poison this cache to intercept traffic — defenders
+detect them with static ARP entries or 802.1X / DHCP snooping.
+IPv6 uses Neighbor Discovery (NDP) instead.`,
+
+  ICMP: `ICMP — Internet Control Message Protocol
+
+The signaling layer of IP. Carries the messages \`ping\` and
+\`traceroute\` use (Echo Request / Echo Reply / Time Exceeded /
+Destination Unreachable / Redirect / etc.). Sits at the same
+protocol level as TCP and UDP — directly on top of IP.
+
+Many firewalls block ICMP at the perimeter (which breaks legit
+diagnostics) or only allow specific message types (a reasonable
+middle ground). Inside a network, ICMP is critical: PMTUD
+relies on Fragmentation-Needed, and \`tracert\` relies on
+Time-Exceeded.`,
+
+  X509: `X.509 — Public Key Certificate Format
+
+The ITU-T standard for digital certificates. Defines the
+certificate structure (Subject, Issuer, Serial Number, Validity,
+Public Key, Extensions) that TLS/HTTPS, S/MIME, code signing,
+client authentication, and most other "what's their public key"
+systems use.
+
+Inspect a cert with \`openssl x509 -text -noout -in <file>\` —
+key fields to audit: Subject Alternative Names (SAN), validity
+window, key usage extensions, CRL distribution points. The
+Web PKI's certificate-transparency logs (crt.sh) make every
+publicly-issued cert auditable retroactively.`,
+
+  TLS: `TLS — Transport Layer Security
+
+The encryption protocol behind HTTPS, secure SMTP, IMAPS, secure
+DNS (DoT), and many other "TLS over X" stacks. Current spec is
+TLS 1.3 (RFC 8446, August 2018) — successor to TLS 1.2 (RFC 5246,
+2008) and the long-obsolete SSL family.
+
+TLS 1.3 dropped a lot of attack surface from earlier versions:
+no RSA key exchange, no static DH, no compression, no SHA-1 in
+the certificate chain by default. The handshake is one round-trip
+faster too. Modern deployments should be TLS 1.2+ only;
+PCI-DSS requires it.`,
+
+  GZIP: `gzip — Lossless compression (RFC 1952)
+
+The lossless data-compression format used for .gz files, HTTP
+Content-Encoding: gzip, and the wire format of git's packfiles.
+Based on DEFLATE (LZ77 + Huffman coding, RFC 1951).
+
+Decompress with \`gunzip <file>\` (creates a sibling file) or
+\`zcat <file>\` (prints to stdout — pipe-friendly). Tarballs are
+typically gzipped: \`tar tvzf foo.tar.gz\` decompresses + lists in
+one step. The newer zstd format outperforms gzip on most modern
+workloads, but gzip remains the universal default.`,
+
+  CIDR: `CIDR — Classless Inter-Domain Routing
+
+The IP-address-with-prefix-length notation: \`10.0.0.0/8\` means
+"the network whose first 8 bits are 10.0.0.0" — 16,777,216
+addresses. Replaced the legacy Class-A/B/C scheme in the 1990s.
+
+Common subnets:
+  /32  single host
+  /30  point-to-point link (4 addrs, 2 usable)
+  /29  small subnet (8 addrs, 6 usable)
+  /24  classic /24 LAN (256 addrs, 254 usable)
+  /16  /16 network (65,536 addrs)
+
+Used in routing tables, firewall rules, ACLs, AWS security
+groups — anywhere you need to describe a range of addresses
+compactly.`,
+
   CRON: `cron — Unix job scheduler
 
 The classic Unix daemon for running scheduled tasks. Each user has

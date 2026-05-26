@@ -23,6 +23,8 @@ import { shellCommands }     from "./shell.js";
 import { textCommands }      from "./text.js";
 import { systemCommands }    from "./system.js";
 import { sysInspectCommands } from "./sysinspect.js";
+import { netInspectCommands } from "./netinspect.js";
+import { formatCommands }     from "./format.js";
 import { learningCommands }  from "./learning.js";
 
 export const COMMANDS = {
@@ -37,6 +39,8 @@ export const COMMANDS = {
   ...textCommands,
   ...systemCommands,
   ...sysInspectCommands,
+  ...netInspectCommands,
+  ...formatCommands,
   ...learningCommands,
 };
 

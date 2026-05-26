@@ -434,6 +434,57 @@ Return to the lobby:    ssh guest@d3cyph3r
         NS: ["dns.atlas.internal."],
       },
     },
+
+    // v1.7.0 NETWORK INSPECTION — local interface / routing / ARP /
+    // reachability data so the dbadmin shell on staging-db.atlas.health
+    // can demonstrate `ip addr`, `ip route`, `arp -a`, `ping`,
+    // `traceroute`, and `nslookup`. The reachable hosts are the same
+    // internal-zone targets the AXFR puzzle surfaced — players can
+    // verify reachability after enumerating the zone.
+    netInterfaces: [
+      { name: "eth0", mac: "52:54:00:12:34:56", ipv4: "10.40.10.5", ipv4Prefix: 24, broadcast: "10.40.10.255" },
+    ],
+    routes: [
+      { destination: "default",      via: "10.40.10.1", dev: "eth0", proto: "dhcp",   src: "10.40.10.5", metric: 100 },
+      { destination: "10.40.10.0/24",                    dev: "eth0", proto: "kernel", scope: "link", src: "10.40.10.5" },
+    ],
+    arpCache: [
+      { hostname: "gateway",                       ip: "10.40.10.1",  mac: "52:54:00:12:34:01", dev: "eth0" },
+      { hostname: "staging-web.atlas.internal",    ip: "10.40.10.10", mac: "52:54:00:ab:cd:11", dev: "eth0" },
+      { hostname: "staging-api.atlas.internal",    ip: "10.40.10.15", mac: "52:54:00:ab:cd:22", dev: "eth0" },
+    ],
+    pingResults: {
+      "10.40.10.1":                      { resolvedIp: "10.40.10.1",  rtts: [0.234, 0.187, 0.201, 0.195] },
+      "staging-web.atlas.internal":      { resolvedIp: "10.40.10.10", rtts: [0.412, 0.398, 0.405, 0.421] },
+      "prod-db.atlas.internal":          { resolvedIp: "10.40.20.5",  rtts: [1.245, 1.198, 1.221, 1.265] },
+      "phi-warehouse.atlas.internal":    { resolvedIp: "10.40.30.8",  rtts: [1.534, 1.512, 1.498, 1.523] },
+      "audit-bypass.atlas.internal":     { resolvedIp: "10.40.99.7",  rtts: [2.012, 1.987, 2.001, 2.034] },
+    },
+    tracerouteResults: {
+      "prod-db.atlas.internal": {
+        resolvedIp: "10.40.20.5",
+        hops: [
+          { n: 1, hostname: "gateway",                     ip: "10.40.10.1",  rtts: [0.234, 0.198, 0.187] },
+          { n: 2, hostname: "core-router.atlas.internal",  ip: "10.40.0.1",   rtts: [0.456, 0.412, 0.398] },
+          { n: 3, hostname: "prod-db.atlas.internal",      ip: "10.40.20.5",  rtts: [1.245, 1.198, 1.221] },
+        ],
+      },
+      "audit-bypass.atlas.internal": {
+        resolvedIp: "10.40.99.7",
+        hops: [
+          { n: 1, hostname: "gateway",                     ip: "10.40.10.1",  rtts: [0.234, 0.198, 0.187] },
+          { n: 2, hostname: "core-router.atlas.internal",  ip: "10.40.0.1",   rtts: [0.456, 0.412, 0.398] },
+          { n: 3, hostname: "deprecated-bypass-host.atlas.internal", ip: "10.40.99.7", rtts: [2.012, 1.987, 2.001] },
+        ],
+      },
+    },
+    nslookupResults: {
+      "atlas.internal":                  { server: "10.40.0.10", addresses: ["10.40.0.10"] },
+      "prod-db.atlas.internal":          { server: "10.40.0.10", addresses: ["10.40.20.5"] },
+      "phi-warehouse.atlas.internal":    { server: "10.40.0.10", addresses: ["10.40.30.8"] },
+      "audit-bypass.atlas.internal":     { server: "10.40.0.10", addresses: ["10.40.99.7"] },
+    },
+
     fs: {
       type: "dir",
       children: {
