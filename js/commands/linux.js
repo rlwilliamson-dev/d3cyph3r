@@ -39,7 +39,7 @@
 // at module-init by flatten.js — never write to either at runtime.
 
 import { currentLevelKey, currentPath, setCurrentPath } from "../engine/state.js";
-import { resolvePath, getFSNode } from "../fs/resolve.js";
+import { resolvePath, getFSNode, resolveFullPath } from "../fs/resolve.js";
 import { expandGlobs } from "../fs/glob.js";
 
 // In-world identity for the current level. Levels can override the
@@ -172,26 +172,43 @@ export const linuxCommands = {
     const showHeaders = blocks.filter(b => b.header && b.node?.children).length > 1;
 
     // Helper: render a single block's `names` list (short or long format).
+    //
+    // Symlink rendering (long format only):
+    //   - mode prefix is `l...` (overriding any per-file permissions
+    //     mode the level set, since the symlink itself never gates
+    //     reads — the target's mode does)
+    //   - display name becomes `name -> target` (bash convention)
+    // Short format prints names as-is (no `@` suffix — we don't
+    // implement the `-F` flag yet).
     const renderBlock = (block) => {
       const { names, node } = block;
       if (names.length === 0) return "(empty directory)";
 
       if (longFmt) {
         const perms = level.permissions || {};
-        const metas = names.map(f => {
+        // Per-entry resolution: look up the child node so we know whether
+        // it's a symlink (and what its target is for the arrow rendering).
+        const entries = names.map(f => {
           const key = f.endsWith("/") ? f.slice(0, -1) : f;
-          return perms[key] || defaultMeta(f);
+          const childNode = node?.children?.[key];
+          const isSymlink = childNode?.type === "symlink";
+          const meta = perms[key] || defaultMeta(f);
+          return {
+            f,
+            meta: isSymlink ? { ...meta, mode: "lrwxrwxrwx" } : meta,
+            displayName: isSymlink ? `${f} -> ${childNode.target}` : f,
+          };
         });
-        const ownerW = Math.max(...metas.map(m => m.owner.length));
-        const groupW = Math.max(...metas.map(m => m.group.length));
-        const sizeW  = Math.max(...metas.map(m => String(m.size).length));
+        const ownerW = Math.max(...entries.map(e => e.meta.owner.length));
+        const groupW = Math.max(...entries.map(e => e.meta.group.length));
+        const sizeW  = Math.max(...entries.map(e => String(e.meta.size).length));
 
         const lines = [];
         if (node && node.children) lines.push("total " + names.length * 8);
-        names.forEach((f, i) => {
-          const m = metas[i];
+        entries.forEach(e => {
+          const m = e.meta;
           lines.push(
-            `${m.mode} 1 ${m.owner.padEnd(ownerW)} ${m.group.padEnd(groupW)} ${String(m.size).padStart(sizeW)}  ${f}`
+            `${m.mode} 1 ${m.owner.padEnd(ownerW)} ${m.group.padEnd(groupW)} ${String(m.size).padStart(sizeW)}  ${e.displayName}`
           );
         });
         return lines.join("\n");
@@ -397,6 +414,46 @@ export const linuxCommands = {
 
     const user = getCurrentUser(level);
     return { text: found.map(f => `/home/${user}/` + f).join("\n"), cls: "out" };
+  },
+
+  // readlink: print the literal target of a symlink (no resolution).
+  //
+  //   readlink mylink         → "../actual-file" (whatever the symlink stores)
+  //   readlink regular-file   → error: "Invalid argument" (not a symlink)
+  //   readlink missing        → error: "No such file or directory"
+  //
+  // Use `realpath` instead when you want the fully-resolved absolute
+  // path; readlink stops at the first symlink hop and prints its
+  // target verbatim, including any relative `..` / `~` references.
+  readlink(level, arg) {
+    if (!arg) return { text: "Usage: readlink <path>", cls: "err" };
+    const target = resolvePath(level, currentPath, arg.trim());
+    const node   = getFSNode(level, target, { noFollow: true });
+    if (!node) return { text: `readlink: ${arg}: No such file or directory`, cls: "err" };
+    if (node.type !== "symlink") {
+      return { text: `readlink: ${arg}: Invalid argument`, cls: "err" };
+    }
+    return { text: node.target || "", cls: "out" };
+  },
+
+  // realpath: print the canonical absolute path of a file after
+  // resolving every symlink in the chain.
+  //
+  //   realpath mylink         → /home/<user>/actual-file
+  //   realpath regular-file   → /home/<user>/regular-file
+  //   realpath dangling-link  → error: "No such file or directory"
+  //
+  // Symlink cycles abort with the same error (the underlying walker
+  // caps resolution at MAX_SYMLINK_HOPS = 16, matching the spirit of
+  // the kernel ELOOP cap).
+  realpath(level, arg) {
+    if (!arg) return { text: "Usage: realpath <path>", cls: "err" };
+    const start = resolvePath(level, currentPath, arg.trim());
+    const full  = resolveFullPath(level, start);
+    if (!full) return { text: `realpath: ${arg}: No such file or directory`, cls: "err" };
+    const user = getCurrentUser(level);
+    const path = full.length === 0 ? `/home/${user}` : `/home/${user}/${full.join("/")}`;
+    return { text: path, cls: "out" };
   },
 
   // env: dump level.env_vars. Levels use this to leak credentials /

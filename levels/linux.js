@@ -5,6 +5,20 @@
 // ssh into this level (set by the PREVIOUS level's content); leave null
 // for the entry level.
 //
+// The fs tree's children are keyed by basename. Each entry is either:
+//
+//   { type: "dir",     children: { ...nested entries... } }
+//   { type: "file",    content: "string body" }
+//   { type: "symlink", target: "path" }
+//
+// Symlink targets follow the same path-resolution rules as anything
+// the player types: absolute (`/home/<user>/foo`), home-relative
+// (`~/foo`), or relative to the symlink's parent dir (`foo`,
+// `../foo`). The resolver caps chain length at 16 hops to break
+// cycles. `cat <symlink>` reads through; `ls -l` shows it as
+// `lrwxrwxrwx ... name -> target`; `readlink` prints the literal
+// target; `realpath` prints the fully-resolved absolute path.
+//
 // Optional: `playerUser` (and `playerGroup`, defaulting to `playerUser`)
 // override the in-world identity the player sees inside the box. The
 // level key (e.g. `level1@linux`) is engine bookkeeping for the SSH-hop
@@ -239,8 +253,18 @@ vi creds.txt
 git status
 git stash
 nano handoff.md
+ln -s notes.txt .notes
 exit
 `
+        },
+
+        // Hidden symlink Daniel left behind — points at notes.txt. Doesn't
+        // affect the puzzle solve (the credential is still in creds.txt),
+        // but a player who runs `ls -la` will see the symlink rendering
+        // and can `readlink .notes` / `realpath .notes` to inspect it.
+        ".notes": {
+          type: "symlink",
+          target: "notes.txt",
         },
 
         "lessons-learned.md": {

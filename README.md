@@ -166,7 +166,7 @@ If you open DevTools on the live site you may see CSP errors blocking scripts fr
 
 See `help` inside the terminal for the full reference. Track-by-track:
 
-- **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `env`
+- **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `readlink` / `realpath` / `env`
 - **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `AXFR`)
 - **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
 - **Web:** `curl` (+ `-I`) / `gobuster` / `cookies`

@@ -140,15 +140,107 @@ export function resolvePath(level, currentPath, input) {
 
 /**
  * Walk level.fs from the root, following an absolute parts array.
- * Returns the matching node or null when any segment is missing or
- * the level has no fs tree.
+ * Returns the matching node or null when any segment is missing,
+ * the level has no fs tree, or symlink resolution hits a cycle.
+ *
+ * Symlink handling:
+ *   By default, symlinks are followed transparently. When the walk
+ *   hits a `{ type: "symlink", target: "..." }` node, the target is
+ *   resolved against the symlink's PARENT directory (via resolvePath)
+ *   and the walk restarts from the resolved path plus any remaining
+ *   un-walked segments. Tracks a hop counter capped at MAX_SYMLINK_HOPS
+ *   to detect cycles (a → b → a) — exceeding the cap returns null,
+ *   mirroring real-system ELOOP.
+ *
+ *   Pass `{ noFollow: true }` to leave the FINAL segment unresolved
+ *   when it's a symlink. Intermediate symlinks on the path are still
+ *   followed — only the last component is preserved. Used by
+ *   `readlink` and `ls -l` to inspect the symlink itself.
+ *
+ * @param {object}  level     - The current level (for fs root + home prefix).
+ * @param {string[]} pathParts - Absolute parts array (relative to fs root).
+ * @param {{noFollow?: boolean}} [opts]
+ * @returns {object|null} The fs tree node at the resolved path, or null.
  */
-export function getFSNode(level, pathParts) {
+const MAX_SYMLINK_HOPS = 16;
+
+export function getFSNode(level, pathParts, opts = {}) {
   if (!level || !level.fs) return null;
+  const noFollow = !!opts.noFollow;
+
+  let path = [...pathParts];
   let node = level.fs;
-  for (const part of pathParts) {
-    if (!node.children || !node.children[part]) return null;
-    node = node.children[part];
+  let i = 0;
+  let hops = 0;
+
+  while (i < path.length) {
+    if (!node.children) return null;
+    const seg = path[i];
+    const child = node.children[seg];
+    if (!child) return null;
+
+    const isFinal = i === path.length - 1;
+
+    // Final segment + noFollow + child is a symlink → hand back the
+    // symlink node verbatim so the caller can read .target / render
+    // it without resolution.
+    if (isFinal && noFollow && child.type === "symlink") {
+      return child;
+    }
+
+    // Symlink anywhere else (or final + follow-mode): resolve target,
+    // splice in the remainder, restart the walk from fs root. The
+    // hop cap protects against cycles.
+    if (child.type === "symlink") {
+      if (++hops > MAX_SYMLINK_HOPS) return null;
+      const symlinkDir = path.slice(0, i);
+      const resolved   = resolvePath(level, symlinkDir, child.target || "");
+      path = [...resolved, ...path.slice(i + 1)];
+      node = level.fs;
+      i = 0;
+      continue;
+    }
+
+    node = child;
+    i++;
   }
+
   return node;
+}
+
+/**
+ * Like getFSNode, but returns the canonicalized parts array (with
+ * every symlink resolved) instead of the final node. Used by the
+ * `realpath` command to print the physical path of a symlink chain.
+ *
+ * Returns null when the path doesn't exist or a cycle is hit.
+ */
+export function resolveFullPath(level, pathParts) {
+  if (!level || !level.fs) return null;
+
+  let path = [...pathParts];
+  let node = level.fs;
+  let i = 0;
+  let hops = 0;
+
+  while (i < path.length) {
+    if (!node.children) return null;
+    const seg = path[i];
+    const child = node.children[seg];
+    if (!child) return null;
+
+    if (child.type === "symlink") {
+      if (++hops > MAX_SYMLINK_HOPS) return null;
+      const symlinkDir = path.slice(0, i);
+      const resolved   = resolvePath(level, symlinkDir, child.target || "");
+      path = [...resolved, ...path.slice(i + 1)];
+      node = level.fs;
+      i = 0;
+      continue;
+    }
+
+    node = child;
+    i++;
+  }
+  return path;
 }

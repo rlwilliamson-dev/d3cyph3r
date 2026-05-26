@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-05-26
+
+**Symlinks.** The level filesystem now supports a third node type
+alongside dirs and files: `{ type: "symlink", target: "..." }`. The
+path resolver follows symlinks transparently (with cycle detection),
+`ls -l` renders them with the canonical `lrwxrwxrwx ... name ->
+target` format, and two new commands — `readlink` and `realpath` —
+let players inspect symlink chains.
+
+Adding symlinks to the engine unlocks the lookup-misdirection puzzle
+shapes future levels will lean on (a dangling pointer that hints at
+a deleted file, a chain of redirections that misleads the player,
+a hidden shortcut to a file behind tighter permissions). v1.5.0 ships
+the engine surface and one demo symlink on level0@linux as a
+reference; future levels can use the schema however the scenario
+calls for.
+
+### Added
+
+- **`level.fs` symlink entries**: `{ type: "symlink", target: "..." }`
+  alongside the existing `{ type: "dir", children }` and `{ type:
+  "file", content }` shapes. Schema documented at the top of
+  `levels/linux.js`.
+- **Symlink-aware path resolver** (`js/fs/resolve.js`):
+  - `getFSNode()` follows symlinks transparently during the walk.
+    When the walk hits a symlink node, its `target` is resolved
+    against the symlink's parent directory (so relative targets
+    like `../bin` work) and the walk restarts. Hop count is capped
+    at MAX_SYMLINK_HOPS = 16 to detect cycles — chains exceeding
+    the cap return null (the resolver's equivalent of ELOOP).
+  - `getFSNode(level, parts, { noFollow: true })` opts out of
+    following the FINAL segment, used by `readlink` and `ls -l`
+    to inspect the symlink itself.
+  - **`resolveFullPath()`** — new helper that returns the
+    canonicalized parts array (every symlink resolved). Used by
+    `realpath` to produce the absolute-path output.
+- **`readlink <path>`** command — prints the literal `target`
+  string stored in a symlink, with no resolution. Errors on
+  non-symlink and missing-path arguments with the canonical
+  bash error strings.
+- **`realpath <path>`** command — prints the fully-resolved
+  canonical absolute path (`/home/<user>/...`) after following
+  every symlink in the chain. Errors on broken targets / cycles.
+- **`ls -l` symlink rendering** — entries whose type is `symlink`
+  show with mode prefix `l` (`lrwxrwxrwx`) and the canonical
+  arrow notation (`name -> target`) appended to the display name.
+  Short-format `ls` continues to list symlinks by name only (no
+  trailing marker — we don't implement the `-F` flag).
+- **Demo symlink on level0@linux** — hidden `.notes -> notes.txt`,
+  visible in `ls -la`. Doesn't change the level's puzzle (the
+  credential is still in creds.txt), but gives players + the
+  playtest a real symlink to interact with.
+- **Manpages** for `readlink` and `realpath`.
+- **Glossary entry**: `what-is symlink`.
+- **Playtest coverage**: 472 → 480 (+8 new). Verifies `ls -la`
+  shows the symlink with `lrwxrwxrwx` prefix and arrow notation,
+  `readlink` on a symlink prints the literal target, `readlink`
+  on non-symlinks errors cleanly, `readlink` on missing files
+  errors cleanly, `realpath` resolves through the symlink, `cat`
+  through the symlink reads the target's content.
+
+### Changed
+
+- `js/commands/linux.js` — `ls -l` renders symlinks differently
+  (see above). `cd`, `cat`, `grep`, `head`, `tail` continue to
+  use `getFSNode` and pick up symlink-following transparently
+  through the resolver — no handler changes needed.
+- LINUX BASICS help reference gains `readlink` and `realpath`.
+
 ## [1.4.0] - 2026-05-26
 
 **Learning aids + awk.** Three player-facing self-help commands
@@ -1800,7 +1869,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.1...v1.2.0

@@ -49,6 +49,8 @@ const HELP_SECTIONS = [
     "echo <text>                – print text to terminal",
     "grep <word> [file ...]     – search for word in file(s), stdin, or *",
     "find <path> -name <pat>    – find files matching pattern",
+    "readlink <path>            – print a symlink's literal target",
+    "realpath <path>            – resolve symlinks → canonical absolute path",
     "env                        – list environment variables",
     "",
     "  Shell features:",
