@@ -141,6 +141,18 @@ export const cloudLevels = {
     playerUser: "cloudsec",
     objective: "Walk Coverline's 6-bucket SOC 2 audit worksheet from outside the Coverline account. For each bucket, run an unauthenticated `aws s3 ls --no-sign-request` probe and record the response. Flag any bucket that isn't behaving the way the worksheet says it should.",
     lesson: "Coverline Insurance is one of Driftwood's insurtech clients — a mid-sized property & casualty carrier specializing in small-business policies (~150 engineers, founded 2019, HQ in Hartford, Connecticut). They sell direct AND white-label their product to ~40 regional insurance carriers, which is why the SOC 2 Type II report is non-negotiable — every carrier customer requires it before they'll resell. State-insurance regs add layers: NAIC Insurance Data Security Model Law has been adopted in ~25 states Coverline operates in, and NYDFS 23 NYCRR 500 applies because they're licensed in New York. Coverline is mid-SOC-2-cycle right now and the audit firm flagged a gap last week: there's no documented evidence trail for the 'S3 bucket public-access review' control (CC6.1). The auditors produced a 6-bucket worksheet with the expected access state for each, and Coverline needs each one walked and the response recorded as evidence. Coverline's DevOps team is fully committed on an us-east-1-to-us-east-2 cutover; Jordan Nguyen (Coverline's Sr. Director of Cloud Infrastructure) asked Driftwood to fill in. You're on Driftwood's cloud-audit workstation (the shell calls you `cloudsec`, the shared service account the cloud-security team uses for client recon). Read welcome.md first — it explains how the unauthenticated S3 probe works. Then read engagement-notes.md, then audit-worksheet.txt, then walk the buckets. Read lessons-learned.md once you've found the bucket that doesn't match the worksheet.",
+
+    // v1.10.0 BONUS FINDS — confirming you're probing from your own
+    // Driftwood account, not Coverline's. Orthogonal to the bucket
+    // finding; doesn't gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "sts-identity-confirmation",
+        name: "Probing from outside the client's account",
+        hint: "`aws sts get-caller-identity` returns Driftwood's own account (driftwood-cloudsec-readonly), not Coverline's. For external-audit work, confirming you are operating from an OUTSIDE account is its own auditable control — the worksheet's `--no-sign-request` premise is undermined if the auditor accidentally has cached Coverline credentials. Confirm identity before every external probe.",
+        trigger: { command: "aws", argMatches: /sts get-caller-identity/, outputContains: "driftwood-cloudsec-readonly" },
+      },
+    ],
     cloud: {
       s3: {
         bucketCreatedDate: "2024-08-12 09:14:22",
@@ -1247,6 +1259,19 @@ Return to the lobby:    ssh guest@d3cyph3r`
     playerUser: "cloudsec",
     objective: "Enumerate the coverline_claims production database with the leaked RDS master credential. Identify any other credentials stored in row data, dormant employee accounts, or anomalous audit-log entries that change the breach-notification math. Read-only audit only — no INSERT/UPDATE/DELETE.",
     lesson: "After Friday's S3 finding closed the CC6.1 control gap, Coverline's CISO (Sloane Becker) + GC + outside counsel spent the weekend on the breach-notification math. The leaked RDS master credential (Cl41ms-Pr0d-M4st3r-2024) is rotation-pending; before they rotate, Sloane wants Driftwood to enumerate what's actually in the database — every abandoned migration artifact, every dormant employee account, every credential stashed in row data — so the notification analysis can cover the full secondary-exposure surface. Jordan Nguyen authorized the follow-on engagement Monday morning and pre-staged the leaked credential in `~/.pgpass` on Coverline's cloud-audit bastion host (the shell you're on now). Read welcome.md first — it explains the new `psql` command. Then read engagement-notes.md and bastion-handoff.txt. Walk the coverline_claims schema with `psql`. Read lessons-learned.md once you've surfaced the findings.",
+
+    // v1.10.0 BONUS FINDS — surfaces the ttl_expires_at column
+    // pattern in migration_artifacts (designed-right, enforcement-
+    // never-shipped). Orthogonal to the credentials-in-rows finding;
+    // doesn't gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "ttl-without-enforcement",
+        name: "TTL columns without enforcement",
+        hint: "`migration_artifacts` was designed RIGHT — a `ttl_expires_at` column on every row, with Q2 2024 deletion intent. The design acknowledged the risk. What failed was enforcement: no cron, no deployment-pipeline check, no quarterly review actually reads the TTL column and deletes expired rows. Documented intent is not a control; an automated job that reads the same column and acts on it is.",
+        trigger: { command: "psql", argMatches: /migration_artifacts/, outputContains: "ttl_expires_at" },
+      },
+    ],
     postgres: {
       defaultDb: "coverline_claims",
       connection: {

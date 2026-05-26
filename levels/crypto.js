@@ -41,6 +41,19 @@ export const cryptoLevels = {
     playerUser: "secops",
     objective: "Decide whether Theo's 'I base64-encoded the API key for safety' commit at Vesta Retail counts as PCI-DSS Requirement 3 protection — and document what the actual key looks like to anyone with read access on the box.",
     lesson: "Vesta Retail's annual PCI-DSS re-attestation is in six weeks. Their CTO, Saanvi, wants Driftwood to walk the payment-deploy code before the QSA does. Priya pulled deploy.sh from Vesta's repo on Friday and flagged the API key handling: their backend engineer Theo committed a change last sprint that 'cleaned up' the script by base64-encoding the production payment-processor API key into a separate file. Theo believes the key is now safer because it's not in plaintext. You're on Driftwood's crypto-analysis workstation (the shell calls you `secops`, the shared service account for code and binary reviews). Read welcome.md first — it explains base64. Then read engagement-notes.md, look at deploy.sh, and decode the key. Read lessons-learned.md once you've seen it.",
+
+    // v1.10.0 BONUS FINDS — surfaces Priya's "side note unrelated
+    // to today's finding" aside in engagement-notes about the
+    // Vendolux coffee machine. Orthogonal to the encoding lesson;
+    // doesn't gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "daniel-coffee-vendor",
+        name: "The Vendolux coffee machine",
+        hint: "Priya's note ends with an unrelated aside: the floor-4 coffee machine still takes nickels four months after Daniel called the vendor. The 'I called them and they weren't interested' anti-pattern is the same shape as Theo's 'I base64'd it for safety' — a single person doing the right thing alone, on an issue nobody else owns, and nothing changes. Ownership beats individual effort.",
+        trigger: { command: "cat", argMatches: /engagement-notes\.md/, outputContains: "Vendolux" },
+      },
+    ],
     fs: {
       type: "dir",
       children: {
@@ -435,6 +448,18 @@ Return to the lobby:    ssh guest@d3cyph3r
     playerUser: "vesta-deploy",
     objective: "Audit Theo's homegrown JWT auth on Vesta's internal admin API — decide whether the tokens in the access log are actually being verified, and document the blast radius if they aren't.",
     lesson: "Day two of Vesta's pre-QSA audit. Yesterday's base64-encoded-API-key finding closed clean; Theo took the news well and the rotation is on the calendar for Friday. During the conversation Theo mentioned a second project — a 'quick token-based auth' he shipped for Vesta's internal admin API three weeks ago. Saanvi authorized you to use the still-live API key from yesterday to ssh into the payment-deploy host where the admin-API logs are mirrored. You're now logged in as `vesta-deploy`. Read welcome.md first (it introduces the `jwt` command and what JWTs are); then priya-note.md for the day-two context; then look at verify-middleware.js and admin-access.log. When you've worked out what's wrong, read lessons-learned.md.",
+
+    // v1.10.0 BONUS FINDS — surfaces Theo's library-popularity-as-
+    // safety reasoning quoted in priya-note. Orthogonal to the
+    // alg:none finding; doesn't gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "most-downloaded-fallacy",
+        name: "'Most-downloaded npm package, should be safe'",
+        hint: "Priya's day-two note quotes Theo's library-choice rationale verbatim: he picked the most-downloaded JWT package because 'everyone uses it, should be safe.' Library popularity is a useful signal for maintenance and audit attention — it is not a signal that you've configured the library correctly. Theo's bug isn't in the library; it's in his two-argument call.",
+        trigger: { command: "cat", argMatches: /priya-note\.md/, outputContains: "most-downloaded" },
+      },
+    ],
     fs: {
       type: "dir",
       children: {

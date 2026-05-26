@@ -9,18 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.10.0] - 2026-05-26
 
-**Lobby polish + cold-start UX.** The first MINOR after v1.9.0 wraps
-the engine-polish run. AVAILABLE ENGAGEMENTS becomes a collapsible
-tree so the lobby scales gracefully as level2/level3 land per-track;
-`progress` learns a `--detail` flag for in-game review of unlocked
-bonus finds; a cold-start gate hint nudges players who try to enter
-a gated level without having visited the prerequisite.
+**Lobby polish + cold-start UX + cross-track bonus finds.** The first
+MINOR after v1.9.0 wraps the engine-polish run. AVAILABLE ENGAGEMENTS
+becomes a collapsible tree so the lobby scales gracefully as
+level2/level3 land per-track; `progress` learns a `--detail` flag
+for in-game review of unlocked bonus finds; a cold-start gate hint
+nudges players who try to enter a gated level without having visited
+the prerequisite.
 
-Two walkthroughs (linux/level1, network/level1) gained "Optional
-exploration" sections covering content that shipped after the
-walkthroughs were last touched (the v1.9.0 multi-host pivot host on
-level1@linux; the v1.7.0 network-inspection demo data on
-level1@network). No solve-path changes.
+**Bonus finds reach every shipped level.** v1.9.0 introduced
+`level.bonusFinds` but only seeded data on the two linux levels.
+v1.10.0 rolls out a bonus find on each of the 12 non-linux levels —
+each a small orthogonal lesson surfaced from existing in-level
+content (Priya's audit-trail asides, welcome.md side notes, EXIF
+fields players often skim past, robots.txt billboarding, the Adobe
+2013 hint-field intel layer, Strava neighborhood exposure, and more).
+Every walkthrough gains a §7.5 "Optional exploration" section that
+names each bonus, gives its trigger, and expands the lesson into the
+broader real-world pattern.
 
 ### Added
 
@@ -57,12 +63,26 @@ level1@network). No solve-path changes.
 - **Per-track `description` field** in `js/engine/tracks.js` —
   one-line blurb shown when the track is expanded. Backfilled on
   all 7 tracks.
-- **Walkthrough additions:**
+- **12 new bonus finds on the non-linux levels** — one per shipped
+  level (network/level0+1, crypto/level0+1, web/level0+1,
+  forensics/level0+1, osint/level0+1, cloud/level0+1). Each uses
+  existing in-level content as the trigger (no new schema, no new
+  fs nodes). Examples: Priya's "next sprint" audit-trail note on
+  network/level0; `robots.txt` as an attacker's site map on
+  web/level0; the EXIF `GPSImgDirection` field beside lat/long on
+  forensics/level0; Adobe 2013's cleartext password-hint field on
+  osint/level0; the `migration_artifacts.ttl_expires_at` column
+  without enforcement on cloud/level1.
+- **Walkthrough §7.5 — Optional exploration** sections added to
+  all 14 walkthroughs. Each names the bonus(es) in the level,
+  gives the trigger, and expands the hint into a real-world
+  pattern reference (MITRE ATT&CK techniques, LOLBAS, 2018 Strava
+  heatmap incident, the Snowflake UNC5537 long-TTL session
+  campaign, Adobe 2013 storage flaws, etc.). Also includes:
   - `walkthroughs/linux/level1.md` §7.5 — "Optional exploration:
     the pivot host" documents the agent-forwarded SSH workflow
     into `dbsvc@halton-bastion`, the backup landing zone shipped
-    in v1.9.0. The solve path doesn't require the pivot; the
-    section is bonus.
+    in v1.9.0. The solve path doesn't require the pivot.
   - `walkthroughs/network/level1.md` §7.5 — "Optional
     verification: walk the perimeter you just enumerated" covers
     `ip addr`, `ip route`, `arp -a`, `nslookup`, `ping`,

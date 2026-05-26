@@ -458,6 +458,28 @@ falsepositives:
 
 This rule, fed into Meridian's SIEM (Splunk, Sentinel, ElasticSearch, whatever), would alert on the next external retrieval of any sensitive path — turning the audit cadence into a real-time detection.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` lists what you've unlocked.
+
+### robots.txt as an attacker's site map
+
+**Trigger:** `curl https://www.meridian.edu/robots.txt`
+
+**What it teaches:** Meridian's `robots.txt` lists `/admin/`, `/backup/`, `/staging/`, `/private/` — every path the institution wanted hidden. `Disallow` doesn't hide; it announces. Every reconnaissance script reads `robots.txt` first because it's an indexed convention for "here are the things you weren't meant to find."
+
+The defender's lesson is symmetric to the autoindex finding: **if a path is sensitive, the removal of a link is what hides it; the addition of a Disallow line is what advertises it.** Real-world examples:
+
+- The HHS OCR breach repository contains multiple "Disallow led directly to the exposed asset" findings against universities, healthcare networks, and government agencies. The pattern is so consistent that some commercial attack-surface management vendors (Detectify, Censys) ship a default rule that emits a finding the moment a customer's robots.txt mentions an admin or backup path.
+- Carlos's `/backup/` would have been a slightly slower find if it weren't *also* in `robots.txt`. The gobuster wordlist hits it eventually, but the robots.txt billboards it.
+
+What to use instead:
+- **Authentication on the path itself.** If `/admin/` requires SSO, putting it in `robots.txt` doesn't matter — the path is gated regardless. The risk is when the path is *served unauthenticated and merely unlisted*.
+- **Server-side authorization, not security through obscurity.** Every "hidden URL" model collapses the moment a search engine, an inadvertent log line, or a tool like gobuster discovers it.
+- **A clean robots.txt that lists *only* convention paths** (`/wp-admin/` for WordPress, `/api/private/`-style legitimate API gates) and absolutely no operational secrets. The robots.txt should be readable by an attacker and *tell them nothing they didn't already know*.
+
+The historical "best practice" of using robots.txt to hide things is the most reliably wrong piece of web-security folk wisdom still being repeated in 2026. Carlos didn't write Meridian's robots.txt — BluePier did — and Carlos inherited the advertised attack surface along with the unmaintained codebase.
+
 ## §8 — Key takeaways
 
 - **The vendor that introduced the exposure is no longer reachable. The institution still owns the regulatory consequence.** This is the consulting-firm engagement pattern in higher ed: an agency builds a website, the relationship ends in dispute, the artifacts remain, the FERPA exposure persists for years until someone audits.

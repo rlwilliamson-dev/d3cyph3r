@@ -415,6 +415,20 @@ falsepositives:
 
 This rule, tuned by replacing "medium" with "high" for service accounts and dropping the `/home/` filter for cases where credentials shouldn't be anywhere outside the vault, is the kind of detection a SOC would deploy at scale.
 
+## §7.5 — Optional exploration: bonus finds
+
+This section is bonus. The credential chain works without it; the post-mortem above stands without it. The level seeds one hidden bonus find that fires if you happen to run a particular command — type `progress --detail` from the lobby to see what's in your discovered list.
+
+### Daniel's muscle-memory pattern
+
+**Trigger:** `cat .bash_history`
+
+**What it teaches:** Daniel's shell history is full of `sudo systemctl status` — he was checking on the staging-worker service constantly. That's the meta-signal. The same developer who *copies secrets to .bak files* is often the developer *logged into every box*. A real incident-response sweep doesn't stop at "find the credential"; it asks "who else was running on these boxes with their fingerprints on the same patterns?" — because muscle memory is a behavioral signature that survives password rotation. `.bash_history` is one of the cheapest places to read that signature.
+
+This is also why the **CIS Linux Benchmark** recommends configuring `HISTSIZE` and `HISTFILESIZE` thoughtfully on shared service accounts — the audit trail is the security control. Daniel's box had `HISTSIZE=1000` (you may have noticed this earlier when you ran `env`). That's roughly five days of shell activity for a busy DevOps engineer, which is plenty for the trail to remain useful at the moment of audit.
+
+The bonus is a small wink at the discipline gap: the same set of commands (`sudo systemctl`, `cat secret.env`, `cp secret.env.bak`) appear in `.bash_history` over and over, and `.bash_history` itself is mode 600 owned by Daniel — readable by the user who's about to be audited, but written without him thinking about who'd read it later. That asymmetry — "I'm not the audience for my own shell history" — is the pattern.
+
 ## §8 — Key takeaways
 
 - **The credential file was the entire breach.** Three stacked failures (account lifecycle, plaintext storage, no rotation forcing function) combine into one finding that violates AC-2, IA-5, CWE-798, OWASP A07, GLBA, and PCI-DSS simultaneously.

@@ -485,6 +485,14 @@ If you want to see this lateral-movement pattern documented in the wild, the **M
 
 This pivot exists in level1@linux specifically to let curious players exercise the multi-host workflow without leaving the engagement; **the credential chain works without it.** If you're racing to level2 once it ships, skip this section.
 
+### Bonus finds on this level
+
+Two hidden bonus finds seed orthogonal lessons. `progress --detail` from anywhere shows your discovered list.
+
+**1. Daniel's backup script** — Trigger: `cat backup.sh`. The script reads its database connection string from a *systemd unit override file* (`override.conf`), not from a `.env` or a shell variable or a Vault lookup. The teaching is the systemd-as-credential-store anti-pattern: drop-in override files are a real production surface where credentials accumulate, are often readable by every user on the box (mode 644 is the default unless you `chmod` them), and are *easy* to miss in a credential audit because they don't live where credentials are conventionally expected. CIS Linux Benchmarks 5.x address `/etc/systemd/system/*.d/` audit posture for exactly this reason.
+
+**2. Self-logged config-fallback bug** — Trigger: `journalctl -u staging-worker`. The staging-worker journal contains a recurring ERROR/WARN sequence: the service tries to open `staging-worker.env` (mode 600, owned by root, fails with EACCES), then *falls back* to `.bak`, then logs *both events* to the journal. The system is logging its own bug. A defender pulling the staging-worker journal in any routine review window from the past five months would have seen the falling back to staging-worker.env.bak message, traced it back to the permission mismatch, and closed the gap before the audit found it. The teaching is that **services log their own misbehavior; defenders just have to read.** `journalctl -u <service>` should be in every operational runbook.
+
 ## §8 — Key takeaways
 
 - **The lock on the front door doesn't matter when there's a key under the mat.** The legitimate `staging-worker.env` file at mode 600 was properly protected; the shadow copy at mode 644 carrying the same content nullified that protection entirely. Permission misconfiguration is the most common single source of CWE-732 findings in real consulting work.

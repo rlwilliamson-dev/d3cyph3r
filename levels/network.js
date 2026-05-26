@@ -34,6 +34,19 @@ export const networkLevels = {
     playerUser: "secops",
     objective: "Verify Atlas Health's claim that their staging environment is VPN-only — and document what's exposed if it isn't.",
     lesson: "Atlas Health is one of Driftwood's largest healthcare clients — they handle PHI for ~400,000 patients across the Pacific Northwest. Their DevOps lead, Marcus, told Priya last quarter that staging.atlas.health is now VPN-only. We do a routine perimeter verification on every client engagement every quarter; today is Atlas's turn. You're on Driftwood's audit workstation (the shell calls you `secops`, the shared service account the security team uses for these checks). Read welcome.md first — it explains nmap. Then read the engagement notes, then start scanning. When you've found what's wrong, read lessons-learned.md.",
+
+    // v1.10.0 BONUS FINDS — orthogonal lesson surfaced from Priya's
+    // engagement-notes audit-trail paragraph. Doesn't gate the
+    // credential chain.
+    bonusFinds: [
+      {
+        id:   "five-sprint-rotation",
+        name: "The five-sprint rotation that never happened",
+        hint: "Priya's audit-trail note records Marcus saying the default credential would be rotated 'next sprint' — five sprints ago. The 'we'll do that next sprint' commitment is the single most reliable predictor of unrotated production credentials. Track promises in the risk register, not Slack.",
+        trigger: { command: "cat", argMatches: /engagement-notes\.md/, outputContains: "five sprints" },
+      },
+    ],
+
     net: {
       "staging.atlas.health": [
         { port: 22,   state: "open", service: "ssh",        version: "OpenSSH 8.9p1 Ubuntu" },
@@ -401,6 +414,19 @@ Return to the lobby:    ssh guest@d3cyph3r
     playerUser: "dbadmin",
     objective: "Validate the blast radius reachable from the staging-db host before Marcus's team rotates the default credential — and document everything Atlas's internal DNS gives up to a guest with shell access.",
     lesson: "Day two of the Atlas Health audit. Last night's perimeter finding was escalated; Marcus's team patches the firewall this morning and rotates the default credential in Friday's change window. Priya has authorized a one-time, documented blast-radius check. You used `atlas-default-2025` to ssh into staging-db.atlas.health and you're now logged in as `dbadmin` — the default vendor service account, configured with /bin/bash because somebody needed the shell for an upgrade six months ago and never reverted. Read welcome.md (it explains the new tool you'll need today); then priya-note.md for the rules of engagement; then start from the internal DNS resolver. When you've documented the scope, read lessons-learned.md.",
+
+    // v1.10.0 BONUS FINDS — surfaces the welcome.md aside about the
+    // vendor service account that still carries /bin/bash. Orthogonal
+    // to the AXFR finding; doesn't gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "dbadmin-shell-drift",
+        name: "Vendor default account with /bin/bash",
+        hint: "welcome.md notes that somebody enabled /bin/bash on this vendor service account during an upgrade six months ago and never reverted. A real attacker doing yesterday's exact sequence ends up here. Service accounts should have nologin shells; the 'just for this debug session' exception is how every shipped shell got there.",
+        trigger: { command: "cat", argMatches: /welcome\.md/, outputContains: "/bin/bash" },
+      },
+    ],
+
     dnsData: {
       "atlas.internal": {
         // AXFR is the payload. Pre-formatted zone-file lines exactly as

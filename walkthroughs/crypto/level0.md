@@ -338,6 +338,25 @@ This rule, run as a pre-commit hook against staged files, would have flagged The
 
 **8. Audit cadence.** Quarterly credential-scanning audits across the entire repository inventory. Annually, a full source-control sweep with history scanning enabled (the credentials that pre-date the credential scanner are the ones most likely to still be there). The audit produces a list of findings; remediation has a defined SLA.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` from any prompt lists what you've unlocked.
+
+### The Vendolux coffee machine
+
+**Trigger:** `cat engagement-notes.md` (you ran this as step 1 of the solve, so the bonus fires there)
+
+**What it teaches:** Priya's notes end with a deliberately unrelated aside about the floor-4 coffee machine that still takes nickels four months after Daniel called the vendor. That coffee-machine paragraph is *the same shape* as Theo's base64 API-key story. In both:
+
+- One competent person identifies a problem.
+- One competent person tries to do the right thing about it.
+- That person has no organizational backing — no ticket, no follow-up cadence, no named-owner accountability for the outcome.
+- The problem persists indefinitely.
+
+The pattern name in real consulting work is **lone effort without organizational ownership**. It is not solved by *more effort from the lone person* (Daniel calling Vendolux a second time will not fix the coffee machine; Theo writing a more thoroughly base64'd key will not fix his key-handling). It is solved by **moving the problem into an organizational queue with an owner**: a ticket in the team's backlog, a name attached, a date attached, escalation path defined. Then the issue lives or dies on its own merit instead of on the willingness of one person to keep calling Vendolux.
+
+This is also the shape of why secret-management migrations stall at most consulting clients. The engineer who's bothered enough to advocate for HashiCorp Vault or AWS Secrets Manager is rarely the engineer with the time, authority, or political capital to lead the migration. Same coffee-machine pattern, larger blast radius.
+
 ## §8 — Key takeaways
 
 - **Encoding is not encryption.** Base64 is a transport format. Hex is a transport format. ROT-13 is a substitution cipher with no key. Cisco Type-7 is XOR with a known constant. None of these provide cryptographic protection; all of them have been mistaken for encryption in production code, including in code that handles credentials. The encoding-vs-encryption distinction is a foundational concept in every cybersecurity cert curriculum because it is a foundational mistake in every credential-exposure incident report.

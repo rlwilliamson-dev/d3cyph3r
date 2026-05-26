@@ -56,6 +56,19 @@ export const forensicsLevels = {
     playerUser: "secops",
     objective: "Forensically verify the alibi photo Reed Connolly submitted to Polaris's in-house counsel. Confirm — or refute — that the photo was taken when and where Reed claims.",
     lesson: "Polaris Defense Systems is one of Driftwood's defense-industrial clients — a mid-sized subcontractor (~$80M annual revenue, ~250 engineers) building electronics subsystems for prime contractors. CMMC Level 2 and NIST 800-171 are in scope across all production environments. Polaris's in-house counsel, Dana Reyes, opened an internal investigation last Tuesday: badge logs put one of their senior manufacturing engineers (Reed Connolly) in a secured fabrication bay on a Saturday morning that had no scheduled work. When asked informally, Reed said he was at his daughter's youth soccer tournament that morning and sent Dana a photo as proof. Dana wants forensic verification of the photo before HR escalates. You're on Driftwood's forensics-analysis workstation (the shell calls you `secops`, the shared service account the security team uses for evidence triage). Read welcome.md first — it explains how `file` and `exif` work. Then read engagement-notes.md, then case-summary.txt, then look at the photo. Read lessons-learned.md once you've decided whether the alibi holds.",
+
+    // v1.10.0 BONUS FINDS — surfaces GPSImgDirection from the EXIF
+    // dump (often skimmed past beside the more obvious lat/long).
+    // Orthogonal to the alibi finding; doesn't gate the credential
+    // chain.
+    bonusFinds: [
+      {
+        id:   "exif-image-direction",
+        name: "Camera direction in EXIF",
+        hint: "The EXIF dump includes GPSImgDirection 218.4° — the compass bearing the camera was pointed when the shutter fired. Beyond when and where, modern phones embed which way the camera was facing. A defender mapping a photo to a specific vantage point at a known location can confirm or refute claims about WHO took the photo, not just whether the location is right.",
+        trigger: { command: "exif", argMatches: /soccer-field\.jpg/, outputContains: "GPSImgDirection" },
+      },
+    ],
     filetypes: {
       "soccer-field.jpg": "JPEG image data, EXIF standard",
     },
@@ -697,6 +710,18 @@ Return to the lobby:    ssh guest@d3cyph3r`
     playerUser: "secops",
     objective: "Triage Reed Connolly's workstation Security event log. Reconstruct his Saturday-morning activity inside the OS, identify any CUI exfiltration evidence, and flag any other findings Polaris's security team needs to know about.",
     lesson: "Dana Reyes escalated the Reed case to Polaris's formal insider-threat track Friday afternoon, right after your alibi finding closed the informal phase. Sgt. Chen (Polaris FSO) authorized a live forensic image of Reed's workstation POL-WS-0418 Tuesday night, packaged the EnCase E01 set with a single-use handoff password (POL-IIS-2026-0007-handoff — the same string that just gated this shell), and pushed it to Driftwood through Polaris's secure portal. The image is mounted read-only on a separate analysis volume; for today's narrow task only the Windows Security event log was extracted into this working directory. Read welcome.md first — it explains the new `evtx` command and how Windows event logs work. Then read engagement-notes.md, then case-summary.txt, then triage Security.evtx. Dana wants two things: a reconstruction of Reed's Saturday-morning activity at the keyboard, and any other findings the IR team needs to know about. Read lessons-learned.md once you've delivered both.",
+
+    // v1.10.0 BONUS FINDS — certutil.exe -encode in the 4688 chain
+    // is a textbook LOLBin pattern. Orthogonal to the IR-credential
+    // leak finding; doesn't gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "certutil-lolbin-pattern",
+        name: "certutil as a LOLBin",
+        hint: "Reed's 4688 process-creation chain includes certutil.exe -encode — a Microsoft-shipped binary whose dual-use potential makes it one of the founding entries on the LOLBAS project. The signal isn't that certutil ran; it's that certutil ran via cmd.exe with -encode arguments by a user who has no certificate-management reason to invoke it. Behavioural rules, not signature rules, catch this.",
+        trigger: { command: "evtx", argMatches: /-id 4688/, outputContains: "certutil.exe" },
+      },
+    ],
     filetypes: {
       "Security.evtx": "Microsoft Windows Event Log, version 3 (EVTX)",
     },

@@ -392,6 +392,34 @@ Every query we ran today, with the timestamp, the database, the table queried, a
 
 Database rows are a credential-storage anti-pattern that organizations underestimate. The intuition is "the database is protected by the application, so row contents are safe." That intuition breaks the moment any credential that opens the database leaks — at which point every credential STORED IN the database also leaks. The defensive answer is layered: never put credentials in the database in the first place (use Secrets Manager / Parameter Store / Vault), enforce that policy through automated detection (entropy scanners, schema-column-name scanners), and treat any historical credential-row finding as a structural sign that the prevention layer is broken upstream.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you query `migration_artifacts` — `progress --detail` lists what you've unlocked.
+
+### TTL columns without enforcement
+
+**Trigger:** `psql -d coverline_claims "SELECT * FROM migration_artifacts"` (or any psql query against that table; runs naturally during step 5 of the solve)
+
+**What it teaches:** `migration_artifacts` was designed RIGHT — a `ttl_expires_at` column on every row, with Q2 2024 deletion intent stamped at row creation. The schema *acknowledges the risk*: this data is temporary, here's when it should be deleted, the database knows the answer. What failed was **enforcement**.
+
+There's no cron job that reads `ttl_expires_at` and deletes expired rows. There's no deployment-pipeline check that gates new code on the table being below a size threshold. There's no quarterly review process where someone scans expired rows and confirms deletion. The TTL column is *documented intent*, not a *control*. Two are different.
+
+This pattern shows up everywhere in real production work, and it's worth naming:
+
+- **S3 bucket lifecycle policies** — the bucket can have a "delete objects older than 90 days" policy attached. Without the policy, the bucket's `created_at` metadata on each object is documented intent that nothing acts on.
+- **DynamoDB Time-To-Live feature** — explicitly automated. You set the TTL attribute name; DynamoDB sweeps expired items. The feature exists because manual cron-based TTL enforcement is a known failure pattern.
+- **Application-layer session expiration** — the session record has an `expires_at`. The application is supposed to check it on every request. The application sometimes doesn't (because the check is in some paths but not others, or it's in a wrapper that some new code paths bypass).
+
+For Coverline specifically:
+
+1. **Add a cron job** (or AWS Lambda EventBridge schedule) that runs daily and deletes `migration_artifacts` rows where `ttl_expires_at < NOW()`. Half a day to write and ship.
+2. **Add a CloudWatch alarm** that fires if `migration_artifacts` table row count exceeds (say) 1000 rows. The alarm is a sentinel that catches the case where the cron job stops running for any reason — silently failing crons are a known anti-pattern.
+3. **Quarterly schema review** that lists every table in production with a TTL/expiration column and confirms each has an active enforcement mechanism. The review produces a list; tables without enforcement get a JIRA ticket and a deadline.
+
+The longer-arc lesson: **documented intent is a planning artifact; an automated job that reads the same column and acts on it is a control.** This is the difference between "we said we'd delete it" and "we deleted it." Auditors and regulators care about the second one. SOC 2 specifically wants evidence that retention controls *fire*, not just that retention controls *are documented*. NYDFS 23 NYCRR 500.13 (Limitations on Data Retention) implicitly assumes enforcement; explicit enforcement is what survives an examination.
+
+For Coverline's CC6.1 control re-attestation work post-this-engagement: every TTL or retention column in every customer-facing table needs an enforcement-mechanism inventory, and any gap is a near-term remediation.
+
 ## §8 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*

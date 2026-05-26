@@ -527,6 +527,12 @@ What you'll see:
 
 None of this changes the solve. It does change how a written-up finding *reads* — moving from "we found a credential in the AXFR response" to "we found a credential in the AXFR response, **and** confirmed network reachability from staging-db, **and** documented the network segmentation between staging-db and the credential's host." The second framing is what a senior reviewer will ask for during peer review of your engagement report.
 
+### Bonus find: vendor default account with /bin/bash
+
+**Trigger:** `cat welcome.md` (you ran this as step 1)
+
+**What it teaches:** welcome.md's parenthetical aside notes that *somebody* enabled `/bin/bash` on `dbadmin` during a vendor upgrade six months ago and never reverted to the original `nologin` shell. A real attacker doing yesterday's exact sequence ends up here, with a working interactive shell on a host the account wasn't supposed to be interactive on. Service-account shell drift is its own finding category: the original control intent was that the vendor service account could connect to PostgreSQL but **not run shell commands** if the credential leaked. That control evaporated the moment somebody needed the shell "just for this debug session." The CIS Distribution-Independent Linux Benchmark control 5.5.1 (the shell-of-service-accounts check) addresses exactly this drift; running it on a quarterly cycle, with named-owner review of every diff, is the operational answer. Worth flagging in the same engagement report as the AXFR finding — same root cause (operational shortcuts that *outlive their justification*), different surface.
+
 ## §8 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*

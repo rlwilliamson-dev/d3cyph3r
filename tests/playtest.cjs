@@ -602,6 +602,13 @@ async function termText(page) {
   check("AXFR against a domain without records returns NXDOMAIN-style error",
         t.includes("NXDOMAIN") || t.includes("REFUSED"));
 
+  // v1.10.0 BONUS-FIND TRIGGER — cat welcome.md fires the
+  // "dbadmin-shell-drift" bonus (welcome.md notes /bin/bash on the
+  // vendor service account).
+  await typeAndEnter(page, "cat welcome.md");
+  t = await termText(page);
+  check("level1@network welcome.md notes /bin/bash on dbadmin",      t.includes("/bin/bash"));
+
   await typeAndEnter(page, "cat priya-note.md");
   t = await termText(page);
   check("priya-note.md mentions Priya (continuity)",                  t.includes("Priya"));
@@ -737,6 +744,14 @@ async function termText(page) {
   check("jwt decoded payload reveals the level2 breadcrumb",          t.includes("vesta-admin-handoff-2026"));
   check("jwt decoded payload shows role=admin claim",                 t.includes("\"role\": \"admin\""));
 
+  // v1.10.0 BONUS-FIND TRIGGER — cat priya-note.md fires the
+  // "most-downloaded-fallacy" bonus (Priya quotes Theo's library-
+  // popularity reasoning verbatim).
+  await typeAndEnter(page, "cat priya-note.md");
+  t = await termText(page);
+  check("level1@crypto priya-note.md quotes the most-downloaded rationale",
+        t.includes("most-downloaded"));
+
   await typeAndEnter(page, "cat verify-middleware.js");
   t = await termText(page);
   check("verify-middleware.js shows jwt.verify without algorithms whitelist",
@@ -797,6 +812,13 @@ async function termText(page) {
   check("lessons-learned.md cites CWE-548 (Directory Listing)",       t.includes("CWE-548"));
   check("lessons-learned.md cites OWASP A05 Security Misconfiguration", t.includes("A05") && t.includes("Misconfiguration"));
 
+  // v1.10.0 BONUS-FIND TRIGGER — robots.txt is a hidden Optional
+  // exploration step (curl /robots.txt while in level0@web). Fires
+  // the "robots-txt-billboard" bonus.
+  await typeAndEnter(page, "curl https://www.meridian.edu/robots.txt");
+  t = await termText(page);
+  check("level0@web: curl robots.txt surfaces /backup/ Disallow",     t.includes("Disallow: /backup/"));
+
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@web returns to lobby",                      (await promptText(page)).includes("@d3cyph3r:"));
@@ -830,6 +852,14 @@ async function termText(page) {
   t = await termText(page);
   check("transcript-api.js shows the SSO require",                    t.includes("requireMeridianSSO"));
   check("transcript-api.js reads student_id from req.query (the bug)", /req\.query\.student_id/.test(t));
+
+  // v1.10.0 BONUS-FIND TRIGGER — cat session.txt fires the
+  // "ten-year-session-token" bonus (the file notes the 2036 expiry
+  // as itself a finding).
+  await typeAndEnter(page, "cat session.txt");
+  t = await termText(page);
+  check("level1@web session.txt notes the long-lived session as a finding",
+        t.includes("long-lived service-account"));
 
   await typeAndEnter(page, "cookies https://portal.meridian.edu");
   t = await termText(page);
@@ -1195,6 +1225,13 @@ async function termText(page) {
         t.includes("coverline-customer-exports") &&
         t.includes("coverline-claims-uploads-prod"));
   check("audit-worksheet.txt flags marketing bucket as intentionally PUBLIC", /coverline-marketing-public\s+PUBLIC/.test(t));
+
+  // v1.10.0 BONUS-FIND TRIGGER — `aws sts get-caller-identity`
+  // confirms the audit is running from Driftwood's account, not the
+  // client's. Fires the "sts-identity-confirmation" bonus.
+  await typeAndEnter(page, "aws sts get-caller-identity");
+  t = await termText(page);
+  check("aws sts get-caller-identity returns Driftwood account",      t.includes("driftwood-cloudsec-readonly"));
 
   // Walk the worksheet. The locked-down buckets should all return
   // AccessDenied (the "correct" response for a private bucket).
@@ -1977,12 +2014,36 @@ async function termText(page) {
   check("progress --detail names a discovered bonus find verbatim",   t.includes("Daniel's muscle-memory pattern"));
   check("progress --detail also names the backup-script bonus",       t.includes("Daniel's backup script"));
   check("progress --detail also names the self-logged-bug bonus",     t.includes("Self-logged config-fallback bug"));
+
+  // v1.10.0 — bonus finds on the 12 non-linux levels. Each trigger
+  // command was either already in the existing playtest flow (cat
+  // engagement-notes.md / cat welcome.md / etc.) or added explicitly
+  // (curl robots.txt on level0@web; aws sts get-caller-identity on
+  // level0@cloud). Verify each fires by checking the bonus name
+  // appears in `progress --detail` output.
+  const v110bonuses = [
+    ["network/level0 five-sprint",          "The five-sprint rotation"],
+    ["network/level1 dbadmin shell drift",  "Vendor default account with /bin/bash"],
+    ["crypto/level0 Vendolux coffee",       "The Vendolux coffee machine"],
+    ["crypto/level1 most-downloaded",       "'Most-downloaded npm package, should be safe'"],
+    ["web/level0 robots.txt billboard",     "robots.txt as an attacker's site map"],
+    ["web/level1 ten-year session",         "The ten-year service-account session"],
+    ["forensics/level0 EXIF direction",     "Camera direction in EXIF"],
+    ["forensics/level1 certutil LOLBin",    "certutil as a LOLBin"],
+    ["osint/level0 Adobe hint",             "Adobe's cleartext password hints"],
+    ["osint/level1 Strava neighborhood",    "Aaron's Strava neighborhood"],
+    ["cloud/level0 sts identity",           "Probing from outside the client's account"],
+    ["cloud/level1 TTL without enforcement", "TTL columns without enforcement"],
+  ];
+  for (const [label, name] of v110bonuses) {
+    check(`bonus '${label}' discovered + appears in --detail`,         t.includes(name));
+  }
+
   // The [?] hidden branch (anti-spoiler render for un-found finds)
-  // can't be exercised here without restarting the session — all
-  // three finds are already unlocked. The branch is a single
-  // hard-coded string in learning.js's progress(); it's covered by
-  // code review + the positive cases above prove the iteration
-  // works.
+  // can't be exercised here without restarting the session — every
+  // bonus is unlocked. The branch is a single hard-coded string in
+  // learning.js's progress(); it's covered by code review + the
+  // positive cases above prove the iteration works.
 
   // ──── v1.10.0: cold-start gate hint ─────────────────────────────
   // Clear the visited set so we can simulate a player ssh-ing into

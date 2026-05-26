@@ -521,6 +521,23 @@ If admin auth is materially important — and for systems that can rotate produc
 
 The retrofit is non-trivial but reduces the surface dramatically. For a system that already has a JWT-based auth model, the migration path is usually "swap the verifier middleware for the IdP's SDK" — one library swap, one redeploy, plus key-rotation coordination.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` from any prompt lists what you've unlocked.
+
+### "Most-downloaded npm package, should be safe"
+
+**Trigger:** `cat priya-note.md` (you ran this as step 1 of the solve, so the bonus fires there)
+
+**What it teaches:** Priya's day-two note quotes Theo's library-choice rationale verbatim: he picked the most-downloaded JWT package because *"everyone uses it, should be safe."* That's a real-world rationale that engineers use all the time, and it conflates two genuinely separate properties:
+
+- **Library popularity is a useful signal for maintenance, security-review attention, and supply-chain risk.** A library with one million weekly downloads has more eyes on it than one with a thousand. CVEs in popular libraries get filed faster, patched faster, and disclosed publicly faster. There's a real reason to prefer popular libraries on those grounds.
+- **Library popularity is *not* a signal that you've configured the library correctly.** Theo's bug isn't in `jsonwebtoken`; it's in his two-argument call to `jwt.verify()` that omits the algorithms whitelist. The library's default for the omitted whitelist accepts `alg:none` for backwards compatibility with old code. Theo would have hit the same bug with any of the popular JWT libraries in 2026 — the configuration-default surface is broadly similar across the ecosystem.
+
+The pattern in real consulting work: *the library is rarely the bug; the integration is*. The CWE-1188 ("Insecure Default Initialization of Resource") and CWE-1188-adjacent insecure-default findings drive a substantial fraction of real-world JWT bypasses, OAuth misconfigurations, S3 bucket leaks, and TLS-context misconfigurations. The fix is rarely "switch libraries"; the fix is usually "audit the integration."
+
+For JWT specifically, **always pass the `algorithms` parameter on every `verify()` call.** Modern versions of `jsonwebtoken` (9.x+) have made this stricter, but Theo's pinned dependency may not be on 9.x, and even on 9.x the configuration discipline is what saves you, not the version. Pin behavior, not version.
+
 ## §8 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
