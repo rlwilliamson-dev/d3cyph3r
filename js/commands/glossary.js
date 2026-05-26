@@ -702,6 +702,22 @@ source options.
 The "detection engineering" discipline writes and tunes the rules
 that fire on the SIEM stream.`,
 
+  SYMLINK: `Symbolic Link (symlink)
+
+A filesystem object whose content is a path string pointing to
+another file or directory. Reading the symlink follows the
+pointer to the target; the symlink itself has no other content.
+
+In ls -l output, symlinks render with mode prefix 'l' and the
+arrow notation \`name -> target\`. Use \`readlink\` to print the
+literal target string (no resolution), or \`realpath\` to print
+the fully-resolved canonical path after following every symlink
+in the chain.
+
+Hard links are different: they create a second directory entry
+pointing at the same inode, so they survive deletion of the
+original name. Symlinks break when their target is moved.`,
+
   IOC: `IoC — Indicator of Compromise
 
 A piece of evidence that an intrusion has occurred or is ongoing.

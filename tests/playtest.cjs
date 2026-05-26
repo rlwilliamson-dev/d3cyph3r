@@ -144,6 +144,36 @@ async function termText(page) {
   await typeAndEnter(page, "ls -a");
   t = await termText(page);
   check("ls -a shows hidden .bash_history", t.includes(".bash_history"));
+  check("ls -a shows the seeded .notes symlink",     t.includes(".notes"));
+
+  // v1.5.0 symlink behavior — `.notes` is a symlink → notes.txt.
+  await typeAndEnter(page, "ls -la");
+  t = await termText(page);
+  check("ls -la renders symlink with lrwxrwxrwx mode", /lrwxrwxrwx.*\.notes -> notes\.txt/.test(t));
+
+  await typeAndEnter(page, "readlink .notes");
+  t = await termText(page);
+  check("readlink .notes prints the literal target",  /^\s*notes\.txt\s*$/m.test(t.split("readlink .notes")[1] || ""));
+
+  await typeAndEnter(page, "readlink notes.txt");
+  t = await termText(page);
+  check("readlink on a non-symlink prints 'Invalid argument'", t.includes("readlink: notes.txt: Invalid argument"));
+
+  await typeAndEnter(page, "readlink nonexistent-file");
+  t = await termText(page);
+  check("readlink on missing file prints 'No such file or directory'", t.includes("readlink: nonexistent-file: No such file or directory"));
+
+  await typeAndEnter(page, "realpath .notes");
+  t = await termText(page);
+  check("realpath .notes resolves to /home/daniel/notes.txt", t.includes("/home/daniel/notes.txt"));
+
+  await typeAndEnter(page, "realpath notes.txt");
+  t = await termText(page);
+  check("realpath on regular file prints absolute path", /\/home\/daniel\/notes\.txt/.test(t.split("realpath notes.txt").slice(-1)[0] || ""));
+
+  await typeAndEnter(page, "cat .notes");
+  t = await termText(page);
+  check("cat .notes reads through symlink to notes.txt content", /Halton|notes|TODO/i.test(t.split("cat .notes")[1] || ""));
 
   await typeAndEnter(page, "cat creds.txt");
   t = await termText(page);

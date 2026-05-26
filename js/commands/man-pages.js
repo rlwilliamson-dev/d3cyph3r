@@ -241,6 +241,43 @@ EXAMPLES
     diff staging.env production.env
     diff before.txt after.txt`,
 
+  readlink: `NAME
+    readlink — print a symlink's literal target
+
+SYNOPSIS
+    readlink PATH
+
+DESCRIPTION
+    If PATH is a symbolic link, print its target verbatim (no
+    resolution — the string stored in the symlink, including any
+    relative \`..\` / \`~\` references). If PATH exists but isn't a
+    symlink, prints 'Invalid argument'. If PATH doesn't exist,
+    prints 'No such file or directory'.
+
+    Use \`realpath\` instead when you want the fully-resolved
+    canonical path.
+
+EXAMPLES
+    readlink /usr/bin/python
+    readlink .notes`,
+
+  realpath: `NAME
+    realpath — resolve a path through symlinks to its canonical form
+
+SYNOPSIS
+    realpath PATH
+
+DESCRIPTION
+    Prints the canonical absolute path of PATH after resolving every
+    symlink in the chain. Symlink cycles abort after 16 hops with
+    'No such file or directory'.
+
+    Compare \`readlink\` (one-hop, literal target).
+
+EXAMPLES
+    realpath ~/notes
+    realpath ../bin/python`,
+
   ps: `NAME
     ps — list running processes
 
