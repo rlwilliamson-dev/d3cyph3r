@@ -4,11 +4,14 @@
 
 import { LEVELS } from "../../levels/index.js";
 import { print } from "../terminal/output.js";
-import { cmdInput, promptUser, promptHost, levelBadge } from "../terminal/dom.js";
+import { cmdInput, levelBadge } from "../terminal/dom.js";
+import { renderPrompt } from "../terminal/prompt.js";
 import {
   setCurrentLevelKey, currentLevelKey,
   setAwaitingPassword, awaitingPassword,
   resetPath,
+  clearProcessEnv, clearJobs,
+  hostStack, pushHost, popHost,
 } from "./state.js";
 import { markVisited } from "./progress.js";
 import { showLobby } from "./lobby.js";
@@ -73,7 +76,42 @@ export function handlePasswordInput(val) {
   }
 }
 
-export function connectTo(key) {
+/**
+ * Switch the engine into the level identified by `key`.
+ *
+ * @param {string} key - "<user>@<host>" target.
+ * @param {object} [opts]
+ * @param {boolean} [opts.unwind=false] - When true, the caller is
+ *     responsible for hostStack management (e.g. `exit` already
+ *     popped the entry that brought us back here). When false (the
+ *     default — forward navigation), this function pushes or clears
+ *     the stack to keep it consistent.
+ */
+export function connectTo(key, opts) {
+  const incoming = LEVELS[key];
+  const unwind   = !!(opts && opts.unwind);
+
+  // Multi-host pivot bookkeeping. When the caller is unwinding, the
+  // stack already reflects the new position — leave it alone.
+  if (!unwind) {
+    if (incoming?.pivot && currentLevelKey !== "guest@d3cyph3r") {
+      // Entering a pivot host: remember where we came from so `exit`
+      // can return there. Push only when we're forward-navigating from
+      // a non-lobby shell (pivoting from the lobby has no meaning).
+      pushHost({ levelKey: currentLevelKey });
+    } else if (!incoming?.pivot) {
+      // Forward-navigating to a top-level destination: any pivots in
+      // the stack are abandoned, since we're leaving the pivot chain.
+      hostStack.length = 0;
+    }
+  }
+
+  // Every level change resets the shell-local state — env vars and the
+  // job table belong to the current shell, not the world. (hostStack
+  // is the explicit exception, managed above.)
+  clearProcessEnv();
+  clearJobs();
+
   setCurrentLevelKey(key);
   const level = LEVELS[key];
   resetPath();
@@ -107,9 +145,7 @@ export function connectTo(key) {
 }
 
 function updatePrompt() {
-  const [keyUser, host] = currentLevelKey.split("@");
   const level = LEVELS[currentLevelKey];
-  promptUser.textContent = level?.playerUser || keyUser;
-  promptHost.textContent = host;
   levelBadge.textContent = level?.isLobby ? "LOBBY" : currentLevelKey.toUpperCase();
+  renderPrompt();
 }

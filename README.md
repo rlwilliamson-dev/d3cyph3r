@@ -175,9 +175,9 @@ If you open DevTools on the live site you may see CSP errors blocking scripts fr
 See `help` inside the terminal for the full reference. Track-by-track:
 
 - **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `readlink` / `realpath` / `basename` / `dirname` / `env` / `history`
-- **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `AXFR`)
+- **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `@server` / `-t TYPE` / `-x IP` / `+short` / `+trace` / `AXFR`)
 - **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
-- **Web:** `curl` (+ `-I`) / `gobuster` / `cookies`
+- **Web:** `curl` (+ `-X` / `-d` / `-H` / `-I` / `-L` / `-o` / `-kvs`) / `gobuster` (+ `-u` / `-w` / `-x` / `-t`) / `cookies`
 - **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sha256sum` / `md5sum`
 - **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo` / `github` (+ `/repo` + `file <path>`)
 - **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity` / `psql` (+ `-d` / `\l` / `\dt` / `SELECT … FROM … [LIMIT N]`)
@@ -190,21 +190,28 @@ See `help` inside the terminal for the full reference. Track-by-track:
 - **Crypto inspection:** `gpg --list-keys` / `gpg --verify` / `gpg --decrypt`
 - **Read-only stubs** (sandbox-friendly errors): `chmod` / `chown` / `mv` / `cp` / `rm` / `mkdir` / `rmdir` / `touch` / `ln` / `sudo` / `su` / `useradd` / `passwd`
 - **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>` / `walkthrough` / `progress` / `search <term>`
+- **Shell environment (v1.9.0):** `export` / `env` / `unset` / `set` / `FOO=bar` / `FOO=bar cmd` / `PS1` substitution (`\u`, `\h`, `\H`, `\w`, `\W`, `\$`)
+- **Job control (v1.9.0):** `cmd &` / `jobs` / `fg` / `bg` / `kill` / `wait` / `disown`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`
 
-The terminal supports a real bash-shaped composition layer (v1.8.0):
+The terminal supports a real bash-shaped composition layer (v1.8.0 + v1.9.0):
 
 - Pipes: `cmd1 | cmd2 | cmd3`
 - Chaining: `cmd1 && cmd2`, `cmd1 || cmd2`, `cmd1 ; cmd2`
+- Background: `cmd &` (captured to job table; synchronous in this sandbox)
 - Wildcards: `*.txt`, `log?`
 - Brace expansion: `cat file{1,2,3}.txt`
 - Shell variables: `$USER`, `$HOME`, `${VAR}`, `$$` (literal `$`)
+- Writable env vars: `export FOO=bar`, `FOO=bar`, `unset FOO`
+- Customizable prompt: `export PS1='> '` (PS1 escape codes: `\u`/`\h`/`\w`/`\$`)
+- Multi-host pivot: `ssh user@internal-host` from inside a level, `exit` unwinds
 - Last exit code: `$?`
 - Command substitution: `$(cmd)`
 - Quote-aware tokenization: `'single'` is literal, `"double"` expands vars
-- Readline shortcuts: `Ctrl-A` / `Ctrl-E` / `Ctrl-W` / `Ctrl-U` / `Ctrl-K`
+- Readline shortcuts: `Ctrl-A` / `Ctrl-E` / `Ctrl-W` / `Ctrl-U` / `Ctrl-K` / `Ctrl-Y` / `Alt-B` / `Alt-F` / `Alt-.`
 - Persistent command history across tab sessions (localStorage)
 - Replay mode: re-entering a solved level skips the password gate
+- Bonus finds: optional discoverable nuggets surfaced in `progress`
 
 The terminal also supports the shell features players carry in from bash:
 

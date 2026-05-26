@@ -32,6 +32,44 @@
 // Surfaced in the connection banner ("Difficulty: Easy · Est. time:
 // ~10 min") so players can pick where to spend a session.
 //
+// Optional: SHELL ENVIRONMENT (v1.9.0).
+//
+//   level.env_vars : { NAME: "value", ... } — static per-level env
+//     pre-set when the player enters this level. Overrides the live
+//     built-ins (USER / HOME / PWD / …) but sits BELOW player-set
+//     `export FOO=bar` in the lookup chain (so the player's writes
+//     always win). Use for level-specific context like
+//     `AWS_PROFILE: "ci"` or `STAGING_HOST: "10.0.0.5"`.
+//
+// Optional: MULTI-HOST PIVOT (v1.9.0).
+//
+//   level.network : { "<user>@<host>": { ... level-shape ... } }
+//     Pivot hosts the player can ssh into FROM this level. Each entry
+//     looks like a regular level (fs, playerUser, password,
+//     env_vars, files), but is hidden from the lobby's track list.
+//     ssh into one of these keys pushes the current shell onto the
+//     pivot stack; `exit` pops back. Useful for in-engagement
+//     lateral-movement scenarios (e.g. "you found these creds, now
+//     ssh to the bastion they unlock").
+//     Conflict policy: registered first-wins. Keep host-keys unique
+//     across levels; pick a hostname that won't collide with future
+//     real levels (e.g. `dbsvc@halton-db01.internal`).
+//
+// Optional: BONUS FINDS (v1.9.0).
+//
+//   level.bonusFinds : [
+//     { id, name?, hint?, trigger: { command?, argMatches?,
+//                                     outputContains? } },
+//     ...
+//   ]
+//   Discoverable nuggets that don't gate the credential chain.
+//   Trigger fires when the player runs a command whose argv[0]
+//   matches `command` (optional), whose joined args match
+//   `argMatches` (RegExp or substring, optional), AND whose
+//   visible output matches `outputContains` (RegExp or substring,
+//   optional). Each find is awarded once per level per session;
+//   `progress` shows the running count.
+//
 // Optional: NETWORK INSPECTION schema (surfaced by the v1.7.0
 // commands — ip addr / ip route / arp / ping / traceroute /
 // nslookup). All sub-fields are independent; every command degrades
@@ -610,6 +648,39 @@ Return to the lobby:    ssh guest@d3cyph3r
       { timestamp: "    1.234567", message: "systemd[1]: Started Journal Service" },
       { timestamp: "    3.456789", message: "systemd[1]: Reached target Multi-User System" },
       { timestamp: "10821.234567", message: "TCP: request_sock_TCP: Possible SYN flooding on port 22 (recent 2026-05-22T11:03:24Z)" },
+    ],
+
+    // v1.9.0 SHELL ENVIRONMENT — set a couple of per-level vars so a
+    // curious player running `env` notices what their predecessor set
+    // up. Players can `export FOO=bar` to add their own (writes win
+    // over these on conflict), or `unset` to reveal the built-ins.
+    env_vars: {
+      EDITOR:        "nano",
+      AWS_PROFILE:   "halton-staging",
+      STAGING_HOST:  "halton-bastion.driftwood.internal",
+    },
+
+    // v1.9.0 BONUS FINDS — optional discoverable nuggets. Won't gate
+    // the credential chain; reward the player for exploring beyond
+    // the smoking-gun file. Two finds here:
+    //   1. Reading backup.sh — Daniel's hand-rolled job — reveals the
+    //      override.conf path he sources for credentials.
+    //   2. Running `journalctl -u staging-worker` and seeing the
+    //      ERROR/WARN sequence proves the system is logging the bug
+    //      to its own journal (a real defender's audit trail).
+    bonusFinds: [
+      {
+        id:   "backup-script",
+        name: "Daniel's backup script",
+        hint: "He's pulling credentials from a systemd unit override.",
+        trigger: { command: "cat", argMatches: /backup\.sh/, outputContains: "override.conf" },
+      },
+      {
+        id:   "self-logged-bug",
+        name: "Self-logged config-fallback bug",
+        hint: "The staging-worker journal records its own permission denial — a defender would have seen this on day one.",
+        trigger: { command: "journalctl", outputContains: "falling back to" },
+      },
     ],
 
     fs: {

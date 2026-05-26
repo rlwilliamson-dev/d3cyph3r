@@ -93,21 +93,71 @@ export const networkCommands = {
     return { text: level.whoisData[arg].join("\n"), cls: "out" };
   },
 
-  // dig: DNS lookup. Without a type arg, defaults to A. ANY iterates
-  // every populated type for the domain (skipping the AXFR pseudo-type
-  // — it has a different output format). AXFR is handled specially
-  // because the zone-transfer output format includes subdomain owner
-  // names that the standard ANSWER-SECTION format can't represent.
-  dig(level, arg) {
-    if (!arg) return { text: "Usage: dig <domain> [record_type]", cls: "err" };
-    const parts   = arg.trim().split(/\s+/);
-    const domain  = parts[0];
-    const recType = (parts[1] || "A").toUpperCase();
+  // dig: DNS lookup. Now (v1.9.0) supports real-bash syntax beyond
+  // the bare `dig domain [TYPE]` shape:
+  //
+  //   dig @8.8.8.8 example.com         — query a specific resolver
+  //   dig -t MX example.com            — explicit type flag form
+  //   dig -x 10.0.0.5                  — reverse PTR lookup
+  //   dig example.com AXFR             — zone transfer (handled below)
+  //   dig example.com +trace           — trace from root (faked sequence)
+  //   dig example.com +short           — answer-only output
+  //
+  // Without a type arg, defaults to A. ANY iterates every populated
+  // type for the domain (skipping the AXFR pseudo-type — it has a
+  // different output format). AXFR is handled specially because the
+  // zone-transfer output format includes subdomain owner names that
+  // the standard ANSWER-SECTION format can't represent.
+  dig(level, _arg, _stdin, argv) {
+    const args = (argv || []).slice();
+    if (args.length === 0) return { text: "Usage: dig [@server] [-t TYPE | -x IP] <domain> [TYPE] [+opt]", cls: "err" };
+
+    // Parse flags. We tolerate any ordering, mirroring real dig.
+    let server  = null;
+    let recType = null;
+    let domain  = null;
+    let reverse = false;
+    const dotOpts = new Set();   // +trace / +short / +noall / etc.
+
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      if (a.startsWith("@"))        { server  = a.slice(1); continue; }
+      if (a.startsWith("+"))        { dotOpts.add(a);       continue; }
+      if (a === "-t" && args[i+1])  { recType = args[++i].toUpperCase(); continue; }
+      if (a === "-x" && args[i+1])  { reverse = true; domain = args[++i]; continue; }
+      if (!domain)                  { domain = a; continue; }
+      if (!recType)                 { recType = a.toUpperCase(); continue; }
+    }
+    if (!domain) return { text: "Usage: dig [@server] [-t TYPE | -x IP] <domain> [TYPE] [+opt]", cls: "err" };
+
+    // Reverse-lookup: synthesize the in-addr.arpa name from the IP,
+    // then look up PTR records on the level. Levels can populate
+    // dnsData["5.0.0.10.in-addr.arpa"].PTR = ["host.example.com."]
+    // or use the simpler dnsData[ip].PTR form (we check both).
+    if (reverse) {
+      const ip = domain;
+      const ptrName = ip.split(".").reverse().join(".") + ".in-addr.arpa";
+      const recs = (level.dnsData && (level.dnsData[ptrName] || level.dnsData[ip])) || null;
+      if (!recs || !recs.PTR) {
+        return { text: `dig: ${ip}: NXDOMAIN — no PTR record`, cls: "err" };
+      }
+      const lines = [
+        `; <<>> DiG 9.18.4 <<>> -x ${ip}`,
+        `;; ANSWER SECTION:`,
+        "",
+        ...recs.PTR.map(v => `${ptrName.padEnd(36)} 300  IN  PTR    ${v}`),
+        "",
+        ";; Query time: 6 msec",
+        `;; SERVER: ${server || "8.8.8.8"}`,
+      ];
+      return { text: lines.join("\n"), cls: "out" };
+    }
 
     if (!level.dnsData || !level.dnsData[domain]) {
       return { text: `dig: ${domain}: NXDOMAIN — no records found`, cls: "err" };
     }
     const records = level.dnsData[domain];
+    if (!recType) recType = "A";
 
     // AXFR is "transfer the whole zone." Real nameservers should restrict
     // this via TSIG or IP ACL; when they don't, an attacker gets the full
@@ -141,8 +191,47 @@ export const networkCommands = {
       return { text: out.join("\n"), cls: "warn" };
     }
 
+    // +trace: simulate the iterative resolution path from the root.
+    // We synthesize plausible root + TLD answers, then hand off to
+    // the authoritative answer. Pure flavor — useful for teaching
+    // how DNS resolution actually works.
+    if (dotOpts.has("+trace")) {
+      const tld = (domain.split(".").slice(-1)[0] || "com").toLowerCase();
+      const records2 = records;
+      const lines = [
+        `; <<>> DiG 9.18.4 <<>> ${domain} +trace`,
+        `;; global options: +cmd`,
+        `.                       86400   IN  NS   a.root-servers.net.`,
+        `;; Received 239 bytes from 8.8.8.8#53(8.8.8.8) in 12 ms`,
+        ``,
+        `${tld}.                 86400   IN  NS   a.gtld-servers.net.`,
+        `;; Received 489 bytes from 198.41.0.4#53(a.root-servers.net) in 32 ms`,
+        ``,
+        `${domain}.              86400   IN  NS   ns1.${domain}.`,
+        `;; Received 137 bytes from 192.5.6.30#53(a.gtld-servers.net) in 48 ms`,
+        ``,
+      ];
+      const vals = records2[recType] || records2.A || [];
+      vals.forEach(v => lines.push(`${domain.padEnd(24)} 300  IN  ${recType.padEnd(5)} ${v}`));
+      lines.push(`;; Received 67 bytes from 192.0.2.1#53(ns1.${domain}) in 18 ms`);
+      return { text: lines.join("\n"), cls: "out" };
+    }
+
+    // +short: answer-only output (no header, no footer, no zone-file
+    // padding). Real dig +short returns one value per line.
+    if (dotOpts.has("+short")) {
+      const types = recType === "ANY" ? Object.keys(records) : [recType];
+      const out = [];
+      types.forEach(t => {
+        if (t === "AXFR") return;
+        (records[t] || []).forEach(v => out.push(v));
+      });
+      if (out.length === 0) return { text: "", cls: "out" };
+      return { text: out.join("\n"), cls: "out" };
+    }
+
     const lines = [
-      `; <<>> DiG 9.18.4 <<>> ${domain} ${recType}`,
+      `; <<>> DiG 9.18.4 <<>> ${(server ? `@${server} ` : "")}${(recType !== "A" ? `-t ${recType} ` : "")}${domain}`,
       `;; ANSWER SECTION:`,
       "",
     ];
@@ -157,7 +246,7 @@ export const networkCommands = {
       vals.forEach(v => lines.push(`${domain.padEnd(24)} 300  IN  ${t.padEnd(5)} ${v}`));
     });
     if (!found) lines.push(`;; (no records of type ${recType})`);
-    lines.push("", ";; Query time: 4 msec", `;; SERVER: 8.8.8.8`);
+    lines.push("", ";; Query time: 4 msec", `;; SERVER: ${server || "8.8.8.8"}`);
     return { text: lines.join("\n"), cls: "out" };
   },
 };

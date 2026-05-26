@@ -970,4 +970,94 @@ products.
 
 Hash IoCs are brittle (one byte change breaks them); behavioral
 IoCs (TTPs, IoBs) survive evasion attempts longer.`,
+
+  // ─── Shell concepts (v1.9.0) ───────────────────────────────────────
+  "ENV VAR": `Environment variable
+
+A NAME=value pair the shell maintains and exposes to commands.
+Bash distinguishes shell variables (set in the current shell)
+from environment variables (inherited by child processes); for
+this sandbox there are no children, so the distinction collapses.
+
+Set in this engine via:
+  export FOO=bar    — full bash form
+  FOO=bar           — POSIX-style assignment
+  env FOO=bar       — set in env-listing mode (no command form)
+Read via:
+  echo $FOO  /  echo "\${FOO}"
+Remove via:
+  unset FOO
+
+Built-in variables (USER, HOME, PWD, HOSTNAME, PATH, SHELL,
+LANG, PS1, PS2) are computed live from engine state; user-set
+exports OVERRIDE them. Every level switch starts with a clean
+shell — exports don't survive an ssh hop.`,
+
+  PS1: `PS1 — primary prompt string
+
+Bash reads PS1 every time it prints a prompt and substitutes the
+following escapes before display:
+
+  \\u   current user
+  \\h   short hostname (truncated at first .)
+  \\H   full hostname
+  \\w   current PWD (with $HOME collapsed to ~)
+  \\W   basename of \\w
+  \\$   $ (or # for uid=0; we always show $)
+  \\\\   literal backslash
+
+Default in this engine: \\u@\\h:\\w\\$ — matches the pre-v1.9.0
+hard-coded layout. Set your own with \`export PS1='> '\` or
+\`export PS1='\\u@\\h(\\W)\\$ '\`.
+
+Sister variable PS2 ('> ' by default) is the continuation prompt
+for multi-line commands — currently unused since the engine
+doesn't support multi-line input.`,
+
+  "KILL RING": `Kill ring — readline yank buffer
+
+Bash maintains a small stack of recently killed (deleted) text.
+Three keystrokes push onto it:
+  Ctrl-W   delete previous word
+  Ctrl-U   delete from cursor to start of line
+  Ctrl-K   kill from cursor to end of line
+And one keystroke pops it:
+  Ctrl-Y   yank — paste the top entry at the cursor
+
+The engine matches bash's default ring size (10 entries). Older
+entries are reachable in real bash via Alt-y (yank-pop); the
+engine doesn't implement that — keeps the model simple.`,
+
+  "JOB CONTROL": `Job control — & / jobs / fg / bg / kill
+
+In bash, trailing & on a command line runs it in the background;
+the shell prints a job ID and PID and returns immediately. The
+\`jobs\` builtin lists known jobs; \`fg %N\` brings job N back
+to the foreground; \`bg %N\` resumes it suspended; \`kill %N\`
+signals it.
+
+This engine runs commands synchronously — no actual concurrency
+— but reproduces the UX: & captures the command's output into a
+job-table entry, jobs/fg/bg/kill operate on that table, and
+\`fg %N\` replays the captured output. Useful for muscle-memory
+practice and for letting realistic scripts run without erroring.
+
+Real bash signal semantics (SIGSTOP, SIGCONT, SIGINT) aren't
+modeled — every signal you send to a job just removes the entry.`,
+
+  PIVOT: `Pivot — lateral movement to another host
+
+In red-team / attacker terminology, a pivot is the moment you
+move from one compromised box to another inside the same
+engagement. ssh'ing from a jumphost into an internal database,
+SOCKS-proxying through a beachhead, RDP'ing from a developer
+workstation to a domain controller — all pivots.
+
+In this engine, a level can define \`level.network\`: a map of
+in-engagement hosts the player can ssh into. ssh-ing a network
+host pushes the current shell onto a pivot stack; \`exit\` pops
+back. The stack lets a level model multi-hop scenarios (level
+landing host → internal database → log aggregator) without
+breaking the credential-chain mental model players use to track
+their progress.`,
 };

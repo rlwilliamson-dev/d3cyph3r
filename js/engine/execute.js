@@ -29,11 +29,19 @@
 import { LEVELS } from "../../levels/index.js";
 import { COMMANDS } from "../../js/commands/index.js";
 import { print } from "../terminal/output.js";
-import { promptUser, promptHost } from "../terminal/dom.js";
-import { currentLevelKey, awaitingPassword, lastExitCode, setLastExitCode } from "./state.js";
+import {
+  currentLevelKey, awaitingPassword, lastExitCode, setLastExitCode,
+  setEnvVar, addJob,
+} from "./state.js";
 import { handleSSH, handlePasswordInput } from "./ssh.js";
 import { parseLine, unquote, expandBraces } from "./parse.js";
-import { expandTokenVars } from "./expand.js";
+import { expandTokenVars, getEnv } from "./expand.js";
+import { checkBonusFinds } from "./bonus.js";
+import { renderPrompt } from "../terminal/prompt.js";
+import { dequoteAssignmentValue } from "../commands/env.js";
+
+/** Valid variable name for inline assignments (POSIX shell identifier). */
+const VAR_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
 /**
  * Top-level entrypoint. Echoes the line, handles password / ssh
@@ -44,11 +52,17 @@ export function execute(raw) {
   if (!input) return;
 
   // Echo the raw line (before any expansion) so the user sees what
-  // they actually typed in history.
+  // they actually typed in history. We echo with the canonical
+  // user@host:cwd$ prefix even when the player has customized PS1 —
+  // the transcript stays grep-friendly that way.
   if (!awaitingPassword) {
-    const user = promptUser.textContent;
-    const host = promptHost.textContent;
-    print(`${user}@${host}:~$ ${input}`, "cmd");
+    const env  = getEnv();
+    const user = env.USER || "user";
+    const host = (env.HOSTNAME || "host").split(".")[0];
+    const home = env.HOME || "/";
+    const pwd  = env.PWD  || home;
+    const path = pwd === home ? "~" : (pwd.startsWith(home + "/") ? "~" + pwd.slice(home.length) : pwd);
+    print(`${user}@${host}:${path}$ ${input}`, "cmd");
   }
 
   // Password-prompt mode short-circuits everything else.
@@ -72,29 +86,68 @@ export function execute(raw) {
   // Parse + run.
   const stmts = parseLine(input);
   runStatements(stmts);
+
+  // Refresh the prompt label — cd may have changed PWD, export may
+  // have changed PS1, FOO=bar assignments may have shadowed built-ins,
+  // etc. Cheap (single innerHTML update) and keeps the prompt in
+  // sync without each command having to remember to call it.
+  renderPrompt();
 }
 
 /**
  * Execute a statement chain honoring AND / OR / ALWAYS semantics.
  * Updates `$?` after each statement.
+ *
+ * Background statements (stmt.bg, from trailing `&`) capture their
+ * stdout into a job-table entry instead of printing it inline. Real
+ * bash would fork and continue immediately; our commands are
+ * synchronous so the work is already done by the time we return,
+ * but the UX (job ID + replayable `fg`) matches.
  */
 function runStatements(stmts) {
   for (const stmt of stmts) {
     if (stmt.op === "AND" && lastExitCode !== 0) continue;
     if (stmt.op === "OR"  && lastExitCode === 0) continue;
-    const code = runPipeline(stmt.segments);
+
+    if (stmt.bg) {
+      const { code, output } = runPipeline(stmt.segments, true);
+      const commandLine = reconstructCommandLine(stmt.segments);
+      const job = addJob(commandLine, output);
+      print(`[${job.id}] ${10000 + job.id}`, "out");
+      setLastExitCode(code);
+      continue;
+    }
+
+    const { code } = runPipeline(stmt.segments, false);
     setLastExitCode(code);
   }
 }
 
 /**
- * Run one pipeline (one or more `|`-separated segments). Returns the
- * exit code of the final segment.
+ * Reconstruct a printable command line from token segments. Used to
+ * label background jobs in `jobs` output. Imperfect — quoting isn't
+ * preserved exactly — but readable.
  */
-function runPipeline(segments) {
+function reconstructCommandLine(segments) {
+  return segments.map(seg => seg.join(" ")).join(" | ");
+}
+
+/**
+ * Run one pipeline (one or more `|`-separated segments).
+ *
+ * @param {Array<string[]>} segments - Token segments from the parser.
+ * @param {boolean} [capture=false] - When true, the final segment's
+ *     output is captured into the returned object instead of being
+ *     printed to the terminal. Used for background jobs.
+ * @returns {{code: number, output: string}} Final-segment exit code
+ *     and (when capturing) the captured stdout. `output` is "" when
+ *     not capturing.
+ */
+function runPipeline(segments, capture = false) {
   const level = LEVELS[currentLevelKey];
   let stdin = undefined;
   let lastSegCode = 0;
+  let captured = "";
 
   for (let i = 0; i < segments.length; i++) {
     const tokens = segments[i];
@@ -102,7 +155,15 @@ function runPipeline(segments) {
     const { result, exitCode } = runSegment(level, tokens, stdin);
 
     if (isLast) {
-      if (result && result.text != null) print(result.text, result.cls);
+      if (capture) {
+        captured = result && result.text != null ? String(result.text) : "";
+      } else if (result && result.text != null) {
+        print(result.text, result.cls);
+        // Side-effect: bonus-find detection on visible output only.
+        // Capturing into jobs intentionally skips this — bg work
+        // shouldn't quietly award discovery points off-screen.
+        checkBonusFinds(level, tokens, result.text);
+      }
       lastSegCode = exitCode;
     } else {
       // Mid-pipeline → pass stdout to next stage's stdin (empty when
@@ -110,12 +171,23 @@ function runPipeline(segments) {
       stdin = result && result.text != null ? String(result.text) : "";
     }
   }
-  return lastSegCode;
+  return { code: lastSegCode, output: captured };
 }
 
 /**
  * Run a single command segment. Handles token expansion, brace
  * expansion, command lookup, and result-to-exit-code conversion.
+ *
+ * Leading `NAME=value` tokens are extracted as inline variable
+ * assignments BEFORE command lookup, mirroring bash's behavior:
+ *
+ *   FOO=bar              → assignment-only, no command run, exit 0
+ *   FOO=bar cmd args     → set FOO in env, then run `cmd args`
+ *
+ * Standard bash temporarily applies assignments for the duration of
+ * the command and restores them afterwards. The sandbox simplifies
+ * this to a permanent set — assignments stay in processEnv after the
+ * command completes. Documented limitation; unlikely to bite players.
  *
  * Returns { result, exitCode } where result is the handler's return
  * value (or null) and exitCode is 0 on success, 1 on err / not-found.
@@ -127,8 +199,22 @@ function runSegment(level, rawTokens, stdin) {
   const argv = expandTokens(rawTokens);
   if (argv.length === 0) return { result: null, exitCode: 0 };
 
-  const cmd = argv[0];
-  const arg = argv.slice(1).join(" ");
+  // Extract leading NAME=value assignments. We test against the
+  // EXPANDED tokens — `FOO=$BAR` should work after $BAR resolves.
+  let cursor = 0;
+  while (cursor < argv.length && VAR_NAME_RE.test(argv[cursor])) {
+    const eq    = argv[cursor].indexOf("=");
+    const name  = argv[cursor].slice(0, eq);
+    const value = dequoteAssignmentValue(argv[cursor].slice(eq + 1));
+    setEnvVar(name, value);
+    cursor++;
+  }
+
+  // Assignment-only: nothing left to run.
+  if (cursor >= argv.length) return { result: null, exitCode: 0 };
+
+  const cmd = argv[cursor];
+  const arg = argv.slice(cursor + 1).join(" ");
 
   const handler = COMMANDS[cmd];
   if (!handler) {
@@ -136,7 +222,7 @@ function runSegment(level, rawTokens, stdin) {
     return { result: null, exitCode: 127 };  // bash uses 127 for not-found
   }
 
-  const result   = handler(level, arg, stdin, argv.slice(1));
+  const result   = handler(level, arg, stdin, argv.slice(cursor + 1));
   // Exit code: 1 if the result was an error envelope, 0 otherwise.
   // Commands can override by returning { exitCode: N } in the future;
   // for now we infer from the CSS class.

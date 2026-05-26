@@ -7,6 +7,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-05-26
+
+**Engine realism — the bash UX players carry in from a real shell.**
+The last engine-polish release before v2.0 turns to level2 content.
+Closes out the realism extensions that didn't make the v1.8.0 cut:
+writable env vars (`export` / `unset` / `set` / `FOO=bar` inline
+assignment), PS1-driven prompt customization, job control (`&` /
+`jobs` / `fg` / `bg` / `kill`), kill-ring yank (`Ctrl-Y`) + Alt-key
+word movement + last-arg recall (`Alt-.`), extended `dig` / `curl`
+/ `gobuster` flags, a multi-host pivot mechanism via `level.network`,
+and optional discoverable bonus-finds via `level.bonusFinds`.
+
+After this release, a player coming from a real bash shell can type
+the patterns they have muscle memory for — `export PS1='> '`,
+`AWS_PROFILE=prod aws s3 ls`, `sleep 5 & jobs`, `dig +short @8.8.8.8
+example.com`, `curl -X POST -H "Content-Type: application/json" -d
+'{}' http://api/path`, `Ctrl-Y`, `Alt-.` — and the engine does what
+they expect.
+
+### Added
+
+- **Shell environment** — writable env vars layered over the
+  built-ins. `export FOO=bar`, bare `FOO=bar` assignment,
+  `env FOO=bar cmd args` (assignment only — sandbox can't fork),
+  `unset NAME`, `set` (alias for env in listing mode). Per-level
+  static env via `level.env_vars`. Built-ins (USER / HOME / PWD /
+  HOSTNAME / PATH / SHELL / LANG / PS1 / PS2) computed live, can
+  be overridden, and re-appear on `unset`. Every level switch
+  resets the writable layer — a fresh shell starts clean.
+- **PS1 customization** — `export PS1='\u@\h(\W)\$ '` (or whatever
+  format the player likes). Escape codes supported: `\u`, `\h`,
+  `\H`, `\w`, `\W`, `\$`, `\\`, `\[`/`\]`, `\n`. Default PS1 still
+  reproduces the historical `.at`/`.host`/`.dollar` colored layout.
+  The prompt re-renders after every dispatched command + level
+  switch (cd / export / unset / PS1 changes all reflect immediately).
+- **Job control** — trailing `&` flags a statement as background;
+  the dispatcher captures its stdout into a job-table entry and
+  prints `[N] PID`. `jobs` / `fg` / `bg` / `kill` / `wait` /
+  `disown` operate on the table. Commands run synchronously in
+  the sandbox, so backgrounded jobs complete immediately — the
+  bash UX matches without true concurrency.
+- **Readline shortcuts** — `Ctrl-Y` yank from kill ring (populated
+  by `Ctrl-W`/`Ctrl-U`/`Ctrl-K`, capped at 10 entries). `Alt-B` /
+  `Alt-F` word-back / word-forward. `Alt-.` (or `Esc-.`) inserts
+  the last argument of the previous command. Detected via
+  `e.code` so the keys work consistently on macOS where Option
+  produces modified characters.
+- **Extended `dig` flags** — `dig @8.8.8.8 host`, `dig -t MX host`,
+  `dig -x 10.0.0.5` (reverse PTR), `dig host +short` (answer-only),
+  `dig host +trace` (simulated root → TLD → authoritative path).
+- **Extended `curl` flags** — `-X METHOD`, `-d DATA` / `--data D`,
+  `-H "Header: Value"` (repeatable), `-L` (follow Location:
+  redirects up to 5 hops), `-o FILE` (warned + printed inline),
+  `-k` / `-s` (accepted as no-ops), `-v` (verbose, prints request +
+  response headers). Method-aware response lookup via
+  `level.webRequests[`METHOD URL`]` with backward-compat fallback
+  to `level.web[URL]`.
+- **Extended `gobuster` syntax** — real-bash `gobuster dir -u URL
+  -w wordlist -x exts -t threads` accepted; the cosmetic flags
+  surface in the banner. Legacy `gobuster <url>` still works.
+- **Multi-host pivot** — `level.network: { "user@host": { ... }}`
+  declares pivot hosts the player can ssh into from inside a
+  level. The pivot pushes the current shell onto a stack; `exit`
+  pops back. Useful for modeling lateral-movement scenarios
+  ("you found these creds, now ssh to the bastion they unlock")
+  without leaving the level boundary.
+- **Bonus finds** — `level.bonusFinds: [{ id, name, hint, trigger
+  }]` declares discoverable nuggets the player MAY uncover. The
+  trigger fires when a command + its args + its output match
+  optional regex/substring patterns. Doesn't gate the credential
+  chain; surfaces a discovery banner + a per-level count in
+  `progress`. sessionStorage-backed so the count survives reloads.
+- **Manpages + glossary entries** — `man export` / `man env` /
+  `man unset` / `man set` / `man jobs` / `man fg` / `man bg` /
+  `man kill` / `man wait` / `man disown`. Glossary entries for
+  "ENV VAR", "PS1", "KILL RING", "JOB CONTROL", "PIVOT".
+- **Help reference** — new SHELL ENVIRONMENT and JOB CONTROL
+  sections; readline shortcuts in LINUX BASICS extended with
+  `Ctrl-Y` / `Alt-B` / `Alt-F` / `Alt-.`.
+- **Schema documentation** — `levels/linux.js` header documents
+  the new `env_vars` / `network` / `bonusFinds` fields with
+  examples. Seed demo data lives on `level1@linux`: two env_vars
+  (EDITOR + AWS_PROFILE), and two bonus-finds (one cat-triggered,
+  one journalctl-triggered).
+
+### Changed
+
+- **Handler signature** — extended from `(level, arg, stdin?)` to
+  `(level, arg, stdin?, argv?)`. The new `argv?` parameter is the
+  post-expansion token array, useful when a command needs to
+  distinguish flags from values without re-tokenizing the joined
+  `arg` string. Existing handlers ignore `argv?` and work
+  unchanged; new flag-rich commands (`dig`, `curl`, `gobuster`,
+  `export`, `env`, `unset`, `set`, `jobs`, `fg`, `bg`, `kill`,
+  `disown`) use it.
+- **Prompt rendering** — the static `prompt-user`/`prompt-host`
+  spans in `index.html` were replaced by a single dynamic
+  `#prompt-label` rendered by `js/terminal/prompt.js#renderPrompt`.
+  Default PS1 (`\u@\h:\w\$ `) reproduces the prior colored
+  layout; custom PS1 renders as plain text.
+
+### Fixed
+
+- **Command-line echo** — the transcript line printed before
+  each command now derives `user@host:path$` live from the env
+  (including any custom `\w` path), rather than reading from the
+  static prompt spans that no longer exist.
+
 ## [1.8.1] - 2026-05-26
 
 **Cache-control patch for JS modules.** Post-deploy, returning
@@ -2231,7 +2339,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.6.0...v1.7.0

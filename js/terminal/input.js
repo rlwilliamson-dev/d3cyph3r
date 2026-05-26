@@ -30,6 +30,18 @@ let blinkResetTimer = null;
 let cmdHistory      = [];
 let histIndex       = -1;
 
+// Kill ring (v1.9.0): bash readline maintains a small stack of recently
+// killed text — Ctrl-W / Ctrl-U / Ctrl-K push onto it, Ctrl-Y pops the
+// top entry at the cursor. Capped at 10 to match bash defaults.
+const KILL_RING_LIMIT = 10;
+let killRing          = [];
+
+function pushKill(text) {
+  if (!text) return;
+  killRing.unshift(text);
+  if (killRing.length > KILL_RING_LIMIT) killRing.length = KILL_RING_LIMIT;
+}
+
 // Persistent history (v1.8.0): commands survive across tab close. We
 // use localStorage rather than sessionStorage for this because the
 // shell-history experience users expect from bash IS cross-session.
@@ -180,9 +192,10 @@ export function initInput() {
     // Emacs-style line-editing shortcuts (bash readline defaults):
     //   Ctrl-A   move to start of line
     //   Ctrl-E   move to end of line
-    //   Ctrl-W   delete word to the left
-    //   Ctrl-U   clear line
-    //   Ctrl-K   kill to end of line
+    //   Ctrl-W   delete word to the left  (→ push to kill ring)
+    //   Ctrl-U   clear line                (→ push to kill ring)
+    //   Ctrl-K   kill to end of line       (→ push to kill ring)
+    //   Ctrl-Y   yank from kill ring at cursor
     //   Ctrl-L   clear screen (handled at the dispatcher level via the `clear` command)
     if (e.ctrlKey || e.metaKey) {
       const pos = cmdInput.selectionStart;
@@ -205,6 +218,7 @@ export function initInput() {
         let i = pos;
         while (i > 0 && /\s/.test(val[i - 1])) i--;       // skip trailing whitespace
         while (i > 0 && !/\s/.test(val[i - 1])) i--;       // delete to start of word
+        pushKill(val.slice(i, pos));
         cmdInput.value = val.slice(0, i) + val.slice(pos);
         cmdInput.setSelectionRange(i, i);
         updateCursor();
@@ -214,6 +228,7 @@ export function initInput() {
       if (e.key === "u" || e.key === "U") {
         // Delete from cursor to start of line.
         e.preventDefault();
+        pushKill(val.slice(0, pos));
         cmdInput.value = val.slice(pos);
         cmdInput.setSelectionRange(0, 0);
         updateCursor();
@@ -223,7 +238,66 @@ export function initInput() {
       if (e.key === "k" || e.key === "K") {
         // Delete from cursor to end of line.
         e.preventDefault();
+        pushKill(val.slice(pos));
         cmdInput.value = val.slice(0, pos);
+        updateCursor();
+        updateTabHint();
+        return;
+      }
+      if (e.key === "y" || e.key === "Y") {
+        // Yank from kill ring at cursor.
+        e.preventDefault();
+        if (killRing.length === 0) return;
+        const text = killRing[0];
+        cmdInput.value = val.slice(0, pos) + text + val.slice(pos);
+        const newPos = pos + text.length;
+        cmdInput.setSelectionRange(newPos, newPos);
+        updateCursor();
+        updateTabHint();
+        return;
+      }
+    }
+
+    // Alt-/Meta-bound word navigation + last-arg insertion (bash
+    // readline defaults). Use e.code instead of e.key because macOS
+    // Option+B produces a modified character (∫) for e.key — only
+    // e.code reliably says "the B key was pressed."
+    if (e.altKey && !e.ctrlKey && !e.metaKey) {
+      const pos = cmdInput.selectionStart;
+      const val = cmdInput.value;
+      if (e.code === "KeyB") {
+        // Move word back: skip whitespace, then to start of word.
+        e.preventDefault();
+        let i = pos;
+        while (i > 0 && /\s/.test(val[i - 1])) i--;
+        while (i > 0 && !/\s/.test(val[i - 1])) i--;
+        cmdInput.setSelectionRange(i, i);
+        updateCursor();
+        return;
+      }
+      if (e.code === "KeyF") {
+        // Move word forward: skip whitespace, then to end of word.
+        e.preventDefault();
+        let i = pos;
+        while (i < val.length && /\s/.test(val[i])) i++;
+        while (i < val.length && !/\s/.test(val[i])) i++;
+        cmdInput.setSelectionRange(i, i);
+        updateCursor();
+        return;
+      }
+      if (e.code === "Period") {
+        // Insert last argument of the previous history entry.
+        // Bash's `!$` and `Alt-.` both do this; players who came from
+        // a real shell expect it.
+        e.preventDefault();
+        if (cmdHistory.length === 0) return;
+        const prev = cmdHistory[0];
+        const tokens = prev.trim().split(/\s+/);
+        const lastArg = tokens[tokens.length - 1] || "";
+        if (!lastArg) return;
+        cmdInput.value = val.slice(0, pos) + lastArg + val.slice(pos);
+        const newPos = pos + lastArg.length;
+        cmdInput.setSelectionRange(newPos, newPos);
         updateCursor();
         updateTabHint();
         return;

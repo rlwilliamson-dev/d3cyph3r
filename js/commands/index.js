@@ -29,6 +29,8 @@ import { structuredCommands } from "./structured.js";
 import { gitCommands }        from "./git.js";
 import { readonlyStubCommands } from "./readonly-stubs.js";
 import { learningCommands }  from "./learning.js";
+import { envCommands }       from "./env.js";
+import { jobCommands }       from "./jobs.js";
 
 export const COMMANDS = {
   ...linuxCommands,
@@ -48,6 +50,8 @@ export const COMMANDS = {
   ...gitCommands,
   ...readonlyStubCommands,
   ...learningCommands,
+  ...envCommands,
+  ...jobCommands,
 };
 
 // Names used by the Tab-autocomplete hint.

@@ -14,7 +14,9 @@
       #progress-fill green fill driven by js/engine/progress.js
     #terminal        scrollable output region; print() appends here
     #input-area      bottom row: prompt label + input + tab-hint
-      #prompt-user / #prompt-host  dynamic per-level prompt labels
+      #prompt-label                 dynamic per-level prompt label,
+                                    rendered from the PS1 env var by
+                                    js/terminal/prompt.js (v1.9.0)
       #input-wrapper                cursor-mirror container — see below
 
   The cursor-mirror trick:
@@ -97,10 +99,13 @@
     <div id="terminal"></div>
 
     <div id="input-area">
-      <span id="prompt-label">
-        <span id="prompt-user">guest</span><span class="at">@</span><span
-          id="prompt-host" class="host">d3cyph3r</span><span class="dollar">:~$&nbsp;</span>
-      </span>
+      <!-- Prompt label is rendered dynamically by js/terminal/prompt.js
+           based on the PS1 env var. Default PS1 reproduces the original
+           "user@host:~$ " styling using .at / .host / .dollar classes;
+           a custom PS1 (e.g. `export PS1='> '`) renders as plain text.
+           Pre-v1.9.0 had a static structure with user/host child spans;
+           kept the HTML id so CSS rules continue to apply. -->
+      <span id="prompt-label"></span>
 
       <div id="input-wrapper">
         <span id="mirror-before"></span><span id="mirror-cursor" class="cursor-inline">▋</span><span id="mirror-after"></span>

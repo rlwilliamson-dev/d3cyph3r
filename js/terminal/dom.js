@@ -18,8 +18,10 @@
 //   mirror*        visible text rendered with custom cursor
 //   tabHint        small hint surfaced when tab-completion is
 //                  ambiguous
-//   promptUser /   the "user@host" label on the prompt line
-//     promptHost
+//   promptLabel    full prompt label element (rendered dynamically
+//                  from PS1 by js/terminal/prompt.js — pre-v1.9.0 had
+//                  inner #prompt-user / #prompt-host spans, replaced
+//                  by the prompt renderer)
 //   levelBadge     top-bar label showing current level + difficulty
 //   progressFill   the in-bar progress meter (visited levels)
 //   clockEl        top-bar HH:MM:SS clock
@@ -29,8 +31,7 @@ export const mirrorBefore = document.getElementById("mirror-before");
 export const mirrorCursor = document.getElementById("mirror-cursor");
 export const mirrorAfter  = document.getElementById("mirror-after");
 export const tabHint      = document.getElementById("tab-hint");
-export const promptUser   = document.getElementById("prompt-user");
-export const promptHost   = document.getElementById("prompt-host");
+export const promptLabel  = document.getElementById("prompt-label");
 export const levelBadge   = document.getElementById("level-badge");
 export const progressFill = document.getElementById("progress-fill");
 export const clockEl      = document.getElementById("clock");

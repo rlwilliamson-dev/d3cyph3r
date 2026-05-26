@@ -1903,4 +1903,183 @@ DESCRIPTION
 
 EXAMPLES
     logout`,
+
+  // ─── Shell environment (v1.9.0) ─────────────────────────────────
+  export: `NAME
+    export — set environment variables
+
+SYNOPSIS
+    export NAME[=value] ...
+    export -n NAME ...
+    export -p
+    export
+
+DESCRIPTION
+    Sets variables in the current shell's environment. In bash, exported
+    variables are inherited by child processes; this sandbox has no
+    children, so 'export FOO=bar' and 'FOO=bar' both have the same
+    effect (set the variable).
+
+    Variables set via export OVERRIDE the engine's built-in values
+    (USER, HOME, PWD, HOSTNAME, PATH, SHELL, LANG, PS1) until you
+    'unset' them or switch levels.
+
+    -n   Unexport / remove from the environment.
+    -p   Print all exports in 'declare -x NAME=value' form.
+    (none) With no arguments, equivalent to -p.
+
+EXAMPLES
+    export PS1='\\u@\\h$ '
+    export AWS_PROFILE=prod
+    export -n AWS_PROFILE
+    export`,
+
+  env: `NAME
+    env — print or modify the environment
+
+SYNOPSIS
+    env [NAME=value ...]
+    env
+
+DESCRIPTION
+    Without arguments, prints every variable in the merged environment
+    in NAME=value form. With NAME=value prefixes, sets those variables
+    in the current shell (the trailing 'command [args]' form supported
+    by real bash is not implemented — set the variables, then run the
+    command on the next line).
+
+EXAMPLES
+    env
+    env PATH=/sbin:/bin
+    env | grep ^AWS`,
+
+  unset: `NAME
+    unset — remove variables from the environment
+
+SYNOPSIS
+    unset [-v | -f] NAME ...
+
+DESCRIPTION
+    Removes each NAME from the shell environment. After 'unset USER',
+    the variable resolves back to its built-in value (USER from the
+    engine's slot identity). -v and -f are accepted but ignored
+    (the sandbox doesn't distinguish shell vars from function names).
+
+EXAMPLES
+    unset AWS_PROFILE
+    unset PS1   # restores the default prompt`,
+
+  set: `NAME
+    set — print the shell environment / set shell options
+
+SYNOPSIS
+    set
+    set [+-]<flag>...
+
+DESCRIPTION
+    With no arguments, prints every variable in the merged environment
+    in NAME=value form (same output as 'env'). When called with shell
+    flags (-e, -u, -o pipefail, +e, ...) the flags are accepted but
+    not acted on — most realistic scripts assume they exist.
+
+EXAMPLES
+    set
+    set -e
+    set -o pipefail`,
+
+  // ─── Job control (v1.9.0) ───────────────────────────────────────
+  jobs: `NAME
+    jobs — list background jobs
+
+SYNOPSIS
+    jobs [-l]
+
+DESCRIPTION
+    Lists jobs the shell knows about. Each entry shows job ID, marker
+    (+ for current, - for previous, blank otherwise), status, and the
+    command line. -l also shows a fake PID.
+
+    NOTE: commands in this sandbox run synchronously, so 'background'
+    jobs complete immediately. The job table preserves the bash UX
+    (jobs / fg / kill) without true concurrency.
+
+EXAMPLES
+    sleep 10 &
+    jobs
+    jobs -l`,
+
+  fg: `NAME
+    fg — bring a background job to the foreground
+
+SYNOPSIS
+    fg [%N]
+
+DESCRIPTION
+    Removes job %N from the job table and replays its captured output.
+    Without an argument, targets the most recent job (%+).
+
+EXAMPLES
+    fg %1
+    fg`,
+
+  bg: `NAME
+    bg — resume a job in the background
+
+SYNOPSIS
+    bg [%N]
+
+DESCRIPTION
+    Marks job %N as running in the background. In this sandbox the
+    job has already completed by the time it appears in the table —
+    bg is a no-op acknowledgement.
+
+EXAMPLES
+    bg %1
+    bg`,
+
+  kill: `NAME
+    kill — send a signal to a job or process
+
+SYNOPSIS
+    kill [-SIGNAL] %N | PID ...
+    kill -s SIGSPEC %N | PID ...
+
+DESCRIPTION
+    Removes job %N from the job table. PIDs are not tracked, so
+    targeting a numeric PID always reports "No such process".
+    The signal flag (-9, -KILL, -s SIGTERM, etc.) is accepted but
+    ignored — every signal terminates the job entry.
+
+EXAMPLES
+    kill %1
+    kill -9 %2
+    kill -s TERM %3`,
+
+  wait: `NAME
+    wait — block until background jobs complete
+
+SYNOPSIS
+    wait [%N]
+
+DESCRIPTION
+    All jobs in this sandbox complete synchronously, so 'wait' returns
+    immediately. Provided for script compatibility.
+
+EXAMPLES
+    wait
+    wait %1`,
+
+  disown: `NAME
+    disown — remove jobs from the job table
+
+SYNOPSIS
+    disown [%N ...]
+
+DESCRIPTION
+    Removes the named jobs without printing anything. With no arguments
+    clears the entire job table.
+
+EXAMPLES
+    disown %1
+    disown`,
 };
