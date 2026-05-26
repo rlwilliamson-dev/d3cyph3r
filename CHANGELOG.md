@@ -57,6 +57,15 @@ broader real-world pattern.
   this level gates on a credential discovered in level<N-1>@<host>.
   Try \`ssh level<N-1>@<host>\` first."). Pivot hosts and any
   non-`level<N>@host` target are exempted.
+- **Future-level "check back later" tip** — `ssh level<N>@<host>`
+  where N is well-formed and the host is a known scaffolded track,
+  but level<N> itself hasn't shipped yet, now prints the standard
+  red "Could not resolve hostname" line AND a yellow follow-up
+  tip naming the track's current shipped ceiling ("The linux
+  track currently ships level0 through level1. Check back later
+  — new levels release as MINOR bumps, one track at a time.").
+  Real typos (`leve4@linux`, `lvl4@linux`) stay on the plain DNS
+  error since they're typos, not missing levels.
 - **Per-level `title` field** — optional schema field surfaced in
   the lobby tree's expanded view next to each level's `ssh`
   invocation. Backfilled on all 14 shipped levels.

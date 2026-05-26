@@ -2066,6 +2066,36 @@ async function termText(page) {
   check("Cold-start gate hint suggests visiting the prerequisite level",
         t.includes("Tip: this level gates on a credential discovered in level0@linux"));
 
+  // ──── v1.10.0: SSH to a not-yet-shipped level on a known host.
+  // Well-formed `level<N>@<known-host>` where N is past what's been
+  // built should: (a) still print the red DNS-style error AND (b)
+  // append a yellow tip telling the player the level isn't built yet
+  // and pointing at the currently-shipped max.
+  await typeAndEnter(page, "ssh level5@linux");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("ssh level5@linux still prints 'Could not resolve hostname' (red)",
+        t.includes("Could not resolve hostname 'level5@linux'"));
+  check("ssh level5@linux follow-up tip: level isn't built yet",
+        t.includes("this level isn't built yet"));
+  check("ssh level5@linux follow-up tip names the linux track + current ceiling",
+        t.includes("The linux track currently ships level0 through level1"));
+
+  // Real typos (`leve4@linux`, missing the second `l`) should still
+  // get ONLY the plain DNS error — no "not built yet" tip, because
+  // it's a typo, not a future level.
+  await typeAndEnter(page, "ssh leve4@linux");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  // Slice to most recent occurrence so we don't pick up the level5 tip
+  // from the prior call still being on screen.
+  const lastTypo = t.lastIndexOf("Could not resolve hostname 'leve4@linux'");
+  const afterTypo = t.slice(lastTypo, lastTypo + 400);
+  check("ssh leve4@linux (typo) still prints DNS error",
+        t.includes("Could not resolve hostname 'leve4@linux'"));
+  check("ssh leve4@linux (typo) does NOT show 'not built yet' tip",
+        !afterTypo.includes("this level isn't built yet"));
+
   // Sanity: the hint is suppressed when the player HAS visited the
   // prereq. Re-seed `visited` with level0@linux and retry.
   await page.evaluate(() => {

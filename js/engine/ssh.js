@@ -20,11 +20,19 @@ import { SCAFFOLDED_HOSTS } from "./tracks.js";
 export function handleSSH(target) {
   const level = LEVELS[target];
   if (!level) {
-    // Distinguish "unknown hostname" (typo, returns DNS-style error)
-    // from "known track, no levels yet" (warm scaffolded-track message).
-    // The lobby surfaces both kinds in its engagement list; ssh has to
-    // route them differently.
+    // Three routes for "level lookup miss":
+    //   1. Scaffolded track with NO levels yet → warm "track scaffolded"
+    //      message (currently unreachable since every track has level0+1
+    //      shipped, but kept for forkers / future empty tracks).
+    //   2. Well-formed `level<N>@<known-host>` where <N> hasn't shipped
+    //      yet → red DNS error + yellow "level isn't built yet" tip.
+    //      Distinguishes a future-level attempt from a true typo.
+    //   3. Anything else (typos, wrong host, malformed user) → plain
+    //      red DNS-style error.
     const host = target.split("@")[1];
+    const user = target.split("@")[0];
+
+    // Route 1: scaffolded-only track.
     if (host && SCAFFOLDED_HOSTS.has(host) && !Object.values(LEVELS).some(l => l.track === host)) {
       return {
         cls: "warn",
@@ -36,6 +44,33 @@ but no scenario has been written for it. Future PRs will land levels for
 ${host}; check the lobby's AVAILABLE ENGAGEMENTS list as new ones ship.`,
       };
     }
+
+    // Route 2: well-formed `level<N>@<known-host>` but N hasn't shipped.
+    // Match strictly — `leve4@linux` (typo, missing the `l`) doesn't
+    // hit this branch and stays on the plain DNS error.
+    const levelMatch = /^level(\d+)$/.exec(user || "");
+    if (levelMatch && host && SCAFFOLDED_HOSTS.has(host)) {
+      const requestedN  = parseInt(levelMatch[1], 10);
+      const shippedNums = Object.keys(LEVELS)
+        .map(k => /^level(\d+)@(.+)$/.exec(k))
+        .filter(m => m && m[2] === host)
+        .map(m => parseInt(m[1], 10))
+        .filter(n => Number.isFinite(n))
+        .sort((a, b) => a - b);
+      if (shippedNums.length > 0) {
+        const maxShipped = shippedNums[shippedNums.length - 1];
+        if (requestedN > maxShipped) {
+          // Red DNS error + yellow follow-up. Mirrors the cold-start
+          // gate-hint UX (handlePasswordInput below): keep the error,
+          // add a friendly tip pointing at the actual situation.
+          print(`ssh: Could not resolve hostname '${target}': Name or service not known`, "err");
+          print(`Tip: this level isn't built yet. The ${host} track currently ships level0 through level${maxShipped}. Check back later — new levels release as MINOR bumps, one track at a time.`, "warn");
+          return null;
+        }
+      }
+    }
+
+    // Route 3: plain DNS error.
     return { text: `ssh: Could not resolve hostname '${target}': Name or service not known`, cls: "err" };
   }
   if (!level.password) { connectTo(target); return null; }
