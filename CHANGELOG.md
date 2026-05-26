@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-05-26
+
+**Shell realism.** Twelve engine-surface additions that make the
+terminal behave a lot more like an actual bash session — paths,
+wildcards, pipes, shell variables, twelve new commands, and richer
+tab-completion. No new levels in this release; the existing shipped
+content is unchanged but plays differently now that pipelines and
+absolute paths work.
+
+The shell features compose: `cat $HOME/*.md | grep TODO | wc -l`
+is a single command line that exercises variable expansion, glob
+expansion, two pipe stages, stdin-aware grep, and stdin-aware wc.
+Each subsystem was added with a dedicated module so future engine
+work (sed, awk, multi-line pipes) has a clean place to extend.
+
+### Added
+
+- **Path resolution** (`js/fs/resolve.js`) — `resolvePath()` turns
+  any path string into an absolute parts array. Handles absolute
+  paths (`/home/<user>/foo`), home expansion (`~`, `~/foo`),
+  chained parent refs (`../../bin`), no-op `.` segments, double
+  slashes, and trailing slashes. `cd`, `ls`, `cat`, `grep`,
+  `head`, `tail`, and tab-completion all route through the new
+  resolver, so absolute-path navigation works everywhere.
+- **Wildcards** (`js/fs/glob.js`) — `expandGlob()` and
+  `expandGlobs()` translate `*` (any chars except `/`) and `?`
+  (single char) into matching paths. Patterns can target a sub-
+  directory (`src/*.txt`). Hidden files are skipped unless the
+  pattern starts with a literal `.`. Used by `ls`, `cat`, `grep`.
+  No-match returns the literal pattern, matching bash default.
+- **Pipes** (`js/engine/execute.js`) — `cmd1 | cmd2 | cmd3` runs
+  segments left-to-right, threading each stage's stdout into the
+  next stage's stdin. Pipe-friendly commands consume stdin when
+  no file arg is given; non-pipe-friendly commands ignore stdin
+  cleanly. Handler contract extends from `(level, arg)` to
+  `(level, arg, stdin?)`.
+- **Shell variables** (`js/engine/expand.js`) — `$USER`, `$HOME`,
+  `$HOSTNAME`, `$PWD`, `$PATH`, `$SHELL`, `$LANG`, `$LOGNAME`,
+  plus any custom `level.env_vars` entries. `${VAR}` bracketed
+  form. `$$` escapes to a literal `$`. Expansion runs before
+  tokenization so vars work in any position (`cat $HOME/*.md`).
+- **Tab autocomplete for paths** (`js/terminal/input.js`) —
+  pressing Tab after a space now completes filesystem paths
+  against the level's fs tree + cwd. Single match fills the
+  basename (with trailing `/` for directories); multiple matches
+  fill the longest common prefix so progressive Tab still makes
+  progress. Command-name completion (first word) unchanged.
+- **Five new pipe-friendly text commands** (`js/commands/text.js`):
+  - `wc [-l] [-w] [-c] [file]` — line / word / char counts
+  - `sort [-n] [-r] [-u] [file]` — sort lines, optionally numeric /
+    reverse / unique (stable sort)
+  - `uniq [-c] [-d] [-u] [file]` — collapse adjacent duplicates,
+    optionally with counts or duplicate-only / unique-only filtering
+  - `cut -d <delim> -f <fields> [file]` — extract delimited columns,
+    range syntax supported (`-f 1,3-5`)
+  - `tr <set1> <set2>` / `tr -d <set>` / `tr -s <set>` —
+    character-class translate / delete / squeeze, with range
+    expansion (`a-z`)
+- **Seven new system-introspection commands**
+  (`js/commands/system.js`):
+  - `which <cmd>` — locate a command in the shell command table
+  - `type <cmd>` — classify a command (builtin / not found)
+  - `id` — print uid / gid / supplementary groups
+  - `uname [-a/-s/-n/-r/-v/-m]` — kernel / machine info
+  - `date` — current date and time in standard format
+  - `uptime` — system uptime + load average
+  - `hostname` — print the current host
+- **`level.system` schema field** for per-level overrides of `uname`,
+  `id`, and `uptime` outputs (all optional — every command works
+  fine without any level data).
+- **`grep`, `head`, `tail` are now stdin-aware** — feed them piped
+  input and they read from stdin when no file arg is given. `grep`
+  also gained multi-file + glob support (`grep word *.log` works).
+- **`ls` accepts a path arg** (`ls src`, `ls /home/<user>/notes`)
+  and supports glob expansion (`ls *.md`). Multiple positional
+  args are listed in a single flat block (bash behavior for
+  explicit-file lists; no "total" header line).
+- **`cat` accepts multiple files and globs** (`cat *.md`, `cat a b
+  c`). Per-file errors are interpolated into the output rather
+  than aborting the whole call, matching bash's "keep going"
+  behavior on multi-file inputs.
+- **`help` reference** gained two new groups — "TEXT PROCESSING
+  (pipe-friendly)" and "SYSTEM INFO" — plus a "Shell features"
+  sub-block under LINUX BASICS documenting pipes, wildcards, and
+  variable expansion.
+- **Playtest coverage** for every new feature — absolute / home /
+  parent-ref path navigation, wildcard expansion, shell-var
+  expansion (bare, bracketed, `$$` escape), single- and multi-
+  stage pipes, path autocomplete, and smoke tests for every new
+  text and system command. Total checks: 412 → 448.
+
+### Changed
+
+- **Handler signature** for all commands extends from
+  `(level, arg)` to `(level, arg, stdin?)`. The third arg is
+  `undefined` for standalone invocations and a string when the
+  command sits downstream of a pipe stage. Existing commands that
+  ignore stdin pass through unchanged.
+- **`cd ..` and `cd ../..` (any all-parent-refs path) from home**
+  now print the same "already at home directory" hint — the prior
+  code only caught the bare `cd ..` case, letting the resolver
+  silently clamp longer up-chains to a no-op.
+- **`js/commands/index.js`** gains `text.js` and `system.js`
+  imports / spreads. Forkers adding new infrastructure-style
+  command modules should follow the same pattern (per-track
+  modules continue to ship under their track key).
+
 ## [1.2.0] - 2026-05-24
 
 **Brand refresh.** The wordmark is now a unified `[ D3CYPH3R ]`
@@ -1621,7 +1728,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.0.0...v1.1.0

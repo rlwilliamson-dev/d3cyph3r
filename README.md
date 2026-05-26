@@ -97,6 +97,7 @@ d3cyph3r/
 │   │   ├── lobby.js         Lobby render + first-visit onboarding
 │   │   ├── tracks.js        Track metadata (track key → display name, etc.)
 │   │   ├── progress.js      sessionStorage persistence (visited levels)
+│   │   ├── expand.js        Shell variable expansion ($USER, $HOME, ${VAR}, $$)
 │   │   └── version.js       Canonical VERSION + release checklist comment
 │   ├── commands/            One file per track + a shell-builtins file
 │   │   ├── index.js         Assembles COMMANDS map from per-track modules
@@ -107,9 +108,12 @@ d3cyph3r/
 │   │   ├── forensics.js     file / strings / exif / evtx / sha256sum / …
 │   │   ├── osint.js         sherlock / hibp / wayback / crtsh / github / …
 │   │   ├── cloud.js         aws (s3/iam/ec2/sts) + psql
+│   │   ├── text.js          wc / sort / uniq / cut / tr (pipe-friendly)
+│   │   ├── system.js        which / type / id / uname / date / uptime / hostname
 │   │   └── shell.js         help / clear / report / exit / logout
 │   ├── fs/                  Per-level filesystem helpers
 │   │   ├── flatten.js       Walks the level.fs tree → level.files flat map
+│   │   ├── glob.js          Wildcard expansion (* and ?) for path-aware commands
 │   │   └── resolve.js       cwd-aware path resolution (cd/cat/ls)
 │   └── util/                Pure helpers
 │       ├── hex.js           Hex encode / decode
@@ -157,7 +161,7 @@ If you open DevTools on the live site you may see CSP errors blocking scripts fr
 
 ## Commands implemented
 
-All commands from the original engine survive the refactor, with `exit` / `logout` added for muscle memory. See `help` inside the terminal for the full reference. Track-by-track:
+See `help` inside the terminal for the full reference. Track-by-track:
 
 - **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `env`
 - **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `AXFR`)
@@ -166,7 +170,17 @@ All commands from the original engine survive the refactor, with `exit` / `logou
 - **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sha256sum` / `md5sum`
 - **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo` / `github` (+ `/repo` + `file <path>`)
 - **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity` / `psql` (+ `-d` / `\l` / `\dt` / `SELECT … FROM … [LIMIT N]`)
+- **Text processing (pipe-friendly):** `wc` (+ `-l` / `-w` / `-c`) / `sort` (+ `-n` / `-r` / `-u`) / `uniq` (+ `-c` / `-d` / `-u`) / `cut` (+ `-d <delim>` / `-f <fields>`) / `tr` (+ `-d` / `-s`)
+- **System info:** `which` / `type` / `id` / `uname` (+ `-a` / `-s` / `-n` / `-r` / `-v` / `-m`) / `date` / `uptime` / `hostname`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`
+
+The terminal also supports the shell features players carry in from bash:
+
+- **Pipes** — `cmd1 | cmd2 | cmd3` runs left-to-right, threading stdout into stdin. `grep` / `head` / `tail` / `wc` / `sort` / `uniq` / `cut` / `tr` all read piped input.
+- **Wildcards** — `*` (any chars except `/`) and `?` (single char). Works with `ls`, `cat`, `grep` (`ls *.md`, `cat *.txt`, `grep TODO *.log`).
+- **Path resolution** — absolute paths (`/home/<user>/notes.txt`), home expansion (`~`, `~/foo`), chained parent refs (`../../bin`), all normalized.
+- **Shell variables** — `$USER`, `$HOME`, `$HOSTNAME`, `$PWD`, `$PATH`, `$SHELL`, `${VAR}` bracketed form, `$$` escapes to literal `$`. Per-level `env_vars` extend the set.
+- **Tab autocomplete** — completes command names on the first word; completes filesystem paths after a space (single match fills basename + `/` for dirs; multi-match fills the longest common prefix).
 
 ## Credit
 

@@ -36,9 +36,9 @@ const LOBBY = "guest@d3cyph3r";
 const HELP_SECTIONS = [
   { track: "linux", title: "LINUX BASICS", lines: [
     "ls / ls -a / ls -l         – list files (all / long format)",
-    "cd <dir>                   – change into a directory",
-    "cd ..                      – go up one directory",
-    "cat <file>                 – print file contents",
+    "ls <dir>                   – list a specific directory",
+    "cd <dir>                   – change into a directory (~, .., abs paths ok)",
+    "cat <file> [file ...]      – print file contents (multi-file + globs)",
     "head <file> [-n N]         – print first N lines (default 10)",
     "tail <file> [-n N]         – print last N lines (default 10)",
     "stat <file>                – detailed file metadata",
@@ -47,9 +47,14 @@ const HELP_SECTIONS = [
     "pwd                        – print working directory",
     "whoami                     – print current user",
     "echo <text>                – print text to terminal",
-    "grep <word> <file|*>       – search for word in file(s)",
+    "grep <word> [file ...]     – search for word in file(s), stdin, or *",
     "find <path> -name <pat>    – find files matching pattern",
     "env                        – list environment variables",
+    "",
+    "  Shell features:",
+    "    cmd1 | cmd2            – pipe stdout of cmd1 to stdin of cmd2",
+    "    *.txt  log?            – wildcards (any chars / single char)",
+    "    $USER  $HOME  ${VAR}   – expand shell variables",
   ]},
   { track: "network", title: "NETWORK RECON", lines: [
     "nmap <host>                – port scan",
@@ -107,6 +112,31 @@ const HELP_SECTIONS = [
   ]},
 ];
 
+// Infrastructure command groups — text-processing and system-info
+// commands that are part of the engine surface (not a specific
+// track). These render between LINUX BASICS and the per-track sections
+// so a player browsing `help` sees them where they intuit them in a
+// real shell.
+const HELP_INFRA = [
+  { title: "TEXT PROCESSING (pipe-friendly)", lines: [
+    "wc [-lwc] [file]           – count lines / words / chars",
+    "sort [-n] [-r] [-u] [file] – sort lines (numeric / reverse / unique)",
+    "uniq [-c] [file]           – dedupe adjacent lines (-c shows counts)",
+    "cut -d <delim> -f <N> ...  – extract delimited columns",
+    "tr <set1> <set2>           – translate chars (e.g. a-z A-Z)",
+    "tr -d <set>                – delete chars",
+  ]},
+  { title: "SYSTEM INFO", lines: [
+    "which <cmd>                – locate a command",
+    "type <cmd>                 – classify a command (builtin / external)",
+    "id                         – print uid / gid / groups",
+    "uname [-a/-s/-n/-r/-m]     – kernel / machine info",
+    "date                       – current date & time",
+    "uptime                     – system uptime + load average",
+    "hostname                   – print current host",
+  ]},
+];
+
 const HELP_TERMINAL = {
   title: "TERMINAL",
   lines: [
@@ -147,6 +177,17 @@ export const shellCommands = {
       print(`  ${section.title}${suffix}`, headerCls);
       for (const line of section.lines) print("    " + line, bodyCls);
       print("", "out");
+
+      // Insert the infrastructure groups right after LINUX BASICS so
+      // players see text-processing / system-info commands in the
+      // intuitive position (alongside the bash basics they extend).
+      if (section.title === "LINUX BASICS") {
+        for (const infra of HELP_INFRA) {
+          print(`  ${infra.title}`, "success");
+          for (const line of infra.lines) print("    " + line, "out");
+          print("", "out");
+        }
+      }
     }
     print(`  ${HELP_TERMINAL.title}`, "success");
     for (const line of HELP_TERMINAL.lines) print("    " + line, "out");
