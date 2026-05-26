@@ -97,7 +97,9 @@ d3cyph3r/
 │   │   ├── lobby.js         Lobby render + first-visit onboarding
 │   │   ├── tracks.js        Track metadata (track key → display name, etc.)
 │   │   ├── progress.js      sessionStorage persistence (visited levels)
-│   │   ├── expand.js        Shell variable expansion ($USER, $HOME, ${VAR}, $$)
+│   │   ├── expand.js        Per-token expansion ($VAR / ${VAR} / $? / $(...))
+│   │   ├── parse.js         Tokenizer + statement chain (&&/||/;), quote-aware
+│   │   ├── validate.js      Schema validator (warns on level data bugs at init)
 │   │   └── version.js       Canonical VERSION + release checklist comment
 │   ├── commands/            One file per track + a shell-builtins file
 │   │   ├── index.js         Assembles COMMANDS map from per-track modules
@@ -111,8 +113,11 @@ d3cyph3r/
 │   │   ├── text.js          wc / sort / uniq / cut / tr / awk (pipe-friendly)
 │   │   ├── system.js        which / type / id / uname / date / uptime / hostname
 │   │   ├── sysinspect.js    crontab / last / who / w / lsof / ss / journalctl / systemctl / dmesg
-│   │   ├── netinspect.js    ip / arp / ping / traceroute / nslookup
-│   │   ├── format.js        openssl x509 / tar / gunzip / zcat
+│   │   ├── netinspect.js    ip / arp / ping / traceroute / nslookup / host / nc
+│   │   ├── format.js        tar / gunzip / zcat (+ shared X.509 renderer)
+│   │   ├── structured.js    jq / gpg / openssl (multi-subcommand)
+│   │   ├── git.js           git log / show / diff / status / blame / config
+│   │   ├── readonly-stubs.js  chmod / mv / rm / sudo / su (read-only errors)
 │   │   ├── learning.js      hint / man / what-is (player self-help layer)
 │   │   ├── man-pages.js     NAME/SYNOPSIS/DESCRIPTION/EXAMPLES for every command
 │   │   ├── glossary.js      what-is term definitions (frameworks / regs / CWEs)
@@ -169,20 +174,37 @@ If you open DevTools on the live site you may see CSP errors blocking scripts fr
 
 See `help` inside the terminal for the full reference. Track-by-track:
 
-- **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `readlink` / `realpath` / `basename` / `dirname` / `env`
+- **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `readlink` / `realpath` / `basename` / `dirname` / `env` / `history`
 - **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `AXFR`)
 - **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
 - **Web:** `curl` (+ `-I`) / `gobuster` / `cookies`
 - **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sha256sum` / `md5sum`
 - **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo` / `github` (+ `/repo` + `file <path>`)
 - **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity` / `psql` (+ `-d` / `\l` / `\dt` / `SELECT … FROM … [LIMIT N]`)
-- **Text processing (pipe-friendly):** `wc` (+ `-l` / `-w` / `-c`) / `sort` (+ `-n` / `-r` / `-u`) / `uniq` (+ `-c` / `-d` / `-u`) / `cut` (+ `-d <delim>` / `-f <fields>`) / `tr` (+ `-d` / `-s`) / `awk` (`'{print $N}'`, `'/pat/ {print $N}'`, `-F SEP`)
-- **System info:** `which` / `type` / `id` / `uname` (+ `-a` / `-s` / `-n` / `-r` / `-v` / `-m`) / `date` / `uptime` / `hostname`
-- **System inspection:** `crontab -l` (+ `-u`) / `last` / `who` / `w` / `lsof` (+ `-i` / `-p`) / `ss` (+ `-l` / `-t` / `-u` / `-n` / `-a`) / `journalctl` (+ `-u` / `-n` / `-r`) / `systemctl status` / `dmesg`
-- **Network inspection:** `ip addr` / `ip route` / `arp -a` / `ping` / `traceroute` / `nslookup`
-- **Format inspection:** `openssl x509 -text -noout -in <file>` / `tar tvf` / `tar xvf` / `gunzip` / `zcat`
-- **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>`
+- **Text processing (pipe-friendly):** `wc` / `sort` / `uniq` / `cut` / `tr` / `awk` / `sed` (`s/pat/repl/[g]`, `-n 'Np'`) / `printf` / `jq` (`.path` queries, `-r` / `-c`)
+- **System info:** `which` / `type` / `id` / `uname` / `date` / `uptime` / `hostname`
+- **System inspection:** `crontab -l` / `last` / `who` / `w` / `lsof` / `ss` / `journalctl` / `systemctl status` / `dmesg` / `df` / `du` / `free`
+- **Network inspection:** `ip addr` / `ip route` / `arp -a` / `ping` / `traceroute` / `nslookup` / `host` / `nc -zv`
+- **Format inspection:** `openssl x509` / `openssl rand` / `openssl dgst` / `openssl enc -d` / `openssl s_client` / `tar tvf` / `tar xvf` / `gunzip` / `zcat`
+- **Version control:** `git log` / `git show` / `git diff` / `git status` / `git blame` / `git config` / `git remote` / `git branch`
+- **Crypto inspection:** `gpg --list-keys` / `gpg --verify` / `gpg --decrypt`
+- **Read-only stubs** (sandbox-friendly errors): `chmod` / `chown` / `mv` / `cp` / `rm` / `mkdir` / `rmdir` / `touch` / `ln` / `sudo` / `su` / `useradd` / `passwd`
+- **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>` / `walkthrough` / `progress` / `search <term>`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`
+
+The terminal supports a real bash-shaped composition layer (v1.8.0):
+
+- Pipes: `cmd1 | cmd2 | cmd3`
+- Chaining: `cmd1 && cmd2`, `cmd1 || cmd2`, `cmd1 ; cmd2`
+- Wildcards: `*.txt`, `log?`
+- Brace expansion: `cat file{1,2,3}.txt`
+- Shell variables: `$USER`, `$HOME`, `${VAR}`, `$$` (literal `$`)
+- Last exit code: `$?`
+- Command substitution: `$(cmd)`
+- Quote-aware tokenization: `'single'` is literal, `"double"` expands vars
+- Readline shortcuts: `Ctrl-A` / `Ctrl-E` / `Ctrl-W` / `Ctrl-U` / `Ctrl-K`
+- Persistent command history across tab sessions (localStorage)
+- Replay mode: re-entering a solved level skips the password gate
 
 The terminal also supports the shell features players carry in from bash:
 

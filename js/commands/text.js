@@ -320,10 +320,78 @@ export const textCommands = {
   //   $0          the whole line (verbatim)
   //   $1, $2, …   1-indexed fields after splitting on FS
   //   missing field → empty string (bash awk behavior)
-  awk(level, arg, stdin) {
-    if (!arg || !arg.trim()) return { text: "Usage: awk 'PROGRAM' [file]", cls: "err" };
+  // printf: formatted output. Supports %s, %d, %x, %%. Real printf
+  // is much richer (precision, width, escapes \n / \t); we cover the
+  // CTF-common forms.
+  printf(_level, _arg, _stdin, argv) {
+    const tokens = (argv || []).slice();
+    if (tokens.length === 0) return { text: "Usage: printf 'FORMAT' [ARG ...]", cls: "err" };
+    const format = stripQuotes(tokens[0]).replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+    const args   = tokens.slice(1);
+    let i = 0;
+    const out = format.replace(/%([sdxX%])/g, (_m, spec) => {
+      if (spec === "%") return "%";
+      const v = args[i++] ?? "";
+      if (spec === "s") return String(v);
+      if (spec === "d") return String(parseInt(v, 10) || 0);
+      if (spec === "x") return (parseInt(v, 10) || 0).toString(16);
+      if (spec === "X") return (parseInt(v, 10) || 0).toString(16).toUpperCase();
+      return v;
+    });
+    return { text: out, cls: "out" };
+  },
 
-    const tokens = tokenizeAwk(arg);
+  // sed: simplified stream editor. Supports:
+  //   sed 's/pat/repl/[g]'        per-line substitution
+  //   sed -n 'Np'                 print line N only
+  //   sed -n 'M,Np'               print lines M-N only
+  //   sed -e 'cmd1' -e 'cmd2'     multiple commands (rare here)
+  // Reads from file arg or stdin (pipe-friendly).
+  sed(level, _arg, stdin, argv) {
+    const tokens = (argv || []).slice();
+    const flags = tokens.filter(t => t.startsWith("-")).join("");
+    const positional = tokens.filter(t => !t.startsWith("-")).map(stripQuotes);
+
+    if (positional.length === 0) return { text: "Usage: sed [-n] 'EXPR' [file]", cls: "err" };
+    const expr = positional[0];
+    const file = positional[1];
+
+    const { content, error } = resolveInput(level, file, stdin, "sed");
+    if (error) return error;
+    if (!content) return { text: "", cls: "out" };
+    const lines = content.split("\n");
+
+    // Substitution form: s/pat/repl/[g]
+    let m = expr.match(/^s([\/|#])(.*?)\1(.*?)\1(g?)$/);
+    if (m) {
+      const [, , pat, repl, gFlag] = m;
+      let re;
+      try { re = new RegExp(pat, gFlag ? "g" : ""); }
+      catch (_) { return { text: `sed: invalid regex: ${pat}`, cls: "err" }; }
+      const out = lines.map(l => l.replace(re, repl)).join("\n");
+      return { text: out, cls: "out" };
+    }
+
+    // Print-line form: 'Np' or 'M,Np' (with -n suppression)
+    const printOnly = flags.includes("n");
+    m = expr.match(/^(\d+)(?:,(\d+))?p$/);
+    if (m && printOnly) {
+      const a = parseInt(m[1], 10) - 1;
+      const b = m[2] ? parseInt(m[2], 10) - 1 : a;
+      return { text: lines.slice(a, b + 1).join("\n"), cls: "out" };
+    }
+
+    return { text: `sed: unsupported expression: ${expr}`, cls: "err" };
+  },
+
+  awk(level, arg, stdin, argv) {
+    // Prefer argv (the dispatcher's pre-quoted token array) so the
+    // awk program — typically wrapped in `'...'` — survives as a
+    // single arg even when it contains spaces. Fall back to the
+    // arg-string tokenizer for any code path that still calls awk
+    // without the argv parameter.
+    const tokens = (argv && argv.length > 0) ? argv : tokenizeAwk(arg || "");
+    if (tokens.length === 0) return { text: "Usage: awk 'PROGRAM' [file]", cls: "err" };
 
     // Parse flags and positional args. -F can be `-F :` (two tokens)
     // or `-F:` (one token, suffix); we handle both.

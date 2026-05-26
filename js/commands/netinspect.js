@@ -226,6 +226,42 @@ export const netInspectCommands = {
     return { text: lines.join("\n"), cls: "out" };
   },
 
+  // nc: netcat. Sandbox supports `nc -zv host port` only — port-
+  // reachability check. Reads level.ncResults[`${host}:${port}`]
+  // (`{ open: bool, error? }`). Unconfigured targets default to
+  // "Connection refused" so the playtest sees a deterministic error.
+  nc(level, _arg, _stdin, argv) {
+    const tokens = (argv || []).slice();
+    const flags  = tokens.filter(t => t.startsWith("-")).join("");
+    const positional = tokens.filter(t => !t.startsWith("-"));
+    if (!flags.includes("z") || positional.length < 2) {
+      return { text: "Usage: nc -zv <host> <port>", cls: "err" };
+    }
+    const host = positional[0];
+    const port = positional[1];
+    const key  = `${host}:${port}`;
+    const r = level?.ncResults?.[key];
+    if (r === undefined) {
+      return { text: `nc: connect to ${host} port ${port} (tcp) failed: Connection refused`, cls: "err" };
+    }
+    if (r.open === false) {
+      return { text: `nc: connect to ${host} port ${port} (tcp) failed: ${r.error || "Connection refused"}`, cls: "err" };
+    }
+    return { text: `Connection to ${host} ${port} port [tcp/*] succeeded!`, cls: "out" };
+  },
+
+  // host: simpler DNS lookup (companion to nslookup). Reads the same
+  // `level.nslookupResults` map so both commands share schema.
+  host(level, _arg, _stdin, argv) {
+    const target = (argv && argv[0]) || "";
+    if (!target) return { text: "Usage: host <name>", cls: "err" };
+    const r = level?.nslookupResults?.[target];
+    if (!r) return { text: `Host ${target} not found: 3(NXDOMAIN)`, cls: "err" };
+    const lines = (r.addresses || []).map(a => `${target} has address ${a}`);
+    if (r.canonical) lines.unshift(`${target} is an alias for ${r.canonical}.`);
+    return { text: lines.join("\n") || `Host ${target} not found: 3(NXDOMAIN)`, cls: "out" };
+  },
+
   // nslookup: DNS lookup. Returns the resolver address and the
   // resolved IPv4 record(s). Without a level.nslookupResults entry,
   // returns NXDOMAIN. Companion to the `dig` command on the network

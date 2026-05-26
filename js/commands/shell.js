@@ -54,11 +54,22 @@ const HELP_SECTIONS = [
     "basename <path> [suffix]   – strip directory portion from a path",
     "dirname <path>             – strip basename from a path",
     "env                        – list environment variables",
+    "history                    – print the command history",
     "",
-    "  Shell features:",
+    "  Shell features (v1.8.0):",
     "    cmd1 | cmd2            – pipe stdout of cmd1 to stdin of cmd2",
+    "    cmd1 && cmd2           – run cmd2 only if cmd1 succeeded",
+    "    cmd1 || cmd2           – run cmd2 only if cmd1 failed",
+    "    cmd1 ; cmd2            – run both sequentially",
     "    *.txt  log?            – wildcards (any chars / single char)",
+    "    {a,b,c}                – brace expansion (cat file{1,2}.txt)",
     "    $USER  $HOME  ${VAR}   – expand shell variables",
+    "    $(cmd)                 – command substitution",
+    "    $?                     – last command's exit code",
+    "    'quoted'  \"quoted\"     – quote-aware tokenization",
+    "",
+    "  Ctrl-A / Ctrl-E          – jump to start / end of line",
+    "  Ctrl-W / Ctrl-U / Ctrl-K – delete word back / clear left / kill right",
   ]},
   { track: "network", title: "NETWORK RECON", lines: [
     "nmap <host>                – port scan",
@@ -72,6 +83,8 @@ const HELP_SECTIONS = [
     "ip addr / ip a             – list interfaces + IPv4 addresses",
     "ip route / ip r            – kernel routing table",
     "arp -a                     – ARP cache (hostname / IP / MAC / dev)",
+    "host <name>                – minimal DNS lookup",
+    "nc -zv <host> <port>       – TCP port reachability check",
   ]},
   { track: "crypto", title: "CRYPTOGRAPHY", lines: [
     "base64 <file>              – decode base64 file",
@@ -136,6 +149,10 @@ const HELP_INFRA = [
     "tr <set1> <set2>           – translate chars (e.g. a-z A-Z)",
     "tr -d <set>                – delete chars",
     "awk 'PROGRAM' [file]       – column extract + filter (print, $N, /regex/)",
+    "sed 's/pat/repl/[g]'       – substitute pattern (use file or stdin)",
+    "sed -n 'Np'                – print line N only",
+    "printf 'FORMAT' ARGS       – formatted output (%s %d %x %%)",
+    "jq '.path' [file]          – JSON path queries (also stdin)",
   ]},
   { title: "SYSTEM INFO", lines: [
     "which <cmd>                – locate a command",
@@ -156,12 +173,32 @@ const HELP_INFRA = [
     "journalctl [-u <unit>] [-n N] [-r] – systemd journal",
     "systemctl status <unit>    – service unit status",
     "dmesg                      – kernel ring buffer",
+    "df [-h]                    – disk-free table",
+    "du [-sh] <path>            – disk usage for a path",
+    "free [-h]                  – memory + swap usage",
   ]},
   { title: "FORMAT INSPECTION", lines: [
     "openssl x509 -text -noout -in <file>  – parse + dump X.509 cert",
+    "openssl rand -hex N        – random hex bytes (N is byte count)",
+    "openssl dgst -sha256 <f>   – compute file digest (md5 / sha1 / sha256)",
+    "openssl enc -d -<cipher> -in <f>  – decrypt a file",
+    "openssl s_client -connect <h:p>   – TLS handshake info",
     "tar tvf <file>             – list contents of a tar archive",
     "tar xvf <file>             – list contents (sandbox: no actual extract)",
     "gunzip <file> | zcat <file>  – decompress a .gz file to stdout",
+    "gpg --list-keys / -K       – list keys (public / secret)",
+    "gpg --verify <signed-file> – verify a signed file",
+    "gpg --decrypt <file>       – decrypt a file",
+  ]},
+  { title: "VERSION CONTROL (git)", lines: [
+    "git log [--oneline]        – list commits",
+    "git show <hash>            – commit metadata + diff",
+    "git diff [<hash>]          – diff against working tree or commit",
+    "git status                 – working-tree status",
+    "git blame <file>           – per-line authorship",
+    "git config [--list] [key]  – read repo config",
+    "git remote -v              – list remotes",
+    "git branch                 – list branches",
   ]},
 ];
 
@@ -176,6 +213,9 @@ const HELP_LEARNING = {
     "hint list                – show how many hints exist + how many you've seen",
     "man <cmd>                – manual page for a command (NAME / SYNOPSIS / …)",
     "what-is <term>           – glossary lookup (CWE / OWASP / MITRE / FERPA / …)",
+    "walkthrough              – open the current level's walkthrough in a new tab",
+    "progress                 – list levels you've visited this session",
+    "search <term>            – search visited levels' lessons-learned for <term>",
   ],
 };
 
@@ -256,6 +296,22 @@ export const shellCommands = {
     return { cls: "info", text:
 `Found a bug or have feedback?
 Open an issue: https://github.com/rlwilliamson-dev/d3cyph3r/issues` };
+  },
+
+  // history: print the current user's command history. Surfaces the
+  // level's pre-populated `.bash_history` if it exists; otherwise the
+  // session's typed-command history. (sessionStorage / localStorage
+  // persistence is the player's actual history layer; this command
+  // shows what's "on disk" rather than what's been typed in-tab.)
+  history(level) {
+    // Try level.fs first — look up .bash_history wherever it is.
+    const bashHistory = level?.files?.[".bash_history"];
+    if (bashHistory) {
+      const lines = String(bashHistory).split("\n").filter(Boolean);
+      const out = lines.map((line, i) => `  ${String(i + 1).padStart(4)}  ${line}`);
+      return { text: out.join("\n"), cls: "out" };
+    }
+    return { text: "(no command history)", cls: "dim" };
   },
 
   exit:   exitToLobby,

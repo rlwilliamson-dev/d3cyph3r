@@ -28,6 +28,7 @@
 // position alongside the visited-levels list.
 
 import { currentLevelKey } from "../engine/state.js";
+import { LEVELS } from "../../levels/index.js";
 import { MAN_PAGES } from "./man-pages.js";
 import { GLOSSARY } from "./glossary.js";
 
@@ -147,6 +148,98 @@ export const learningCommands = {
   //
   // Lookups are case-insensitive. Unknown term → friendly "not in
   // glossary" message with the canonical-search suggestion.
+  // walkthrough: open the matching walkthrough page for the current
+  // level in a new tab. Useful when the player wants to compare
+  // their solve to the published reference, or just see the level's
+  // post-solve deep-dive without leaving the terminal.
+  walkthrough(level) {
+    if (!level || level.isLobby) {
+      return { text: "walkthrough: ssh into a level first to see its walkthrough", cls: "dim" };
+    }
+    const slot = currentLevelKey.split("@")[0];
+    const url  = `/walkthroughs/#/${level.track}/${slot}`;
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (_) { /* popup blocked or non-browser env */ }
+    return {
+      text: `Opening walkthrough in new tab: ${url}\n(if your browser blocked the popup, navigate to /walkthroughs/ and pick ${level.track} / ${slot})`,
+      cls: "info",
+    };
+  },
+
+  // progress: list every visited level plus an overall solve count.
+  // Visited state lives in sessionStorage (see js/engine/progress.js);
+  // we render it as a per-track checklist.
+  progress() {
+    let visited;
+    try {
+      visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]"));
+    } catch (_) { visited = new Set(); }
+    // Group all non-lobby levels by track.
+    const byTrack = {};
+    for (const [key, lvl] of Object.entries(LEVELS)) {
+      if (lvl.isLobby || !lvl.track) continue;
+      (byTrack[lvl.track] ||= []).push(key);
+    }
+    const tracks = Object.keys(byTrack).sort();
+    const lines = [];
+    let totalSolved = 0, totalLevels = 0;
+    for (const t of tracks) {
+      const keys = byTrack[t].sort();
+      lines.push(`  ${t.toUpperCase()}`);
+      for (const k of keys) {
+        const mark = visited.has(k) ? "✓" : "·";
+        lines.push(`    ${mark} ${k}`);
+        if (visited.has(k)) totalSolved++;
+        totalLevels++;
+      }
+      lines.push("");
+    }
+    lines.push(`  ${totalSolved} / ${totalLevels} levels visited this session.`);
+    lines.push(`  (Progress is per-tab; closing the tab resets the visited list.)`);
+    return { text: lines.join("\n"), cls: "out" };
+  },
+
+  // search: cross-level lessons-learned + welcome.md / handoff.md /
+  // engagement-notes.md search. Iterates every visited level's text
+  // content for the query (case-insensitive). Prints up to N matches
+  // per file, with the surrounding line as context.
+  //
+  // Spoiler-safe: search ONLY visits levels the player has already
+  // entered. Players don't accidentally surface lessons-learned
+  // content from levels they haven't solved yet.
+  search(level, arg) {
+    const query = (arg || "").trim();
+    if (!query) return { text: "Usage: search <term>", cls: "err" };
+    const lc = query.toLowerCase();
+    let visited;
+    try {
+      visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]"));
+    } catch (_) { visited = new Set(); }
+    if (visited.size === 0) {
+      return { text: "search: visit at least one level first; search only scans levels you've entered.", cls: "dim" };
+    }
+    const hits = [];
+    for (const key of visited) {
+      const lvl = LEVELS[key];
+      if (!lvl?.files) continue;
+      for (const [path, content] of Object.entries(lvl.files)) {
+        if (typeof content !== "string") continue;
+        const ls = content.split("\n");
+        for (let i = 0; i < ls.length; i++) {
+          if (ls[i].toLowerCase().includes(lc)) {
+            hits.push(`${key}:${path}:${i + 1}: ${ls[i].trim()}`);
+            if (hits.length >= 50) break;  // hard cap to avoid spam
+          }
+        }
+        if (hits.length >= 50) break;
+      }
+      if (hits.length >= 50) break;
+    }
+    if (hits.length === 0) return { text: `(no matches for '${query}' in visited levels)`, cls: "dim" };
+    return { text: hits.join("\n"), cls: "warn" };
+  },
+
   "what-is"(_level, arg) {
     const term = (arg || "").trim();
     if (!term) {

@@ -702,6 +702,90 @@ source options.
 The "detection engineering" discipline writes and tunes the rules
 that fire on the SIEM stream.`,
 
+  JQ: `jq — JSON command-line processor
+
+A streaming JSON manipulation tool. Filters, projects, and
+transforms JSON documents with a query language. Like sed/awk
+for JSON. Critical for cloud-API exploration where every
+response is JSON: AWS CLI \`--output json\`, kubectl output,
+CloudTrail logs, S3 inventory reports.
+
+Common patterns:
+  jq '.users[].email'              project all emails from an array
+  jq '.[] | select(.role==\"admin\")' filter to admins
+  jq -r '.id'                       raw output (no quotes)
+
+Real jq has way more (variables, functions, regex, recursion).
+The sandbox supports the path-extraction subset.`,
+
+  GPG: `GnuPG (gpg) — Free OpenPGP implementation
+
+The de facto open-source OpenPGP suite — generates / manages
+asymmetric keypairs, signs / verifies, encrypts / decrypts.
+Used to sign Linux distro packages, verify advisory bulletins,
+encrypt files for specific recipients, sign git commits.
+
+OpenPGP is RFC 4880 (replaced by RFC 9580 in July 2024). The
+"web of trust" model — peers signing each other's keys — has
+mostly been superseded in practice by centralized keyservers
++ TOFU (Trust On First Use).
+
+The Snowden archive disclosed that NSA targets PGP users for
+metadata collection; the protocol itself remains uncompromised
+when used correctly with modern algorithms.`,
+
+  SED: `sed — Stream EDitor
+
+A line-oriented text transformation tool. Reads input line by
+line, applies the program to each, prints the result. The
+canonical Unix substitution tool. \`sed 's/foo/bar/g'\` is the
+gold standard for "replace X with Y everywhere."
+
+The full grammar is rich: addresses (line numbers or regex),
+multiple commands, hold/pattern space manipulation, branches.
+The sandbox supports the most common forms: per-line
+substitution and print-by-line-number. For richer
+transformation, players reach for awk.`,
+
+  BASH: `bash — Bourne Again Shell
+
+The GNU project's free re-implementation of the Bourne shell
+(sh), shipped as the default login shell on most Linux
+distros. POSIX-compatible but extended: brace expansion,
+arrays, regex matching, process substitution, integer math.
+
+The shell language sits at three layers:
+  1. Tokenization (quoting, splitting)
+  2. Expansion (vars, command substitution, globs, braces)
+  3. Execution (pipelines, redirection, control flow)
+
+Modern alternatives: zsh (macOS default since Catalina),
+fish (interactive-focused), pwsh (cross-platform PowerShell).
+But bash remains the universal lowest-common-denominator —
+every CI image, every Docker container, every cloud VM has it.`,
+
+  ANSI: `ANSI Escape Codes — Terminal Color / Formatting
+
+The ECMA-48 / ANSI X3.64 standard for terminal control
+sequences. Strings starting with \`\\033[\` (ESC \`[\`) plus
+parameters and a terminator. Used for color, cursor movement,
+screen clearing, and (originally) modem control.
+
+Color codes:
+  \\033[30m–37m   foreground (black/red/green/yellow/blue/...)
+  \\033[40m–47m   background
+  \\033[90m–97m   bright foreground
+  \\033[0m        reset
+
+Combined with semicolons: \\033[1;31m = bold red.
+
+Modern terminals support 256-color (\\033[38;5;Nm) and
+24-bit truecolor (\\033[38;2;R;G;Bm) extensions. The D3CYPH3R
+terminal sandbox treats output as plain text — ANSI codes
+appear as literal escape sequences (a feature, not a bug:
+it makes attacker-injected color codes in log files visible
+to the auditor).`,
+
   ARP: `ARP — Address Resolution Protocol
 
 The Layer-2 protocol that maps IPv4 addresses to MAC addresses on

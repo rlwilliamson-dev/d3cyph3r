@@ -1,97 +1,177 @@
-// Shell variable expansion. Applied to raw input AFTER history /
-// echo, but BEFORE tokenization and pipe-splitting in execute().
+// Token-level expansion: variables, command substitution, $?, quoting.
 //
-// Supported forms:
-//   $USER  $HOME  $HOSTNAME  $PATH  $PWD       — common bash vars
-//   ${VAR}                                     — bracketed form
-//   $UPPER_CASE   $with_underscore_123         — any identifier-style name
+// Called per-token from the dispatcher (`js/engine/execute.js`) after
+// the parser has produced the raw token list. The parser leaves outer
+// quote markers on each token so this layer can decide:
 //
-// Where the values come from (in priority order):
-//   1. level.env_vars[NAME]   — per-level overrides (the same map
-//                               the `env` command surfaces)
-//   2. Built-ins derived from engine state:
-//      USER      → level.playerUser or the engine slot name
-//      HOME      → /home/<USER>
-//      HOSTNAME  → currentLevelKey.split("@")[1]
-//      PWD       → buildDisplayPath equivalent
-//      PATH      → "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-//   3. If undefined, expansion produces the empty string (bash default).
+//   single-quoted   ('foo $USER')    → no expansion, content literal
+//   double-quoted   ("foo $USER")    → expand $VAR / ${VAR} / $? / $(...)
+//   unquoted        (foo$USER)       → expand same as double-quoted
+//                                      (we don't word-split substitution
+//                                      results — bash does, but the
+//                                      sandbox doesn't need it)
 //
-// What we DON'T do:
-//   - Command substitution `$(cmd)` / backticks. Would require running
-//     a sub-execute() inline; not needed for level content.
-//   - Arithmetic substitution `$((expr))`.
-//   - Default-value forms `${VAR:-default}`.
-//   - Quoting / escape rules. The engine doesn't support quoted strings
-//     yet — single/double quotes pass through verbatim. Players who
-//     need a literal `$` in echo can use `$$` (substituted to literal $).
+// Built-in variables (priority order — level.env_vars wins):
+//   USER / LOGNAME → level.playerUser or engine slot name
+//   HOME           → /home/<USER>
+//   HOSTNAME       → currentLevelKey's host portion
+//   PWD            → /home/<USER>[/<cwd>]
+//   SHELL          → /bin/bash
+//   PATH           → /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+//   LANG           → en_US.UTF-8
+//   ?              → last exit code (numeric, as a string)
 //
-// Why expansion happens at the dispatcher level: shell vars are a
-// player-facing convenience that should work for ANY command without
-// the command having to opt in. Doing it here keeps every command
-// handler unchanged.
+// Special: `$$` always expands to a literal `$` (escape hatch).
+//
+// Command substitution: `$(cmd ...)` runs the inner pipeline (with
+// the full chain semantics) and inserts the captured stdout. Nested
+// substitutions work because the parser captures them as opaque
+// blobs inside the outer token. The expand layer calls the supplied
+// `runForOutput` callback to actually run them — the callback is
+// passed in to avoid an import cycle with execute.js.
 
-import { currentLevelKey, currentPath } from "./state.js";
+import { currentLevelKey, currentPath, lastExitCode } from "./state.js";
+import { LEVELS } from "../../levels/index.js";
+
+const SINGLE = "'";
+const DOUBLE = '"';
 
 /**
- * Compute the level-scoped variable map, including built-ins.
- *
- * Built-ins are derived from engine state and don't depend on which
- * command is running. Per-level env_vars override built-ins of the
- * same name (so a level can pin USER for a teaching scenario).
+ * Compute the live variable map for the current level. Built-ins
+ * are derived from engine state; per-level `env_vars` override
+ * built-ins of the same name.
  */
-function getEnv(level) {
-  const user = level?.playerUser || currentLevelKey.split("@")[0];
+function getEnv() {
+  const level = LEVELS[currentLevelKey] || {};
+  const user = level.playerUser || currentLevelKey.split("@")[0];
   const host = currentLevelKey.split("@")[1] || "localhost";
   const home = `/home/${user}`;
   const pwd  = currentPath.length === 0 ? home : home + "/" + currentPath.join("/");
 
   const builtins = {
-    USER:      user,
-    LOGNAME:   user,
-    HOME:      home,
-    HOSTNAME:  host,
-    PWD:       pwd,
-    SHELL:     "/bin/bash",
-    PATH:      "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-    LANG:      "en_US.UTF-8",
+    USER:     user,
+    LOGNAME:  user,
+    HOME:     home,
+    HOSTNAME: host,
+    PWD:      pwd,
+    SHELL:    "/bin/bash",
+    PATH:     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    LANG:     "en_US.UTF-8",
   };
-
-  // Per-level env_vars override built-ins of the same name.
-  return { ...builtins, ...(level?.env_vars || {}) };
+  return { ...builtins, ...(level.env_vars || {}) };
 }
 
 /**
- * Expand `$VAR` and `${VAR}` references in `input` against the level's
- * variable map. Returns the expanded string (or the original if no
- * substitutions applied).
+ * Expand variables and command substitution inside a single token,
+ * respecting single-quote literal regions inside the token.
  *
- * Names match the bash identifier rules: [A-Za-z_][A-Za-z0-9_]*. So
- * `$1foo` doesn't expand (digits can't lead), and `$VAR-suffix` only
- * expands `$VAR` (the `-` breaks the identifier).
- *
- * Special: `$$` expands to a literal `$` (escape hatch for players
- * who want to put a dollar sign through `echo` without invoking
- * variable expansion).
- *
- * @param {string} input - The raw command line.
- * @param {object} level - The current level (for env_vars / playerUser).
- * @returns {string} Expanded input.
+ * @param {string} token        - Raw token (with quote markers retained).
+ * @param {function(string): string} runSubstitution
+ *      - Callback that runs a sub-command and returns its captured
+ *        stdout. Injected to avoid a circular import on execute.js.
+ * @returns {string} Expanded token (quote markers still present;
+ *      caller strips them with `unquote` from parse.js).
  */
-export function expandVars(input, level) {
-  if (!input || (!input.includes("$"))) return input;
-  const env = getEnv(level);
+export function expandTokenVars(token, runSubstitution) {
+  if (!token) return token;
+  // Fast path: no expansion-trigger char anywhere.
+  if (!token.includes("$") && !token.includes(SINGLE)) return token;
 
-  // Single regex that captures all three forms in one pass:
-  //   $$            literal-dollar escape       → group 1 = "$"
-  //   ${name}       bracketed                   → group 2 = name
-  //   $name         bare identifier             → group 3 = name
-  return input.replace(/\$(\$)|\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
-    (_match, dollar, bracketed, bare) => {
-      if (dollar) return "$";
-      const name  = bracketed || bare;
-      const value = env[name];
-      // Bash default: undefined vars expand to "" (no warning).
-      return value === undefined ? "" : String(value);
-    });
+  const env = getEnv();
+  let out  = "";
+  let i    = 0;
+  // Walk the token tracking whether we're inside single quotes — those
+  // are literal. Double quotes don't disable expansion.
+  let mode = "none";
+
+  while (i < token.length) {
+    const c    = token[i];
+    const next = token[i + 1];
+
+    if (mode === "single") {
+      out += c;
+      if (c === SINGLE) mode = "none";
+      i++;
+      continue;
+    }
+    if (c === SINGLE && mode !== "double") {
+      mode = "single";
+      out += c;
+      i++;
+      continue;
+    }
+    if (c === DOUBLE && mode === "none") {
+      mode = "double";
+      out += c;
+      i++;
+      continue;
+    }
+    if (c === DOUBLE && mode === "double") {
+      mode = "none";
+      out += c;
+      i++;
+      continue;
+    }
+
+    // $$ → literal $
+    if (c === "$" && next === "$") {
+      out += "$";
+      i += 2;
+      continue;
+    }
+
+    // $? → last exit code
+    if (c === "$" && next === "?") {
+      out += String(lastExitCode);
+      i += 2;
+      continue;
+    }
+
+    // $(...) → run inner command, substitute output
+    if (c === "$" && next === "(") {
+      // Find matching close — parens are balanced thanks to parse.js
+      let depth = 1;
+      let j = i + 2;
+      while (j < token.length && depth > 0) {
+        if (token[j] === "(") depth++;
+        else if (token[j] === ")") depth--;
+        if (depth === 0) break;
+        j++;
+      }
+      const inner = token.slice(i + 2, j);
+      const sub   = runSubstitution(inner);
+      out += sub;
+      i = j + 1;
+      continue;
+    }
+
+    // ${name} → bracketed var
+    if (c === "$" && next === "{") {
+      const close = token.indexOf("}", i + 2);
+      if (close === -1) {
+        // unterminated — treat as literal
+        out += c;
+        i++;
+        continue;
+      }
+      const name = token.slice(i + 2, close);
+      out += (env[name] !== undefined) ? String(env[name]) : "";
+      i = close + 1;
+      continue;
+    }
+
+    // $name → bare var (identifier rules: [A-Za-z_][A-Za-z0-9_]*)
+    if (c === "$" && next && /[A-Za-z_]/.test(next)) {
+      let j = i + 1;
+      while (j < token.length && /[A-Za-z0-9_]/.test(token[j])) j++;
+      const name = token.slice(i + 1, j);
+      out += (env[name] !== undefined) ? String(env[name]) : "";
+      i = j;
+      continue;
+    }
+
+    out += c;
+    i++;
+  }
+  return out;
 }
