@@ -411,6 +411,29 @@ Three parallel remediation tracks: Aaron specifically, Veridian as the employer,
 
 **Note the adjacent findings, don't pursue them.** The Strava presence in `sherlock` output is interesting OPSEC adjacent — Aaron's segment leaderboards in his own neighborhood are how the LinkedIn DM's "her school in Coolidge Corner" intel could have been derived. Worth flagging in the writeup as an adjacent observation; explicitly out of scope for active investigation today.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run the sherlock command — `progress --detail` lists what you've unlocked.
+
+### Aaron's Strava neighborhood
+
+**Trigger:** `sherlock aaron-hines-md` (you ran this as step 3 of the solve, so the bonus fires there)
+
+**What it teaches:** sherlock surfaces Aaron's Strava with segment leaderboards on **Brookline / Newton hills** — public training routes through his actual neighborhood. Strava heatmap exposure is a real, recurring OPSEC problem with documented mass-OSINT precedent:
+
+- **2018 Strava global heatmap** — Strava published an aggregated activity heatmap as a fitness-engagement marketing artifact. Researchers and journalists quickly noticed that the heatmap revealed previously-classified locations including U.S. military forward-operating bases in active conflict zones, intelligence-community facilities, and embassy compound layouts. The exposure traced to individual soldiers and intelligence officers running on their bases with public Strava accounts. Strava's response was to add a "metro area only" privacy default and disable the global heatmap for new accounts, but the historical exposure remained for pre-2018 accounts that didn't opt in to the new defaults.
+- **Pattern persistence**: Strava's segment-leaderboards feature, which is *separate* from the heatmap and still public by default for many accounts, exposes the same neighborhood-pattern intel. Aaron's leaderboard on a Brookline/Newton hill is a deanonymization signal — his actual residential pattern is in the public dataset for anyone running the same `sherlock` query.
+
+For Aaron specifically, the lesson is **executive-protection adjacent**, not core to the credential-leak finding:
+
+- A public-named CMO in a documented hostile-attention campaign should not have segment-leaderboard exposure on routes near his home.
+- Marisol's executive-protection vendor (if engaged) will absolutely note this in their threat-model write-up.
+- The remediation is straightforward — Strava → Privacy Controls → "Map Visibility" → set to "Followers Only" or hide identifiable segments — but it requires Aaron to do it; Veridian can't do it for him.
+
+For the project: this is the kind of finding that sits between "out of scope" and "must report." Note it in the engagement report, flag it for Marisol's discretion, and let Veridian's exec-protection vendor pick it up if engaged. The MITRE ATT&CK framework's [T1593.001 — Search Open Websites/Domains: Social Media](https://attack.mitre.org/techniques/T1593/001/) covers the technique from the offensive side; the defender response is **accounts inventory + privacy-default audit** for any named executive in a hostile-attention scenario.
+
+For broader awareness: every fitness app, every social media platform, every "find friends nearby" feature shipping in 2026 is the same shape. The 2018 Strava incident is the named example; the underlying pattern is general.
+
 ## §8 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*

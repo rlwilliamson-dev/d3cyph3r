@@ -53,9 +53,23 @@ export const osintLevels = {
   "level0@osint": {
     password: null,
     track: "osint",
+    title: "Aaron's online footprint (HIBP)",
+    estimatedMinutes: 12,
     playerUser: "intel",
     objective: "Run a personal-credential exposure check on Veridian's new CMO, Dr. Aaron Hines. Marisol Vega wants to know what's in public breach corpora against his known personal email before she decides whether to escalate to executive protection.",
     lesson: "Veridian Analytics is one of Driftwood's healthcare-vertical clients — a mid-sized healthcare-analytics SaaS company headquartered in Boston (~250 engineers, founded 2018). They handle claims and outcomes data on behalf of insurers and provider networks, which makes them a HIPAA Business Associate under signed BAAs with each customer. PHI handling is in scope across their entire production environment, and they layer HITRUST CSF v11 on top for the customer-facing assurance their insurance-carrier customers require. Their General Counsel, Marisol Vega, opened this engagement last Friday. Their newly-hired Chief Medical Officer, Dr. Aaron Hines, has surfaced in an open-letter campaign about a controversial clinical trial he ran at his previous employer (Helix Therapeutics); the campaign has produced one identifiable LinkedIn DM with a snippet of Aaron's personal information in it, and Marisol wants a baseline read on Aaron's public credential exposure before deciding whether to engage an executive-protection vendor. You're on Driftwood's OSINT-engagement workstation (the shell calls you `intel`, the shared service account the recon team uses for client-side intel work). Read welcome.md first — it explains how `hibp` works. Then read engagement-notes.md, then subject-brief.txt, then run the lookup. Read lessons-learned.md once you've seen what's in the breach corpus.",
+
+    // v1.10.0 BONUS FINDS — Adobe 2013 hint field as OSINT-grade
+    // intel layer. Orthogonal to the password-reuse finding;
+    // doesn't gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "adobe-hint-as-intel",
+        name: "Adobe's cleartext password hints",
+        hint: "Aaron's Adobe 2013 record carries the hint 'city we lived in for residency' — Adobe stored hints in cleartext alongside encrypted passwords. Even when the password itself isn't recovered, the hint is OSINT-grade intel for building a targeted guess list. Aaron's public bio names BIDMC in Boston as his residency; the hint plus the bio narrows his Adobe-era password to a small candidate set.",
+        trigger: { command: "hibp", argMatches: /aaron\.hines\.md@gmail\.com/, outputContains: "city we lived in" },
+      },
+    ],
     hibpResults: {
       "aaron.hines.md@gmail.com": [
         {
@@ -800,9 +814,23 @@ Return to the lobby:    ssh guest@d3cyph3r`
   "level1@osint": {
     password: "BostonStrong#2013",
     track: "osint",
+    title: "Aaron's weekend project (GitHub)",
+    estimatedMinutes: 18,
     playerUser: "intel",
     objective: "Map Aaron Hines's public developer footprint. Marisol expanded scope after Friday's HIBP finding — `sherlock` and the new `github` command are in scope. Identify any committed credentials or sensitive disclosures in Aaron's public GitHub.",
     lesson: "Friday's HIBP lookup confirmed Aaron's password-reuse signal (BostonStrong#2013 recovered from both LinkedIn 2012 and LiveJournal 2014). Marisol Vega expanded engagement scope over the weekend after seeing the finding: source-control OSINT (the new `github` command) and handle-pivot OSINT (`sherlock`) are now authorized for Aaron's public developer footprint. Authorization basis unchanged — Aaron + Veridian's Chief People Officer consent reconfirmed Monday morning — broader public-data lookup, still no active testing of any account, still no enumeration of family members. Today: walk Aaron's public GitHub presence and identify any sensitive disclosures (committed credentials, internal references, personal-AWS exposure) that warrant remediation. Read welcome.md first — it explains the new `github` command. Then read engagement-notes.md and subject-update.txt. Use `sherlock aaron-hines-md` to confirm the GitHub handle, then `github aaron-hines-md` to enumerate his public repos. Read lessons-learned.md once you've found what's there.",
+
+    // v1.10.0 BONUS FINDS — Strava segment leaderboards as residential-
+    // pattern leak. Orthogonal to the GitHub credential finding;
+    // doesn't gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "strava-segment-pattern",
+        name: "Aaron's Strava neighborhood",
+        hint: "sherlock surfaces Aaron's Strava with segment leaderboards on Brookline / Newton hills — public training routes through his actual neighborhood. Strava heatmaps have been used in real OPSEC incidents (2018 Strava global heatmap revealed forward-operating bases) to deanonymize home, work, and travel patterns. For a publicly-named executive in a hostile-attention campaign, a public Strava is a residential-pattern leak.",
+        trigger: { command: "sherlock", argMatches: /aaron-hines-md/, outputContains: "Brookline / Newton hills" },
+      },
+    ],
     sherlockResults: {
       "aaron-hines-md": [
         "[+] GitHub:    https://github.com/aaron-hines-md",

@@ -7,6 +7,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-05-26
+
+**Lobby polish + cold-start UX + cross-track bonus finds.** The first
+MINOR after v1.9.0 wraps the engine-polish run. AVAILABLE ENGAGEMENTS
+becomes a collapsible tree so the lobby scales gracefully as
+level2/level3 land per-track; `progress` learns a `--detail` flag
+for in-game review of unlocked bonus finds; a cold-start gate hint
+nudges players who try to enter a gated level without having visited
+the prerequisite.
+
+**Bonus finds reach every shipped level.** v1.9.0 introduced
+`level.bonusFinds` but only seeded data on the two linux levels.
+v1.10.0 rolls out a bonus find on each of the 12 non-linux levels —
+each a small orthogonal lesson surfaced from existing in-level
+content (Priya's audit-trail asides, welcome.md side notes, EXIF
+fields players often skim past, robots.txt billboarding, the Adobe
+2013 hint-field intel layer, Strava neighborhood exposure, and more).
+Every walkthrough gains a §7.5 "Optional exploration" section that
+names each bonus, gives its trigger, and expands the lesson into the
+broader real-world pattern.
+
+### Added
+
+- **Lobby tree** — AVAILABLE ENGAGEMENTS renders as a collapsible
+  tree (`js/engine/lobby.js#engagementList`). Each track is one
+  line by default (entry-point `ssh level0@<host>` + label +
+  visited count + level0's difficulty); expanded tracks add the
+  track's `description` plus indented per-level rows showing the
+  level's `title`, visited mark, and estimated time.
+- **`tracks` command** (`js/commands/lobby.js`) — toggles
+  per-track expand state. `tracks` (status), `tracks <name>`
+  (toggle one), `tracks all` (expand every track), `tracks reset`
+  (collapse every track). Expand state persists in
+  sessionStorage. Smart default on the first lobby render of a
+  session: tracks containing any visited level auto-expand.
+- **`progress --detail`** — lists per-level bonus finds by name
+  when unlocked (✦ marker) and as "[?] hidden — keep exploring"
+  when not yet found. Anti-spoiler: unvisited levels show only
+  "(visit the level to discover what's here)" — no per-find
+  titles surface until the player has entered the level. The
+  default `progress` view now also shows a `[bonuses N/M]`
+  counter on every level that declares bonus finds + an aggregate
+  "N / M bonus finds discovered" summary line.
+- **Cold-start gate hint** (`js/engine/ssh.js#prerequisiteHint`) —
+  when a player attempts `level<N>@<host>` without having visited
+  `level<N-1>@<host>`, the red "Permission denied" line is now
+  followed by a yellow tip pointing at the prerequisite ("Tip:
+  this level gates on a credential discovered in level<N-1>@<host>.
+  Try \`ssh level<N-1>@<host>\` first."). Pivot hosts and any
+  non-`level<N>@host` target are exempted.
+- **Future-level "check back later" tip** — `ssh level<N>@<host>`
+  where N is well-formed and the host is a known scaffolded track,
+  but level<N> itself hasn't shipped yet, now prints the standard
+  red "Could not resolve hostname" line AND a yellow follow-up
+  tip naming the track's current shipped ceiling ("The linux
+  track currently ships level0 through level1. Check back later
+  — new levels release as MINOR bumps, one track at a time.").
+  Real typos (`leve4@linux`, `lvl4@linux`) stay on the plain DNS
+  error since they're typos, not missing levels.
+- **Per-level `title` field** — optional schema field surfaced in
+  the lobby tree's expanded view next to each level's `ssh`
+  invocation. Backfilled on all 14 shipped levels.
+- **Per-track `description` field** in `js/engine/tracks.js` —
+  one-line blurb shown when the track is expanded. Backfilled on
+  all 7 tracks.
+- **12 new bonus finds on the non-linux levels** — one per shipped
+  level (network/level0+1, crypto/level0+1, web/level0+1,
+  forensics/level0+1, osint/level0+1, cloud/level0+1). Each uses
+  existing in-level content as the trigger (no new schema, no new
+  fs nodes). Examples: Priya's "next sprint" audit-trail note on
+  network/level0; `robots.txt` as an attacker's site map on
+  web/level0; the EXIF `GPSImgDirection` field beside lat/long on
+  forensics/level0; Adobe 2013's cleartext password-hint field on
+  osint/level0; the `migration_artifacts.ttl_expires_at` column
+  without enforcement on cloud/level1.
+- **Walkthrough §7.5 — Optional exploration** sections added to
+  all 14 walkthroughs. Each names the bonus(es) in the level,
+  gives the trigger, and expands the hint into a real-world
+  pattern reference (MITRE ATT&CK techniques, LOLBAS, 2018 Strava
+  heatmap incident, the Snowflake UNC5537 long-TTL session
+  campaign, Adobe 2013 storage flaws, etc.). Also includes:
+  - `walkthroughs/linux/level1.md` §7.5 — "Optional exploration:
+    the pivot host" documents the agent-forwarded SSH workflow
+    into `dbsvc@halton-bastion`, the backup landing zone shipped
+    in v1.9.0. The solve path doesn't require the pivot.
+  - `walkthroughs/network/level1.md` §7.5 — "Optional
+    verification: walk the perimeter you just enumerated" covers
+    `ip addr`, `ip route`, `arp -a`, `nslookup`, `ping`,
+    `traceroute` against the demo data shipped in v1.7.0. Useful
+    for writing up findings in real engagement language; not part
+    of the solve.
+
+### Changed
+
+- **Difficulty becomes a computed tier.** Manual `level.difficulty`
+  is gone. Replaced with a 5-tier curve computed from the level
+  number in `js/engine/tiers.js`:
+  - `Routine` (level 0–5) — standard quarterly audit work
+  - `Live` (level 6–10) — active engagement, real contractual
+    stakes
+  - `Escalated` (level 11–15) — incident response in progress
+  - `Critical` (level 16–20) — notification clocks running
+  - `Crisis` (level 21+) — public-statement-grade engagement
+
+  The label describes the *operational state* the player is
+  inside, not just puzzle complexity. The new `tiers` command
+  prints the legend; the lobby footer points at it. The
+  connection banner now reads `Tier: Routine · Est. time: ~10
+  min` instead of `Difficulty: Easy · Est. time: ~10 min`. The
+  expanded lobby tree shows a `[Routine]` tag per level row.
+  Pivot hosts (non-numbered) get no tier label since they sit
+  off the main curve.
+- **`estimatedMinutes:` rolled out cross-track.** This v1.8.0
+  schema field existed but was only populated on the linux
+  track. Backfilled on all 12 non-linux levels so the lobby
+  tree's est-time annotation works everywhere.
+- **TERMINAL help section** lists the new `tracks` command,
+  `tiers` command, and the `progress --detail` flag.
+
+### Fixed
+
+- (No fixes — v1.10.0 is purely additive.)
+
 ## [1.9.0] - 2026-05-26
 
 **Engine realism — the bash UX players carry in from a real shell.**
@@ -2339,7 +2462,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.7.0...v1.8.0

@@ -26,11 +26,24 @@
 // and `ls -la` owner columns show. Without this override the engine
 // falls back to the level key's user prefix.
 //
-// Optional player-orientation fields (v1.8.0):
-//   level.difficulty       : "Easy" | "Medium" | "Hard" | "Expert"
+// Optional player-orientation fields (v1.8.0 / v1.10.0):
 //   level.estimatedMinutes : positive integer — typical solve time
-// Surfaced in the connection banner ("Difficulty: Easy · Est. time:
-// ~10 min") so players can pick where to spend a session.
+//   level.title            : short scenario name (~25–40 chars) shown
+//                            in the lobby tree's expanded view next
+//                            to the `ssh ...` invocation line
+//
+// NOTE: as of v1.10.0, difficulty is COMPUTED from the level number
+// (see `js/engine/tiers.js`). Don't add a `difficulty:` field to a
+// numbered level — the tier (Routine / Live / Escalated / Critical /
+// Crisis) flows from the ordinal in `level<N>@<host>` automatically.
+// Pivot hosts (`pivot: true`) are non-numbered and sit off the main
+// difficulty curve; they get no tier label in either the lobby tree
+// or the connection banner.
+//
+// Surfaced in the connection banner ("Tier: Routine · Est. time:
+// ~10 min") and in the lobby tree. Without a title, the lobby tree
+// shows only the ssh command + tier + estimated time on each level
+// row.
 //
 // Optional: SHELL ENVIRONMENT (v1.9.0).
 //
@@ -175,7 +188,7 @@ export const linuxLevels = {
   "level0@linux": {
     password: null,
     track: "linux",
-    difficulty: "Easy",
+    title: "Daniel's laptop handoff",
     estimatedMinutes: 10,
     playerUser: "daniel",
     objective: "Audit Daniel's laptop and find the client credential he left behind before IT reimages the box on Wednesday.",
@@ -558,7 +571,7 @@ Return to the lobby:    ssh guest@d3cyph3r
   "level1@linux": {
     password: "please-rotate-me",
     track: "linux",
-    difficulty: "Easy",
+    title: "Halton Bank staging bastion",
     estimatedMinutes: 10,
     playerUser: "app_admin",
     objective: "Find the production database credential a misconfigured backup is leaking — and document the blast radius before Priya rotates it.",
@@ -700,7 +713,6 @@ Return to the lobby:    ssh guest@d3cyph3r
         // No `password` field → ssh connects without a password
         // gate. (Real bash's key-forwarding equivalent.)
         password: null,
-        difficulty: "Easy",
         estimatedMinutes: 3,
         lesson: "You ssh'd into halton-bastion using agent forwarding. This is where Daniel's nightly backup lands. Walk the box; you're not looking for anything specific. `exit` returns you to staging-worker.",
         objective: "Confirm last night's backup landed at /var/backups/halton-staging/ and then `exit` back to the staging-worker shell.",

@@ -417,6 +417,31 @@ The rule would not have stopped Reed from submitting the photograph — that's n
 
 **6. The longer-arc institutional habit.** Insider-threat investigations have a specific procedural shape *because their findings can result in firings, clearance revocations, and criminal referrals.* The shape protects both the institution and the subject. Do not shortcut it. Do not let a forensic examiner volunteer an opinion on guilt. Do not let an HR team act before the institutional Insider Threat Program working group has met. Do not let the subject be confronted before the forensic finding is in writing. Each procedural rail exists because at some point in the history of similar cases, skipping the rail produced a worse outcome than following it.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` lists what you've unlocked.
+
+### Camera direction in EXIF
+
+**Trigger:** `exif soccer-field.jpg` (you ran this as step 4 of the solve, so the bonus fires there)
+
+**What it teaches:** The EXIF dump includes `GPSImgDirection 218.4°` — the compass bearing the camera was pointed when the shutter fired. Lat/long and timestamp are the headline alibi-falsifiers; `GPSImgDirection` is the bonus, and it's important.
+
+Modern phones embed *more* than when and where. Recent iPhones and Android flagships record:
+
+- **GPSImgDirection** — the compass bearing the lens was pointing (true north or magnetic, depending on the field used)
+- **GPSDestBearing** — for some camera apps, the heading the photographer was moving toward
+- **GPSSpeed** — instantaneous velocity at the moment of capture (in km/h or knots)
+- **GPSAltitude** — meters above sea level
+- **GPSImgDirectionRef** — the reference frame ("T" for true north, "M" for magnetic)
+- **GPSSatellites** — the number of GPS satellites the receiver had a lock on (useful for assessing fix quality)
+
+Beyond the *time-and-place* falsification the level scores on, a defender mapping the photo to a *specific vantage point at a known location* can confirm or refute claims about WHO took the photo, not just whether the location is right. If Reed's alibi photo's GPSImgDirection were 218.4° but the soccer field stands are NOT at bearing 218.4° from the on-field position the photo's lat/long claims, that's *additional* evidence the photo couldn't have been taken from the claimed angle.
+
+The longer-arc lesson is that **EXIF is a richer forensic artifact than most investigators use**. The MITRE ATT&CK technique [T1497.003 — Time Based Evasion / Geographic Detection](https://attack.mitre.org/techniques/T1497/003/) addresses the offensive side (attackers stripping EXIF before exfil); defensively, the same metadata fields are what let you *prove* a claim about where, when, and how a photo was actually taken.
+
+For the project: when you train forensic examiners, train them on every EXIF field, not just the obvious time/place. The photo Reed submitted is rich with metadata he didn't think to consider. So is every photo every suspect ever submits to in-house counsel.
+
 ## §8 — Key takeaways
 
 - **The forensic examiner writes findings, not conclusions.** The chain-of-custody discipline, the procedural rails, and the "examiner does not opine on guilt" rule are not bureaucratic theater — they are the structural requirements that make the finding survive cross-examination. Dana writes the conclusion. We write what the metadata says.

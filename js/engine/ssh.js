@@ -16,15 +16,24 @@ import {
 import { markVisited } from "./progress.js";
 import { showLobby } from "./lobby.js";
 import { SCAFFOLDED_HOSTS } from "./tracks.js";
+import { tierForLevel, levelNumberFromKey } from "./tiers.js";
 
 export function handleSSH(target) {
   const level = LEVELS[target];
   if (!level) {
-    // Distinguish "unknown hostname" (typo, returns DNS-style error)
-    // from "known track, no levels yet" (warm scaffolded-track message).
-    // The lobby surfaces both kinds in its engagement list; ssh has to
-    // route them differently.
+    // Three routes for "level lookup miss":
+    //   1. Scaffolded track with NO levels yet → warm "track scaffolded"
+    //      message (currently unreachable since every track has level0+1
+    //      shipped, but kept for forkers / future empty tracks).
+    //   2. Well-formed `level<N>@<known-host>` where <N> hasn't shipped
+    //      yet → red DNS error + yellow "level isn't built yet" tip.
+    //      Distinguishes a future-level attempt from a true typo.
+    //   3. Anything else (typos, wrong host, malformed user) → plain
+    //      red DNS-style error.
     const host = target.split("@")[1];
+    const user = target.split("@")[0];
+
+    // Route 1: scaffolded-only track.
     if (host && SCAFFOLDED_HOSTS.has(host) && !Object.values(LEVELS).some(l => l.track === host)) {
       return {
         cls: "warn",
@@ -36,6 +45,33 @@ but no scenario has been written for it. Future PRs will land levels for
 ${host}; check the lobby's AVAILABLE ENGAGEMENTS list as new ones ship.`,
       };
     }
+
+    // Route 2: well-formed `level<N>@<known-host>` but N hasn't shipped.
+    // Match strictly — `leve4@linux` (typo, missing the `l`) doesn't
+    // hit this branch and stays on the plain DNS error.
+    const levelMatch = /^level(\d+)$/.exec(user || "");
+    if (levelMatch && host && SCAFFOLDED_HOSTS.has(host)) {
+      const requestedN  = parseInt(levelMatch[1], 10);
+      const shippedNums = Object.keys(LEVELS)
+        .map(k => /^level(\d+)@(.+)$/.exec(k))
+        .filter(m => m && m[2] === host)
+        .map(m => parseInt(m[1], 10))
+        .filter(n => Number.isFinite(n))
+        .sort((a, b) => a - b);
+      if (shippedNums.length > 0) {
+        const maxShipped = shippedNums[shippedNums.length - 1];
+        if (requestedN > maxShipped) {
+          // Red DNS error + yellow follow-up. Mirrors the cold-start
+          // gate-hint UX (handlePasswordInput below): keep the error,
+          // add a friendly tip pointing at the actual situation.
+          print(`ssh: Could not resolve hostname '${target}': Name or service not known`, "err");
+          print(`Tip: this level isn't built yet. The ${host} track currently ships level0 through level${maxShipped}. Check back later — new levels release as MINOR bumps, one track at a time.`, "warn");
+          return null;
+        }
+      }
+    }
+
+    // Route 3: plain DNS error.
     return { text: `ssh: Could not resolve hostname '${target}': Name or service not known`, cls: "err" };
   }
   if (!level.password) { connectTo(target); return null; }
@@ -73,7 +109,42 @@ export function handlePasswordInput(val) {
     setTimeout(() => connectTo(target), 300);
   } else {
     print("Permission denied, please try again.", "err");
+    // Cold-start hint (v1.10.0): if the player tried to enter
+    // level<N>@<host> without first visiting level<N-1>@<host>, they
+    // can't possibly know the password — it's only seeded by the
+    // previous level in the chain. Surface a friendly yellow nudge
+    // pointing them at the prerequisite. Skipped for pivot hosts and
+    // anything that isn't a `level<N>@<host>` pattern.
+    const hint = prerequisiteHint(target);
+    if (hint) print(hint, "warn");
   }
+}
+
+/**
+ * If `target` is a `level<N>@<host>` with N > 0 and the player has
+ * NOT visited `level<N-1>@<host>` in this session, return a hint
+ * string. Otherwise return null (no hint — player has either earned
+ * the credential or isn't trying a numbered level).
+ *
+ * @param {string} target - e.g. "level2@linux"
+ * @returns {string | null}
+ */
+function prerequisiteHint(target) {
+  const m = /^level(\d+)@(.+)$/.exec(target);
+  if (!m) return null;                   // pivot host or other non-numbered target
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const host = m[2];
+  const prev = `level${n - 1}@${host}`;
+  // If the prerequisite level doesn't exist in the registry, there's
+  // no useful hint to give (defensive — shouldn't happen for shipped
+  // chains, but level<N> may exist before level<N-1> is built).
+  if (!LEVELS[prev]) return null;
+  let visited;
+  try { visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]")); }
+  catch (_) { visited = new Set(); }
+  if (visited.has(prev)) return null;    // player has the credential
+  return `Tip: this level gates on a credential discovered in ${prev}. Try 'ssh ${prev}' first.`;
 }
 
 /**
@@ -123,12 +194,17 @@ export function connectTo(key, opts) {
   print("", "out");
   print(`── Connected: ${key}`, "dim");
 
-  // Difficulty + estimated time (v1.8.0 schema fields). Both are
-  // optional; render the line only if at least one is present so
-  // pre-v1.8 levels stay clean.
-  if (level.difficulty || level.estimatedMinutes) {
+  // Tier + estimated time. Tier is computed from the level number
+  // (v1.10.0: Routine / Live / Escalated / Critical / Crisis); see
+  // `js/engine/tiers.js`. Pivot hosts (non-numbered) return null
+  // from tierForLevel and we suppress the tier label for them
+  // since they sit off the main difficulty curve. `estimatedMinutes`
+  // remains a manual per-level field — keep this side of the line
+  // optional so legacy / pivot levels without it stay clean.
+  const tier = tierForLevel(levelNumberFromKey(key));
+  if (tier || level.estimatedMinutes) {
     const bits = [];
-    if (level.difficulty)       bits.push(`Difficulty: ${level.difficulty}`);
+    if (tier)                   bits.push(`Tier: ${tier}`);
     if (level.estimatedMinutes) bits.push(`Est. time: ~${level.estimatedMinutes} min`);
     print(bits.join("   ·   "), "dim");
   }

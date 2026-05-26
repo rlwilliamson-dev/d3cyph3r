@@ -536,6 +536,30 @@ The rule, fed into Coverline's SIEM, would alert on the next attempt to create a
 
 **6. The broader OPSEC lesson (defender side).** Public cloud storage is the modern equivalent of an unauthenticated FTP server on the internet, except it happens to companies that wouldn't dream of running an unauthenticated FTP server. The mental model is wrong; the reality is the same. *"Public"* is a feature for marketing assets, OSS artifacts, and documented public APIs. It is a defect for anything else, including any byproduct of an operational process — logs, dumps, exports, migrations, backups, snapshots, scratch. The default of *"private"* is correct; the exceptions should be explicit, named, reviewed, and continuously monitored.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run the right command — `progress --detail` lists what you've unlocked.
+
+### Probing from outside the client's account
+
+**Trigger:** `aws sts get-caller-identity`
+
+**What it teaches:** `sts get-caller-identity` returns Driftwood's own account (`778899012345 / driftwood-cloudsec-readonly`), not Coverline's. For external-audit work, **confirming you are operating from an OUTSIDE account is its own auditable control.**
+
+The bonus fires when you run the command; here's why a methodical auditor would run it BEFORE the bucket probes start:
+
+- The audit worksheet's *premise* is that the auditor is hitting the buckets unauthenticated, using `--no-sign-request`. That premise is undermined if the auditor *also* has cached Coverline credentials in their environment — a stray `AWS_PROFILE` left from a previous engagement, an instance-profile credential leaking through environment-variable precedence, an SSO session that hasn't expired.
+- The auditor probably *intends* to be unauthenticated. But the AWS CLI's credential-resolution chain is silent about which credential ended up signing each request unless you explicitly check (`aws sts get-caller-identity` is the canonical check).
+- For SOC 2 evidence specifically, the auditor's workpaper should record: *the identity that performed the test* (named external auditor), *the timestamp of the test*, *the response observed*. If the response is `AccessDenied`, that's only audit-grade evidence if the auditor's account isn't Coverline's account. `sts get-caller-identity` is what produces the named external auditor row.
+
+The longer-arc principle: **external auditors should be operating from an account that cannot accidentally be inside the audited environment.** Driftwood maintains `driftwood-cloudsec-readonly` for exactly this reason — a separate account, with no cross-account-trust relationships to client accounts, with read-only IAM, with no cached client credentials. Confirming identity before every external probe is how you produce audit evidence that the test was genuinely external.
+
+This is also why **AWS CloudTrail captures `sts:GetCallerIdentity` as an immutable audit event** — the API call is the kind of operational check that becomes audit evidence retroactively. Run it; CloudTrail records it; the workpaper points to the CloudTrail timestamp; the evidence is reproducible.
+
+For the broader project lesson: **the test setup matters as much as the test result.** A `AccessDenied` response from a private bucket probed from an outside account is audit-grade evidence. The same `AccessDenied` response from the same probe, where the probe was *accidentally* signed by an internal Coverline credential the auditor's environment had cached, is not audit-grade evidence — because the access-control under test was the *signing credential's policy*, not the *bucket's policy as exposed to unauthenticated requesters*.
+
+The CIS AWS Foundations Benchmark addresses this from the *audited* side: separation of audit and operational identities at the account level. CIS Benchmark control 1.16 ("Ensure IAM policies are attached only to groups or roles") and the broader IAM-account-separation guidance speak to it.
+
 ## §8 — Key takeaways
 
 - **`AccessDenied` is what GOOD looks like for a private S3 bucket probed from outside.** The bucket exists; the access control works. The audit's job is to confirm that response across the inventory.

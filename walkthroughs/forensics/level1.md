@@ -396,6 +396,30 @@ For aggregation: ship Security.evtx and Sysmon logs via Windows Event Forwarding
 
 Dana coordinates with General Counsel on DC3 notification timing. The 72-hour clock is real and missing it is a contractual non-compliance event. The DIBNET portal (dibnet.dod.mil) is where the report files; Polaris's FSO has the credentials. The reporting form requires specific facts (the affected system, the timeline, the artifacts) — your timeline write-up is what Dana hands the FSO to populate the form.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` lists what you've unlocked.
+
+### certutil as a LOLBin
+
+**Trigger:** `evtx -id 4688 Security.evtx` (a natural filter for any process-creation investigation; the bonus fires when the 4688 chain surfaces)
+
+**What it teaches:** Reed's 4688 process-creation chain includes `certutil.exe -encode` — a Microsoft-shipped binary whose dual-use potential makes it one of the founding entries on the [LOLBAS Project](https://lolbas-project.github.io/) (Living Off the Land Binaries and Scripts). The signal isn't *that certutil ran*; it's that **certutil ran via cmd.exe with `-encode` arguments by a user who has no certificate-management reason to invoke it.**
+
+The LOLBin pattern matters for three reasons:
+
+1. **AV/EDR signature rules don't flag it.** certutil.exe is signed by Microsoft. Its hash matches the Windows install. Every signature-based detection treats it as legitimate. The attack pattern is the *combination* of legitimate binary + suspicious argument usage, not the binary itself.
+2. **Forensic timelines look "normal" at a glance.** A 4688 event for certutil.exe looks like routine certificate operations to an analyst who isn't paying attention to the command-line arguments. The argument string is where the signal lives.
+3. **Defender response is behavioral rules, not signatures.** Sigma, Velociraptor, ATT&CK-aligned hunt queries — these are how teams catch LOLBin patterns. Reed's specific sequence (cmd.exe → certutil.exe -encode → outbound to a non-Polaris domain) is detectable via behavioral rules that look at the parent-child process chain and the argument string.
+
+The canonical LOLBin references for the Polaris IR team to add to their hunting library:
+
+- **[LOLBAS Project](https://lolbas-project.github.io/)** — the community-maintained catalog of Windows binaries with documented dual-use potential. certutil, bitsadmin, mshta, rundll32, wmic, regsvr32, msbuild, installutil, powershell, and ~50 others.
+- **[Sigma Rules Repository](https://github.com/SigmaHQ/sigma)** — open-source signature-format detection rules. The certutil-encode-with-suspicious-args pattern is well-covered in `rules/windows/process_creation/proc_creation_win_certutil_*.yml`.
+- **[MITRE ATT&CK T1140 — Deobfuscate/Decode Files or Information](https://attack.mitre.org/techniques/T1140/)** — the technique covering certutil-encode usage in real campaigns. Polaris's MITRE-aligned detection coverage should include T1140 with certutil specifically called out.
+
+For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-encode` argument by any user in the manufacturing-engineering OU" would have caught Reed's encoding step in near real-time. Add to the hunting library.
+
 ## §8 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*

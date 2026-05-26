@@ -67,7 +67,20 @@ requires touching both:
 
 The lobby's track list (`js/engine/tracks.js`) is the third place —
 it's the canonical track registry that both the lobby and the
-"scaffolded but no levels yet" warm-message code read from.
+"scaffolded but no levels yet" warm-message code read from. Each
+entry carries `key`, `label`, `host`, and (v1.10.0) `description` —
+the one-line blurb shown inside the lobby tree when a track is
+expanded.
+
+**Lobby tree (v1.10.0).** The lobby's AVAILABLE ENGAGEMENTS list
+is rendered as a collapsible tree by `js/engine/lobby.js`:
+collapsed tracks show a one-liner (entry-point ssh command + label
++ visited count + level0's difficulty); expanded tracks show the
+track's `description` plus per-level rows with the level's `title`,
+visited mark, and estimated time. The `tracks` command (in
+`js/commands/lobby.js`) toggles state, persisted in
+`sessionStorage("lobbyExpanded")`. Smart default: tracks with any
+visited level auto-expand on the first lobby render of a session.
 
 **Filesystem tri-representation.** Level content lives as a nested
 tree under `level.fs`. Three node types:

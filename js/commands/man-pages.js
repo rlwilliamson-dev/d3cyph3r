@@ -1733,18 +1733,100 @@ EXAMPLES
     walkthrough`,
 
   progress: `NAME
-    progress — list levels you've visited this session
+    progress — list levels you've visited and bonus finds discovered
 
 SYNOPSIS
     progress
+    progress --detail
 
 DESCRIPTION
     Print a per-track checklist of every level, marked with ✓ for
-    visited or · for not-yet-visited. Progress is per-tab; closing
-    the tab resets the list.
+    visited or · for not-yet-visited. Levels that declare bonus
+    finds also display a [bonuses N/M] counter showing how many
+    you've unlocked. Progress is per-tab; closing the tab resets
+    everything (visited list AND bonus finds).
+
+    With --detail, each level's bonus finds are expanded:
+    discovered finds list by name with a ✦ marker; un-discovered
+    finds render as "[?] hidden — keep exploring" so the listing
+    can't be used as a spoiler walkthrough. Unvisited levels show
+    only a generic "(visit the level to discover what's here)"
+    line — no per-find titles surface until you've entered the
+    level once.
 
 EXAMPLES
-    progress`,
+    progress
+    progress --detail`,
+
+  tiers: `NAME
+    tiers — print the difficulty-tier legend
+
+SYNOPSIS
+    tiers
+
+DESCRIPTION
+    Print the 5-tier difficulty legend (v1.10.0). Each level's tier
+    is computed from its level number, not stored manually:
+
+      Routine    (level 0–5)     standard quarterly audit work
+      Live       (level 6–10)    active engagement, real contractual
+                                 stakes
+      Escalated  (level 11–15)   incident response in progress
+      Critical   (level 16–20)   notification clocks running, outside
+                                 counsel on the call
+      Crisis     (level 21+)     the kind of engagement that produces
+                                 a public statement
+
+    The label describes the operational state of the engagement
+    inside the box, not raw puzzle complexity. A 'Live' level isn't
+    merely harder than a 'Routine' one — it carries real time
+    pressure and contractual stakes.
+
+    Pivot hosts (multi-host pivot destinations, v1.9.0) are
+    non-numbered and therefore have no tier; the lobby tree and
+    connection banner suppress the tier label for them.
+
+EXAMPLES
+    tiers`,
+
+  tracks: `NAME
+    tracks — toggle per-track expand state in the lobby tree
+
+SYNOPSIS
+    tracks
+    tracks NAME
+    tracks all
+    tracks reset
+
+DESCRIPTION
+    The lobby's AVAILABLE ENGAGEMENTS list renders as a collapsible
+    tree (v1.10.0). Each track shows as a one-liner with a chevron;
+    expanding a track reveals its per-level ssh invocations, a
+    visited/unvisited mark, and the estimated time per level.
+
+    \`tracks\` with no argument prints the current expand state.
+
+    \`tracks NAME\` toggles the named track — if collapsed it
+    expands; if expanded it collapses. NAME must match a track key
+    from \`js/engine/tracks.js\` (linux, network, crypto, web,
+    forensics, osint, cloud).
+
+    \`tracks all\` expands every track.
+
+    \`tracks reset\` (also \`tracks none\`, \`tracks collapse\`)
+    collapses every track.
+
+    Expand state persists in sessionStorage; closing the tab
+    resets it. Smart default: on the first lobby render of a
+    session, tracks containing at least one visited level are
+    auto-expanded — once you've started a track, it stays open
+    until you explicitly collapse it.
+
+EXAMPLES
+    tracks
+    tracks linux
+    tracks all
+    tracks reset`,
 
   search: `NAME
     search — search visited levels' content for a term

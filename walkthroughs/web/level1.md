@@ -530,6 +530,28 @@ Assume the application-level authz check will, at some point, be missing. Belt-a
 
 The principle: any single layer that can be bypassed by a missing check (the application authz, the database RLS, the gateway policy) is meaningfully harder to bypass when all three are present.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` lists what you've unlocked.
+
+### The ten-year service-account session
+
+**Trigger:** `cat session.txt` (you ran this as step 3 of the solve, so the bonus fires there)
+
+**What it teaches:** session.txt decodes a `MeridianSSO` cookie with `exp:2036-04-09` — a *ten-year* session token, issued for a "nightly health-check job." Long-lived service-account sessions are themselves a finding, separate from the IDOR finding the level scores on.
+
+Rotation is the security property. A one-hour session that's used and renewed by the runtime every hour has a one-hour blast radius if compromised. A one-year session has a one-year blast radius. A ten-year session has *effectively no rotation* — the next token rotation is scheduled for the second Trump administration, which is to say it's not a rotation, it's just a TTL that expires before the engineer who issued it retires.
+
+What Carlos's monitoring job *should* be doing:
+
+- **Fetch-on-startup**: the job uses OAuth client-credentials grant or AWS STS AssumeRole to obtain a short-lived (15-minute, one-hour) token at job invocation time. The token is in memory only, never on disk, never in a `session.txt` file an auditor can read.
+- **Token-cache with TTL enforcement**: if the job runs frequently enough that fetching a token every invocation is wasteful, cache the token *with the actual TTL of the upstream provider* — not a synthetic ten-year wrapper around an upstream short-lived token.
+- **Audit logs that capture token issuance**: every issuance is a logged event with the principal, the requested scope, and the expiration. A ten-year token would have been visible in the issuance audit log the moment it was minted — *if* anyone was reading the issuance audit log.
+
+The 2024 [Snowflake UNC5537 campaign](https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion) demonstrated the long-TTL service-account session as a real-world primary attack vector at scale: customers whose Snowflake credentials had been exfiltrated years earlier (from compromised personal devices of employees) still had valid sessions in 2024 because nothing had rotated. The MFA-not-enforced surface compounded the problem, but the rotation-not-enforced surface was the root cause.
+
+Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Still a finding.
+
 ## §8 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*

@@ -380,6 +380,28 @@ falsepositives:
 
 The rule's value is recognizing the *signature* — many usernames, few attempts per username, high failure rate, single source — which is the credential-stuffing pattern regardless of which specific corpus the attacker is testing against.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run the right command — `progress --detail` lists what you've unlocked.
+
+### Adobe's cleartext password hints
+
+**Trigger:** `hibp aaron.hines.md@gmail.com` (you ran this as the headline solve command, so the bonus fires there)
+
+**What it teaches:** Aaron's Adobe 2013 record carries the hint *"city we lived in for residency."* This is the often-overlooked second layer of breach-corpus intel. Adobe's 2013 breach is famous for two reasons: (a) the password storage was structurally broken — ECB-mode 3DES encryption with the *same key* for every password, which is functionally a substitution cipher across the corpus — and (b) the **password hint field was stored in cleartext** alongside the encrypted password.
+
+The hint field collapses the password-recovery problem entirely:
+
+- Even if the encryption hadn't been broken, the hint *names the password* often enough to be useful.
+- When the encryption *was* broken (cryptanalysis of the ECB pattern was a months-long community effort), the hint corroborated each recovered plaintext.
+- For passwords that *couldn't* be recovered (unique enough patterns to resist statistical analysis), the hint *plus* OSINT on the user often narrowed the candidate set to a handful of guesses.
+
+For Aaron specifically: his hint is "city we lived in for residency." His public bio names BIDMC in Boston as his residency. The hint plus the bio narrows his Adobe-era password to a small candidate set (`Boston123`, `Boston2010`, `BIDMC2010`, etc.). For a 2025 OSINT engagement looking for credential-reuse leverage across multiple breach corpora, that's a tighter target than a brute-force ever produces.
+
+The historical lesson is for product designers: **never store password hints in cleartext** (or, ideally, don't have a hints feature at all — the security cost vastly exceeds the user-convenience benefit). The current-day lesson is for OSINT operators: **read every field of every breach record, not just the password.** Birth dates, security-question answers, hint fields, security-Q&A pairs, account-creation IP addresses — every one of these is a separate intel layer that compounds with the others.
+
+[Have I Been Pwned's documentation page on the Adobe breach](https://haveibeenpwned.com/PwnedWebsites#Adobe) discusses both the encryption flaw and the hint-field exposure; reading the page in full is the canonical 2026 starting point for any analyst who needs to explain to a non-technical stakeholder why "we changed our password" doesn't fix the Adobe-era exposure for anyone.
+
 ## §8 — Key takeaways
 
 - **Two breach corpora with matching cleartexts is the high-confidence credential-reuse signal.** One value in one breach could be a one-off. Two values matching is a *habit* — the user almost certainly uses the same password (or a trivially-mutated variant) across many other personal accounts.

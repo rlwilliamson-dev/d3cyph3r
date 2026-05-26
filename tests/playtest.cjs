@@ -301,6 +301,8 @@ async function termText(page) {
   await page.waitForTimeout(300);
   t = await termText(page);
   check("Connected to level0@linux", t.includes("Connected: level0@linux"));
+  check("Connection banner shows computed Tier (v1.10.0)", t.includes("Tier: Routine"));
+  check("Connection banner shows Est. time",               t.includes("Est. time: ~10 min"));
   check("Objective references Daniel", t.includes("Daniel"));
   check("Lesson mentions Driftwood",   t.includes("Driftwood"));
   check("Lesson mentions Halton Bank", t.includes("Halton"));
@@ -602,6 +604,13 @@ async function termText(page) {
   check("AXFR against a domain without records returns NXDOMAIN-style error",
         t.includes("NXDOMAIN") || t.includes("REFUSED"));
 
+  // v1.10.0 BONUS-FIND TRIGGER — cat welcome.md fires the
+  // "dbadmin-shell-drift" bonus (welcome.md notes /bin/bash on the
+  // vendor service account).
+  await typeAndEnter(page, "cat welcome.md");
+  t = await termText(page);
+  check("level1@network welcome.md notes /bin/bash on dbadmin",      t.includes("/bin/bash"));
+
   await typeAndEnter(page, "cat priya-note.md");
   t = await termText(page);
   check("priya-note.md mentions Priya (continuity)",                  t.includes("Priya"));
@@ -737,6 +746,14 @@ async function termText(page) {
   check("jwt decoded payload reveals the level2 breadcrumb",          t.includes("vesta-admin-handoff-2026"));
   check("jwt decoded payload shows role=admin claim",                 t.includes("\"role\": \"admin\""));
 
+  // v1.10.0 BONUS-FIND TRIGGER — cat priya-note.md fires the
+  // "most-downloaded-fallacy" bonus (Priya quotes Theo's library-
+  // popularity reasoning verbatim).
+  await typeAndEnter(page, "cat priya-note.md");
+  t = await termText(page);
+  check("level1@crypto priya-note.md quotes the most-downloaded rationale",
+        t.includes("most-downloaded"));
+
   await typeAndEnter(page, "cat verify-middleware.js");
   t = await termText(page);
   check("verify-middleware.js shows jwt.verify without algorithms whitelist",
@@ -797,6 +814,13 @@ async function termText(page) {
   check("lessons-learned.md cites CWE-548 (Directory Listing)",       t.includes("CWE-548"));
   check("lessons-learned.md cites OWASP A05 Security Misconfiguration", t.includes("A05") && t.includes("Misconfiguration"));
 
+  // v1.10.0 BONUS-FIND TRIGGER — robots.txt is a hidden Optional
+  // exploration step (curl /robots.txt while in level0@web). Fires
+  // the "robots-txt-billboard" bonus.
+  await typeAndEnter(page, "curl https://www.meridian.edu/robots.txt");
+  t = await termText(page);
+  check("level0@web: curl robots.txt surfaces /backup/ Disallow",     t.includes("Disallow: /backup/"));
+
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
   check("exit from level0@web returns to lobby",                      (await promptText(page)).includes("@d3cyph3r:"));
@@ -830,6 +854,14 @@ async function termText(page) {
   t = await termText(page);
   check("transcript-api.js shows the SSO require",                    t.includes("requireMeridianSSO"));
   check("transcript-api.js reads student_id from req.query (the bug)", /req\.query\.student_id/.test(t));
+
+  // v1.10.0 BONUS-FIND TRIGGER — cat session.txt fires the
+  // "ten-year-session-token" bonus (the file notes the 2036 expiry
+  // as itself a finding).
+  await typeAndEnter(page, "cat session.txt");
+  t = await termText(page);
+  check("level1@web session.txt notes the long-lived session as a finding",
+        t.includes("long-lived service-account"));
 
   await typeAndEnter(page, "cookies https://portal.meridian.edu");
   t = await termText(page);
@@ -1195,6 +1227,13 @@ async function termText(page) {
         t.includes("coverline-customer-exports") &&
         t.includes("coverline-claims-uploads-prod"));
   check("audit-worksheet.txt flags marketing bucket as intentionally PUBLIC", /coverline-marketing-public\s+PUBLIC/.test(t));
+
+  // v1.10.0 BONUS-FIND TRIGGER — `aws sts get-caller-identity`
+  // confirms the audit is running from Driftwood's account, not the
+  // client's. Fires the "sts-identity-confirmation" bonus.
+  await typeAndEnter(page, "aws sts get-caller-identity");
+  t = await termText(page);
+  check("aws sts get-caller-identity returns Driftwood account",      t.includes("driftwood-cloudsec-readonly"));
 
   // Walk the worksheet. The locked-down buckets should all return
   // AccessDenied (the "correct" response for a private bucket).
@@ -1916,6 +1955,185 @@ async function termText(page) {
 
   // Clear the input so it doesn't dirty subsequent assertions.
   await page.locator("#cmd-input").fill("");
+
+  // ──── v1.10.0: lobby tree (tracks command) ──────────────────────
+  // We're in the lobby (exit from web at line 1862). Test the
+  // tracks verb + the expanded tree rendering.
+
+  await typeAndEnter(page, "tracks");
+  t = await termText(page);
+  check("tracks (no args) prints expand-state report",                t.includes("Track expand state:"));
+  check("tracks status lists linux track",                            t.includes("linux"));
+  check("tracks status lists network track",                          t.includes("network"));
+
+  // Toggle linux (will be expanded since level0@linux was visited
+  // earlier — collapse it first to get a known state, then expand).
+  await typeAndEnter(page, "tracks reset");
+  t = await termText(page);
+  check("tracks reset prints 'All tracks collapsed.'",                t.includes("All tracks collapsed"));
+
+  // After reset, expand linux explicitly.
+  await typeAndEnter(page, "tracks linux");
+  t = await termText(page);
+  check("tracks linux prints toggle success",                         t.includes("Track 'linux' expanded"));
+
+  // Lobby has been re-rendered. The expanded tree should now show
+  // each linux level's `ssh levelN@linux` line, plus the title we
+  // added in v1.10.0.
+  t = await termText(page);
+  check("Expanded linux tree shows ssh level1@linux entry",           t.includes("ssh level1@linux"));
+  check("Expanded linux tree shows the v1.10.0 title 'Halton Bank staging bastion'",
+        t.includes("Halton Bank staging bastion"));
+  check("Expanded linux tree shows the v1.10.0 title 'Daniel'",       t.includes("Daniel's laptop handoff"));
+  // v1.10.0 — tier tag computed from level number. level0/1 → Routine.
+  check("Expanded linux tree shows computed [Routine] tag per row",   t.includes("[Routine]"));
+
+  // Unknown-track guard.
+  await typeAndEnter(page, "tracks doesnotexist");
+  t = await termText(page);
+  check("tracks <unknown> errors with helpful message",               t.includes("is not a known track"));
+
+  // tracks all expands every track.
+  await typeAndEnter(page, "tracks all");
+  t = await termText(page);
+  check("tracks all reports 'All tracks expanded.'",                  t.includes("All tracks expanded"));
+
+  // After tracks all, the lobby re-renders with everything open;
+  // a non-linux track's level1 should now be visible.
+  check("After 'tracks all', network/level1 row visible",             t.includes("ssh level1@network"));
+
+  // Reset state for tidy session end.
+  await typeAndEnter(page, "tracks reset");
+
+  // ──── v1.10.0: tiers command — print difficulty-tier legend.
+  await typeAndEnter(page, "tiers");
+  t = await termText(page);
+  check("tiers prints the 'Difficulty tiers' header",                 t.includes("Difficulty tiers"));
+  check("tiers lists Routine + range level0-5",                       t.includes("Routine") && t.includes("level0–5"));
+  check("tiers lists Live + range level6-10",                         t.includes("Live") && t.includes("level6–10"));
+  check("tiers lists Escalated + range level11-15",                   t.includes("Escalated") && t.includes("level11–15"));
+  check("tiers lists Critical + range level16-20",                    t.includes("Critical") && t.includes("level16–20"));
+  check("tiers lists Crisis + range level21+",                        t.includes("Crisis") && t.includes("level21+"));
+  check("tiers explains the 'Live not just harder than Routine' framing",
+        t.includes("not the puzzle complexity") || t.includes("operational state"));
+
+  // ──── v1.10.0: progress --detail ────────────────────────────────
+  await typeAndEnter(page, "progress --detail");
+  t = await termText(page);
+  check("progress --detail prints session summary",                   /\d+ \/ \d+ levels visited this session/.test(t));
+  check("progress --detail prints bonus-find aggregate counter",      /\d+ \/ \d+ bonus finds discovered/.test(t));
+  // All three bonus finds (Daniel's muscle-memory pattern, Daniel's
+  // backup script, Self-logged config-fallback bug) were unlocked
+  // earlier in the run (see the "bonus-find fires on …" checks),
+  // so in --detail mode every find renders by name with the ✦
+  // marker. Verify all three appear verbatim.
+  check("progress --detail names a discovered bonus find verbatim",   t.includes("Daniel's muscle-memory pattern"));
+  check("progress --detail also names the backup-script bonus",       t.includes("Daniel's backup script"));
+  check("progress --detail also names the self-logged-bug bonus",     t.includes("Self-logged config-fallback bug"));
+
+  // v1.10.0 — bonus finds on the 12 non-linux levels. Each trigger
+  // command was either already in the existing playtest flow (cat
+  // engagement-notes.md / cat welcome.md / etc.) or added explicitly
+  // (curl robots.txt on level0@web; aws sts get-caller-identity on
+  // level0@cloud). Verify each fires by checking the bonus name
+  // appears in `progress --detail` output.
+  const v110bonuses = [
+    ["network/level0 five-sprint",          "The five-sprint rotation"],
+    ["network/level1 dbadmin shell drift",  "Vendor default account with /bin/bash"],
+    ["crypto/level0 Vendolux coffee",       "The Vendolux coffee machine"],
+    ["crypto/level1 most-downloaded",       "'Most-downloaded npm package, should be safe'"],
+    ["web/level0 robots.txt billboard",     "robots.txt as an attacker's site map"],
+    ["web/level1 ten-year session",         "The ten-year service-account session"],
+    ["forensics/level0 EXIF direction",     "Camera direction in EXIF"],
+    ["forensics/level1 certutil LOLBin",    "certutil as a LOLBin"],
+    ["osint/level0 Adobe hint",             "Adobe's cleartext password hints"],
+    ["osint/level1 Strava neighborhood",    "Aaron's Strava neighborhood"],
+    ["cloud/level0 sts identity",           "Probing from outside the client's account"],
+    ["cloud/level1 TTL without enforcement", "TTL columns without enforcement"],
+  ];
+  for (const [label, name] of v110bonuses) {
+    check(`bonus '${label}' discovered + appears in --detail`,         t.includes(name));
+  }
+
+  // The [?] hidden branch (anti-spoiler render for un-found finds)
+  // can't be exercised here without restarting the session — every
+  // bonus is unlocked. The branch is a single hard-coded string in
+  // learning.js's progress(); it's covered by code review + the
+  // positive cases above prove the iteration works.
+
+  // ──── v1.10.0: cold-start gate hint ─────────────────────────────
+  // Clear the visited set so we can simulate a player ssh-ing into
+  // level1@linux without having earned the credential. The yellow
+  // hint should follow "Permission denied".
+  await page.evaluate(() => {
+    sessionStorage.removeItem("visited");
+    // Also reset lobby expand state so this section doesn't pollute it.
+    sessionStorage.removeItem("lobbyExpanded");
+  });
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(120);
+  // Password prompt — type a bogus password.
+  await page.keyboard.type("not-the-password");
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("Cold-start: wrong-password still prints 'Permission denied'",
+        t.includes("Permission denied, please try again."));
+  check("Cold-start gate hint suggests visiting the prerequisite level",
+        t.includes("Tip: this level gates on a credential discovered in level0@linux"));
+
+  // ──── v1.10.0: SSH to a not-yet-shipped level on a known host.
+  // Well-formed `level<N>@<known-host>` where N is past what's been
+  // built should: (a) still print the red DNS-style error AND (b)
+  // append a yellow tip telling the player the level isn't built yet
+  // and pointing at the currently-shipped max.
+  await typeAndEnter(page, "ssh level5@linux");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("ssh level5@linux still prints 'Could not resolve hostname' (red)",
+        t.includes("Could not resolve hostname 'level5@linux'"));
+  check("ssh level5@linux follow-up tip: level isn't built yet",
+        t.includes("this level isn't built yet"));
+  check("ssh level5@linux follow-up tip names the linux track + current ceiling",
+        t.includes("The linux track currently ships level0 through level1"));
+
+  // Real typos (`leve4@linux`, missing the second `l`) should still
+  // get ONLY the plain DNS error — no "not built yet" tip, because
+  // it's a typo, not a future level.
+  await typeAndEnter(page, "ssh leve4@linux");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  // Slice to most recent occurrence so we don't pick up the level5 tip
+  // from the prior call still being on screen.
+  const lastTypo = t.lastIndexOf("Could not resolve hostname 'leve4@linux'");
+  const afterTypo = t.slice(lastTypo, lastTypo + 400);
+  check("ssh leve4@linux (typo) still prints DNS error",
+        t.includes("Could not resolve hostname 'leve4@linux'"));
+  check("ssh leve4@linux (typo) does NOT show 'not built yet' tip",
+        !afterTypo.includes("this level isn't built yet"));
+
+  // Sanity: the hint is suppressed when the player HAS visited the
+  // prereq. Re-seed `visited` with level0@linux and retry.
+  await page.evaluate(() => {
+    sessionStorage.setItem("visited", JSON.stringify(["level0@linux"]));
+  });
+  // The current shell is still at the password prompt (because we
+  // didn't connect). The previous wrong password dropped us out of
+  // password mode, so we need to ssh again to re-enter it.
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(120);
+  await page.keyboard.type("still-wrong");
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  // After the second wrong attempt, the most recent line should be
+  // "Permission denied" without a follow-up tip. Slice to the most
+  // recent occurrence and check the next few lines don't include
+  // the tip prefix.
+  const lastDenied = t.lastIndexOf("Permission denied, please try again.");
+  const after = t.slice(lastDenied, lastDenied + 400);
+  check("Cold-start hint is suppressed when prereq IS visited",
+        !after.includes("Tip: this level gates on a credential"));
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));

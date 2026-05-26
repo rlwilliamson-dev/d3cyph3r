@@ -383,6 +383,23 @@ This rule, with the allowed CIDR list maintained as part of the firewall-as-code
 
 **7. Quarterly perimeter checks remain the audit floor.** The quarterly verification Driftwood performs continues to have value as an audit artifact and as the contractual evidence of due diligence. But it is the *floor* of the security program, not the ceiling. The ceiling is continuous monitoring; the floor is the documented quarterly walkthrough that exists so the audit report has the right signatures on it.
 
+## §7.5 — Optional exploration: bonus finds
+
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` from any prompt lists what you've unlocked.
+
+### The five-sprint rotation that never happened
+
+**Trigger:** `cat engagement-notes.md` (you ran this as step 1 of the solve, so the bonus fires there)
+
+**What it teaches:** Priya's audit-trail paragraph records Marcus saying the default credential would be rotated *"next sprint."* That note is dated five sprints ago. The "we'll do that next sprint" verbal commitment is the single most reliable leading indicator of unrotated production credentials in real consulting work — *not because engineers are dishonest*, but because verbal "next sprint" commitments are explicitly **not tracked** in the same backlog the engineer's sprint is graded on. There's no Jira ticket, no sprint board card, no PR review, no Definition of Done.
+
+The mitigation pattern is straightforward and rarely implemented:
+- Verbal commitments at quarterly reviews go into the **risk register**, not the meeting minutes
+- Each risk register entry has a named owner with an explicit acknowledged due date
+- The due date is reviewed (or rolled with documented justification) at every subsequent quarterly meeting
+
+The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/) ties a substantial fraction of credential-driven initial-access incidents to credentials that were "known stale" before the breach — i.e., credentials a defender could have rotated but didn't, often because the rotation was on someone's list but not on someone's calendar. Marcus's `atlas-default-2025` is the textbook case: every quarterly review since Q1 2025 included a verbal "yes, next sprint" — and every quarterly review *also* didn't have a place to write that down.
+
 ## §8 — Key takeaways
 
 - **The perimeter was wrong because verification was annual and attack is continuous.** Three months of drift is invisible to a defender doing quarterly checks; the same three months is plenty of time for an attacker running daily Shodan/Censys queries to find the exposure and decide what to do with it.
