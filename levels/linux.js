@@ -12,6 +12,22 @@
 // and `ls -la` owner columns show. Without this override the engine
 // falls back to the level key's user prefix.
 //
+// Optional: `hints` is an ordered list of nudges surfaced by the
+// `hint` command (one per call, advancing each time). Order them
+// most-subtle to most-direct — the first hint should re-orient the
+// player; the last should nearly hand them the answer:
+//
+//   hints: [
+//     "Look at all the files in the home directory, including hidden ones.",
+//     "Daniel kept a credential cheat sheet — its name is on the nose.",
+//     "Try `cat creds.txt`. The password is in there, prefixed with PASSWORD=.",
+//   ]
+//
+// Per-level hint position is tracked in sessionStorage so the
+// counter survives reloads within the tab session. Levels without a
+// `hints` field print a "no hints for this level" message — players
+// can always fall back to the walkthrough subsite.
+//
 // Optional: `permissions` is a map keyed by file basename (within the
 // level's home directory) whose values describe the file's mode and
 // ownership for `ls -l` and `cat`:
@@ -50,6 +66,11 @@ export const linuxLevels = {
     playerUser: "daniel",
     objective: "Audit Daniel's laptop and find the client credential he left behind before IT reimages the box on Wednesday.",
     lesson: "Day one at Driftwood. A senior consultant whose engagement at Halton Bank ended Friday left his work laptop with IT for reimaging. His client access was revoked over the weekend, but the laptop hasn't been wiped yet, and his home directory hasn't been audited. Sweep it before Wednesday. Anything that looks like a client credential, you flag. Read every file. Then read lessons-learned.md.",
+    hints: [
+      "Use `ls` to enumerate Daniel's home directory. Then use `ls -a` to also see anything starting with a dot — `.bash_history` and friends.",
+      "There are six files visible to `ls`. One of them is named after a category of secrets a consultant should never leave behind on a laptop.",
+      "Try `cat creds.txt` — it's exactly what it says on the tin. The Halton Bank credential is in there in plaintext.",
+    ],
     fs: {
       type: "dir",
       children: {
@@ -391,6 +412,11 @@ Return to the lobby:    ssh guest@d3cyph3r
     playerUser: "app_admin",
     objective: "Find the production database credential a misconfigured backup is leaking — and document the blast radius before Priya rotates it.",
     lesson: "Day two. You used the credential from Daniel's creds.txt to ssh into Halton Bank's jumphost — and Halton's ops team left the staging service account with a login shell. You're now logged in as app_admin, sitting on a client production bastion. A real attacker who pulled the same trick would be exactly here. Walk the home directory and find the production credential a careless backup has left exposed. Read welcome.md first; it explains the new permission columns you'll use today. Then lessons-learned.md once you've found it.",
+    hints: [
+      "Run `ls -la` to see file permissions. Two files have the same base name but different modes — that's the smoking gun.",
+      "`staging-worker.env` is mode 600 owned by root — you can't read it. Its `.bak` sibling is mode 644 owned by app_admin (you).",
+      "`cat staging-worker.env.bak`. The DB_PROD_PASS line is the production database credential. Note the filename: someone copied a secret file and forgot to preserve permissions.",
+    ],
     permissions: {
       "welcome.md":             { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 1842 },
       "handoff.md":             { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 1956 },
