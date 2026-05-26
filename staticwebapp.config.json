@@ -26,6 +26,18 @@
     {
       "route": "/walkthroughs/index.html",
       "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    },
+    {
+      "route": "/js/*",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    },
+    {
+      "route": "/levels/*",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    },
+    {
+      "route": "/walkthroughs/walkthrough.js",
+      "headers": { "Cache-Control": "no-cache, must-revalidate" }
     }
   ],
   "responseOverrides": {

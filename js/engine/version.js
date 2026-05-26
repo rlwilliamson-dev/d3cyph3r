@@ -29,6 +29,16 @@
 //       visitors — bumping unnecessarily forces a re-fetch of
 //       identical bytes.
 //
+//       JS files do NOT need a version-string cache-bust. As of
+//       v1.8.1, `staticwebapp.config.json` serves `/js/*`,
+//       `/levels/*`, and `/walkthroughs/walkthrough.js` with
+//       `Cache-Control: no-cache, must-revalidate`, so every page
+//       load revalidates the engine modules. (Pre-v1.8.1, Azure's
+//       default 4-hour cache TTL meant returning visitors ran the
+//       prior release's engine for hours after a deploy.) Vendored
+//       libraries under `/walkthroughs/vendor/*` stay cached at the
+//       SWA default — they're stable across releases.
+//
 //   3. Author the level walkthrough at
 //      walkthroughs/<track>/<level>.md. Use level0@linux's walkthrough
 //      as the template (9 sections, 7000-9000 words). Update the
@@ -84,6 +94,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "1.8.0";
+export const VERSION = "1.8.1";
 
 export const VERSION_DISPLAY = "v" + VERSION;
