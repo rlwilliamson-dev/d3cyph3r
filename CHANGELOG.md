@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-05-26
+
+**Cache-control patch for JS modules.** Post-deploy, returning
+visitors were seeing up-to-4-hour-stale JS because Azure SWA's
+default `Cache-Control` for static assets is `public,
+max-age=14400, must-revalidate`. The `?v=<version>` cache-bust
+on the stylesheet `<link>` tag immunized CSS, but the engine's
+ES-module `<script type="module" src="js/main.js">` (plus the
+dozens of dynamic `await import()` calls inside) had no
+equivalent mechanism. The result: ship a new release, browser
+keeps running the old engine for hours.
+
+### Fixed
+
+- **`staticwebapp.config.json`** — added explicit
+  `Cache-Control: no-cache, must-revalidate` routes for `/js/*`,
+  `/levels/*`, and `/walkthroughs/walkthrough.js`. All engine /
+  level / subsite JS now revalidates on every page load (matching
+  the HTML behavior). Vendored libraries (`/walkthroughs/vendor/*`)
+  and the favicon / OG image stay cached at the SWA default —
+  they're stable across releases.
+
+The CSS cache-bust convention is unchanged — `?v=<version>` on
+the stylesheet links continues to be the right mechanism for
+the few releases that change `style.css` or
+`walkthrough.css`. JS no longer needs a version-string
+mechanism since it now revalidates on every request.
+
 ## [1.8.0] - 2026-05-26
 
 **Author polish + realism.** The largest single engine release since
@@ -2203,7 +2231,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.5.0...v1.6.0
