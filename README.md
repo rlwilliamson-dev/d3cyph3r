@@ -108,8 +108,11 @@ d3cyph3r/
 │   │   ├── forensics.js     file / strings / exif / evtx / sha256sum / …
 │   │   ├── osint.js         sherlock / hibp / wayback / crtsh / github / …
 │   │   ├── cloud.js         aws (s3/iam/ec2/sts) + psql
-│   │   ├── text.js          wc / sort / uniq / cut / tr (pipe-friendly)
+│   │   ├── text.js          wc / sort / uniq / cut / tr / awk (pipe-friendly)
 │   │   ├── system.js        which / type / id / uname / date / uptime / hostname
+│   │   ├── learning.js      hint / man / what-is (player self-help layer)
+│   │   ├── man-pages.js     NAME/SYNOPSIS/DESCRIPTION/EXAMPLES for every command
+│   │   ├── glossary.js      what-is term definitions (frameworks / regs / CWEs)
 │   │   └── shell.js         help / clear / report / exit / logout
 │   ├── fs/                  Per-level filesystem helpers
 │   │   ├── flatten.js       Walks the level.fs tree → level.files flat map
@@ -170,8 +173,9 @@ See `help` inside the terminal for the full reference. Track-by-track:
 - **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sha256sum` / `md5sum`
 - **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo` / `github` (+ `/repo` + `file <path>`)
 - **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity` / `psql` (+ `-d` / `\l` / `\dt` / `SELECT … FROM … [LIMIT N]`)
-- **Text processing (pipe-friendly):** `wc` (+ `-l` / `-w` / `-c`) / `sort` (+ `-n` / `-r` / `-u`) / `uniq` (+ `-c` / `-d` / `-u`) / `cut` (+ `-d <delim>` / `-f <fields>`) / `tr` (+ `-d` / `-s`)
+- **Text processing (pipe-friendly):** `wc` (+ `-l` / `-w` / `-c`) / `sort` (+ `-n` / `-r` / `-u`) / `uniq` (+ `-c` / `-d` / `-u`) / `cut` (+ `-d <delim>` / `-f <fields>`) / `tr` (+ `-d` / `-s`) / `awk` (`'{print $N}'`, `'/pat/ {print $N}'`, `-F SEP`)
 - **System info:** `which` / `type` / `id` / `uname` (+ `-a` / `-s` / `-n` / `-r` / `-v` / `-m`) / `date` / `uptime` / `hostname`
+- **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`
 
 The terminal also supports the shell features players carry in from bash:

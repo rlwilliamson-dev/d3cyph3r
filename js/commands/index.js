@@ -22,6 +22,7 @@ import { cloudCommands }     from "./cloud.js";
 import { shellCommands }     from "./shell.js";
 import { textCommands }      from "./text.js";
 import { systemCommands }    from "./system.js";
+import { learningCommands }  from "./learning.js";
 
 export const COMMANDS = {
   ...linuxCommands,
@@ -34,6 +35,7 @@ export const COMMANDS = {
   ...shellCommands,
   ...textCommands,
   ...systemCommands,
+  ...learningCommands,
 };
 
 // Names used by the Tab-autocomplete hint.

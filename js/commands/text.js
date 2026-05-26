@@ -1,4 +1,4 @@
-// Pipe-friendly text-processing commands: wc, sort, uniq, cut, tr.
+// Pipe-friendly text-processing commands: wc, sort, uniq, cut, tr, awk.
 //
 // Handler contract: same (level, arg, stdin?) → { text, cls } | null
 // signature as every other command module. Every command here is
@@ -300,7 +300,147 @@ export const textCommands = {
     }
     return { text: out, cls: "out" };
   },
+
+  // awk: simplified column-extracting text processor.
+  //
+  //   awk '{print $1}'             field 1 from every line
+  //   awk '{print $1, $3}'         fields 1 and 3 (OFS-joined)
+  //   awk '/pat/ {print $2}'       only on lines matching /pat/
+  //   awk '!/pat/ {print $2}'      only on lines NOT matching
+  //   awk -F: '{print $1}'         use ':' as the field separator
+  //
+  // Only `print` actions are supported — the level content we ship
+  // never needs variable assignments, BEGIN/END blocks, or function
+  // definitions. Players who need full awk should reach for the
+  // pipe-chain alternatives (cut / grep / sort) that ARE in the
+  // engine. If a future level wants more awk, the parser below has
+  // a clear extension point.
+  //
+  // Field model:
+  //   $0          the whole line (verbatim)
+  //   $1, $2, …   1-indexed fields after splitting on FS
+  //   missing field → empty string (bash awk behavior)
+  awk(level, arg, stdin) {
+    if (!arg || !arg.trim()) return { text: "Usage: awk 'PROGRAM' [file]", cls: "err" };
+
+    const tokens = tokenizeAwk(arg);
+
+    // Parse flags and positional args. -F can be `-F :` (two tokens)
+    // or `-F:` (one token, suffix); we handle both.
+    let sep = null;       // null → whitespace splitter
+    let program = null;
+    let file = null;
+    for (let i = 0; i < tokens.length; i++) {
+      const t = tokens[i];
+      if (t === "-F" && tokens[i + 1] !== undefined) {
+        sep = stripQuotes(tokens[++i]);
+        continue;
+      }
+      if (t.startsWith("-F") && t.length > 2) {
+        sep = stripQuotes(t.slice(2));
+        continue;
+      }
+      if (program === null) {
+        program = stripQuotes(t);
+      } else if (file === null) {
+        file = stripQuotes(t);
+      }
+    }
+
+    if (!program) return { text: "Usage: awk 'PROGRAM' [file]", cls: "err" };
+
+    const parsed = parseAwkProgram(program);
+    if (parsed.error) return { text: `awk: ${parsed.error}`, cls: "err" };
+
+    const { content, error } = resolveInput(level, file, stdin, "awk");
+    if (error) return error;
+    if (!content) return { text: "", cls: "out" };
+
+    let lines = content.split("\n");
+    // Drop trailing empty line from a final newline (matches sort / uniq).
+    if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+
+    // OFS (output field separator) mirrors FS, which is bash awk's
+    // default when OFS isn't explicitly set. ' ' for the whitespace
+    // splitter, the literal `sep` otherwise.
+    const ofs = sep === null ? " " : sep;
+    const out = [];
+    for (const line of lines) {
+      if (parsed.pattern) {
+        const m = parsed.pattern.test(line);
+        if (parsed.negate ? m : !m) continue;
+      }
+      const fields = sep === null ? line.trim().split(/\s+/) : line.split(sep);
+
+      const printed = parsed.print.map(ref => {
+        if (ref === "$0") return line;
+        const fm = ref.match(/^\$(\d+)$/);
+        if (fm) {
+          const idx = parseInt(fm[1], 10);
+          if (idx === 0) return line;
+          return fields[idx - 1] ?? "";
+        }
+        // Anything else is a literal (after quote stripping).
+        return stripQuotes(ref);
+      }).join(ofs);
+
+      out.push(printed);
+    }
+
+    return { text: out.join("\n"), cls: "out" };
+  },
 };
+
+// Awk-specific tokenizer. Splits on whitespace but treats single- and
+// double-quoted blocks as atomic — the program (e.g. `'{print $1, $3}'`)
+// stays in one token even though it contains spaces.
+function tokenizeAwk(s) {
+  const out = [];
+  const re = /'[^']*'|"[^"]*"|\S+/g;
+  let m;
+  while ((m = re.exec(s)) !== null) out.push(m[0]);
+  return out;
+}
+
+// Parse the awk program string into { pattern, negate, print } or
+// { error }. Supports:
+//   {action}
+//   /pattern/ {action}
+//   !/pattern/ {action}
+// where action is `print` followed by zero or more comma-separated
+// field references / string literals.
+function parseAwkProgram(prog) {
+  let p = prog.trim();
+  let pattern = null;
+  let negate = false;
+
+  // Optional /pattern/ or !/pattern/ before the {action}.
+  const re = p.match(/^(!?)\s*\/((?:[^\/\\]|\\.)*)\/\s*/);
+  if (re) {
+    negate = re[1] === "!";
+    try { pattern = new RegExp(re[2]); }
+    catch (_) { return { error: `invalid regex: /${re[2]}/` }; }
+    p = p.slice(re[0].length);
+  }
+
+  if (!p.startsWith("{") || !p.endsWith("}")) {
+    return { error: `expected {action} block — only 'print' is supported` };
+  }
+  const action = p.slice(1, -1).trim();
+  if (!action.startsWith("print")) {
+    return { error: `only 'print' actions are supported (got '${action}')` };
+  }
+
+  const rest = action.slice(5).trim();
+  if (!rest) {
+    // Bare `print` prints $0.
+    return { print: ["$0"], pattern, negate };
+  }
+
+  // Comma is the awk arg separator; whitespace between args is fine.
+  const refs = rest.split(",").map(r => r.trim()).filter(Boolean);
+  return { print: refs, pattern, negate };
+}
 
 // Strip surrounding single or double quotes from a token. The engine
 // doesn't have a real quote layer; this lets `tr 'a-z' 'A-Z'` work

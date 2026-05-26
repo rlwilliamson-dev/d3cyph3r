@@ -1222,6 +1222,106 @@ async function termText(page) {
   t = await termText(page);
   check("cut -d : -f 2 extracts 'b' from a:b:c",                      /\bb\b/.test(t.split("cut -d : -f 2")[1] || ""));
 
+  // ── v1.4.0 learning aids + awk ────────────────────────────────────
+  // hint at lobby: graceful — no level to give hints for.
+  await typeAndEnter(page, "hint");
+  t = await termText(page);
+  check("hint at lobby gracefully refuses",                           t.includes("ssh into a level first"));
+
+  // man <cmd> for several commands — all should be in the catalog.
+  await typeAndEnter(page, "man ls");
+  t = await termText(page);
+  check("man ls returns NAME / SYNOPSIS / DESCRIPTION / EXAMPLES",
+    t.includes("NAME") && t.includes("SYNOPSIS") && t.includes("DESCRIPTION") && t.includes("EXAMPLES"));
+  check("man ls mentions long format (-l)",                           /Long format/.test(t));
+
+  await typeAndEnter(page, "man jwt");
+  t = await termText(page);
+  check("man jwt covers JWT-specific red flags",                      t.includes("alg: none") || t.includes("alg: 'none'"));
+
+  await typeAndEnter(page, "man hint");
+  t = await termText(page);
+  check("man hint exists (self-referential entry)",                   t.includes("nudge for the current level") || t.includes("most-direct"));
+
+  await typeAndEnter(page, "man this-command-does-not-exist");
+  t = await termText(page);
+  check("man on unknown command prints 'No manual entry'",            t.includes("No manual entry for this-command-does-not-exist"));
+
+  // what-is glossary lookups.
+  await typeAndEnter(page, "what-is CWE");
+  t = await termText(page);
+  check("what-is CWE returns the Common Weakness Enumeration entry",  t.includes("Common Weakness Enumeration"));
+  check("what-is CWE mentions MITRE",                                 t.includes("MITRE"));
+
+  await typeAndEnter(page, "what-is cwe");
+  t = await termText(page);
+  check("what-is is case-insensitive (cwe → CWE entry)",              t.includes("Common Weakness Enumeration"));
+
+  await typeAndEnter(page, "what-is CWE-798");
+  t = await termText(page);
+  check("what-is CWE-798 returns the Hard-coded Credentials entry",   t.includes("Hard-coded Credentials"));
+
+  await typeAndEnter(page, "what-is JWT");
+  t = await termText(page);
+  check("what-is JWT explains the three-segment format",              t.includes("header.payload.signature") || t.includes("three"));
+
+  await typeAndEnter(page, "what-is FERPA");
+  t = await termText(page);
+  check("what-is FERPA explains student-records privacy",             t.includes("student") && t.includes("education records"));
+
+  await typeAndEnter(page, "what-is asdfasdf-not-a-real-term");
+  t = await termText(page);
+  check("what-is on unknown term prints 'not in the glossary'",       t.includes("not in the glossary"));
+
+  // awk: column extraction + pattern filtering, both file and stdin paths.
+  await typeAndEnter(page, "echo hello world | awk '{print $1}'");
+  t = await termText(page);
+  check("awk '{print $1}' on stdin prints first field",               /\bhello\b/.test(t.split("awk '{print $1}'")[1] || ""));
+
+  await typeAndEnter(page, "echo hello world | awk '{print $2}'");
+  t = await termText(page);
+  check("awk '{print $2}' on stdin prints second field",              /\bworld\b/.test(t.split("awk '{print $2}'")[1] || ""));
+
+  await typeAndEnter(page, "echo hello world | awk '{print $1, $2}'");
+  t = await termText(page);
+  check("awk '{print $1, $2}' joins both fields with OFS",            /hello world/.test(t.split("awk '{print $1, $2}'")[1] || ""));
+
+  await typeAndEnter(page, "echo a:b:c | awk -F: '{print $2}'");
+  t = await termText(page);
+  check("awk -F: '{print $2}' splits on colon + prints 2nd field",    /^\s*b\s*$/m.test(t.split("awk -F: '{print $2}'")[1] || ""));
+
+  await typeAndEnter(page, "echo hello | awk '/h/ {print $1}'");
+  t = await termText(page);
+  check("awk '/regex/ {print ...}' fires on matching lines",          /\bhello\b/.test(t.split("awk '/h/")[1] || ""));
+
+  // hint command — verify progression in level0@linux (which we seeded with 3 hints).
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(300);
+
+  await typeAndEnter(page, "hint reset");  // ensure we start at hint 1
+  t = await termText(page);
+  check("hint reset returns to the first hint",                       t.includes("[hint 1/3]"));
+
+  await typeAndEnter(page, "hint");
+  t = await termText(page);
+  check("hint advances to hint 2 after the first call",               t.includes("[hint 2/3]"));
+
+  await typeAndEnter(page, "hint");
+  t = await termText(page);
+  check("hint advances to hint 3 (the most-direct one)",              t.includes("[hint 3/3]"));
+  check("hint 3 names creds.txt (the smoking gun)",                   /creds\.txt/.test(t.split("[hint 3/3]")[1] || ""));
+
+  await typeAndEnter(page, "hint");
+  t = await termText(page);
+  check("hint past the end falls back to walkthrough pointer",        t.includes("walkthroughs"));
+
+  await typeAndEnter(page, "hint list");
+  t = await termText(page);
+  check("hint list reports 3 hints available",                        /3 hints available/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
 

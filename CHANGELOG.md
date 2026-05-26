@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-05-26
+
+**Learning aids + awk.** Three player-facing self-help commands
+(`hint`, `man`, `what-is`) and one new pipe-friendly text utility
+(`awk`). A stuck player can now get a progressive nudge without
+opening the walkthrough, look up any command's syntax in the
+terminal, and search a built-in glossary of the frameworks /
+regulations / CWE IDs / MITRE techniques the lessons-learned
+post-mortems cite.
+
+The new commands ship as engine surface; per-level hint content is
+authored alongside (`level.hints` schema field). v1.4.0 seeds
+hints on the two linux levels as a reference pattern; the other 12
+shipped levels can get hints in a follow-up content PR — empty
+levels print a polite "no hints — see walkthrough" message.
+
+### Added
+
+- **`hint` command** (`js/commands/learning.js`) — surface the next
+  hint for the current level. Hints are arranged most-subtle to
+  most-direct; each call advances the position. `hint reset`
+  rewinds to the first hint; `hint list` reports progress without
+  spoiling unseen hints. Per-level position is tracked in
+  sessionStorage so it survives reloads within the same tab session.
+- **`level.hints` schema field** — ordered array of string nudges
+  per level. Documented at the top of `levels/linux.js`. Levels
+  without `hints` print a graceful "no hints" message with a
+  pointer to the walkthrough.
+- **`man <cmd>` command** — manual pages for every shipped command
+  (~65 entries in `js/commands/man-pages.js`) following the standard
+  NAME / SYNOPSIS / DESCRIPTION / EXAMPLES format. Unknown command
+  → `No manual entry for <cmd>`.
+- **`what-is <term>` command** — concept glossary
+  (`js/commands/glossary.js`) covering frameworks (NIST 800-53,
+  800-171, 800-63, 800-218, CSF, OWASP Top 10, ASVS, WSTG, MITRE
+  ATT&CK, CIS Controls), regulations (PCI-DSS, HIPAA, FERPA, GLBA,
+  CMMC, SOC 2, NAIC, NYDFS, DFARS), certifications (Security+,
+  CySA+, CISSP, OSCP, SCS-C03), CWE entries cited in lessons-
+  learned (CWE-200 / 798 / 639 / 862 / 285 / 347 / 532 / 306 /
+  548), MITRE technique IDs cited in lessons-learned (T1078 /
+  T1110.004 / T1190 / T1213 / T1552.001 / T1567.002 / T1593.003),
+  and core technical concepts (JWT, IDOR, BOLA, AXFR, MFA, IAM,
+  RBAC, ABAC, ReBAC, RLS, KMS, evtx, SIEM, IoC). ~50 entries to
+  start; lookups are case-insensitive.
+- **`awk` command** in `js/commands/text.js` — simplified column-
+  extracting text processor. Supports `{print $N}`,
+  `{print $N, $M}`, optional `/pattern/` or `!/pattern/` filter
+  before the action block, and `-F SEP` for custom field
+  separator. Stdin-aware like the rest of the pipe-friendly text
+  commands. Only `print` actions; variable assignments and
+  BEGIN/END blocks are out of scope (level content doesn't need
+  them, and the parser has a clean extension point if a future
+  level does).
+- **Seeded hints on level0@linux + level1@linux** as a reference
+  pattern for level authors. Three hints each, most-subtle to
+  most-direct, ending at the specific file / command that
+  resolves the puzzle.
+- **`help` reference** gains a new LEARNING AIDS section
+  (hint / man / what-is) between the per-track sections and the
+  TERMINAL block. `awk` is added to TEXT PROCESSING.
+- **Playtest coverage**: 448 → 472 checks (+24 new). Verifies
+  hint progression on level0@linux (3 hints + exhaustion +
+  walkthrough fallback + reset behavior), man on known + unknown
+  commands, what-is on known + unknown terms + case-insensitivity,
+  and awk in stdin / file / pattern-filter / -F-separator modes.
+
+### Changed
+
+- Help reference reorganized so LEARNING AIDS lives between the
+  track sections and TERMINAL — players who type `help` discover
+  the self-help layer in the natural position.
+
 ## [1.3.0] - 2026-05-26
 
 **Shell realism.** Twelve engine-surface additions that make the
@@ -1728,7 +1800,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.1.0...v1.1.1

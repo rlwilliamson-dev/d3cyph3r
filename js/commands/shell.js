@@ -125,6 +125,7 @@ const HELP_INFRA = [
     "cut -d <delim> -f <N> ...  – extract delimited columns",
     "tr <set1> <set2>           – translate chars (e.g. a-z A-Z)",
     "tr -d <set>                – delete chars",
+    "awk 'PROGRAM' [file]       – column extract + filter (print, $N, /regex/)",
   ]},
   { title: "SYSTEM INFO", lines: [
     "which <cmd>                – locate a command",
@@ -136,6 +137,20 @@ const HELP_INFRA = [
     "hostname                   – print current host",
   ]},
 ];
+
+// Learning-aid commands — surface alongside TERMINAL so a player who
+// types `help` discovers the self-help layer without having to know
+// to look for hint/man/what-is by name.
+const HELP_LEARNING = {
+  title: "LEARNING AIDS",
+  lines: [
+    "hint                     – nudge for the current level (advances each call)",
+    "hint reset               – rewind hint counter to the first hint",
+    "hint list                – show how many hints exist + how many you've seen",
+    "man <cmd>                – manual page for a command (NAME / SYNOPSIS / …)",
+    "what-is <term>           – glossary lookup (CWE / OWASP / MITRE / FERPA / …)",
+  ],
+};
 
 const HELP_TERMINAL = {
   title: "TERMINAL",
@@ -189,6 +204,9 @@ export const shellCommands = {
         }
       }
     }
+    print(`  ${HELP_LEARNING.title}`, "success");
+    for (const line of HELP_LEARNING.lines) print("    " + line, "out");
+    print("", "out");
     print(`  ${HELP_TERMINAL.title}`, "success");
     for (const line of HELP_TERMINAL.lines) print("    " + line, "out");
     print("", "out");
