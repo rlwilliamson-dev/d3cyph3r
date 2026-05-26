@@ -49,7 +49,6 @@ export function setLastExitCode(n)    { lastExitCode = n; }
 export function setEnvVar(k, v)   { processEnv.set(k, String(v)); }
 export function unsetEnvVar(k)    { processEnv.delete(k); }
 export function clearProcessEnv() { processEnv = new Map(); }
-export function getEnvVar(k)      { return processEnv.get(k); }
 
 // Pivot stack ops.
 export function pushHost(entry)   { hostStack.push(entry); }

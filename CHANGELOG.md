@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.10.1] - 2026-05-26
 
-**Docs catch-up.** Patch release covering documentation surfaces that
-landed in v1.10.0's later commits but didn't propagate back to the
-contributor-facing docs.
+**Docs catch-up + dead-code purge.** Patch release covering
+documentation surfaces that landed in v1.10.0's later commits but
+didn't propagate to the contributor-facing docs, plus a swept
+dead-code audit that removed ~90 lines of code unreachable since
+the v1.10.0 tier system + cross-track bonus rollout settled.
 
-### Changed
+### Changed (docs)
 
 - **CONTRIBUTING.md** — Added sections covering the v1.10.0 tier
   system (Routine / Live / Escalated / Critical / Crisis computed
@@ -27,8 +29,50 @@ contributor-facing docs.
   intro paragraph + per-bonus subsection with trigger and expanded
   lesson + real-world pattern reference).
 
-No engine, level, walkthrough-content, or playtest changes. Pure
-documentation cleanup.
+### Removed (dead code)
+
+- **`js/engine/validate.js`** — Dropped the `DIFFICULTY_LEVELS`
+  constant + the `level.difficulty` enum-validation block + the
+  header-comment bullet documenting them. v1.10.0 removed the
+  manual `difficulty:` field from every shipped level; tier is
+  computed via `tierForLevel(N)`, so the validator's enum check
+  was misleading any forker who read the source.
+- **`js/terminal/output.js`** — Dropped unused `printAscii()` and
+  `printBanner()` exports (no callers; the lobby wordmark uses
+  direct DOM in `js/engine/lobby.js#renderLogo`).
+- **`js/engine/tiers.js`** — Dropped unused `tierDescription()`
+  helper (the `tiers` command iterates `TIERS` directly).
+- **`js/engine/state.js`** — Dropped unused `getEnvVar()` export
+  (all reads go through `getEnv()` in expand.js for the merged
+  3-layer view).
+- **`js/commands/env.js`** — Dropped the unused `processEnv` import.
+- **`js/commands/sysinspect.js`** — Dropped the unused `parseArgs()`
+  helper (~33 lines). Defined but never called; every handler in
+  the module does its own ad-hoc token split, as the function's
+  own comment admitted.
+- **`js/commands/linux.js`** — Dropped the legacy `env` handler
+  that v1.9.0's `envCommands.env` had been silently shadowing
+  since the v1.9.0 spread order in `js/commands/index.js`.
+
+### Changed (refactor)
+
+- **Lobby-expand state is now single-sourced.** `EXPAND_STORAGE_KEY`
+  + `readExpandedTracks()` + `writeExpandedTracks()` all live in
+  `js/engine/lobby.js` and are imported by `js/commands/lobby.js`.
+  Previously the storage key and a parallel reader were duplicated
+  across the two modules; they could drift on rename.
+
+### Fixed (docs)
+
+- **`js/terminal/dom.js`** — Corrected stale comment on the
+  `levelBadge` element ("level + difficulty" → "current level
+  key" — the badge never showed difficulty/tier).
+- **`js/engine/bonus.js`** — Corrected stale comment claiming
+  `progress` reads `state.foundBonuses` directly (it queries
+  through `isBonusFound`).
+
+Playtest: 654/654 (unchanged from v1.10.0 — purge had no behavioral
+impact, all changes were dead-code paths).
 
 ## [1.10.0] - 2026-05-26
 

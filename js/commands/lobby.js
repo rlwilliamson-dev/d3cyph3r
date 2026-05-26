@@ -25,27 +25,12 @@
 import { TRACKS } from "../engine/tracks.js";
 import { currentLevelKey } from "../engine/state.js";
 import { LEVELS } from "../../levels/index.js";
-import { showLobby } from "../engine/lobby.js";
+import { showLobby, readExpandedTracks, writeExpandedTracks } from "../engine/lobby.js";
 import { TIERS } from "../engine/tiers.js";
 
-const STORAGE_KEY = "lobbyExpanded";
-
-/** Read the expand set from sessionStorage. */
-export function readExpanded() {
-  try {
-    const arr = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "[]");
-    return new Set(Array.isArray(arr) ? arr : []);
-  } catch (_) {
-    return new Set();
-  }
-}
-
-/** Persist the expand set to sessionStorage. */
-function writeExpanded(set) {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
-  } catch (_) { /* storage disabled — silently no-op */ }
-}
+// v1.10.1: the expand-set storage key + read/write helpers live in
+// js/engine/lobby.js (single source of truth). We import them so the
+// tracks command and the lobby renderer can't drift out of sync.
 
 /**
  * If the player is currently in the lobby, re-render it so the
@@ -89,7 +74,7 @@ export const lobbyCommands = {
   tracks(_level, arg) {
     const a = (arg || "").trim();
     const knownKeys = new Set(TRACKS.map(t => t.key));
-    const expanded  = readExpanded();
+    const expanded  = readExpandedTracks();
 
     // `tracks` with no arg: status report.
     if (a === "") {
@@ -108,13 +93,13 @@ export const lobbyCommands = {
 
     if (a === "all") {
       for (const t of TRACKS) expanded.add(t.key);
-      writeExpanded(expanded);
+      writeExpandedTracks(expanded);
       rerenderIfInLobby();
       return { text: "All tracks expanded.", cls: "success" };
     }
 
     if (a === "reset" || a === "none" || a === "collapse") {
-      writeExpanded(new Set());
+      writeExpandedTracks(new Set());
       rerenderIfInLobby();
       return { text: "All tracks collapsed.", cls: "success" };
     }
@@ -131,7 +116,7 @@ export const lobbyCommands = {
     const action = expanded.has(a) ? "collapsed" : "expanded";
     if (expanded.has(a)) expanded.delete(a);
     else                 expanded.add(a);
-    writeExpanded(expanded);
+    writeExpandedTracks(expanded);
     rerenderIfInLobby();
     return { text: `Track '${a}' ${action}.`, cls: "success" };
   },

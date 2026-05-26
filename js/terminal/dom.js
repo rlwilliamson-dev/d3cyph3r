@@ -22,7 +22,7 @@
 //                  from PS1 by js/terminal/prompt.js — pre-v1.9.0 had
 //                  inner #prompt-user / #prompt-host spans, replaced
 //                  by the prompt renderer)
-//   levelBadge     top-bar label showing current level + difficulty
+//   levelBadge     top-bar label showing the current level key
 //   progressFill   the in-bar progress meter (visited levels)
 //   clockEl        top-bar HH:MM:SS clock
 export const termEl       = document.getElementById("terminal");

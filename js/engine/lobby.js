@@ -67,7 +67,11 @@ function renderLogo() {
 
 const DIVIDER = "  ────────────────────────────────────────────────";
 
-const EXPAND_STORAGE_KEY = "lobbyExpanded";
+// Storage key for the lobby-tree expand state. Exported so the
+// `tracks` command (in js/commands/lobby.js) can share the single
+// source of truth — there's exactly one sessionStorage entry for
+// the expand-set, and exactly one helper module that knows its name.
+export const EXPAND_STORAGE_KEY = "lobbyExpanded";
 
 /**
  * Read the set of currently-expanded track keys. On the first read
@@ -75,9 +79,12 @@ const EXPAND_STORAGE_KEY = "lobbyExpanded";
  * player has already visited a level in — once you've started a
  * track, it stays expanded until you explicitly collapse it.
  *
+ * Exported so `tracks` (in js/commands/lobby.js) can share the same
+ * implementation (and the same seed-on-first-read behavior).
+ *
  * @returns {Set<string>} expanded track keys
  */
-function readExpandedTracks() {
+export function readExpandedTracks() {
   const raw = sessionStorage.getItem(EXPAND_STORAGE_KEY);
   if (raw !== null) {
     try {
@@ -97,6 +104,19 @@ function readExpandedTracks() {
   try { sessionStorage.setItem(EXPAND_STORAGE_KEY, JSON.stringify([...seeded])); }
   catch (_) { /* storage disabled — silent */ }
   return seeded;
+}
+
+/**
+ * Persist a new expand-set to sessionStorage. Exported so the
+ * `tracks` command can mutate state through the same single
+ * surface that the renderer reads from.
+ *
+ * @param {Set<string>} set
+ */
+export function writeExpandedTracks(set) {
+  try {
+    sessionStorage.setItem(EXPAND_STORAGE_KEY, JSON.stringify([...set]));
+  } catch (_) { /* storage disabled — silent */ }
 }
 
 /**

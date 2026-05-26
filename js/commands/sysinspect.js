@@ -76,42 +76,6 @@ function getCurrentUser(level) {
 // Pad helper used by tabular output. Right-pads to width.
 function pad(s, w) { return String(s).padEnd(w); }
 
-// Parse a token-list arg into a small flags+positional structure. Used
-// by the commands that take optional flags (-l, -u, -t, -n N).
-function parseArgs(arg) {
-  const tokens = (arg || "").trim().split(/\s+/).filter(Boolean);
-  const flags = new Set();
-  const named = {};   // -u root → named.u = "root"
-  const positional = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.startsWith("--")) {
-      // --since "yesterday" — store as a single named entry
-      const k = t.slice(2);
-      if (tokens[i + 1] !== undefined && !tokens[i + 1].startsWith("-")) {
-        named[k] = tokens[++i];
-      } else {
-        flags.add(k);
-      }
-    } else if (t.startsWith("-") && t.length > 1) {
-      // Could be `-u root` (named) or `-l` (flag). Heuristic: if
-      // there's a follower that doesn't start with `-`, treat as
-      // named. Commands that take only flags (like ss -lt) opt out
-      // by NOT calling parseArgs and parsing flags directly from
-      // tokens themselves.
-      const k = t.slice(1);
-      if (k.length === 1 && tokens[i + 1] !== undefined && !tokens[i + 1].startsWith("-")) {
-        named[k] = tokens[++i];
-      } else {
-        for (const ch of k) flags.add(ch);
-      }
-    } else {
-      positional.push(t);
-    }
-  }
-  return { flags, named, positional };
-}
-
 export const sysInspectCommands = {
   // crontab -l: print the current user's crontab. Real crontab also
   // supports -u <user> for root to read another user's table; we

@@ -17,7 +17,7 @@
 // has already stripped outer quotes from each token. So
 // `export FOO="hello world"` arrives as argv = ["export", "FOO=hello world"].
 
-import { processEnv, setEnvVar, unsetEnvVar } from "../engine/state.js";
+import { setEnvVar, unsetEnvVar } from "../engine/state.js";
 import { getEnv } from "../engine/expand.js";
 
 /** Valid variable name: must match POSIX shell identifier rules. */
