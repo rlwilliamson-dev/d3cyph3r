@@ -105,6 +105,35 @@ async function termText(page) {
   t = await termText(page);
   check("ps prints empty-state when no level.processes is set", t.includes("no processes visible"));
 
+  // v1.6.0 SYSTEM INSPECTION smoke tests — every command should
+  // degrade to a graceful empty-state message when called from the
+  // lobby (which has no system-inspection data).
+  const sysInspectProbes = [
+    ["crontab -l",                "no crontab for"],
+    ["last",                      "wtmp begins (no recorded logins)"],
+    ["who",                       "(no active sessions)"],
+    ["lsof",                      "(no open files visible"],
+    ["ss",                        "(no sockets visible"],
+    ["journalctl",                "No entries"],
+    ["systemctl status anything", "could not be found"],
+    ["dmesg",                     "ring buffer empty"],
+  ];
+  for (const [cmd, expected] of sysInspectProbes) {
+    await typeAndEnter(page, cmd);
+    t = await termText(page);
+    check(`${cmd.split(" ")[0]} degrades gracefully at the lobby`, t.includes(expected));
+  }
+
+  // `crontab` with no flag prints usage (not a graceful empty-state).
+  await typeAndEnter(page, "crontab");
+  t = await termText(page);
+  check("crontab without -l prints usage", t.includes("Usage: crontab -l"));
+
+  // `systemctl` without a subcommand prints usage.
+  await typeAndEnter(page, "systemctl");
+  t = await termText(page);
+  check("systemctl without subcommand prints usage", t.includes("Usage: systemctl status"));
+
   // `aws` (no args) prints its own multi-service usage block.
   await typeAndEnter(page, "aws");
   t = await termText(page);
@@ -283,6 +312,64 @@ async function termText(page) {
   await typeAndEnter(page, "whoami");
   t = await termText(page);
   check("whoami prints in-world identity 'app_admin'", /\bapp_admin\b/.test(t));
+
+  // v1.6.0 SYSTEM INSPECTION — exercise each command against the
+  // demo data seeded on level1@linux. These tests double as
+  // regression coverage for the format strings and the per-field
+  // schema lookups.
+  await typeAndEnter(page, "crontab -l");
+  t = await termText(page);
+  check("crontab -l on app_admin prints 'no scheduled jobs' header", t.includes("no scheduled jobs"));
+
+  await typeAndEnter(page, "crontab -l -u root");
+  t = await termText(page);
+  check("crontab -l -u root reveals the staging-worker healthcheck", t.includes("staging-worker-healthcheck.sh"));
+  check("crontab -l -u root reveals the backup-staging cron",        t.includes("backup-staging-env.sh"));
+
+  await typeAndEnter(page, "last");
+  t = await termText(page);
+  check("last shows the current app_admin session as 'still logged in'", t.includes("still logged in"));
+  check("last shows the reboot pseudo-event with kernel version",       /reboot.*6\.1\.0-d3cyph3r/.test(t));
+  check("last shows Daniel's prior session (continuity)",               t.includes("daniel"));
+
+  await typeAndEnter(page, "who");
+  t = await termText(page);
+  check("who lists the active app_admin session from 10.0.7.42",  /app_admin.*pts\/0.*10\.0\.7\.42/.test(t));
+
+  await typeAndEnter(page, "w");
+  t = await termText(page);
+  check("w prints uptime header with load average",                t.includes("load average"));
+  check("w prints USER / TTY / FROM column header",                t.includes("USER") && t.includes("LOGIN@"));
+
+  await typeAndEnter(page, "lsof -i");
+  t = await termText(page);
+  check("lsof -i shows sshd listening on port 22",                 /sshd.*LISTEN/.test(t));
+  check("lsof -i shows postgres listening on 5432",                /postgres.*5432.*LISTEN/.test(t));
+
+  await typeAndEnter(page, "ss -lt");
+  t = await termText(page);
+  check("ss -lt shows LISTEN-state TCP sockets",                   t.includes("LISTEN"));
+  check("ss -lt shows sshd process info",                          t.includes("sshd"));
+
+  await typeAndEnter(page, "journalctl -u staging-worker");
+  t = await termText(page);
+  check("journalctl -u staging-worker shows the fallback log line", t.includes("falling back to /home/app_admin/staging-worker.env.bak"));
+  check("journalctl -u staging-worker shows the permission-denied error", t.includes("permission denied reading /home/app_admin/staging-worker.env"));
+
+  await typeAndEnter(page, "systemctl status staging-worker.service");
+  t = await termText(page);
+  check("systemctl status renders the active glyph",               /● staging-worker\.service/.test(t));
+  check("systemctl status shows the unit description",             t.includes("Halton staging-worker service"));
+  check("systemctl status shows the journal-log block",            t.includes("falling back to"));
+
+  await typeAndEnter(page, "systemctl status nonexistent-unit");
+  t = await termText(page);
+  check("systemctl status on unknown unit reports 'could not be found'", t.includes("could not be found"));
+
+  await typeAndEnter(page, "dmesg");
+  t = await termText(page);
+  check("dmesg shows the Linux kernel version line",               /Linux version 6\.1\.0-d3cyph3r/.test(t));
+  check("dmesg shows the SYN-flood warning entry",                 t.includes("Possible SYN flooding"));
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);

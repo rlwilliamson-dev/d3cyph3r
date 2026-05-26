@@ -702,6 +702,82 @@ source options.
 The "detection engineering" discipline writes and tunes the rules
 that fire on the SIEM stream.`,
 
+  CRON: `cron — Unix job scheduler
+
+The classic Unix daemon for running scheduled tasks. Each user has
+a crontab (cron table) listing time specs + command lines:
+
+    # m  h  dom mon dow  command
+    */5 *  *   *   *    /usr/local/bin/healthcheck.sh
+
+System-wide jobs live in /etc/cron.d/ and /etc/crontab. Anacron
+handles jobs that can run "around" a time rather than on it.
+View your crontab with \`crontab -l\`; modern setups have largely
+moved to systemd timers for the same job.`,
+
+  SYSTEMD: `systemd — Linux init / service manager
+
+The de facto init system on most modern Linux distros (Debian /
+Ubuntu / RHEL / Fedora / Arch / SUSE). Manages units (services,
+timers, sockets, mounts, devices) defined under
+/etc/systemd/system/ and /usr/lib/systemd/system/.
+
+Key commands: \`systemctl start|stop|status|enable|disable <unit>\`,
+\`journalctl -u <unit>\` for that unit's logs. systemd-timers
+replace classic cron for new-school scheduled jobs.
+
+Created by Lennart Poettering at Red Hat (initial release 2010).
+Controversial in 2014-2016 for replacing sysvinit; now ubiquitous.`,
+
+  JOURNAL: `journald — systemd's binary log store
+
+The systemd journal is a structured, binary log database written
+by journald to /var/log/journal/. Each entry has typed fields
+(MESSAGE, PRIORITY, _SYSTEMD_UNIT, _PID, _HOSTNAME, etc.) rather
+than free-form text. Query with \`journalctl\` — filter by unit
+(-u), priority (-p), time (--since / --until), or any field
+(_PID=842).
+
+Coexists with /var/log/syslog: rsyslog and journald often run
+in tandem, with rsyslog forwarding to remote SIEMs while
+journald keeps a local structured store.`,
+
+  DMESG: `dmesg — kernel ring buffer dump
+
+Prints the contents of the kernel's circular log buffer:
+boot-time hardware probing, driver loads, OOM kills, link-state
+changes, SYN-flood warnings, segfaults. Each line carries a
+bracketed seconds-since-boot timestamp.
+
+On modern systemd-based systems the same content is also
+forwarded into the journal (\`journalctl -k\`). Buffer size is
+configurable via /proc/sys/kernel/printk_ratelimit and friends.`,
+
+  LSOF: `lsof — list open files
+
+A diagnostic tool that lists every open file across every process.
+"Files" in Unix includes regular files, directories, sockets,
+pipes, FIFOs, device nodes, and locks — so \`lsof\` is also the
+canonical way to see "what's listening on port 80" (\`lsof -i :80\`)
+or "what process has this file open" (\`lsof /var/log/secure\`).
+
+A defender's first call when investigating an unknown process,
+suspicious file handle, or "why can't I unmount this disk".`,
+
+  SS: `ss — socket statistics (netstat replacement)
+
+The modern utility for inspecting sockets, replacing the
+deprecated \`netstat\`. Reads directly from the kernel's
+netlink-based socket diagnostics interface (much faster than
+parsing /proc/net/* like netstat did).
+
+Common invocations:
+  ss -tuln     listening TCP + UDP sockets, numeric
+  ss -tunap    + process info for each socket
+  ss -t state established   established TCP connections
+
+Ships as part of the iproute2 package on Linux.`,
+
   SYMLINK: `Symbolic Link (symlink)
 
 A filesystem object whose content is a path string pointing to

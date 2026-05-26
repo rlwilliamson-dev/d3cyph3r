@@ -26,6 +26,27 @@
 // and `ls -la` owner columns show. Without this override the engine
 // falls back to the level key's user prefix.
 //
+// Optional: SYSTEM INSPECTION schema (surfaced by the v1.6.0 commands —
+// crontab, last, who, w, lsof, ss, journalctl, systemctl, dmesg).
+// All sub-fields are independent; every command degrades to a polite
+// empty-state message when its data is absent. See the per-field
+// shape docs at the top of `js/commands/sysinspect.js`.
+//
+//   level.crontab        : { [username]: "...crontab text..." }
+//   level.lastLogins     : [{ user, tty, from, start, end, duration }]
+//   level.activeSessions : [{ user, tty, from, login, idle?, jcpu?,
+//                             pcpu?, what? }]
+//   level.openFiles      : [{ command, pid, user, fd, type, device,
+//                             sizeOrOff, node, name }]
+//   level.sockets        : [{ netid, state, recvq, sendq, localAddr,
+//                             localPort, peerAddr, peerPort, process }]
+//   level.journal        : [{ timestamp, host, unit, pid, message }]
+//   level.systemdUnits   : { [unitName]: { loadState, activeState,
+//                              subState, description, since, enabled,
+//                              preset, mainPid, command, tasks, memory,
+//                              cpu, cgroup, logs } }
+//   level.dmesg          : [{ timestamp, message }] or [string]
+//
 // Optional: `hints` is an ordered list of nudges surfaced by the
 // `hint` command (one per call, advancing each time). Order them
 // most-subtle to most-direct — the first hint should re-orient the
@@ -450,6 +471,104 @@ Return to the lobby:    ssh guest@d3cyph3r
       "staging-worker.env.bak": { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size:  342 },
       "lessons-learned.md":     { mode: "-rw-r--r--", owner: "app_admin", group: "app_admin", size: 4521 },
     },
+
+    // v1.6.0 SYSTEM INSPECTION — demo data so `crontab` / `last` /
+    // `who` / `w` / `lsof` / `ss` / `journalctl` / `systemctl status`
+    // / `dmesg` have something realistic to render on level1@linux.
+    // The journal entries below corroborate the puzzle's finding: the
+    // staging-worker service fails to read the mode-600 file, falls
+    // back to the mode-644 backup, and logs the fallback — a player
+    // who runs `journalctl -u staging-worker` sees the bug from the
+    // service's perspective.
+    crontab: {
+      "app_admin": "# Crontab for app_admin (no scheduled jobs)\n",
+      "root":
+`# Halton Bank staging-worker maintenance
+*/5 * * * * /usr/local/bin/staging-worker-healthcheck.sh
+0 2 * * * /usr/local/bin/backup-staging-env.sh > /var/log/backup-staging.log 2>&1
+`,
+    },
+    lastLogins: [
+      { user: "app_admin", tty: "pts/0", from: "10.0.7.42", start: "Mon May 26 14:23", end: "still logged in", duration: null },
+      { user: "app_admin", tty: "pts/0", from: "10.0.7.42", start: "Fri May 23 09:15", end: "Fri May 23 17:30", duration: "08:15" },
+      { user: "daniel",    tty: "pts/0", from: "10.0.7.18", start: "Thu May 22 16:00", end: "Thu May 22 16:45", duration: "00:45" },
+      { user: "root",      tty: "pts/0", from: "10.0.1.5",  start: "Thu May 22 11:00", end: "Thu May 22 11:45", duration: "00:45" },
+      { user: "reboot",    tty: "system boot", from: "6.1.0-d3cyph3r", start: "Thu May 22 10:55", end: "still running", duration: null },
+    ],
+    activeSessions: [
+      { user: "app_admin", tty: "pts/0", from: "10.0.7.42", login: "14:23", idle: "0.00s", jcpu: "0.12s", pcpu: "0.05s", what: "w" },
+    ],
+    openFiles: [
+      { command: "sshd",       pid: "842",   user: "root",      fd: "3u",  type: "IPv4", device: "12345", sizeOrOff: "0t0", node: "TCP", name: "*:22 (LISTEN)" },
+      { command: "sshd",       pid: "12345", user: "root",      fd: "4u",  type: "IPv4", device: "23456", sizeOrOff: "0t0", node: "TCP", name: "10.0.7.10:22->10.0.7.42:51234 (ESTABLISHED)" },
+      { command: "postgres",   pid: "1100",  user: "postgres",  fd: "5u",  type: "IPv4", device: "34567", sizeOrOff: "0t0", node: "TCP", name: "*:5432 (LISTEN)" },
+      { command: "staging-w",  pid: "2300",  user: "app_admin", fd: "cwd", type: "DIR",  device: "253,1", sizeOrOff: "4096", node: "65536", name: "/home/app_admin" },
+      { command: "staging-w",  pid: "2300",  user: "app_admin", fd: "6r",  type: "REG",  device: "253,1", sizeOrOff: "342", node: "1048584", name: "/home/app_admin/staging-worker.env.bak" },
+    ],
+    sockets: [
+      { netid: "tcp", state: "LISTEN", recvq: 0, sendq: 128, localAddr: "0.0.0.0",   localPort: 22,   peerAddr: "0.0.0.0",   peerPort: "*",   process: `users:(("sshd",pid=842,fd=3))` },
+      { netid: "tcp", state: "LISTEN", recvq: 0, sendq: 128, localAddr: "0.0.0.0",   localPort: 5432, peerAddr: "0.0.0.0",   peerPort: "*",   process: `users:(("postgres",pid=1100,fd=5))` },
+      { netid: "tcp", state: "ESTAB",  recvq: 0, sendq: 0,   localAddr: "10.0.7.10", localPort: 22,   peerAddr: "10.0.7.42", peerPort: 51234, process: `users:(("sshd",pid=12345,fd=4))` },
+    ],
+    journal: [
+      { timestamp: "May 22 10:55:10", host: "halton-bastion", unit: "sshd",            pid: "842",  message: "Server listening on 0.0.0.0 port 22." },
+      { timestamp: "May 22 10:55:14", host: "halton-bastion", unit: "staging-worker",  pid: "2300", message: "Starting Halton staging-worker service" },
+      { timestamp: "May 22 10:55:14", host: "halton-bastion", unit: "staging-worker",  pid: "2300", message: "loading config from /home/app_admin/staging-worker.env" },
+      { timestamp: "May 22 10:55:14", host: "halton-bastion", unit: "staging-worker",  pid: "2300", message: "ERROR: permission denied reading /home/app_admin/staging-worker.env" },
+      { timestamp: "May 22 10:55:14", host: "halton-bastion", unit: "staging-worker",  pid: "2300", message: "WARN: falling back to /home/app_admin/staging-worker.env.bak (mode 644)" },
+      { timestamp: "May 22 10:55:14", host: "halton-bastion", unit: "staging-worker",  pid: "2300", message: "config loaded successfully; service ready" },
+      { timestamp: "May 26 14:23:00", host: "halton-bastion", unit: "sshd",            pid: "842",  message: "Accepted publickey for app_admin from 10.0.7.42 port 51234 ssh2: ED25519 SHA256:Jk8...redacted" },
+      { timestamp: "May 26 14:23:01", host: "halton-bastion", unit: "sshd",            pid: "842",  message: "pam_unix(sshd:session): session opened for user app_admin(uid=1001) by (uid=0)" },
+    ],
+    systemdUnits: {
+      "staging-worker.service": {
+        loadState: "loaded",
+        activeState: "active",
+        subState: "running",
+        description: "Halton staging-worker service",
+        since: "Thu 2026-05-22 10:55:14 UTC; 4 days ago",
+        enabled: true,
+        preset: "enabled",
+        mainPid: "2300",
+        command: "staging-worker --config /home/app_admin/staging-worker.env",
+        tasks: "3 (limit: 4915)",
+        memory: "12.4M",
+        cpu: "5.123s",
+        cgroup: "/system.slice/staging-worker.service",
+        logs: [
+          "May 22 10:55:14 halton-bastion staging-worker[2300]: ERROR: permission denied reading /home/app_admin/staging-worker.env",
+          "May 22 10:55:14 halton-bastion staging-worker[2300]: WARN: falling back to /home/app_admin/staging-worker.env.bak (mode 644)",
+          "May 22 10:55:14 halton-bastion staging-worker[2300]: config loaded successfully; service ready",
+        ],
+      },
+      "sshd.service": {
+        loadState: "loaded",
+        activeState: "active",
+        subState: "running",
+        description: "OpenSSH server daemon",
+        since: "Thu 2026-05-22 10:55:10 UTC; 4 days ago",
+        enabled: true,
+        preset: "enabled",
+        mainPid: "842",
+        command: "sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups",
+        tasks: "1 (limit: 4915)",
+        memory: "4.5M",
+        cpu: "1.234s",
+        cgroup: "/system.slice/sshd.service",
+        logs: [
+          "May 26 14:23:00 halton-bastion sshd[842]: Accepted publickey for app_admin from 10.0.7.42 port 51234 ssh2",
+          "May 26 14:23:01 halton-bastion sshd[842]: pam_unix(sshd:session): session opened for user app_admin(uid=1001) by (uid=0)",
+        ],
+      },
+    },
+    dmesg: [
+      { timestamp: "    0.000000", message: "Linux version 6.1.0-d3cyph3r (build@d3cyph3r) (gcc 12.2.0) #1 SMP Thu May 22 10:54:30 UTC 2026" },
+      { timestamp: "    0.001234", message: "Command line: BOOT_IMAGE=/vmlinuz-6.1.0 root=/dev/sda1 ro" },
+      { timestamp: "    1.234567", message: "systemd[1]: Started Journal Service" },
+      { timestamp: "    3.456789", message: "systemd[1]: Reached target Multi-User System" },
+      { timestamp: "10821.234567", message: "TCP: request_sock_TCP: Possible SYN flooding on port 22 (recent 2026-05-22T11:03:24Z)" },
+    ],
+
     fs: {
       type: "dir",
       children: {

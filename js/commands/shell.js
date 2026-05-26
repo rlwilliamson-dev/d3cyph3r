@@ -138,6 +138,17 @@ const HELP_INFRA = [
     "uptime                     – system uptime + load average",
     "hostname                   – print current host",
   ]},
+  { title: "SYSTEM INSPECTION", lines: [
+    "crontab -l [-u <user>]     – list a user's cron jobs",
+    "last                       – login history",
+    "who                        – list active sessions (basic)",
+    "w                          – list active sessions + idle / what",
+    "lsof [-i] [-p <pid>]       – open files (-i: network only)",
+    "ss [-l] [-t] [-u] [-n]     – socket stats (listening / TCP / UDP)",
+    "journalctl [-u <unit>] [-n N] [-r] – systemd journal",
+    "systemctl status <unit>    – service unit status",
+    "dmesg                      – kernel ring buffer",
+  ]},
 ];
 
 // Learning-aid commands — surface alongside TERMINAL so a player who
