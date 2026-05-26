@@ -496,9 +496,16 @@ async function termText(page) {
   check("ss -lt shows sshd process info",                          t.includes("sshd"));
 
   await typeAndEnter(page, "journalctl -u staging-worker");
+  await page.waitForTimeout(150);  // wait for the bonus-find banner to render
   t = await termText(page);
   check("journalctl -u staging-worker shows the fallback log line", t.includes("falling back to /home/app_admin/staging-worker.env.bak"));
   check("journalctl -u staging-worker shows the permission-denied error", t.includes("permission denied reading /home/app_admin/staging-worker.env"));
+  // v1.9.0: this call also triggers the level1@linux bonus-find
+  // "self-logged-bug" (trigger: journalctl + output contains
+  // "falling back to"). First-call-only — subsequent journalctl
+  // invocations in the same session won't re-print the banner
+  // because the find is already marked as discovered.
+  check("v1.9.0 bonus-find fires on journalctl (self-logged-bug)",   t.includes("Bonus find unlocked: Self-logged config-fallback bug"));
 
   await typeAndEnter(page, "systemctl status staging-worker.service");
   t = await termText(page);
@@ -1708,8 +1715,207 @@ async function termText(page) {
   // that the request flag at least doesn't break the lookup.
   check("dig @server still returns AXFR records",                     /SOA/.test(t.split("dig @8.8.8.8")[1] || ""));
 
+  // dig +trace flavor — synthesizes the root → TLD → authoritative
+  // walk. We assert the trace header appears.
+  await typeAndEnter(page, "dig atlas.internal +trace");
+  t = await termText(page);
+  check("dig +trace prints root-servers + a-gtld-servers walk",       /root-servers|gtld-servers/.test(t.split("dig atlas.internal +trace")[1] || ""));
+
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(400);
+
+  // ──── v1.9.0: deeper command coverage (pre-merge audit)
+  // Hop into level1@linux for the multi-host pivot demo + the
+  // remaining shell-environment / job-control / readline shortcuts
+  // that didn't get covered in the first pass.
+
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById("terminal").innerHTML = ""; });
+
+  // `set` (env alias) — print mode.
+  await typeAndEnter(page, "set");
+  t = await termText(page);
+  check("set prints env (alias) — shows USER=app_admin",              /USER=app_admin/.test(t.split("\nset\n").slice(-1)[0] || t));
+
+  // export -p / -n forms.
+  await typeAndEnter(page, "export TEMP_VAR=tmp");
+  await typeAndEnter(page, "export -n TEMP_VAR");
+  await typeAndEnter(page, "echo after-unexport:${TEMP_VAR}done");
+  t = await termText(page);
+  check("export -n acts as unset",                                    /after-unexport:done/.test(t));
+
+  // Job control: bg %1 + kill %1 + jobs -l + wait.
+  await typeAndEnter(page, "echo j1 &");
+  await typeAndEnter(page, "echo j2 &");
+  await typeAndEnter(page, "jobs -l");
+  t = await termText(page);
+  check("jobs -l prints fake PID column",                             /\[\d+\]\s+[+\- ]?\s*\d{5}/.test(t.split("jobs -l")[1] || ""));
+
+  await typeAndEnter(page, "bg %1");
+  t = await termText(page);
+  check("bg %1 prints '[N]+ <cmd> &' echo",                           /\[\d+\]\+ echo j1 &/.test(t.split("bg %1")[1] || ""));
+
+  await typeAndEnter(page, "kill %2");
+  await typeAndEnter(page, "jobs");
+  t = await termText(page);
+  const afterKill = t.split("jobs").slice(-1)[0] || "";
+  check("kill %2 removes job 2; only job 1 remains",                  /echo j1/.test(afterKill) && !/echo j2/.test(afterKill));
+
+  await typeAndEnter(page, "disown");
+  await typeAndEnter(page, "jobs");
+  t = await termText(page);
+  check("disown (no args) clears the job table",                      !/echo j[12]/.test(t.split("disown").slice(-1)[0] || ""));
+
+  // wait is a no-op (everything synchronous).
+  await typeAndEnter(page, "wait");
+  // No assertion beyond "doesn't throw" — covered by the No-page-
+  // errors check at the bottom.
+
+  // kill with unknown PID prints "No such process".
+  await typeAndEnter(page, "kill 99999");
+  t = await termText(page);
+  check("kill <pid> on unknown PID prints 'No such process'",         /No such process/.test(t.split("kill 99999")[1] || ""));
+
+  // (v1.9.0 bonus-find for journalctl asserted earlier in the
+  // sysinspect section — first-call only; the find is single-shot
+  // per session, so a duplicate journalctl here wouldn't reprint
+  // the banner.)
+
+  // Multi-host pivot demo: ssh into Daniel's halton-bastion. The
+  // pivot host has no password — implied agent forwarding. We
+  // verify the prompt changes, ls shows the backups dir, and exit
+  // unwinds back to app_admin@linux.
+  await typeAndEnter(page, "ssh dbsvc@halton-bastion");
+  await page.waitForTimeout(300);
+  const pivotPrompt = await promptText(page);
+  check("ssh into pivot host shows dbsvc@halton-bastion: prompt",     /dbsvc@halton-bastion/.test(pivotPrompt));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  check("pivot host's ls shows backups/ + logs/ + welcome.md",        /backups/.test(t) && /logs/.test(t) && /welcome\.md/.test(t));
+
+  await typeAndEnter(page, "cat ~/logs/postgresql.log");
+  t = await termText(page);
+  check("pivot host can read its own postgres log",                   /pg_dump completed/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+  const unwoundPrompt = await promptText(page);
+  check("exit from pivot unwinds back to app_admin@linux",            /app_admin@linux:/.test(unwoundPrompt));
+
+  // After unwinding, env should be fresh (per-shell semantics) —
+  // TEMP_VAR set inside the parent shell pre-pivot should be gone.
+  await typeAndEnter(page, "echo before${TEMP_VAR}after");
+  t = await termText(page);
+  check("pivot-back: env reset (TEMP_VAR no longer set)",             /beforeafter/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+
+  // ──── v1.9.0: backfilled level0@linux env_vars + bonusFind
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById("terminal").innerHTML = ""; });
+
+  await typeAndEnter(page, "env");
+  t = await termText(page);
+  check("level0@linux env_vars: EDITOR=vi present",                   /EDITOR=vi/.test(t));
+  check("level0@linux env_vars: HISTSIZE=1000 present",               /HISTSIZE=1000/.test(t));
+
+  await typeAndEnter(page, "cat .bash_history");
+  t = await termText(page);
+  check("bonus-find fires on cat .bash_history (Daniel's pattern)",   /Bonus find unlocked: Daniel's muscle-memory pattern/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+
+  // ──── v1.9.0: curl extended flags (lobby has no web data, so we
+  // hop to level0@web which seeds web responses for the meridian
+  // engagement).
+  await typeAndEnter(page, "ssh level0@web");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById("terminal").innerHTML = ""; });
+
+  // -v verbose prints request preamble (> lines) regardless of the
+  // server's response. URL must exist in level.web so the request
+  // hits a response rather than a DNS-fail.
+  await typeAndEnter(page, "curl -v https://www.meridian.edu");
+  t = await termText(page);
+  check("curl -v prints '> GET ...' request preamble",                /> GET .+ HTTP\/1\.1/.test(t.split("curl -v ").slice(-1)[0] || ""));
+
+  // -X POST + -d + -H — sandbox can't fork, so the response lookup
+  // falls back to the GET response for the URL when no method-aware
+  // entry exists. Just verify the command doesn't error.
+  await typeAndEnter(page, "curl -X POST -d 'a=1' -H 'Content-Type: application/x-www-form-urlencoded' https://www.meridian.edu");
+  t = await termText(page);
+  check("curl -X POST -d -H runs (no 'command not found' / no err)",  !/command not found/.test(t.split("curl -X POST").slice(-1)[0] || ""));
+
+  // Gobuster real syntax — dir subcommand + -u + -w cosmetic flag.
+  // The URL needs to match a level.gobusterRes entry; level0@web
+  // seeds the meridian.edu top-level domain.
+  await typeAndEnter(page, "gobuster dir -u https://www.meridian.edu -w /usr/share/wordlists/dirb/big.txt");
+  t = await termText(page);
+  check("gobuster dir -u -w threads banner shows the new wordlist",   /\/dirb\/big\.txt/.test(t.split("gobuster dir").slice(-1)[0] || ""));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+
+  // ──── v1.9.0: readline shortcuts. Playwright dispatches the
+  // exact key combos; we verify they mutate the cmd-input value
+  // (we're not asserting visual cursor position — too brittle).
+
+  // Pre-fill some history so Alt-. has something to recall.
+  await typeAndEnter(page, "echo last-arg-victim");
+  await page.locator("#cmd-input").focus();
+  await page.locator("#cmd-input").fill("");
+
+  // Alt-.: insert last arg of previous command.
+  await page.keyboard.down("Alt");
+  await page.keyboard.press("Period");
+  await page.keyboard.up("Alt");
+  let inputVal = await page.locator("#cmd-input").inputValue();
+  check("Alt-. inserts last arg of previous command",                 inputVal === "last-arg-victim");
+
+  await page.locator("#cmd-input").fill("");
+
+  // Ctrl-K + Ctrl-Y: kill text + yank it back at cursor 0.
+  await page.locator("#cmd-input").fill("hello world");
+  // Move cursor to start so Ctrl-K kills the whole line.
+  await page.keyboard.down("Control");
+  await page.keyboard.press("a");
+  await page.keyboard.up("Control");
+  await page.keyboard.down("Control");
+  await page.keyboard.press("k");
+  await page.keyboard.up("Control");
+  inputVal = await page.locator("#cmd-input").inputValue();
+  check("Ctrl-K kills from cursor to end of line",                    inputVal === "");
+
+  await page.keyboard.down("Control");
+  await page.keyboard.press("y");
+  await page.keyboard.up("Control");
+  inputVal = await page.locator("#cmd-input").inputValue();
+  check("Ctrl-Y yanks killed text back from the kill ring",           inputVal === "hello world");
+
+  // Alt-B / Alt-F: word back / word forward (we don't have a clean
+  // way to assert cursor position via Playwright, but we can verify
+  // the key combo doesn't dispatch a character into the input).
+  await page.locator("#cmd-input").fill("");
+  await page.locator("#cmd-input").fill("alpha beta gamma");
+  await page.keyboard.down("Alt");
+  await page.keyboard.press("KeyB");
+  await page.keyboard.up("Alt");
+  inputVal = await page.locator("#cmd-input").inputValue();
+  check("Alt-B doesn't insert a modified character into the input",   inputVal === "alpha beta gamma");
+
+  await page.keyboard.down("Alt");
+  await page.keyboard.press("KeyF");
+  await page.keyboard.up("Alt");
+  inputVal = await page.locator("#cmd-input").inputValue();
+  check("Alt-F doesn't insert a modified character either",           inputVal === "alpha beta gamma");
+
+  // Clear the input so it doesn't dirty subsequent assertions.
+  await page.locator("#cmd-input").fill("");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));

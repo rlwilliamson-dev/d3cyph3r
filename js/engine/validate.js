@@ -58,6 +58,21 @@ export function validateLevels(levels) {
     // Lobby is special-cased — it has no track + no puzzle content.
     if (level.isLobby || key === "guest@d3cyph3r") continue;
 
+    // Pivot hosts (v1.9.0 multi-host pivot) are promoted into LEVELS
+    // by initLevels but intentionally lack a `track` — they live
+    // inside another level, not as a track entry. Validate their
+    // own fields without forcing them to look like top-level
+    // engagements.
+    if (level.pivot) {
+      if (!level.objective) { warn(key, "pivot host missing objective"); warnings++; }
+      if (!level.lesson)    { warn(key, "pivot host missing lesson");    warnings++; }
+      if (!level.fs && (!level.files || Object.keys(level.files).length === 0)) {
+        warn(key, "pivot host has no fs content");
+        warnings++;
+      }
+      continue;
+    }
+
     // Required fields
     if (!level.track)     { warn(key, "missing required field: track");     warnings++; }
     if (!level.objective) { warn(key, "missing required field: objective"); warnings++; }
