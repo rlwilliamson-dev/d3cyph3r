@@ -16,6 +16,7 @@ import { LEVELS } from "../../levels/index.js";
 import { connectTo } from "./ssh.js";
 import { VERSION_DISPLAY } from "./version.js";
 import { TRACKS } from "./tracks.js";
+import { tierForLevel, levelNumberFromKey } from "./tiers.js";
 
 // Wordmark rendered char-by-char inside `[ ]` brackets — uniform VT323
 // font with a brightness cascade across the 8 characters (bright / mid /
@@ -167,14 +168,14 @@ function engagementList() {
     }
 
     const chevron = isExpanded ? "[▾]" : "[▸]";
-    // Difficulty surface: show level0's difficulty (the entry point)
-    // since it's what a player picking the track from cold start will
-    // experience. Levels may vary internally — that's revealed on
-    // expand.
-    const entryDifficulty = levels[0]?.level?.difficulty || "";
+    // Tier surface (v1.10.0): compute from level0's ordinal (always
+    // 0 → "Routine" for any track's entry point). The collapsed
+    // header reads as "tier at the entry point"; the expanded body
+    // shows each level's own tier if/when the track gets deeper.
+    const entryTier = tierForLevel(levelNumberFromKey(levels[0]?.key));
     const progressStr     = `${visitedCount}/${shippedCount} visited`;
-    const meta = entryDifficulty
-      ? `${progressStr} · ${entryDifficulty}`
+    const meta = entryTier
+      ? `${progressStr} · ${entryTier}`
       : progressStr;
     out.push({
       line: `  ${entryCmd.padEnd(24)} ${chevron} ${t.label.padEnd(22)}  ${meta}`,
@@ -192,10 +193,12 @@ function engagementList() {
         const branch = last ? "└──" : "├──";
         const mark   = visited ? "✓" : "·";
         const title  = level.title ? `   ${level.title}` : "";
+        const tier   = tierForLevel(levelNumberFromKey(key));
+        const tierTag = tier ? `   [${tier}]` : "";
         const time   = level.estimatedMinutes ? `   ~${level.estimatedMinutes} min` : "";
         const cmd    = `ssh ${key}`.padEnd(24);
         out.push({
-          line: `              ${branch} ${cmd} ${mark}${title}${time}`,
+          line: `              ${branch} ${cmd} ${mark}${title}${tierTag}${time}`,
           cls: visited ? "success" : "out",
         });
       }
@@ -245,6 +248,7 @@ export function showLobby() {
   engagementList().forEach(({ line, cls }) => print(line, cls));
   print(DIVIDER, "dim");
   print("  Type 'tracks <name>' to expand a track, 'tracks all' to expand all.", "dim");
+  print("  Type 'tiers' to see what each difficulty label (Routine / Live / Escalated / …) means.", "dim");
   print("  Type 'help' for available commands.", "warn");
   print("", "out");
 }

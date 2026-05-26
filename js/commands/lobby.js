@@ -26,6 +26,7 @@ import { TRACKS } from "../engine/tracks.js";
 import { currentLevelKey } from "../engine/state.js";
 import { LEVELS } from "../../levels/index.js";
 import { showLobby } from "../engine/lobby.js";
+import { TIERS } from "../engine/tiers.js";
 
 const STORAGE_KEY = "lobbyExpanded";
 
@@ -56,7 +57,35 @@ function rerenderIfInLobby() {
   if (lvl?.isLobby) showLobby();
 }
 
+/**
+ * `tiers` — print the difficulty-tier legend. Single-purpose
+ * informational command discoverable from the lobby footer pointer
+ * and the help reference.
+ *
+ * The output reads the TIERS array directly from tiers.js, so any
+ * future edit to the names / ranges / descriptions automatically
+ * flows through to the legend without touching this command.
+ */
+function tiersCommand() {
+  const lines = [];
+  lines.push("  Difficulty tiers — computed from level number (v1.10.0).");
+  lines.push("");
+  for (const t of TIERS) {
+    const [min, max] = t.range;
+    const rangeStr = max === null ? `level${min}+` : `level${min}–${max}`;
+    lines.push(`  ${t.name.padEnd(11)} ${rangeStr.padEnd(14)} ${t.description}`);
+  }
+  lines.push("");
+  lines.push("  The label describes the operational state of the engagement");
+  lines.push("  inside the box, not the puzzle complexity in isolation. A");
+  lines.push("  'Live' level isn't merely harder than a 'Routine' one — it");
+  lines.push("  carries real contractual stakes and time pressure.");
+  return { text: lines.join("\n"), cls: "out" };
+}
+
 export const lobbyCommands = {
+  tiers: tiersCommand,
+
   tracks(_level, arg) {
     const a = (arg || "").trim();
     const knownKeys = new Set(TRACKS.map(t => t.key));

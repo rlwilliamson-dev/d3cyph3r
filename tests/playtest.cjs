@@ -301,6 +301,8 @@ async function termText(page) {
   await page.waitForTimeout(300);
   t = await termText(page);
   check("Connected to level0@linux", t.includes("Connected: level0@linux"));
+  check("Connection banner shows computed Tier (v1.10.0)", t.includes("Tier: Routine"));
+  check("Connection banner shows Est. time",               t.includes("Est. time: ~10 min"));
   check("Objective references Daniel", t.includes("Daniel"));
   check("Lesson mentions Driftwood",   t.includes("Driftwood"));
   check("Lesson mentions Halton Bank", t.includes("Halton"));
@@ -1983,6 +1985,8 @@ async function termText(page) {
   check("Expanded linux tree shows the v1.10.0 title 'Halton Bank staging bastion'",
         t.includes("Halton Bank staging bastion"));
   check("Expanded linux tree shows the v1.10.0 title 'Daniel'",       t.includes("Daniel's laptop handoff"));
+  // v1.10.0 — tier tag computed from level number. level0/1 → Routine.
+  check("Expanded linux tree shows computed [Routine] tag per row",   t.includes("[Routine]"));
 
   // Unknown-track guard.
   await typeAndEnter(page, "tracks doesnotexist");
@@ -2000,6 +2004,18 @@ async function termText(page) {
 
   // Reset state for tidy session end.
   await typeAndEnter(page, "tracks reset");
+
+  // ──── v1.10.0: tiers command — print difficulty-tier legend.
+  await typeAndEnter(page, "tiers");
+  t = await termText(page);
+  check("tiers prints the 'Difficulty tiers' header",                 t.includes("Difficulty tiers"));
+  check("tiers lists Routine + range level0-5",                       t.includes("Routine") && t.includes("level0–5"));
+  check("tiers lists Live + range level6-10",                         t.includes("Live") && t.includes("level6–10"));
+  check("tiers lists Escalated + range level11-15",                   t.includes("Escalated") && t.includes("level11–15"));
+  check("tiers lists Critical + range level16-20",                    t.includes("Critical") && t.includes("level16–20"));
+  check("tiers lists Crisis + range level21+",                        t.includes("Crisis") && t.includes("level21+"));
+  check("tiers explains the 'Live not just harder than Routine' framing",
+        t.includes("not the puzzle complexity") || t.includes("operational state"));
 
   // ──── v1.10.0: progress --detail ────────────────────────────────
   await typeAndEnter(page, "progress --detail");

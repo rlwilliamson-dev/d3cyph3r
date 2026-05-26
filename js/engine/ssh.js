@@ -16,6 +16,7 @@ import {
 import { markVisited } from "./progress.js";
 import { showLobby } from "./lobby.js";
 import { SCAFFOLDED_HOSTS } from "./tracks.js";
+import { tierForLevel, levelNumberFromKey } from "./tiers.js";
 
 export function handleSSH(target) {
   const level = LEVELS[target];
@@ -193,12 +194,17 @@ export function connectTo(key, opts) {
   print("", "out");
   print(`── Connected: ${key}`, "dim");
 
-  // Difficulty + estimated time (v1.8.0 schema fields). Both are
-  // optional; render the line only if at least one is present so
-  // pre-v1.8 levels stay clean.
-  if (level.difficulty || level.estimatedMinutes) {
+  // Tier + estimated time. Tier is computed from the level number
+  // (v1.10.0: Routine / Live / Escalated / Critical / Crisis); see
+  // `js/engine/tiers.js`. Pivot hosts (non-numbered) return null
+  // from tierForLevel and we suppress the tier label for them
+  // since they sit off the main difficulty curve. `estimatedMinutes`
+  // remains a manual per-level field — keep this side of the line
+  // optional so legacy / pivot levels without it stay clean.
+  const tier = tierForLevel(levelNumberFromKey(key));
+  if (tier || level.estimatedMinutes) {
     const bits = [];
-    if (level.difficulty)       bits.push(`Difficulty: ${level.difficulty}`);
+    if (tier)                   bits.push(`Tier: ${tier}`);
     if (level.estimatedMinutes) bits.push(`Est. time: ~${level.estimatedMinutes} min`);
     print(bits.join("   ·   "), "dim");
   }

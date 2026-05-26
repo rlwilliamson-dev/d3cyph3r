@@ -101,12 +101,30 @@ broader real-world pattern.
 
 ### Changed
 
-- **`difficulty:` and `estimatedMinutes:` rolled out cross-track.**
-  These v1.8.0 schema fields existed but were only populated on
-  the linux track. Backfilled on all 12 non-linux levels so the
-  lobby tree's difficulty annotation works everywhere.
-- **TERMINAL help section** lists the new `tracks` command and
-  the `progress --detail` flag.
+- **Difficulty becomes a computed tier.** Manual `level.difficulty`
+  is gone. Replaced with a 5-tier curve computed from the level
+  number in `js/engine/tiers.js`:
+  - `Routine` (level 0–5) — standard quarterly audit work
+  - `Live` (level 6–10) — active engagement, real contractual
+    stakes
+  - `Escalated` (level 11–15) — incident response in progress
+  - `Critical` (level 16–20) — notification clocks running
+  - `Crisis` (level 21+) — public-statement-grade engagement
+
+  The label describes the *operational state* the player is
+  inside, not just puzzle complexity. The new `tiers` command
+  prints the legend; the lobby footer points at it. The
+  connection banner now reads `Tier: Routine · Est. time: ~10
+  min` instead of `Difficulty: Easy · Est. time: ~10 min`. The
+  expanded lobby tree shows a `[Routine]` tag per level row.
+  Pivot hosts (non-numbered) get no tier label since they sit
+  off the main curve.
+- **`estimatedMinutes:` rolled out cross-track.** This v1.8.0
+  schema field existed but was only populated on the linux
+  track. Backfilled on all 12 non-linux levels so the lobby
+  tree's est-time annotation works everywhere.
+- **TERMINAL help section** lists the new `tracks` command,
+  `tiers` command, and the `progress --detail` flag.
 
 ### Fixed
 

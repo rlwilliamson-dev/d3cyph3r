@@ -259,6 +259,7 @@ const HELP_TERMINAL = {
     "tracks                   – show lobby-tree expand state",
     "tracks <name>            – toggle expand for one track (e.g. 'tracks linux')",
     "tracks all / reset       – expand every track / collapse every track",
+    "tiers                    – show the difficulty-tier legend",
     "report                   – show how to report bugs",
     "help                     – show this reference",
   ],

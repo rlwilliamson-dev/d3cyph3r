@@ -1758,6 +1758,37 @@ EXAMPLES
     progress
     progress --detail`,
 
+  tiers: `NAME
+    tiers — print the difficulty-tier legend
+
+SYNOPSIS
+    tiers
+
+DESCRIPTION
+    Print the 5-tier difficulty legend (v1.10.0). Each level's tier
+    is computed from its level number, not stored manually:
+
+      Routine    (level 0–5)     standard quarterly audit work
+      Live       (level 6–10)    active engagement, real contractual
+                                 stakes
+      Escalated  (level 11–15)   incident response in progress
+      Critical   (level 16–20)   notification clocks running, outside
+                                 counsel on the call
+      Crisis     (level 21+)     the kind of engagement that produces
+                                 a public statement
+
+    The label describes the operational state of the engagement
+    inside the box, not raw puzzle complexity. A 'Live' level isn't
+    merely harder than a 'Routine' one — it carries real time
+    pressure and contractual stakes.
+
+    Pivot hosts (multi-host pivot destinations, v1.9.0) are
+    non-numbered and therefore have no tier; the lobby tree and
+    connection banner suppress the tier label for them.
+
+EXAMPLES
+    tiers`,
+
   tracks: `NAME
     tracks — toggle per-track expand state in the lobby tree
 
