@@ -1023,6 +1023,163 @@ DESCRIPTION
 EXAMPLES
     hostname`,
 
+  // ─── System inspection ────────────────────────────────────────────
+  crontab: `NAME
+    crontab — list a user's cron jobs
+
+SYNOPSIS
+    crontab -l [-u USER]
+
+DESCRIPTION
+    Prints the named user's crontab (or the current user's by default).
+    The sandbox is single-user, so -u <user> works without a privilege
+    check. Levels populate \`level.crontab[username]\` with the full
+    crontab text.
+
+EXAMPLES
+    crontab -l
+    crontab -l -u root`,
+
+  last: `NAME
+    last — login history
+
+SYNOPSIS
+    last
+
+DESCRIPTION
+    Prints the recent login history in reverse-chronological order:
+    user, TTY, source IP, start / end timestamps, session duration.
+    System-boot pseudo-events render as 'reboot   system boot   <kernel>'.
+
+EXAMPLES
+    last`,
+
+  who: `NAME
+    who — list currently logged-in users (basic)
+
+SYNOPSIS
+    who
+
+DESCRIPTION
+    Prints one line per active session: user, TTY, login time, source
+    address (in parens). See \`w\` for the richer variant with idle /
+    JCPU / PCPU / WHAT columns.
+
+EXAMPLES
+    who`,
+
+  w: `NAME
+    w — currently logged-in users with extended info
+
+SYNOPSIS
+    w
+
+DESCRIPTION
+    Prints an uptime / load-average header followed by one line per
+    active session: user, TTY, source IP, login time, idle time,
+    accumulated session CPU (JCPU), foreground process CPU (PCPU),
+    and the currently-running command (WHAT).
+
+EXAMPLES
+    w`,
+
+  lsof: `NAME
+    lsof — list open files
+
+SYNOPSIS
+    lsof [-i] [-p PID]
+
+DESCRIPTION
+    Prints the open-files table: COMMAND / PID / USER / FD / TYPE /
+    DEVICE / SIZE/OFF / NODE / NAME. With -i, restricts to network
+    sockets (IPv4 / IPv6). With -p <pid>, restricts to one process.
+
+    -i      Show only network sockets.
+    -p PID  Show only files opened by the named process.
+
+EXAMPLES
+    lsof
+    lsof -i
+    lsof -p 842`,
+
+  ss: `NAME
+    ss — socket statistics
+
+SYNOPSIS
+    ss [-l] [-t] [-u] [-n] [-a] [-p]
+
+DESCRIPTION
+    Modern replacement for netstat. Prints the socket table with state,
+    queue depths, local / peer addresses, and the owning process. Flags
+    compose:
+
+    -l   only LISTEN-state sockets
+    -t   only TCP
+    -u   only UDP
+    -n   numeric (no DNS) — engine output is already numeric
+    -a   include non-LISTEN sockets (default already does)
+    -p   include process info (always shown)
+
+EXAMPLES
+    ss -lt
+    ss -tuln`,
+
+  journalctl: `NAME
+    journalctl — query the systemd journal
+
+SYNOPSIS
+    journalctl [-u UNIT] [-n N] [-r]
+
+DESCRIPTION
+    Prints lines from the systemd journal. Without flags, dumps the
+    full journal in chronological order.
+
+    -u UNIT   only entries from the named unit (sshd.service or just
+              sshd both work)
+    -n N      keep only the most recent N entries
+    -r        reverse order (newest first)
+
+EXAMPLES
+    journalctl
+    journalctl -u sshd.service
+    journalctl -u staging-worker -n 5
+    journalctl -r -n 10`,
+
+  systemctl: `NAME
+    systemctl — query systemd unit state (status subset)
+
+SYNOPSIS
+    systemctl status UNIT
+
+DESCRIPTION
+    Prints the status block for the named unit: load / active / sub
+    states, since-timestamp, main PID, command line, task count,
+    memory, CPU, cgroup, and the most-recent journal lines for that
+    unit. Both 'sshd' and 'sshd.service' resolve to the same unit.
+
+    Only the 'status' subcommand is implemented — start / stop /
+    enable / restart are real OS actions the sandbox can't honor.
+
+EXAMPLES
+    systemctl status sshd
+    systemctl status staging-worker.service`,
+
+  dmesg: `NAME
+    dmesg — print the kernel ring buffer
+
+SYNOPSIS
+    dmesg
+
+DESCRIPTION
+    Prints kernel-level events from the ring buffer: boot messages,
+    driver loads, OOM kills, link-state changes, SYN-flood warnings.
+    Each line is prefixed with a bracketed seconds-since-boot
+    timestamp.
+
+EXAMPLES
+    dmesg
+    dmesg | tail -n 20`,
+
   // ─── Learning aids ────────────────────────────────────────────────
   hint: `NAME
     hint — get a nudge on the current level

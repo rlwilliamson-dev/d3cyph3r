@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-05-26
+
+**Forensics expansion.** Nine new system-inspection commands —
+`crontab -l`, `last`, `who`, `w`, `lsof`, `ss`, `journalctl`,
+`systemctl status`, `dmesg` — that unlock Linux-host compromise
+investigation and persistence-detection puzzles. Each is a pure
+reflector over a level-defined schema field; the handlers render
+real-bash output format so the muscle memory transfers.
+
+The new commands open up scenarios v1.0 couldn't tell: finding
+the cron line a former employee installed, tracing a session in
+the wtmp history, matching a network socket to a backdoor
+process, reading the systemd unit logs that corroborate a
+filesystem finding. Level1@linux is seeded with a small but
+realistic system-state snapshot so the commands have something
+to chew on; the journal entries corroborate the file-permission
+bug the level is teaching.
+
+### Added
+
+- **`js/commands/sysinspect.js`** — new command module bundling
+  the nine inspection commands. Each is a pure reflector with no
+  shared state.
+- **`crontab -l [-u USER]`** — print a user's crontab. Reads
+  `level.crontab[username]`. Empty → `no crontab for <user>`.
+- **`last`** — login history in reverse-chronological order.
+  Reads `level.lastLogins`. Handles "still logged in" sessions and
+  reboot pseudo-events.
+- **`who`** — basic listing of currently-active sessions (user /
+  TTY / login / source IP). Reads `level.activeSessions`.
+- **`w`** — extended session listing with uptime header + idle /
+  JCPU / PCPU / WHAT columns. Reads the same `level.activeSessions`
+  array as `who`, plus the optional extended fields.
+- **`lsof [-i] [-p PID]`** — open files table. `-i` filters to
+  network sockets (IPv4 / IPv6); `-p` filters to one process.
+  Reads `level.openFiles`.
+- **`ss [-l] [-t] [-u] [-n] [-a]`** — socket statistics
+  (netstat replacement). Flags compose. Reads `level.sockets`.
+- **`journalctl [-u UNIT] [-n N] [-r]`** — systemd journal
+  query. Filters by unit (sshd OR sshd.service both work), keeps
+  only the most recent N entries, reverses chronological order.
+  Reads `level.journal`.
+- **`systemctl status UNIT`** — service unit status block:
+  load / active / sub states, since-timestamp, main PID, command,
+  task / memory / CPU / cgroup, and the recent journal lines for
+  the unit. Both `sshd` and `sshd.service` resolve to the same
+  unit. Reads `level.systemdUnits[unit]`. Only the `status`
+  subcommand is implemented — start / stop / enable / restart
+  are real OS actions the sandbox can't honor.
+- **`dmesg`** — kernel ring buffer. Reads `level.dmesg` (array of
+  `{ timestamp, message }` entries or plain strings).
+- **Eight schema fields** documented at the top of `levels/linux.js`:
+  `crontab`, `lastLogins`, `activeSessions`, `openFiles`, `sockets`,
+  `journal`, `systemdUnits`, `dmesg`. Per-field shape docs at the
+  top of `js/commands/sysinspect.js`.
+- **Demo data on level1@linux** for every new command. The journal
+  entries are story-aware: they show the staging-worker service
+  hitting permission-denied on the mode-600 file and falling back
+  to the mode-644 backup — the same bug the player resolves via
+  `cat staging-worker.env.bak`. A player who runs `journalctl -u
+  staging-worker` corroborates the finding from the service's
+  perspective.
+- **Manpages** for all 9 new commands. `man crontab` / `man last`
+  / `man who` / `man w` / `man lsof` / `man ss` / `man journalctl`
+  / `man systemctl` / `man dmesg`.
+- **Glossary entries** for `cron`, `systemd`, `journal`, `dmesg`,
+  `lsof`, `ss`. Available via `what-is <term>`.
+- **`help` reference** gains a new SYSTEM INSPECTION section
+  between SYSTEM INFO and LEARNING AIDS.
+- **Playtest coverage**: 480 → 511 checks (+31 new). Lobby
+  smoke tests for graceful empty-state on every new command;
+  level1@linux tests for real-data rendering (crontab reveals the
+  staging-worker healthcheck job; last shows the reboot
+  pseudo-event with kernel version; who/w show the active session;
+  lsof -i shows sshd LISTEN on :22 and postgres on :5432; ss -lt
+  shows LISTEN-state TCP sockets; journalctl -u staging-worker
+  shows the permission-denied fallback; systemctl status renders
+  the active glyph + log block; dmesg shows kernel boot lines).
+
 ## [1.5.0] - 2026-05-26
 
 **Symlinks.** The level filesystem now supports a third node type
@@ -1869,7 +1948,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.2.0...v1.3.0

@@ -22,6 +22,7 @@ import { cloudCommands }     from "./cloud.js";
 import { shellCommands }     from "./shell.js";
 import { textCommands }      from "./text.js";
 import { systemCommands }    from "./system.js";
+import { sysInspectCommands } from "./sysinspect.js";
 import { learningCommands }  from "./learning.js";
 
 export const COMMANDS = {
@@ -35,6 +36,7 @@ export const COMMANDS = {
   ...shellCommands,
   ...textCommands,
   ...systemCommands,
+  ...sysInspectCommands,
   ...learningCommands,
 };
 
