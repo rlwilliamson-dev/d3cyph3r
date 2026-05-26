@@ -1061,6 +1061,167 @@ async function termText(page) {
   await page.waitForTimeout(500);
   check("exit from level1@cloud returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
 
+  // ── v1.3.0 shell-realism features (paths / globs / pipes / vars) ──
+  // These tests run against level0@linux, which has the largest
+  // file set (welcome.md, handoff.md, tasks.md, notes.txt, creds.txt,
+  // lessons-learned.md, plus hidden .bash_history). We exit back to
+  // the lobby at the end for the system-command tests.
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(300);
+
+  // Path resolution
+  await typeAndEnter(page, "pwd");
+  t = await termText(page);
+  check("pwd prints /home/daniel",                                    /\/home\/daniel\s*$/m.test(t));
+
+  await typeAndEnter(page, "cd /home/daniel");
+  await typeAndEnter(page, "pwd");
+  t = await termText(page);
+  check("cd to absolute /home/<user> resolves to home",               /\/home\/daniel\s*$/m.test(t));
+
+  await typeAndEnter(page, "cd ~");
+  await typeAndEnter(page, "pwd");
+  t = await termText(page);
+  check("cd ~ resolves to home root",                                 /\/home\/daniel\s*$/m.test(t));
+
+  await typeAndEnter(page, "cd ../../..");
+  t = await termText(page);
+  check("cd ../../.. from home prints 'already at home directory'",   t.includes("already at home directory"));
+
+  await typeAndEnter(page, "cd /etc");
+  t = await termText(page);
+  check("cd /etc (outside sandbox) prints 'No such file or directory'", t.includes("cd: /etc: No such file or directory"));
+
+  // Wildcards
+  await typeAndEnter(page, "ls *.md");
+  t = await termText(page);
+  check("ls *.md expands glob and lists welcome.md",                  t.includes("welcome.md"));
+  check("ls *.md expands glob and lists handoff.md",                  t.includes("handoff.md"));
+  check("ls *.md expands glob and lists tasks.md",                    t.includes("tasks.md"));
+  check("ls *.md does NOT include creds.txt (no .md extension)",      !/\bcreds\.txt\b/.test(t.split("ls *.md")[1] || ""));
+
+  await typeAndEnter(page, "cat *.txt");
+  t = await termText(page);
+  check("cat *.txt concatenates notes.txt + creds.txt",               t.includes("please-rotate-me") && /Halton/.test(t));
+
+  await typeAndEnter(page, "ls *.nope");
+  t = await termText(page);
+  check("ls *.nope (no match) leaves pattern literal in error",       t.includes("ls: cannot access '*.nope'"));
+
+  // Shell variable expansion
+  await typeAndEnter(page, "echo $USER");
+  t = await termText(page);
+  check("echo $USER expands to 'daniel'",                             /\bdaniel\b/.test(t.split("echo $USER")[1] || ""));
+
+  await typeAndEnter(page, "echo $HOME");
+  t = await termText(page);
+  check("echo $HOME expands to /home/daniel",                         t.split("echo $HOME")[1]?.includes("/home/daniel"));
+
+  await typeAndEnter(page, "echo $HOSTNAME");
+  t = await termText(page);
+  check("echo $HOSTNAME expands to 'linux'",                          /\blinux\b/.test(t.split("echo $HOSTNAME")[1] || ""));
+
+  await typeAndEnter(page, "echo ${USER}@${HOSTNAME}");
+  t = await termText(page);
+  check("echo ${USER}@${HOSTNAME} expands both (bracketed form)",     t.includes("daniel@linux"));
+
+  await typeAndEnter(page, "echo $$");
+  t = await termText(page);
+  check("echo $$ escapes to literal $",                               /\$\s*$/m.test(t.split("echo $$")[1] || ""));
+
+  await typeAndEnter(page, "cat $HOME/welcome.md");
+  t = await termText(page);
+  check("cat $HOME/welcome.md resolves via var + absolute path",      t.includes("welcome") || t.includes("Welcome"));
+
+  // Pipes
+  await typeAndEnter(page, "cat welcome.md | wc -l");
+  t = await termText(page);
+  check("cat | wc -l counts lines",                                   /\d+\s+welcome\.md|^\s*\d+\s*$/m.test(t.split("cat welcome.md | wc -l")[1] || ""));
+
+  await typeAndEnter(page, "cat creds.txt | grep please");
+  t = await termText(page);
+  check("cat | grep filters lines from stdin",                        t.includes("please-rotate-me"));
+
+  await typeAndEnter(page, "ls | wc -l");
+  t = await termText(page);
+  check("ls | wc -l counts visible files (no -a)",                    /\d/.test(t.split("ls | wc -l")[1] || ""));
+
+  await typeAndEnter(page, "echo hello | tr a-z A-Z");
+  t = await termText(page);
+  check("echo hello | tr a-z A-Z prints HELLO",                       t.includes("HELLO"));
+
+  await typeAndEnter(page, "ls | sort -r");
+  t = await termText(page);
+  // Just confirm it didn't error; the actual ordering of `ls` (space-separated)
+  // depends on the implementation. We mainly want no crash.
+  check("ls | sort -r runs without crash",                            !t.includes("command not found") && !t.includes("error"));
+
+  // Multi-stage pipe
+  await typeAndEnter(page, "cat welcome.md | grep -v ^ | wc -l");
+  t = await termText(page);
+  // grep -v isn't implemented; this is intentionally probing that
+  // the pipe stages execute (even if grep -v just matches lines
+  // containing "-v"). The point is the multi-stage pipe doesn't crash.
+  check("Multi-stage pipe runs without crash",                        !t.includes("command not found"));
+
+  // Tab autocomplete: path completion for `cat we<Tab>` → welcome.md
+  await page.locator("#cmd-input").focus();
+  await page.keyboard.type("cat we");
+  await page.waitForTimeout(80);
+  check("Path autocomplete suggests 'lcome.md' for 'cat we'",         (await page.locator("#tab-hint").innerText()) === "lcome.md");
+  await page.locator("#cmd-input").fill("");
+
+  // Exit back to lobby for system-command tests.
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+
+  // System commands (test from the lobby)
+  await typeAndEnter(page, "which ls");
+  t = await termText(page);
+  check("which ls returns /usr/bin/ls",                               t.includes("/usr/bin/ls"));
+
+  await typeAndEnter(page, "which nope-asdf");
+  t = await termText(page);
+  check("which on unknown command prints 'not found'",                t.includes("nope-asdf: command not found"));
+
+  await typeAndEnter(page, "type cat");
+  t = await termText(page);
+  check("type cat prints 'is a shell builtin'",                       t.includes("cat is a shell builtin"));
+
+  await typeAndEnter(page, "id");
+  t = await termText(page);
+  check("id prints uid=1000(guest)",                                  /uid=1000\(guest\)/.test(t));
+  check("id prints groups=",                                          /groups=/.test(t));
+
+  await typeAndEnter(page, "uname");
+  t = await termText(page);
+  check("uname prints 'Linux'",                                       /\bLinux\b/.test(t.split("uname")[1] || ""));
+
+  await typeAndEnter(page, "uname -a");
+  t = await termText(page);
+  check("uname -a prints kernel release",                             t.includes("d3cyph3r"));
+
+  await typeAndEnter(page, "hostname");
+  t = await termText(page);
+  check("hostname prints 'd3cyph3r' at lobby",                        /\bd3cyph3r\b/.test(t.split("hostname")[1] || ""));
+
+  await typeAndEnter(page, "date");
+  t = await termText(page);
+  check("date prints day-of-week + month",                            /\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(t));
+
+  await typeAndEnter(page, "uptime");
+  t = await termText(page);
+  check("uptime prints 'up' + 'load average'",                        t.includes("up") && t.includes("load average"));
+
+  // Text-processing commands (smoke test via stdin)
+  await typeAndEnter(page, "echo hello world | wc -w");
+  t = await termText(page);
+  check("echo | wc -w counts 2 words",                                /\b2\b/.test(t.split("echo hello world | wc -w")[1] || ""));
+
+  await typeAndEnter(page, "echo a:b:c | cut -d : -f 2");
+  t = await termText(page);
+  check("cut -d : -f 2 extracts 'b' from a:b:c",                      /\bb\b/.test(t.split("cut -d : -f 2")[1] || ""));
+
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
 

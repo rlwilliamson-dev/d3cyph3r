@@ -97,6 +97,7 @@ d3cyph3r/
 │   │   ├── lobby.js         Lobby render + first-visit onboarding
 │   │   ├── tracks.js        Track metadata (track key → display name, etc.)
 │   │   ├── progress.js      sessionStorage persistence (visited levels)
+│   │   ├── expand.js        Shell variable expansion ($USER, $HOME, ${VAR}, $$)
 │   │   └── version.js       Canonical VERSION + release checklist comment
 │   ├── commands/            One file per track + a shell-builtins file
 │   │   ├── index.js         Assembles COMMANDS map from per-track modules
@@ -107,9 +108,12 @@ d3cyph3r/
 │   │   ├── forensics.js     file / strings / exif / evtx / sha256sum / …
 │   │   ├── osint.js         sherlock / hibp / wayback / crtsh / github / …
 │   │   ├── cloud.js         aws (s3/iam/ec2/sts) + psql
+│   │   ├── text.js          wc / sort / uniq / cut / tr (pipe-friendly)
+│   │   ├── system.js        which / type / id / uname / date / uptime / hostname
 │   │   └── shell.js         help / clear / report / exit / logout
 │   ├── fs/                  Per-level filesystem helpers
 │   │   ├── flatten.js       Walks the level.fs tree → level.files flat map
+│   │   ├── glob.js          Wildcard expansion (* and ?) for path-aware commands
 │   │   └── resolve.js       cwd-aware path resolution (cd/cat/ls)
 │   └── util/                Pure helpers
 │       ├── hex.js           Hex encode / decode

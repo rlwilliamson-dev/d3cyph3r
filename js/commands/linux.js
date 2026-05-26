@@ -39,19 +39,8 @@
 // at module-init by flatten.js — never write to either at runtime.
 
 import { currentLevelKey, currentPath, setCurrentPath } from "../engine/state.js";
-
-// Walk the fs tree from level root, following path parts. Returns the
-// node (dir or file) at that path, or null if any segment is missing.
-// Used by every cwd-aware handler (cd / ls / cat).
-function getFSNode(level, pathParts) {
-  if (!level.fs) return null;
-  let node = level.fs;
-  for (const part of pathParts) {
-    if (!node.children || !node.children[part]) return null;
-    node = node.children[part];
-  }
-  return node;
-}
+import { resolvePath, getFSNode } from "../fs/resolve.js";
+import { expandGlobs } from "../fs/glob.js";
 
 // In-world identity for the current level. Levels can override the
 // engine's abstract slot name (e.g. `level1` from `level1@linux`) with
@@ -96,103 +85,215 @@ function canReadFile(meta, currentUser, currentGroup) {
 }
 
 export const linuxCommands = {
-  // cd: change directory. `~` or empty arg resets to level root; `..`
-  // pops one segment. Other args resolve relative to currentPath (no
-  // absolute path support — levels are sandboxed to /home/<user>).
+  // cd: change directory. Routes the arg through the path resolver,
+  // which gives us absolute paths (`/home/<user>/foo`), home expansion
+  // (`~`, `~/foo`), chained parent refs (`../../bin`), no-op `.`
+  // segments, and double-slash collapsing for free.
+  //
+  // Special-case: `cd ..` from the home root prints the familiar
+  // "already at home directory" hint instead of silently no-op'ing —
+  // a bash-shaped quality-of-life affordance for new players.
   cd(level, arg) {
-    if (!arg || arg === "~") { setCurrentPath([]); return { text: "", cls: "out" }; }
-    if (arg === "..") {
-      if (currentPath.length === 0) return { text: "cd: already at home directory", cls: "err" };
-      setCurrentPath(currentPath.slice(0, -1));
-      return null;
+    const trimmed = (arg || "").trim();
+
+    // Friendly hint for the up-from-root miscue. Triggers when the
+    // player is AT home and types a path made entirely of `..`
+    // segments (`..`, `../..`, `../../..`, etc.). Without this trap
+    // the resolver would just clamp to [] and the cd would silently
+    // no-op — which is bash's actual behavior, but new players read
+    // the silence as a bug.
+    if (currentPath.length === 0 && /^\.\.(\/\.\.)*\/?$/.test(trimmed)) {
+      return { text: "cd: already at home directory", cls: "err" };
     }
-    const parts = arg.replace(/^\/+/, "").split("/").filter(Boolean);
-    const testPath = [...currentPath, ...parts];
-    const node = getFSNode(level, testPath);
+
+    const target = resolvePath(level, currentPath, trimmed);
+
+    // cd with no arg = cd ~ (home root)
+    if (target.length === 0) { setCurrentPath([]); return null; }
+
+    const node = getFSNode(level, target);
     if (!node)                return { text: `cd: ${arg}: No such file or directory`, cls: "err" };
     if (node.type !== "dir")  return { text: `cd: ${arg}: Not a directory`,            cls: "err" };
-    setCurrentPath(testPath);
+    setCurrentPath(target);
     return null;
   },
 
-  // ls: list directory entries at currentPath. Flag parsing is a simple
-  // contains-check, so `-la` / `-al` / `-l -a` all work. `-a` shows
-  // dotfiles; `-l` switches to long format with mode/owner/group/size.
+  // ls: list directory entries. Targets currentPath when called with
+  // no path arg; otherwise lists the directory(ies) the player asked
+  // for. Flag parsing is a simple contains-check, so `-la` / `-al` /
+  // `-l -a` all work. `-a` shows dotfiles; `-l` switches to long
+  // format with mode/owner/group/size.
+  //
+  // Multi-arg + globs:
+  //   `ls *.txt`            expand glob, list matches (treated as files)
+  //   `ls src docs`         list each dir in turn, with a header line
+  //                         when more than one target was provided
+  //
   // Falls back to enumerating level.files when level.fs is absent
   // (legacy levels — currently none in shipped content).
   ls(level, arg) {
-    const flags      = (arg || "").split(" ").filter(a => a.startsWith("-")).join("");
+    const tokens     = (arg || "").split(/\s+/).filter(Boolean);
+    const flagTokens = tokens.filter(t => t.startsWith("-"));
+    const rawPaths   = tokens.filter(t => !t.startsWith("-"));
+    const flags      = flagTokens.join("");
     const showHidden = flags.includes("a");
     const longFmt    = flags.includes("l");
 
-    const node = getFSNode(level, currentPath);
-    let names;
-    if (node && node.children) {
-      names = Object.keys(node.children).filter(f => showHidden || !f.startsWith("."));
-      names = names.map(f => node.children[f].type === "dir" ? f + "/" : f);
-    } else {
-      names = Object.keys(level.files).filter(f => showHidden || !f.startsWith("."));
+    // Expand globs into concrete path strings. Empty input → list cwd.
+    const pathArgs = rawPaths.length === 0
+      ? [undefined]
+      : expandGlobs(level, currentPath, rawPaths);
+
+    // Build per-target listings. Files get a single-entry "names"
+    // list (the basename); dirs get their children enumerated.
+    const blocks = []; // [{ header?: string, names: string[] }]
+    for (const pa of pathArgs) {
+      const target = resolvePath(level, currentPath, pa);
+      const node   = getFSNode(level, target);
+
+      if (node && node.children) {
+        let n = Object.keys(node.children).filter(f => showHidden || !f.startsWith("."));
+        n = n.map(f => node.children[f].type === "dir" ? f + "/" : f);
+        blocks.push({ header: pa, names: n, node });
+      } else if (node && node.type === "file") {
+        const basename = target[target.length - 1] || pa;
+        blocks.push({ header: null, names: [basename], node });
+      } else if (pa === undefined && level.files) {
+        // No path arg and no fs tree → legacy flat-map fallback.
+        const n = Object.keys(level.files).filter(f => showHidden || !f.startsWith("."));
+        blocks.push({ header: null, names: n, node: null });
+      } else {
+        return { text: `ls: cannot access '${pa}': No such file or directory`, cls: "err" };
+      }
     }
 
-    if (names.length === 0) return { text: "(empty directory)", cls: "dim" };
+    // If multiple dir targets, bash prefixes each with "<dirname>:" and
+    // a blank line between blocks. Single target is unprefixed.
+    const showHeaders = blocks.filter(b => b.header && b.node?.children).length > 1;
 
-    if (longFmt) {
-      const perms = level.permissions || {};
-      const metas = names.map(f => {
-        const key = f.endsWith("/") ? f.slice(0, -1) : f;
-        return perms[key] || defaultMeta(f);
-      });
-      const ownerW = Math.max(...metas.map(m => m.owner.length));
-      const groupW = Math.max(...metas.map(m => m.group.length));
-      const sizeW  = Math.max(...metas.map(m => String(m.size).length));
+    // Helper: render a single block's `names` list (short or long format).
+    const renderBlock = (block) => {
+      const { names, node } = block;
+      if (names.length === 0) return "(empty directory)";
 
-      const lines = ["total " + names.length * 8];
-      names.forEach((f, i) => {
-        const m = metas[i];
-        lines.push(
-          `${m.mode} 1 ${m.owner.padEnd(ownerW)} ${m.group.padEnd(groupW)} ${String(m.size).padStart(sizeW)}  ${f}`
-        );
+      if (longFmt) {
+        const perms = level.permissions || {};
+        const metas = names.map(f => {
+          const key = f.endsWith("/") ? f.slice(0, -1) : f;
+          return perms[key] || defaultMeta(f);
+        });
+        const ownerW = Math.max(...metas.map(m => m.owner.length));
+        const groupW = Math.max(...metas.map(m => m.group.length));
+        const sizeW  = Math.max(...metas.map(m => String(m.size).length));
+
+        const lines = [];
+        if (node && node.children) lines.push("total " + names.length * 8);
+        names.forEach((f, i) => {
+          const m = metas[i];
+          lines.push(
+            `${m.mode} 1 ${m.owner.padEnd(ownerW)} ${m.group.padEnd(groupW)} ${String(m.size).padStart(sizeW)}  ${f}`
+          );
+        });
+        return lines.join("\n");
+      }
+
+      return names.join("  ");
+    };
+
+    // Aggregate output: header per dir (if multiple), block, blank line.
+    if (showHeaders) {
+      const out = [];
+      blocks.forEach((b, i) => {
+        if (i > 0) out.push("");
+        out.push(`${b.header}:`);
+        out.push(renderBlock(b));
       });
-      return { text: lines.join("\n"), cls: "out" };
+      return { text: out.join("\n"), cls: "out" };
     }
 
-    return { text: names.join("  "), cls: "out" };
+    // No-headers case: flatten all blocks' names into a single listing.
+    // This covers both the single-target case (file or dir) AND the
+    // multi-file case (`ls a.txt b.txt c.txt` → all three on one line,
+    // no per-file headers, no "total" line). For long format, we pass
+    // node=null so renderBlock skips the "total <N>" header — bash
+    // omits it when ls is given explicit file args.
+    const allNames = blocks.flatMap(b => b.names);
+    if (allNames.length === 0) return { text: "(empty directory)", cls: "dim" };
+    // If we had a single dir target, reuse its node so the long-format
+    // renderer prints the "total" line.
+    const synthetic = blocks.length === 1
+      ? blocks[0]
+      : { names: allNames, node: null };
+    return { text: renderBlock(synthetic), cls: "out" };
   },
 
-  // cat: print file contents. Two paths:
-  //   1. Modern (level.fs present): resolve via the nested tree, honor
-  //      currentPath, then optionally enforce a per-file permission
-  //      check from level.permissions.
+  // cat: print file contents. Supports multiple positional args and
+  // glob expansion: `cat *.md` concatenates every .md in cwd;
+  // `cat a b` concatenates a and b. Per-file errors (missing,
+  // is-a-directory, permission denied) are interpolated into the
+  // output rather than aborting the whole call, mirroring real cat's
+  // "keep going" behavior with multi-file inputs.
+  //
+  // Two filesystem paths:
+  //   1. Modern (level.fs present): resolvePath → getFSNode lookup,
+  //      then an optional per-basename permission check via
+  //      level.permissions.
   //   2. Legacy (no level.fs): direct lookup in the flat level.files
-  //      map. No cwd resolution, no permission check.
+  //      map. No cwd resolution, no permission check, no glob.
   // The legacy branch is retained for forward-compat with externally-
   // authored levels; all shipped levels populate level.fs.
   cat(level, arg) {
     if (!arg) return { text: "Usage: cat <file>", cls: "err" };
+
+    // Legacy flat-files fallback — single arg only, no glob support.
     if (!level.fs) {
-      // Legacy flat-files fallback — kept for forward-compat with hand-written levels.
       if (!(arg in level.files)) return { text: `cat: ${arg}: No such file or directory`, cls: "err" };
       const c = level.files[arg];
       if (c === null) return { text: `cat: ${arg}: Is a directory`, cls: "err" };
       if (c === "")   return { text: "(empty file)", cls: "dim" };
       return { text: c, cls: "out" };
     }
-    const parts = arg.split("/").filter(Boolean);
-    const node  = getFSNode(level, [...currentPath, ...parts]);
-    if (!node)               return { text: `cat: ${arg}: No such file or directory`, cls: "err" };
-    if (node.type === "dir") return { text: `cat: ${arg}: Is a directory`,            cls: "err" };
 
-    // Permission check — only applies if the level defines a metadata
-    // entry for this basename. Levels without `permissions` (e.g. level0)
-    // behave exactly as before.
-    const basename = parts[parts.length - 1];
-    const meta     = level.permissions?.[basename];
-    if (meta && !canReadFile(meta, getCurrentUser(level), getCurrentGroup(level))) {
-      return { text: `cat: ${arg}: Permission denied`, cls: "err" };
+    // Modern path: tokenize, expand globs, fetch each, concat outputs.
+    const rawArgs = arg.trim().split(/\s+/).filter(Boolean);
+    const expanded = expandGlobs(level, currentPath, rawArgs);
+
+    const user  = getCurrentUser(level);
+    const group = getCurrentGroup(level);
+    const out   = [];
+    let hadError = false;
+    let hadContent = false;
+
+    for (const a of expanded) {
+      const target = resolvePath(level, currentPath, a);
+      const node   = getFSNode(level, target);
+      if (!node)               { out.push(`cat: ${a}: No such file or directory`); hadError = true; continue; }
+      if (node.type === "dir") { out.push(`cat: ${a}: Is a directory`);             hadError = true; continue; }
+
+      const basename = target[target.length - 1];
+      const meta     = level.permissions?.[basename];
+      if (meta && !canReadFile(meta, user, group)) {
+        out.push(`cat: ${a}: Permission denied`);
+        hadError = true;
+        continue;
+      }
+
+      if (node.content) {
+        out.push(node.content);
+        hadContent = true;
+      }
     }
 
-    if (!node.content) return { text: "(empty file)", cls: "dim" };
-    return { text: node.content, cls: "out" };
+    // Single-file empty content → graceful "(empty file)" hint.
+    if (!hadContent && !hadError) return { text: "(empty file)", cls: "dim" };
+    return {
+      text: out.join("\n"),
+      // If everything was an error, use the error color. Mixed
+      // success+error still uses "out" so the body content is
+      // legible — errors are clearly tagged in-text by the
+      // "cat: <name>: ..." prefix.
+      cls: !hadContent && hadError ? "err" : "out",
+    };
   },
 
   // pwd / whoami / echo: trivial reflectors over engine state and
@@ -210,30 +311,63 @@ export const linuxCommands = {
     return { text: arg || "", cls: "out" };
   },
 
-  // grep: case-insensitive substring search across one file or all
-  // files (`*` or omitted target). Operates on the flat level.files
-  // map — does not honor currentPath, so a player can grep cross-
-  // directory from any cwd. Output is one match per line, prefixed
-  // with the file name (mimics GNU grep with multi-file inputs).
-  grep(level, arg) {
-    if (!arg) return { text: "Usage: grep <word> <file|*>", cls: "err" };
-    const parts  = arg.trim().split(/\s+/);
-    const word   = parts[0];
-    const target = parts[1];
+  // grep: case-insensitive substring search.
+  //
+  //   grep word              search ALL files in level (legacy *-behavior)
+  //   grep word file         search one file (cwd-aware via resolvePath)
+  //   grep word *.log        glob-expand and search each match
+  //   <stdin> | grep word    search the piped input (no filename prefix)
+  //
+  // Output is one match per line. With multiple files (or the no-arg
+  // global search), each match is prefixed with the filename so the
+  // player can tell which file the hit came from — bash grep's
+  // standard multi-file format. Stdin mode skips the prefix because
+  // there's no meaningful filename to show.
+  grep(level, arg, stdin) {
+    const parts = (arg || "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return { text: "Usage: grep <word> [file ...]", cls: "err" };
+
+    const word       = parts[0];
+    const rawTargets = parts.slice(1);
+    const lc         = word.toLowerCase();
+
+    // Stdin path: no explicit file targets + piped input present.
+    if (rawTargets.length === 0 && stdin !== undefined) {
+      const matches = String(stdin).split("\n")
+        .filter(l => l.toLowerCase().includes(lc));
+      if (matches.length === 0) return { text: "(no matches)", cls: "dim" };
+      return { text: matches.join("\n"), cls: "warn" };
+    }
 
     const searchFile = (name, content) => {
       if (!content) return [];
       return String(content).split("\n")
-        .filter(l => l.toLowerCase().includes(word.toLowerCase()))
+        .filter(l => l.toLowerCase().includes(lc))
         .map(l => `${name}: ${l}`);
     };
 
+    // Legacy global-search mode: no target or explicit "*" → iterate
+    // level.files (flat map). Keeps cross-directory cheating accessible
+    // for players who haven't learned `cd` yet.
     let results = [];
-    if (!target || target === "*") {
+    if (rawTargets.length === 0 || rawTargets[0] === "*") {
       Object.entries(level.files).forEach(([f, c]) => results.push(...searchFile(f, c)));
     } else {
-      if (!(target in level.files)) return { text: `grep: ${target}: No such file or directory`, cls: "err" };
-      results = searchFile(target, level.files[target]);
+      // Explicit file args — glob-expand, resolve each through cwd.
+      const expanded = expandGlobs(level, currentPath, rawTargets);
+      for (const t of expanded) {
+        const target = resolvePath(level, currentPath, t);
+        const node   = getFSNode(level, target);
+        if (!node) {
+          results.push(`grep: ${t}: No such file or directory`);
+          continue;
+        }
+        if (node.type === "dir") {
+          results.push(`grep: ${t}: Is a directory`);
+          continue;
+        }
+        results.push(...searchFile(t, node.content || ""));
+      }
     }
 
     if (results.length === 0) return { text: "(no matches)", cls: "dim" };
@@ -278,24 +412,36 @@ export const linuxCommands = {
 
   // head / tail share the same -n parsing: `head [-n N] <file>`.
   // If -n is given as a separate token it's parsed; otherwise N defaults
-  // to 10. Works against level.files (flat map) for cross-level
-  // consistency with grep / find.
-  head(level, arg) {
-    if (!arg) return { text: "Usage: head [-n N] <file>", cls: "err" };
-    const { n, file } = parseHeadTailArgs(arg);
+  // to 10. Both commands are pipe-friendly — feed them stdin without a
+  // file arg and they read from the previous pipeline stage:
+  //   cat big.log | head -n 5
+  //   ls -la /var/log | tail
+  // Falls back to the legacy flat-map lookup if level.fs is absent
+  // (forward-compat for hand-written legacy levels).
+  head(level, arg, stdin) {
+    const { n, file } = parseHeadTailArgs(arg || "");
+    if (file === null && stdin !== undefined) {
+      const content = String(stdin);
+      if (!content) return { text: "(empty input)", cls: "dim" };
+      return { text: content.split("\n").slice(0, n).join("\n"), cls: "out" };
+    }
     if (file === null) return { text: "Usage: head [-n N] <file>", cls: "err" };
-    if (!(file in level.files)) return { text: `head: cannot open '${file}' for reading: No such file or directory`, cls: "err" };
-    const content = String(level.files[file] || "");
+    const content = readFileForView(level, file, "head");
+    if (content && typeof content === "object") return content;  // error envelope
     if (!content) return { text: "(empty file)", cls: "dim" };
     return { text: content.split("\n").slice(0, n).join("\n"), cls: "out" };
   },
 
-  tail(level, arg) {
-    if (!arg) return { text: "Usage: tail [-n N] <file>", cls: "err" };
-    const { n, file } = parseHeadTailArgs(arg);
+  tail(level, arg, stdin) {
+    const { n, file } = parseHeadTailArgs(arg || "");
+    if (file === null && stdin !== undefined) {
+      const content = String(stdin);
+      if (!content) return { text: "(empty input)", cls: "dim" };
+      return { text: content.split("\n").slice(-n).join("\n"), cls: "out" };
+    }
     if (file === null) return { text: "Usage: tail [-n N] <file>", cls: "err" };
-    if (!(file in level.files)) return { text: `tail: cannot open '${file}' for reading: No such file or directory`, cls: "err" };
-    const content = String(level.files[file] || "");
+    const content = readFileForView(level, file, "tail");
+    if (content && typeof content === "object") return content;
     if (!content) return { text: "(empty file)", cls: "dim" };
     return { text: content.split("\n").slice(-n).join("\n"), cls: "out" };
   },
@@ -389,11 +535,41 @@ export const linuxCommands = {
   },
 };
 
+// Shared file-reader for head / tail. Returns:
+//   - string content on success
+//   - { text, cls } error envelope on failure (caller passes it through)
+//
+// Cwd-aware via resolvePath. Falls back to the flat `level.files`
+// lookup when level.fs is absent (forward-compat with hand-written
+// legacy levels). The `cmd` arg gates the error string so head's
+// "head: cannot open ..." stays distinct from tail's.
+function readFileForView(level, file, cmd) {
+  if (!level.fs) {
+    if (!(file in level.files)) {
+      return { text: `${cmd}: cannot open '${file}' for reading: No such file or directory`, cls: "err" };
+    }
+    return String(level.files[file] || "");
+  }
+  const target = resolvePath(level, currentPath, file);
+  const node   = getFSNode(level, target);
+  if (!node) {
+    return { text: `${cmd}: cannot open '${file}' for reading: No such file or directory`, cls: "err" };
+  }
+  if (node.type === "dir") {
+    return { text: `${cmd}: error reading '${file}': Is a directory`, cls: "err" };
+  }
+  return String(node.content || "");
+}
+
 // Shared parser for head / tail. Returns { n, file } or { file: null }
-// on malformed args. Accepts: "<file>", "-n <N> <file>", "<file> -n <N>"
-// (the last form is rare but matches GNU coreutils behavior).
+// on malformed/empty args. Accepts: "<file>", "-n <N> <file>",
+// "<file> -n <N>" (the last form is rare but matches GNU coreutils
+// behavior).
+//
+// Empty arg or only-flags → file stays null, so the caller routes to
+// the usage error (or to the stdin branch for pipe-friendly use).
 function parseHeadTailArgs(arg) {
-  const parts = arg.trim().split(/\s+/);
+  const parts = arg.trim().split(/\s+/).filter(Boolean);
   let n = 10;
   let file = null;
   for (let i = 0; i < parts.length; i++) {
