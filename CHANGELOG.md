@@ -74,6 +74,18 @@ the v1.10.0 tier system + cross-track bonus rollout settled.
 Playtest: 654/654 (unchanged from v1.10.0 — purge had no behavioral
 impact, all changes were dead-code paths).
 
+### Changed (CI/deploy hygiene)
+
+- **Prune dev/docs files from the CDN deploy** — Added a step to
+  `.github/workflows/azure-static-web-apps-…yml` that removes the
+  following from the deploy payload before SWA uploads it:
+  `tests/`, `CHANGELOG.md`, `README.md`, `CONTRIBUTING.md`,
+  `walkthroughs/README.md`, `.gitignore`. These were accidentally
+  CDN-served because SWA's `app_location: "/"` ships the entire
+  repo. Expected ~14% reduction in deployed size (~313 KB) without
+  affecting any player-facing surface. `LICENSE` and `SECURITY.md`
+  remain served (legal + security-disclosure conventions).
+
 ## [1.10.0] - 2026-05-26
 
 **Lobby polish + cold-start UX + cross-track bonus finds.** The first
