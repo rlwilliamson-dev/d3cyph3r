@@ -17,7 +17,7 @@
 import { termEl } from "../terminal/dom.js";
 import { print } from "../terminal/output.js";
 import { connectTo } from "../engine/ssh.js";
-import { currentLevelKey } from "../engine/state.js";
+import { currentLevelKey, hostStack, popHost } from "../engine/state.js";
 import { LEVELS } from "../../levels/index.js";
 
 const LOBBY = "guest@d3cyph3r";
@@ -70,6 +70,9 @@ const HELP_SECTIONS = [
     "",
     "  Ctrl-A / Ctrl-E          – jump to start / end of line",
     "  Ctrl-W / Ctrl-U / Ctrl-K – delete word back / clear left / kill right",
+    "  Ctrl-Y                   – yank (paste) from the kill ring",
+    "  Alt-B / Alt-F            – move backward / forward one word",
+    "  Alt-.                    – insert last arg of previous command",
   ]},
   { track: "network", title: "NETWORK RECON", lines: [
     "nmap <host>                – port scan",
@@ -200,6 +203,33 @@ const HELP_INFRA = [
     "git remote -v              – list remotes",
     "git branch                 – list branches",
   ]},
+  { title: "SHELL ENVIRONMENT", lines: [
+    "export NAME=value          – set an environment variable",
+    "export                     – list every exported variable",
+    "export -n NAME             – unexport / remove",
+    "env                        – print NAME=value pairs (one per line)",
+    "unset NAME                 – remove a variable",
+    "set                        – print every variable (same as env)",
+    "FOO=bar                    – inline assignment (no `export` keyword)",
+    "FOO=bar cmd args           – run cmd with FOO temporarily set",
+    "",
+    "  PS1 escapes: \\u user · \\h short host · \\H full host · \\w PWD",
+    "               \\W basename(PWD) · \\$ literal $ · \\\\ literal \\",
+    "  Example: export PS1='\\u@\\h(\\W)\\$ '",
+  ]},
+  { title: "JOB CONTROL", lines: [
+    "cmd &                      – run in background, print [N] PID",
+    "jobs [-l]                  – list known jobs",
+    "fg [%N]                    – replay job N's output (defaults to last)",
+    "bg [%N]                    – mark job N as running in background",
+    "kill [-SIG] %N             – remove job N from the table",
+    "wait [%N]                  – block until jobs complete (no-op here)",
+    "disown [%N]                – silently remove jobs from the table",
+    "",
+    "  Commands in this sandbox run synchronously — backgrounded jobs",
+    "  complete immediately. The table preserves the bash UX without",
+    "  true concurrency.",
+  ]},
 ];
 
 // Learning-aid commands — surface alongside TERMINAL so a player who
@@ -230,15 +260,31 @@ const HELP_TERMINAL = {
   ],
 };
 
-// Mimics an ssh logout — prints the standard close-msg and drops the
-// player back into the lobby. `logout` is an alias for muscle memory.
+// Mimics an ssh logout — prints the standard close-msg and either
+// unwinds a multi-host pivot (back to the previous shell) or, if the
+// pivot stack is empty, drops the player back into the lobby.
+// `logout` is an alias for muscle memory.
 function exitToLobby() {
   if (currentLevelKey === LOBBY) {
     return { text: "Already at the lobby. Use ssh <user@host> to connect to a level.", cls: "dim" };
   }
+
   const from = currentLevelKey;
   print("logout", "dim");
   print(`Connection to ${from} closed.`, "dim");
+
+  // v1.9.0: if we're inside a multi-host pivot, unwind one level
+  // instead of bouncing all the way back to the lobby. The pivot was
+  // pushed by connectTo() when we ssh'ed in; we pop and reconnect
+  // with the unwind flag so connectTo doesn't try to re-manage the
+  // stack (caller's already done it). New shell still gets fresh
+  // env + jobs — those are per-shell, not per-pivot-direction.
+  if (hostStack.length > 0) {
+    const previous = popHost();
+    setTimeout(() => connectTo(previous.levelKey, { unwind: true }), 200);
+    return null;
+  }
+
   setTimeout(() => connectTo(LOBBY), 200);
   return null;
 }

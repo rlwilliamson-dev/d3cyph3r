@@ -39,6 +39,8 @@ if (isMobile()) {
   const { ALL_CMDS }                 = await import("./commands/index.js");
   const { VERSION_DISPLAY }          = await import("./engine/version.js");
   const { themeToggle }              = await import("./terminal/dom.js");
+  const { renderPrompt }             = await import("./terminal/prompt.js");
+  const { loadBonusesFromStorage }   = await import("./engine/state.js");
 
   // Apply saved theme BEFORE the boot sequence renders so the player
   // doesn't see a flash of the wrong palette.
@@ -51,5 +53,10 @@ if (isMobile()) {
   setCommandSet(ALL_CMDS);
   initInput();
   startClock();
+  // Render the prompt label before the kernel-boot sequence starts so
+  // the user doesn't see an empty `:~$` line under the boot messages.
+  renderPrompt();
+  // Restore bonus-finds discovered earlier in this session.
+  loadBonusesFromStorage();
   boot();
 }

@@ -32,6 +32,44 @@
 // Surfaced in the connection banner ("Difficulty: Easy · Est. time:
 // ~10 min") so players can pick where to spend a session.
 //
+// Optional: SHELL ENVIRONMENT (v1.9.0).
+//
+//   level.env_vars : { NAME: "value", ... } — static per-level env
+//     pre-set when the player enters this level. Overrides the live
+//     built-ins (USER / HOME / PWD / …) but sits BELOW player-set
+//     `export FOO=bar` in the lookup chain (so the player's writes
+//     always win). Use for level-specific context like
+//     `AWS_PROFILE: "ci"` or `STAGING_HOST: "10.0.0.5"`.
+//
+// Optional: MULTI-HOST PIVOT (v1.9.0).
+//
+//   level.network : { "<user>@<host>": { ... level-shape ... } }
+//     Pivot hosts the player can ssh into FROM this level. Each entry
+//     looks like a regular level (fs, playerUser, password,
+//     env_vars, files), but is hidden from the lobby's track list.
+//     ssh into one of these keys pushes the current shell onto the
+//     pivot stack; `exit` pops back. Useful for in-engagement
+//     lateral-movement scenarios (e.g. "you found these creds, now
+//     ssh to the bastion they unlock").
+//     Conflict policy: registered first-wins. Keep host-keys unique
+//     across levels; pick a hostname that won't collide with future
+//     real levels (e.g. `dbsvc@halton-db01.internal`).
+//
+// Optional: BONUS FINDS (v1.9.0).
+//
+//   level.bonusFinds : [
+//     { id, name?, hint?, trigger: { command?, argMatches?,
+//                                     outputContains? } },
+//     ...
+//   ]
+//   Discoverable nuggets that don't gate the credential chain.
+//   Trigger fires when the player runs a command whose argv[0]
+//   matches `command` (optional), whose joined args match
+//   `argMatches` (RegExp or substring, optional), AND whose
+//   visible output matches `outputContains` (RegExp or substring,
+//   optional). Each find is awarded once per level per session;
+//   `progress` shows the running count.
+//
 // Optional: NETWORK INSPECTION schema (surfaced by the v1.7.0
 // commands — ip addr / ip route / arp / ping / traceroute /
 // nslookup). All sub-fields are independent; every command degrades
@@ -147,6 +185,31 @@ export const linuxLevels = {
       "There are six files visible to `ls`. One of them is named after a category of secrets a consultant should never leave behind on a laptop.",
       "Try `cat creds.txt` — it's exactly what it says on the tin. The Halton Bank credential is in there in plaintext.",
     ],
+
+    // v1.9.0 SHELL ENVIRONMENT — Daniel's leftover per-user env. The
+    // player inherits these when they ssh into the level (they were
+    // set in Daniel's .bashrc by IT during onboarding and never
+    // touched since). `env` lists them; the player can override
+    // with their own `export`.
+    env_vars: {
+      EDITOR:        "vi",
+      HISTSIZE:      "1000",
+      LESS:          "-FRX",
+    },
+
+    // v1.9.0 BONUS FINDS — small reward for the player who reads
+    // .bash_history (which they often do during a defender audit
+    // even when the smoking gun is already in creds.txt). Doesn't
+    // gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "daniel-history-pattern",
+        name: "Daniel's muscle-memory pattern",
+        hint: "His .bash_history is full of `sudo systemctl status` — he was checking on the staging-worker service constantly. Pattern that bites: the same dev who copies secrets to .bak files is the one logged in everywhere.",
+        trigger: { command: "cat", argMatches: /\.bash_history/, outputContains: "sudo systemctl" },
+      },
+    ],
+
     fs: {
       type: "dir",
       children: {
@@ -610,6 +673,156 @@ Return to the lobby:    ssh guest@d3cyph3r
       { timestamp: "    1.234567", message: "systemd[1]: Started Journal Service" },
       { timestamp: "    3.456789", message: "systemd[1]: Reached target Multi-User System" },
       { timestamp: "10821.234567", message: "TCP: request_sock_TCP: Possible SYN flooding on port 22 (recent 2026-05-22T11:03:24Z)" },
+    ],
+
+    // v1.9.0 SHELL ENVIRONMENT — set a couple of per-level vars so a
+    // curious player running `env` notices what their predecessor set
+    // up. Players can `export FOO=bar` to add their own (writes win
+    // over these on conflict), or `unset` to reveal the built-ins.
+    env_vars: {
+      EDITOR:        "nano",
+      AWS_PROFILE:   "halton-staging",
+      STAGING_HOST:  "halton-bastion.driftwood.internal",
+    },
+
+    // v1.9.0 MULTI-HOST PIVOT — Daniel's backup.sh scp's to
+    // `halton-bastion`. The player can ssh into that downstream box
+    // via the implied key-forward (no password — the bastion
+    // accepts the agent-forwarded credential the way real ops
+    // setups do). The pivot host is pure atmosphere: the player can
+    // verify the backup landed, peek at the postgres log, and exit.
+    // No credential gate; nothing on the bastion advances level1
+    // chains. It's a "this is what lateral movement feels like in
+    // bash" demo for the engine feature.
+    network: {
+      "dbsvc@halton-bastion": {
+        playerUser: "dbsvc",
+        // No `password` field → ssh connects without a password
+        // gate. (Real bash's key-forwarding equivalent.)
+        password: null,
+        difficulty: "Easy",
+        estimatedMinutes: 3,
+        lesson: "You ssh'd into halton-bastion using agent forwarding. This is where Daniel's nightly backup lands. Walk the box; you're not looking for anything specific. `exit` returns you to staging-worker.",
+        objective: "Confirm last night's backup landed at /var/backups/halton-staging/ and then `exit` back to the staging-worker shell.",
+        env_vars: {
+          BACKUP_RETENTION_DAYS: "14",
+        },
+        // The pivot host's fs is rooted at /home/dbsvc — same anchor
+        // every other level uses. Service accounts often keep working
+        // directories under their home (configured via pg_backup_dir
+        // or similar), so the backup tree lives at ~/backups/.
+        fs: {
+          type: "dir",
+          children: {
+            "welcome.md": {
+              type: "file",
+              content:
+`──────────────────────────────────────────────────
+  halton-bastion — backups landing zone
+──────────────────────────────────────────────────
+
+You are: dbsvc (service account, no shell history)
+Hostname: halton-bastion
+Purpose:  receives nightly backups from staging-worker
+          via Daniel's backup.sh (scp + key-forwarded
+          ssh from /home/app_admin/backup.sh)
+
+──── HOW YOU GOT HERE ───────────────────────────
+
+You ssh'd in from staging-worker without typing a
+password. SSH agent-forwarding lets a connection
+authenticate using a key cached on the upstream
+shell — convenient, dangerous, and the reason
+"pivoting" is a thing in red-team training.
+
+──── WHAT'S HERE ────────────────────────────────
+
+  ~/backups/halton-staging/   nightly snapshots
+  ~/logs/postgresql.log       the .log Daniel
+                              mentioned in his
+                              handoff note
+
+(Daniel's setup pinned the postgres backup
+landing-zone to dbsvc's home — convenient for
+the service account, easier to back up than a
+sprawling /var/ tree, and the reason a single
+ssh-in here surfaces everything.)
+
+──── HOW TO GO BACK ─────────────────────────────
+
+Type \`exit\` (or \`logout\`). You'll be returned
+to the staging-worker shell as app_admin. Your
+env, jobs, and history on staging-worker are
+preserved across the pivot; this box has its own.
+`,
+            },
+            "backups": {
+              type: "dir",
+              children: {
+                "halton-staging": {
+                  type: "dir",
+                  children: {
+                    "halton-staging-2026-05-26.sql.gz": {
+                      type: "file",
+                      content: "(gzipped PostgreSQL dump; 4.2 MB. Use gunzip + grep to inspect.)",
+                    },
+                    "halton-staging-2026-05-25.sql.gz": {
+                      type: "file",
+                      content: "(gzipped PostgreSQL dump; 4.1 MB.)",
+                    },
+                    "halton-staging-2026-05-24.sql.gz": {
+                      type: "file",
+                      content: "(gzipped PostgreSQL dump; 4.1 MB.)",
+                    },
+                  },
+                },
+              },
+            },
+            "logs": {
+              type: "dir",
+              children: {
+                "postgresql.log": {
+                  type: "file",
+                  content:
+`2026-05-26 02:00:03 UTC LOG:  connection received: host=staging-worker.halton-staging port=51234
+2026-05-26 02:00:03 UTC LOG:  connection authorized: user=halton_staging database=halton_staging
+2026-05-26 02:00:03 UTC LOG:  pg_dump initiated for halton_staging
+2026-05-26 02:00:12 UTC LOG:  pg_dump completed (9.234s, 4.2 MB)
+2026-05-26 02:00:12 UTC LOG:  disconnection: session time: 0:00:09.243
+2026-05-25 02:00:02 UTC LOG:  connection received: host=staging-worker.halton-staging port=49882
+2026-05-25 02:00:02 UTC LOG:  connection authorized: user=halton_staging database=halton_staging
+2026-05-25 02:00:02 UTC LOG:  pg_dump initiated for halton_staging
+2026-05-25 02:00:11 UTC LOG:  pg_dump completed (8.997s, 4.1 MB)
+`,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    // v1.9.0 BONUS FINDS — optional discoverable nuggets. Won't gate
+    // the credential chain; reward the player for exploring beyond
+    // the smoking-gun file. Two finds here:
+    //   1. Reading backup.sh — Daniel's hand-rolled job — reveals the
+    //      override.conf path he sources for credentials.
+    //   2. Running `journalctl -u staging-worker` and seeing the
+    //      ERROR/WARN sequence proves the system is logging the bug
+    //      to its own journal (a real defender's audit trail).
+    bonusFinds: [
+      {
+        id:   "backup-script",
+        name: "Daniel's backup script",
+        hint: "He's pulling credentials from a systemd unit override.",
+        trigger: { command: "cat", argMatches: /backup\.sh/, outputContains: "override.conf" },
+      },
+      {
+        id:   "self-logged-bug",
+        name: "Self-logged config-fallback bug",
+        hint: "The staging-worker journal records its own permission denial — a defender would have seen this on day one.",
+        trigger: { command: "journalctl", outputContains: "falling back to" },
+      },
     ],
 
     fs: {

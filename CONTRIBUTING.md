@@ -100,24 +100,53 @@ dispatcher called per Enter press. Order:
 
 1. Echo the line.
 2. Password mode (route to `handlePasswordInput`).
-3. Shell-variable expansion (`js/engine/expand.js` — `$USER`,
-   `${VAR}`, `$$` escape).
-4. `ssh` special-case (can't appear in a pipe; route to `handleSSH`).
-5. Split on top-level `|` and run each segment left-to-right,
-   threading stdout into the next segment's stdin.
-6. `COMMANDS[cmd]` lookup per segment.
+3. `ssh` special-case (can't appear in a pipe; route to `handleSSH`).
+4. Parse into a statement chain (`parseLine` — splits on `&&`/`||`/
+   `;`/`&` at top level; each statement is a pipeline of `|`-
+   separated segments; each segment is a token list).
+5. Run the chain honoring AND/OR/ALWAYS semantics + per-statement
+   background flag (`&` → output captured to job table).
+6. Per-segment: brace expansion → variable expansion (`$VAR`,
+   `${VAR}`, `$?`, `$(cmd)`) → quote stripping → leading
+   `NAME=value` assignments applied → `COMMANDS[cmd]` lookup.
 7. "command not found."
 
 Each command handler has the signature
-`(level, arg, stdin?) → { text, cls } | null`. The `stdin`
+`(level, arg, stdin?, argv?) → { text, cls } | null`. The `stdin`
 parameter is `undefined` for standalone invocations and a string
-when the command sits downstream of a pipe. Pipe-friendly commands
-(`grep`, `head`, `tail`, `wc`, `sort`, `uniq`, `cut`, `tr`, `awk`)
-read from `stdin` when no file arg is given; non-pipe-friendly
-commands ignore it cleanly. Returning `null` suppresses output;
-otherwise the dispatcher prints with the given CSS class
-(`out`, `err`, `dim`, `warn`, `success`, `info`, `cmd`, `ascii`,
-`banner`).
+when the command sits downstream of a pipe; the `argv?` parameter
+is the post-expansion token array (useful when the command needs to
+distinguish flags from values without re-parsing `arg`). Pipe-
+friendly commands (`grep`, `head`, `tail`, `wc`, `sort`, `uniq`,
+`cut`, `tr`, `awk`) read from `stdin` when no file arg is given;
+non-pipe-friendly commands ignore it cleanly. Returning `null`
+suppresses output; otherwise the dispatcher prints with the given
+CSS class (`out`, `err`, `dim`, `warn`, `success`, `info`, `cmd`,
+`ascii`, `banner`).
+
+**Shell environment (v1.9.0).** The engine maintains a writable
+env map in `js/engine/state.js#processEnv`. Player-set values
+(`export FOO=bar`, `FOO=bar` assignment, `unset FOO`) live there
+and override the built-in `USER` / `HOME` / `PWD` / `HOSTNAME` /
+`PATH` / `SHELL` / `LANG` / `PS1` / `PS2`. The map is cleared on
+every level switch — a fresh shell starts clean. Levels can also
+declare a static `env_vars` map; its values sit between the
+built-ins and the writable layer.
+
+**Multi-host pivot (v1.9.0).** A level can declare `network: {
+"<user>@<host>": { ... }}` — pivot hosts the player can `ssh` into
+from inside the level. They're registered as hidden top-level
+LEVELS entries (`pivot: true`) at module init. ssh'ing in pushes
+the current shell onto `hostStack`; `exit` pops back. The lobby's
+track list never shows pivot hosts.
+
+**Job control (v1.9.0).** Trailing `&` flags a statement as
+background. The dispatcher captures its stdout into a `jobs`
+table entry and prints `[N] PID`. `fg %N` replays the captured
+output; `jobs`/`bg`/`kill`/`wait`/`disown` operate on the table.
+Commands run synchronously in the sandbox, so backgrounded jobs
+complete immediately — the UX matches bash without true
+concurrency.
 
 **Boot order matters.** `js/main.js` short-circuits on mobile
 *before* importing engine modules (dynamic `await import()`), so the

@@ -6,6 +6,10 @@
 
 const { chromium } = require("playwright");
 
+async function promptText(page) {
+  return await page.locator("#prompt-label").innerText();
+}
+
 async function typeAndEnter(page, text) {
   await page.locator("#cmd-input").focus();
   await page.keyboard.type(text);
@@ -300,8 +304,8 @@ async function termText(page) {
   check("Objective references Daniel", t.includes("Daniel"));
   check("Lesson mentions Driftwood",   t.includes("Driftwood"));
   check("Lesson mentions Halton Bank", t.includes("Halton"));
-  check("Prompt host updated to linux", (await page.locator("#prompt-host").innerText()) === "linux");
-  check("Prompt user shows in-world identity 'daniel'", (await page.locator("#prompt-user").innerText()) === "daniel");
+  check("Prompt host updated to linux", (await promptText(page)).includes("@linux:"));
+  check("Prompt user shows in-world identity 'daniel'", (await promptText(page)).startsWith("daniel@"));
 
   await typeAndEnter(page, "ls");
   t = await termText(page);
@@ -384,7 +388,7 @@ async function termText(page) {
   const midTransition = await termText(page);
   check("exit prints 'Connection ... closed'", midTransition.includes("Connection to level0@linux closed"));
   await page.waitForTimeout(500);
-  check("exit returns prompt host to d3cyph3r", (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit returns prompt host to d3cyph3r", (await promptText(page)).includes("@d3cyph3r:"));
   t = await termText(page);
   check("exit re-renders lobby engagements",  t.includes("AVAILABLE ENGAGEMENTS"));
 
@@ -396,7 +400,7 @@ async function termText(page) {
   await page.waitForTimeout(300);
   await typeAndEnter(page, "logout");
   await page.waitForTimeout(500);
-  check("logout alias also returns to lobby", (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("logout alias also returns to lobby", (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 1 — Halton jumphost (permissions puzzle) ──────────────
   // Wrong password first to confirm the gate works.
@@ -413,8 +417,8 @@ async function termText(page) {
   await page.waitForTimeout(600);
   t = await termText(page);
   check("Correct password connects to level1@linux",          t.includes("Connected: level1@linux"));
-  check("Prompt host updated to linux on level1",              (await page.locator("#prompt-host").innerText()) === "linux");
-  check("Prompt user shows in-world identity app_admin",       (await page.locator("#prompt-user").innerText()) === "app_admin");
+  check("Prompt host updated to linux on level1",              (await promptText(page)).includes("@linux:"));
+  check("Prompt user shows in-world identity app_admin",       (await promptText(page)).startsWith("app_admin@"));
   check("Objective references the production credential",      t.includes("production"));
 
   await typeAndEnter(page, "ls");
@@ -492,9 +496,16 @@ async function termText(page) {
   check("ss -lt shows sshd process info",                          t.includes("sshd"));
 
   await typeAndEnter(page, "journalctl -u staging-worker");
+  await page.waitForTimeout(150);  // wait for the bonus-find banner to render
   t = await termText(page);
   check("journalctl -u staging-worker shows the fallback log line", t.includes("falling back to /home/app_admin/staging-worker.env.bak"));
   check("journalctl -u staging-worker shows the permission-denied error", t.includes("permission denied reading /home/app_admin/staging-worker.env"));
+  // v1.9.0: this call also triggers the level1@linux bonus-find
+  // "self-logged-bug" (trigger: journalctl + output contains
+  // "falling back to"). First-call-only — subsequent journalctl
+  // invocations in the same session won't re-print the banner
+  // because the find is already marked as discovered.
+  check("v1.9.0 bonus-find fires on journalctl (self-logged-bug)",   t.includes("Bonus find unlocked: Self-logged config-fallback bug"));
 
   await typeAndEnter(page, "systemctl status staging-worker.service");
   t = await termText(page);
@@ -513,7 +524,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level1 returns to lobby", (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level1 returns to lobby", (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 0 — Atlas Health perimeter check (network track) ──────
   // No password (level0 of each track is the entry point).
@@ -521,8 +532,8 @@ async function termText(page) {
   await page.waitForTimeout(300);
   t = await termText(page);
   check("Connected to level0@network",                                t.includes("Connected: level0@network"));
-  check("Prompt host updated to 'network'",                           (await page.locator("#prompt-host").innerText()) === "network");
-  check("Prompt user shows in-world identity 'secops'",               (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Prompt host updated to 'network'",                           (await promptText(page)).includes("@network:"));
+  check("Prompt user shows in-world identity 'secops'",               (await promptText(page)).startsWith("secops@"));
   check("Objective references Atlas Health",                          t.includes("Atlas Health"));
   check("Lesson mentions Marcus (new recurring character)",           t.includes("Marcus"));
 
@@ -551,7 +562,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level0@network returns to lobby",                  (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level0@network returns to lobby",                  (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 1 — Atlas internal DNS (zone-transfer puzzle) ─────────
   // Wrong password first to confirm the gate works.
@@ -568,8 +579,8 @@ async function termText(page) {
   await page.waitForTimeout(600);
   t = await termText(page);
   check("Correct password connects to level1@network",                t.includes("Connected: level1@network"));
-  check("Prompt host stays 'network' on level1",                      (await page.locator("#prompt-host").innerText()) === "network");
-  check("Prompt user shows in-world identity 'dbadmin'",              (await page.locator("#prompt-user").innerText()) === "dbadmin");
+  check("Prompt host stays 'network' on level1",                      (await promptText(page)).includes("@network:"));
+  check("Prompt user shows in-world identity 'dbadmin'",              (await promptText(page)).startsWith("dbadmin@"));
   check("Objective references blast-radius / Marcus's team",          t.includes("blast radius") || t.includes("Marcus"));
 
   await typeAndEnter(page, "ls");
@@ -645,7 +656,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level1@network returns to lobby",                  (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level1@network returns to lobby",                  (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 0 — Theo's Safer API Key (crypto track) ───────────────
   // No password (level0 of each track is the entry point).
@@ -653,8 +664,8 @@ async function termText(page) {
   await page.waitForTimeout(300);
   t = await termText(page);
   check("Connected to level0@crypto",                                 t.includes("Connected: level0@crypto"));
-  check("Prompt host updated to 'crypto'",                            (await page.locator("#prompt-host").innerText()) === "crypto");
-  check("Prompt user shows in-world identity 'secops'",               (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Prompt host updated to 'crypto'",                            (await promptText(page)).includes("@crypto:"));
+  check("Prompt user shows in-world identity 'secops'",               (await promptText(page)).startsWith("secops@"));
   check("Objective references Vesta Retail",                          t.includes("Vesta Retail"));
   check("Lesson mentions Theo (new recurring character)",             t.includes("Theo"));
 
@@ -684,7 +695,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level0@crypto returns to lobby",                   (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level0@crypto returns to lobby",                   (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 1 — Theo's Signature That Wasn't (crypto track) ────────
   // Wrong password first to confirm the gate works.
@@ -701,8 +712,8 @@ async function termText(page) {
   await page.waitForTimeout(600);
   t = await termText(page);
   check("Correct password connects to level1@crypto",                 t.includes("Connected: level1@crypto"));
-  check("Prompt host stays 'crypto' on level1",                       (await page.locator("#prompt-host").innerText()) === "crypto");
-  check("Prompt user shows in-world identity 'vesta-deploy'",         (await page.locator("#prompt-user").innerText()) === "vesta-deploy");
+  check("Prompt host stays 'crypto' on level1",                       (await promptText(page)).includes("@crypto:"));
+  check("Prompt user shows in-world identity 'vesta-deploy'",         (await promptText(page)).startsWith("vesta-deploy@"));
   check("Objective references Vesta admin API JWT auth",              t.includes("JWT") || t.includes("token"));
 
   await typeAndEnter(page, "ls");
@@ -737,7 +748,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level1@crypto returns to lobby",                   (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level1@crypto returns to lobby",                   (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 0 — Meridian's Forgotten Backup Folder (web track) ────
   // No password (level0 of each track is the entry point).
@@ -745,8 +756,8 @@ async function termText(page) {
   await page.waitForTimeout(300);
   t = await termText(page);
   check("Connected to level0@web",                                    t.includes("Connected: level0@web"));
-  check("Prompt host updated to 'web'",                               (await page.locator("#prompt-host").innerText()) === "web");
-  check("Prompt user shows in-world identity 'secops'",               (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Prompt host updated to 'web'",                               (await promptText(page)).includes("@web:"));
+  check("Prompt user shows in-world identity 'secops'",               (await promptText(page)).startsWith("secops@"));
   check("Objective references Meridian State University",             t.includes("Meridian State University"));
   check("Lesson mentions Carlos (new recurring character)",           t.includes("Carlos"));
 
@@ -788,7 +799,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level0@web returns to lobby",                      (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level0@web returns to lobby",                      (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 1 — Carlos's Login Wall (web track, IDOR) ──────────────
   // Wrong password first to confirm the gate works.
@@ -805,8 +816,8 @@ async function termText(page) {
   await page.waitForTimeout(600);
   t = await termText(page);
   check("Correct password connects to level1@web",                    t.includes("Connected: level1@web"));
-  check("Prompt host stays 'web' on level1",                          (await page.locator("#prompt-host").innerText()) === "web");
-  check("Prompt user shows in-world identity 'webapp_admin'",         (await page.locator("#prompt-user").innerText()) === "webapp_admin");
+  check("Prompt host stays 'web' on level1",                          (await promptText(page)).includes("@web:"));
+  check("Prompt user shows in-world identity 'webapp_admin'",         (await promptText(page)).startsWith("webapp_admin@"));
   check("Objective references the transcript audit",                  /transcript/i.test(t));
 
   await typeAndEnter(page, "ls");
@@ -854,7 +865,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level1@web returns to lobby",                      (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level1@web returns to lobby",                      (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 0 — Reed's Soccer Alibi (forensics track) ─────────────
   // No password (level0 of each track is the entry point).
@@ -862,8 +873,8 @@ async function termText(page) {
   await page.waitForTimeout(300);
   t = await termText(page);
   check("Connected to level0@forensics",                              t.includes("Connected: level0@forensics"));
-  check("Prompt host updated to 'forensics'",                         (await page.locator("#prompt-host").innerText()) === "forensics");
-  check("Prompt user shows in-world identity 'secops'",               (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Prompt host updated to 'forensics'",                         (await promptText(page)).includes("@forensics:"));
+  check("Prompt user shows in-world identity 'secops'",               (await promptText(page)).startsWith("secops@"));
   check("Objective references Polaris Defense Systems",               t.includes("Polaris"));
   check("Lesson mentions Dana (new recurring character)",             t.includes("Dana"));
 
@@ -900,7 +911,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level0@forensics returns to lobby",                (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level0@forensics returns to lobby",                (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 1 — What the Logs Saw (forensics track, evtx) ──────────
   // Wrong password first to confirm the gate works.
@@ -917,8 +928,8 @@ async function termText(page) {
   await page.waitForTimeout(600);
   t = await termText(page);
   check("Correct password connects to level1@forensics",              t.includes("Connected: level1@forensics"));
-  check("Prompt host stays 'forensics' on level1",                    (await page.locator("#prompt-host").innerText()) === "forensics");
-  check("Prompt user stays 'secops' on level1@forensics",             (await page.locator("#prompt-user").innerText()) === "secops");
+  check("Prompt host stays 'forensics' on level1",                    (await promptText(page)).includes("@forensics:"));
+  check("Prompt user stays 'secops' on level1@forensics",             (await promptText(page)).startsWith("secops@"));
   check("Objective references event-log triage",                      /event log/i.test(t) || /Security event/i.test(t));
 
   await typeAndEnter(page, "ls");
@@ -988,7 +999,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level1@forensics returns to lobby",                (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level1@forensics returns to lobby",                (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 0 — Veridian's Open Letter (OSINT track) ──────────────
   // No password (level0 of each track is the entry point).
@@ -996,8 +1007,8 @@ async function termText(page) {
   await page.waitForTimeout(300);
   t = await termText(page);
   check("Connected to level0@osint",                                  t.includes("Connected: level0@osint"));
-  check("Prompt host updated to 'osint'",                             (await page.locator("#prompt-host").innerText()) === "osint");
-  check("Prompt user shows in-world identity 'intel'",                (await page.locator("#prompt-user").innerText()) === "intel");
+  check("Prompt host updated to 'osint'",                             (await promptText(page)).includes("@osint:"));
+  check("Prompt user shows in-world identity 'intel'",                (await promptText(page)).startsWith("intel@"));
   check("Objective references Veridian (client)",                     t.includes("Veridian"));
   check("Objective references Dr. Aaron Hines (subject)",             t.includes("Aaron Hines"));
   check("Lesson mentions Marisol (new recurring character)",          t.includes("Marisol"));
@@ -1044,7 +1055,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level0@osint returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level0@osint returns to lobby",                    (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 1 — Aaron's Weekend Project (osint, github OSINT) ──────
   // Wrong password first to confirm the gate works.
@@ -1061,8 +1072,8 @@ async function termText(page) {
   await page.waitForTimeout(600);
   t = await termText(page);
   check("Correct password connects to level1@osint",                  t.includes("Connected: level1@osint"));
-  check("Prompt host stays 'osint' on level1",                        (await page.locator("#prompt-host").innerText()) === "osint");
-  check("Prompt user stays 'intel' on level1@osint",                  (await page.locator("#prompt-user").innerText()) === "intel");
+  check("Prompt host stays 'osint' on level1",                        (await promptText(page)).includes("@osint:"));
+  check("Prompt user stays 'intel' on level1@osint",                  (await promptText(page)).startsWith("intel@"));
   check("Objective references the developer footprint task",          /developer footprint/i.test(t) || /github/i.test(t));
 
   await typeAndEnter(page, "ls");
@@ -1147,7 +1158,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level1@osint returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level1@osint returns to lobby",                    (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 0 — Coverline's Twelfth Bucket (cloud track) ──────────
   // No password (level0 of each track is the entry point).
@@ -1155,8 +1166,8 @@ async function termText(page) {
   await page.waitForTimeout(300);
   t = await termText(page);
   check("Connected to level0@cloud",                                  t.includes("Connected: level0@cloud"));
-  check("Prompt host updated to 'cloud'",                             (await page.locator("#prompt-host").innerText()) === "cloud");
-  check("Prompt user shows in-world identity 'cloudsec'",             (await page.locator("#prompt-user").innerText()) === "cloudsec");
+  check("Prompt host updated to 'cloud'",                             (await promptText(page)).includes("@cloud:"));
+  check("Prompt user shows in-world identity 'cloudsec'",             (await promptText(page)).startsWith("cloudsec@"));
   check("Objective references Coverline (client)",                    t.includes("Coverline"));
   check("Lesson mentions Jordan (new recurring character)",           t.includes("Jordan"));
   check("Lesson mentions SOC 2 (compliance regime)",                  t.includes("SOC 2"));
@@ -1246,7 +1257,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level0@cloud returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level0@cloud returns to lobby",                    (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── Level 1 — The Migration Table Nobody Dropped (cloud, psql) ───
   // Wrong password first to confirm the gate works.
@@ -1263,8 +1274,8 @@ async function termText(page) {
   await page.waitForTimeout(600);
   t = await termText(page);
   check("Correct password connects to level1@cloud",                  t.includes("Connected: level1@cloud"));
-  check("Prompt host stays 'cloud' on level1",                        (await page.locator("#prompt-host").innerText()) === "cloud");
-  check("Prompt user stays 'cloudsec' on level1@cloud",               (await page.locator("#prompt-user").innerText()) === "cloudsec");
+  check("Prompt host stays 'cloud' on level1",                        (await promptText(page)).includes("@cloud:"));
+  check("Prompt user stays 'cloudsec' on level1@cloud",               (await promptText(page)).startsWith("cloudsec@"));
   check("Objective references DB enumeration",                        /enumerate|database|psql/i.test(t));
 
   await typeAndEnter(page, "ls");
@@ -1359,7 +1370,7 @@ async function termText(page) {
 
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(500);
-  check("exit from level1@cloud returns to lobby",                    (await page.locator("#prompt-host").innerText()) === "d3cyph3r");
+  check("exit from level1@cloud returns to lobby",                    (await promptText(page)).includes("@d3cyph3r:"));
 
   // ── v1.3.0 shell-realism features (paths / globs / pipes / vars) ──
   // These tests run against level0@linux, which has the largest
@@ -1619,8 +1630,292 @@ async function termText(page) {
   t = await termText(page);
   check("hint list reports 3 hints available",                        /3 hints available/.test(t));
 
+  // ──── v1.9.0: shell-environment + job control + extended flags
+  //
+  // env_vars + bonusFinds are seeded on level1@linux. Hop there to
+  // exercise them, then come back to lobby and over to level1@network
+  // for dig flag tests.
+
   await typeAndEnter(page, "exit");
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(400);
+
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById("terminal").innerHTML = ""; });
+
+  await typeAndEnter(page, "env");
+  t = await termText(page);
+  check("env lists EDITOR seeded from level.env_vars",                t.includes("EDITOR=nano"));
+  check("env lists AWS_PROFILE seeded from level.env_vars",           t.includes("AWS_PROFILE=halton-staging"));
+  check("env still shows built-in USER",                              /USER=app_admin/.test(t));
+
+  await typeAndEnter(page, "export FOO=bar");
+  await typeAndEnter(page, "echo $FOO");
+  t = await termText(page);
+  check("export FOO=bar + echo $FOO prints 'bar'",                    /\bbar\b/.test(t.split("echo $FOO")[1] || ""));
+
+  await typeAndEnter(page, "unset FOO");
+  await typeAndEnter(page, "echo before-${FOO}after");
+  t = await termText(page);
+  check("unset FOO removes the value (expands to empty)",             /before-after/.test(t));
+
+  // POSIX assignment: bare FOO=bar
+  await typeAndEnter(page, "X=hello");
+  await typeAndEnter(page, "echo $X");
+  t = await termText(page);
+  check("POSIX-style X=hello assignment + echo expands",              /hello/.test(t.split("echo $X")[1] || ""));
+
+  // PS1 customization: short prompt, then restore.
+  await typeAndEnter(page, "export PS1='> '");
+  const customPrompt = await promptText(page);
+  check("custom PS1 renders without user@host: layout",               !customPrompt.includes("@linux:") && customPrompt.length > 0);
+  await typeAndEnter(page, "unset PS1");
+  const defaultPrompt = await promptText(page);
+  check("unset PS1 restores the default user@host: prompt",           /@linux:/.test(defaultPrompt));
+
+  // Job control: backgrounded echo, jobs lists it, fg replays it.
+  await typeAndEnter(page, "echo hello-bg &");
+  t = await termText(page);
+  check("backgrounded cmd prints job header [N] NNNNN",               /\[\d+\]\s+\d+/.test(t.split("echo hello-bg &")[1] || ""));
+  await typeAndEnter(page, "jobs");
+  t = await termText(page);
+  check("jobs lists the backgrounded entry",                          /Done.*echo hello-bg/.test(t));
+  await typeAndEnter(page, "fg");
+  t = await termText(page);
+  check("fg replays captured output (prints hello-bg)",               /hello-bg/.test(t.split("fg")[1] || ""));
+  await typeAndEnter(page, "jobs");
+  t = await termText(page);
+  // After fg removes the job, jobs prints nothing — confirm by
+  // looking at the LATEST output block (split after `jobs` command).
+  const afterFg = t.split("jobs").slice(-1)[0] || "";
+  check("jobs after fg is empty",                                     !/Done|Running/.test(afterFg));
+
+  // Bonus-find: cat backup.sh should fire the "backup-script" find.
+  await typeAndEnter(page, "cat backup.sh");
+  t = await termText(page);
+  check("bonus-find fires on cat backup.sh",                          /Bonus find unlocked: Daniel's backup script/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+
+  // dig extended flags — level1@network has the AXFR-rich dnsData
+  // for atlas.internal (single-label TLD; AXFR contains the MX
+  // record). +short answer-only output works on any populated host.
+  await typeAndEnter(page, "ssh level1@network");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById("terminal").innerHTML = ""; });
+
+  await typeAndEnter(page, "dig +short atlas.internal AXFR");
+  t = await termText(page);
+  check("dig +short (AXFR) returns answer-only output",               !/ANSWER SECTION/.test(t.split("dig +short")[1] || ""));
+
+  await typeAndEnter(page, "dig @8.8.8.8 atlas.internal AXFR");
+  t = await termText(page);
+  // The AXFR path doesn't use the SERVER footer format, so we test
+  // that the request flag at least doesn't break the lookup.
+  check("dig @server still returns AXFR records",                     /SOA/.test(t.split("dig @8.8.8.8")[1] || ""));
+
+  // dig +trace flavor — synthesizes the root → TLD → authoritative
+  // walk. We assert the trace header appears.
+  await typeAndEnter(page, "dig atlas.internal +trace");
+  t = await termText(page);
+  check("dig +trace prints root-servers + a-gtld-servers walk",       /root-servers|gtld-servers/.test(t.split("dig atlas.internal +trace")[1] || ""));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+
+  // ──── v1.9.0: deeper command coverage (pre-merge audit)
+  // Hop into level1@linux for the multi-host pivot demo + the
+  // remaining shell-environment / job-control / readline shortcuts
+  // that didn't get covered in the first pass.
+
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById("terminal").innerHTML = ""; });
+
+  // `set` (env alias) — print mode.
+  await typeAndEnter(page, "set");
+  t = await termText(page);
+  check("set prints env (alias) — shows USER=app_admin",              /USER=app_admin/.test(t.split("\nset\n").slice(-1)[0] || t));
+
+  // export -p / -n forms.
+  await typeAndEnter(page, "export TEMP_VAR=tmp");
+  await typeAndEnter(page, "export -n TEMP_VAR");
+  await typeAndEnter(page, "echo after-unexport:${TEMP_VAR}done");
+  t = await termText(page);
+  check("export -n acts as unset",                                    /after-unexport:done/.test(t));
+
+  // Job control: bg %1 + kill %1 + jobs -l + wait.
+  await typeAndEnter(page, "echo j1 &");
+  await typeAndEnter(page, "echo j2 &");
+  await typeAndEnter(page, "jobs -l");
+  t = await termText(page);
+  check("jobs -l prints fake PID column",                             /\[\d+\]\s+[+\- ]?\s*\d{5}/.test(t.split("jobs -l")[1] || ""));
+
+  await typeAndEnter(page, "bg %1");
+  t = await termText(page);
+  check("bg %1 prints '[N]+ <cmd> &' echo",                           /\[\d+\]\+ echo j1 &/.test(t.split("bg %1")[1] || ""));
+
+  await typeAndEnter(page, "kill %2");
+  await typeAndEnter(page, "jobs");
+  t = await termText(page);
+  const afterKill = t.split("jobs").slice(-1)[0] || "";
+  check("kill %2 removes job 2; only job 1 remains",                  /echo j1/.test(afterKill) && !/echo j2/.test(afterKill));
+
+  await typeAndEnter(page, "disown");
+  await typeAndEnter(page, "jobs");
+  t = await termText(page);
+  check("disown (no args) clears the job table",                      !/echo j[12]/.test(t.split("disown").slice(-1)[0] || ""));
+
+  // wait is a no-op (everything synchronous).
+  await typeAndEnter(page, "wait");
+  // No assertion beyond "doesn't throw" — covered by the No-page-
+  // errors check at the bottom.
+
+  // kill with unknown PID prints "No such process".
+  await typeAndEnter(page, "kill 99999");
+  t = await termText(page);
+  check("kill <pid> on unknown PID prints 'No such process'",         /No such process/.test(t.split("kill 99999")[1] || ""));
+
+  // (v1.9.0 bonus-find for journalctl asserted earlier in the
+  // sysinspect section — first-call only; the find is single-shot
+  // per session, so a duplicate journalctl here wouldn't reprint
+  // the banner.)
+
+  // Multi-host pivot demo: ssh into Daniel's halton-bastion. The
+  // pivot host has no password — implied agent forwarding. We
+  // verify the prompt changes, ls shows the backups dir, and exit
+  // unwinds back to app_admin@linux.
+  await typeAndEnter(page, "ssh dbsvc@halton-bastion");
+  await page.waitForTimeout(300);
+  const pivotPrompt = await promptText(page);
+  check("ssh into pivot host shows dbsvc@halton-bastion: prompt",     /dbsvc@halton-bastion/.test(pivotPrompt));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  check("pivot host's ls shows backups/ + logs/ + welcome.md",        /backups/.test(t) && /logs/.test(t) && /welcome\.md/.test(t));
+
+  await typeAndEnter(page, "cat ~/logs/postgresql.log");
+  t = await termText(page);
+  check("pivot host can read its own postgres log",                   /pg_dump completed/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+  const unwoundPrompt = await promptText(page);
+  check("exit from pivot unwinds back to app_admin@linux",            /app_admin@linux:/.test(unwoundPrompt));
+
+  // After unwinding, env should be fresh (per-shell semantics) —
+  // TEMP_VAR set inside the parent shell pre-pivot should be gone.
+  await typeAndEnter(page, "echo before${TEMP_VAR}after");
+  t = await termText(page);
+  check("pivot-back: env reset (TEMP_VAR no longer set)",             /beforeafter/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+
+  // ──── v1.9.0: backfilled level0@linux env_vars + bonusFind
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById("terminal").innerHTML = ""; });
+
+  await typeAndEnter(page, "env");
+  t = await termText(page);
+  check("level0@linux env_vars: EDITOR=vi present",                   /EDITOR=vi/.test(t));
+  check("level0@linux env_vars: HISTSIZE=1000 present",               /HISTSIZE=1000/.test(t));
+
+  await typeAndEnter(page, "cat .bash_history");
+  t = await termText(page);
+  check("bonus-find fires on cat .bash_history (Daniel's pattern)",   /Bonus find unlocked: Daniel's muscle-memory pattern/.test(t));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+
+  // ──── v1.9.0: curl extended flags (lobby has no web data, so we
+  // hop to level0@web which seeds web responses for the meridian
+  // engagement).
+  await typeAndEnter(page, "ssh level0@web");
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById("terminal").innerHTML = ""; });
+
+  // -v verbose prints request preamble (> lines) regardless of the
+  // server's response. URL must exist in level.web so the request
+  // hits a response rather than a DNS-fail.
+  await typeAndEnter(page, "curl -v https://www.meridian.edu");
+  t = await termText(page);
+  check("curl -v prints '> GET ...' request preamble",                /> GET .+ HTTP\/1\.1/.test(t.split("curl -v ").slice(-1)[0] || ""));
+
+  // -X POST + -d + -H — sandbox can't fork, so the response lookup
+  // falls back to the GET response for the URL when no method-aware
+  // entry exists. Just verify the command doesn't error.
+  await typeAndEnter(page, "curl -X POST -d 'a=1' -H 'Content-Type: application/x-www-form-urlencoded' https://www.meridian.edu");
+  t = await termText(page);
+  check("curl -X POST -d -H runs (no 'command not found' / no err)",  !/command not found/.test(t.split("curl -X POST").slice(-1)[0] || ""));
+
+  // Gobuster real syntax — dir subcommand + -u + -w cosmetic flag.
+  // The URL needs to match a level.gobusterRes entry; level0@web
+  // seeds the meridian.edu top-level domain.
+  await typeAndEnter(page, "gobuster dir -u https://www.meridian.edu -w /usr/share/wordlists/dirb/big.txt");
+  t = await termText(page);
+  check("gobuster dir -u -w threads banner shows the new wordlist",   /\/dirb\/big\.txt/.test(t.split("gobuster dir").slice(-1)[0] || ""));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+
+  // ──── v1.9.0: readline shortcuts. Playwright dispatches the
+  // exact key combos; we verify they mutate the cmd-input value
+  // (we're not asserting visual cursor position — too brittle).
+
+  // Pre-fill some history so Alt-. has something to recall.
+  await typeAndEnter(page, "echo last-arg-victim");
+  await page.locator("#cmd-input").focus();
+  await page.locator("#cmd-input").fill("");
+
+  // Alt-.: insert last arg of previous command.
+  await page.keyboard.down("Alt");
+  await page.keyboard.press("Period");
+  await page.keyboard.up("Alt");
+  let inputVal = await page.locator("#cmd-input").inputValue();
+  check("Alt-. inserts last arg of previous command",                 inputVal === "last-arg-victim");
+
+  await page.locator("#cmd-input").fill("");
+
+  // Ctrl-K + Ctrl-Y: kill text + yank it back at cursor 0.
+  await page.locator("#cmd-input").fill("hello world");
+  // Move cursor to start so Ctrl-K kills the whole line.
+  await page.keyboard.down("Control");
+  await page.keyboard.press("a");
+  await page.keyboard.up("Control");
+  await page.keyboard.down("Control");
+  await page.keyboard.press("k");
+  await page.keyboard.up("Control");
+  inputVal = await page.locator("#cmd-input").inputValue();
+  check("Ctrl-K kills from cursor to end of line",                    inputVal === "");
+
+  await page.keyboard.down("Control");
+  await page.keyboard.press("y");
+  await page.keyboard.up("Control");
+  inputVal = await page.locator("#cmd-input").inputValue();
+  check("Ctrl-Y yanks killed text back from the kill ring",           inputVal === "hello world");
+
+  // Alt-B / Alt-F: word back / word forward (we don't have a clean
+  // way to assert cursor position via Playwright, but we can verify
+  // the key combo doesn't dispatch a character into the input).
+  await page.locator("#cmd-input").fill("");
+  await page.locator("#cmd-input").fill("alpha beta gamma");
+  await page.keyboard.down("Alt");
+  await page.keyboard.press("KeyB");
+  await page.keyboard.up("Alt");
+  inputVal = await page.locator("#cmd-input").inputValue();
+  check("Alt-B doesn't insert a modified character into the input",   inputVal === "alpha beta gamma");
+
+  await page.keyboard.down("Alt");
+  await page.keyboard.press("KeyF");
+  await page.keyboard.up("Alt");
+  inputVal = await page.locator("#cmd-input").inputValue();
+  check("Alt-F doesn't insert a modified character either",           inputVal === "alpha beta gamma");
+
+  // Clear the input so it doesn't dirty subsequent assertions.
+  await page.locator("#cmd-input").fill("");
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));

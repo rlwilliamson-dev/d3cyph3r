@@ -15,6 +15,11 @@
 //   AND     → run only if the previous statement's exit code was 0
 //   OR      → run only if the previous statement's exit code was != 0
 //
+// Background marker (v1.9.0): a `&` outside `&&` terminates the
+// current statement and flags it with `bg: true`. The execution
+// layer captures the output into a job entry instead of printing it
+// inline. Mostly cosmetic since commands run synchronously here.
+//
 // Tokens retain their surrounding quote markers (a leading `'` or `"`)
 // so downstream expansion (`js/engine/expand.js`) can decide whether
 // to expand `$VAR` / `$(...)` (yes inside `"..."` and unquoted; no
@@ -25,7 +30,6 @@
 //   - Variable expansion (that's expand.js's job, after parsing)
 //   - Glob expansion (per-command, after expansion)
 //   - Pathname/heredoc/redirect syntax (`>`, `<`, `<<`)
-//   - Background jobs (`&` at end of line) — irrelevant in this sandbox
 
 const SINGLE = "'";
 const DOUBLE = '"';
@@ -51,8 +55,9 @@ export function parseLine(input) {
     }
   };
 
-  const flushStmt = (nextOp) => {
+  const flushStmt = (nextOp, bg) => {
     flushToken();
+    if (bg) curStmt.bg = true;
     stmts.push(curStmt);
     curStmt   = { op: nextOp, segments: [[]] };
     curSegIdx = 0;
@@ -115,9 +120,13 @@ export function parseLine(input) {
     }
 
     // Chain operators at top level
-    if (c === "&" && next === "&") { flushStmt("AND");    i += 2; continue; }
-    if (c === "|" && next === "|") { flushStmt("OR");     i += 2; continue; }
-    if (c === ";")                  { flushStmt("ALWAYS"); i += 1; continue; }
+    if (c === "&" && next === "&") { flushStmt("AND");           i += 2; continue; }
+    if (c === "|" && next === "|") { flushStmt("OR");            i += 2; continue; }
+    if (c === ";")                  { flushStmt("ALWAYS");        i += 1; continue; }
+    // Single `&` (not part of `&&`) — background the current statement
+    // and start the next one ALWAYS-style. Bash treats `&` as a
+    // statement terminator + bg flag, like `;` but asynchronous.
+    if (c === "&")                  { flushStmt("ALWAYS", true);  i += 1; continue; }
 
     // Pipe within current statement
     if (c === "|") {

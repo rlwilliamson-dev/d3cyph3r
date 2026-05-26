@@ -11,17 +11,18 @@
 //                                      results — bash does, but the
 //                                      sandbox doesn't need it)
 //
-// Built-in variables (priority order — level.env_vars wins):
-//   USER / LOGNAME → level.playerUser or engine slot name
-//   HOME           → /home/<USER>
-//   HOSTNAME       → currentLevelKey's host portion
-//   PWD            → /home/<USER>[/<cwd>]
-//   SHELL          → /bin/bash
-//   PATH           → /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-//   LANG           → en_US.UTF-8
-//   ?              → last exit code (numeric, as a string)
+// Variable resolution layers (later layers override earlier):
+//   1. Built-ins   — USER / LOGNAME / HOME / HOSTNAME / PWD / SHELL /
+//                    PATH / LANG / PS1 / PS2. Computed live from engine
+//                    state so they reflect the current level and cwd.
+//   2. level.env_vars — static per-level env (the level author's gift
+//                    to the player; e.g. a CI-style level can declare
+//                    AWS_PROFILE=ci as an embedded hint).
+//   3. processEnv  — user-writable layer set via `export FOO=bar` or
+//                    `FOO=bar` assignment. Wins ties. Reset on level
+//                    switch (a fresh shell starts clean).
 //
-// Special: `$$` always expands to a literal `$` (escape hatch).
+//   Special: `?` → last exit code, `$` → literal $ (escape hatch).
 //
 // Command substitution: `$(cmd ...)` runs the inner pipeline (with
 // the full chain semantics) and inserts the captured stdout. Nested
@@ -30,18 +31,25 @@
 // `runForOutput` callback to actually run them — the callback is
 // passed in to avoid an import cycle with execute.js.
 
-import { currentLevelKey, currentPath, lastExitCode } from "./state.js";
+import { currentLevelKey, currentPath, lastExitCode, processEnv } from "./state.js";
 import { LEVELS } from "../../levels/index.js";
 
 const SINGLE = "'";
 const DOUBLE = '"';
 
+/** Default PS1 — bash's standard `\u@\h:\w$ ` plus a space for clarity. */
+export const DEFAULT_PS1 = "\\u@\\h:\\w\\$ ";
+export const DEFAULT_PS2 = "> ";
+
 /**
- * Compute the live variable map for the current level. Built-ins
- * are derived from engine state; per-level `env_vars` override
- * built-ins of the same name.
+ * Compute the live variable map for the current level.
+ *
+ * Layers (later layers win on conflict):
+ *   1. Live built-ins (derived from engine state — always fresh).
+ *   2. level.env_vars (static per-level).
+ *   3. processEnv (user-writable; export/assignment).
  */
-function getEnv() {
+export function getEnv() {
   const level = LEVELS[currentLevelKey] || {};
   const user = level.playerUser || currentLevelKey.split("@")[0];
   const host = currentLevelKey.split("@")[1] || "localhost";
@@ -57,8 +65,15 @@ function getEnv() {
     SHELL:    "/bin/bash",
     PATH:     "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     LANG:     "en_US.UTF-8",
+    PS1:      DEFAULT_PS1,
+    PS2:      DEFAULT_PS2,
   };
-  return { ...builtins, ...(level.env_vars || {}) };
+
+  // processEnv (Map) → plain object for spread
+  const procObj = {};
+  for (const [k, v] of processEnv) procObj[k] = v;
+
+  return { ...builtins, ...(level.env_vars || {}), ...procObj };
 }
 
 /**
