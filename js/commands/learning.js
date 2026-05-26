@@ -27,7 +27,7 @@
 // state beyond the theme preference. Closing the tab resets hint
 // position alongside the visited-levels list.
 
-import { currentLevelKey } from "../engine/state.js";
+import { currentLevelKey, isBonusFound } from "../engine/state.js";
 import { LEVELS } from "../../levels/index.js";
 import { MAN_PAGES } from "./man-pages.js";
 import { GLOSSARY } from "./glossary.js";
@@ -170,32 +170,80 @@ export const learningCommands = {
   // progress: list every visited level plus an overall solve count.
   // Visited state lives in sessionStorage (see js/engine/progress.js);
   // we render it as a per-track checklist.
-  progress() {
+  //
+  // Bonus finds (v1.9.0) layer on top: each level may declare a
+  // `bonusFinds` array, and `foundBonuses` (state.js) tracks which
+  // ones the player has unlocked. By default we render the count
+  // (e.g. `[bonuses 1/2]`); pass `--detail` to see each find by name.
+  //
+  // Anti-spoiler rule (v1.10.0): in --detail mode we ONLY name finds
+  // the player has already unlocked. Unfound entries render as
+  // `[?] hidden — keep exploring`. Same for un-visited levels: we
+  // do not surface the per-level find titles until the player has
+  // at least entered the level.
+  progress(_level, arg) {
+    const detail = (arg || "").trim() === "--detail";
     let visited;
     try {
       visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]"));
     } catch (_) { visited = new Set(); }
-    // Group all non-lobby levels by track.
+    // Group all non-lobby, non-pivot levels by track. Pivot hosts
+    // (level.pivot === true) don't belong to a track and shouldn't
+    // appear in the per-track checklist.
     const byTrack = {};
     for (const [key, lvl] of Object.entries(LEVELS)) {
-      if (lvl.isLobby || !lvl.track) continue;
+      if (lvl.isLobby || !lvl.track || lvl.pivot) continue;
       (byTrack[lvl.track] ||= []).push(key);
     }
     const tracks = Object.keys(byTrack).sort();
     const lines = [];
     let totalSolved = 0, totalLevels = 0;
+    let totalFinds = 0, totalFoundFinds = 0;
     for (const t of tracks) {
       const keys = byTrack[t].sort();
       lines.push(`  ${t.toUpperCase()}`);
       for (const k of keys) {
+        const lvl  = LEVELS[k];
         const mark = visited.has(k) ? "✓" : "·";
-        lines.push(`    ${mark} ${k}`);
+        const finds = Array.isArray(lvl.bonusFinds) ? lvl.bonusFinds : [];
+        const foundCount = finds.filter(f => f.id && isBonusFound(k, f.id)).length;
+        totalFinds      += finds.length;
+        totalFoundFinds += foundCount;
+        // Inline bonus count, but only on levels that actually have
+        // any. Suppress the brackets entirely on bonus-free levels so
+        // the output stays tidy for older content.
+        const bonusTag = finds.length > 0
+          ? `   [bonuses ${foundCount}/${finds.length}]`
+          : "";
+        lines.push(`    ${mark} ${k}${bonusTag}`);
         if (visited.has(k)) totalSolved++;
         totalLevels++;
+        // --detail expansion: only if this level has bonus finds.
+        if (detail && finds.length > 0) {
+          if (!visited.has(k)) {
+            // Anti-spoiler: don't name finds on unvisited levels.
+            lines.push(`        (visit the level to discover what's here)`);
+          } else {
+            for (const f of finds) {
+              if (!f.id) continue;
+              if (isBonusFound(k, f.id)) {
+                lines.push(`        ✦ ${f.name || f.id}`);
+              } else {
+                lines.push(`        [?] hidden — keep exploring`);
+              }
+            }
+          }
+        }
       }
       lines.push("");
     }
     lines.push(`  ${totalSolved} / ${totalLevels} levels visited this session.`);
+    if (totalFinds > 0) {
+      lines.push(`  ${totalFoundFinds} / ${totalFinds} bonus finds discovered.`);
+      if (!detail) {
+        lines.push(`  (Run 'progress --detail' to list discovered finds by name.)`);
+      }
+    }
     lines.push(`  (Progress is per-tab; closing the tab resets the visited list.)`);
     return { text: lines.join("\n"), cls: "out" };
   },

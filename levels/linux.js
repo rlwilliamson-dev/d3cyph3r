@@ -26,11 +26,16 @@
 // and `ls -la` owner columns show. Without this override the engine
 // falls back to the level key's user prefix.
 //
-// Optional player-orientation fields (v1.8.0):
+// Optional player-orientation fields (v1.8.0 / v1.10.0):
 //   level.difficulty       : "Easy" | "Medium" | "Hard" | "Expert"
 //   level.estimatedMinutes : positive integer — typical solve time
+//   level.title            : short scenario name (~25–40 chars) shown
+//                            in the lobby tree's expanded view next
+//                            to the `ssh ...` invocation line
 // Surfaced in the connection banner ("Difficulty: Easy · Est. time:
-// ~10 min") so players can pick where to spend a session.
+// ~10 min") and in the lobby tree. Without a title, the lobby tree
+// shows only the ssh command + difficulty + estimated time on each
+// level row.
 //
 // Optional: SHELL ENVIRONMENT (v1.9.0).
 //
@@ -175,6 +180,7 @@ export const linuxLevels = {
   "level0@linux": {
     password: null,
     track: "linux",
+    title: "Daniel's laptop handoff",
     difficulty: "Easy",
     estimatedMinutes: 10,
     playerUser: "daniel",
@@ -558,6 +564,7 @@ Return to the lobby:    ssh guest@d3cyph3r
   "level1@linux": {
     password: "please-rotate-me",
     track: "linux",
+    title: "Halton Bank staging bastion",
     difficulty: "Easy",
     estimatedMinutes: 10,
     playerUser: "app_admin",

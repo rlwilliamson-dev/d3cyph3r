@@ -28,6 +28,9 @@ export const networkLevels = {
   "level0@network": {
     password: null,
     track: "network",
+    title: "Atlas Health VPN audit",
+    difficulty: "Medium",
+    estimatedMinutes: 12,
     playerUser: "secops",
     objective: "Verify Atlas Health's claim that their staging environment is VPN-only — and document what's exposed if it isn't.",
     lesson: "Atlas Health is one of Driftwood's largest healthcare clients — they handle PHI for ~400,000 patients across the Pacific Northwest. Their DevOps lead, Marcus, told Priya last quarter that staging.atlas.health is now VPN-only. We do a routine perimeter verification on every client engagement every quarter; today is Atlas's turn. You're on Driftwood's audit workstation (the shell calls you `secops`, the shared service account the security team uses for these checks). Read welcome.md first — it explains nmap. Then read the engagement notes, then start scanning. When you've found what's wrong, read lessons-learned.md.",
@@ -392,6 +395,9 @@ Return to the lobby:    ssh guest@d3cyph3r
   "level1@network": {
     password: "atlas-default-2025",
     track: "network",
+    title: "Atlas DNS zone transfer",
+    difficulty: "Medium",
+    estimatedMinutes: 15,
     playerUser: "dbadmin",
     objective: "Validate the blast radius reachable from the staging-db host before Marcus's team rotates the default credential — and document everything Atlas's internal DNS gives up to a guest with shell access.",
     lesson: "Day two of the Atlas Health audit. Last night's perimeter finding was escalated; Marcus's team patches the firewall this morning and rotates the default credential in Friday's change window. Priya has authorized a one-time, documented blast-radius check. You used `atlas-default-2025` to ssh into staging-db.atlas.health and you're now logged in as `dbadmin` — the default vendor service account, configured with /bin/bash because somebody needed the shell for an upgrade six months ago and never reverted. Read welcome.md (it explains the new tool you'll need today); then priya-note.md for the rules of engagement; then start from the internal DNS resolver. When you've documented the scope, read lessons-learned.md.",

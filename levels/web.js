@@ -34,6 +34,9 @@ export const webLevels = {
   "level0@web": {
     password: null,
     track: "web",
+    title: "Meridian's exposed backup",
+    difficulty: "Medium",
+    estimatedMinutes: 10,
     playerUser: "secops",
     objective: "Audit Meridian State University's public web stack ahead of their cyber-insurance renewal. Find anything BluePier Digital left behind that the carrier's reviewer would flag.",
     lesson: "Meridian State University is one of Driftwood's smaller clients — public regional uni in Oregon, ~30,000 students, FERPA in scope across all student-record systems. Their cyber-insurance policy is up for renewal and the carrier requires a third-party web audit as a renewal condition. Carlos, Meridian's in-house web developer, inherited the public web stack from a dismissed agency (BluePier Digital) that left work-product files scattered on the production server. He's been cleaning them up but suspects he hasn't caught all of them. You're on Driftwood's web-audit workstation (the shell calls you `secops`, the shared service account the security team uses for client recon). Read welcome.md first — it explains gobuster. Then read engagement-notes.md, then meridian-scope.txt, then start enumerating. Read lessons-learned.md once you've found the FERPA-grade exposure.",
@@ -642,6 +645,9 @@ Return to the lobby:    ssh guest@d3cyph3r`
   "level1@web": {
     password: "M3rid14n!2023-prod",
     track: "web",
+    title: "Carlos's login wall (IDOR)",
+    difficulty: "Hard",
+    estimatedMinutes: 18,
     playerUser: "webapp_admin",
     objective: "Audit Carlos's transcript-download endpoint at Meridian — confirm whether the SSO wrapper is doing the authorization work Carlos thinks it's doing, and document the blast radius if it isn't.",
     lesson: "Day two at Meridian. Yesterday's level0 backup-dir finding closed within the hour — Carlos deleted the directory and proactively notified Cedarwood Mutual (he is, increasingly, an A+ client). The `M3rid14n!2023-prod` DB credential is still live until Friday's rotation window; you used it to ssh into the student-portal webapp host with Carlos's standing authorization. You're now logged in as `webapp_admin` — the database user whose shell access was enabled six months ago for a debug session and never reverted. (That's a finding too, but not today's.) Carlos mentioned a 'quick transcript download' he shipped to the student portal last sprint — self-service for students to grab unofficial transcripts. It's behind Meridian SSO. He thinks that's enough. Priya, with Meridian's general counsel cc'd, has asked us to verify. Read welcome.md first; then priya-note.md for the day-2 context; then look at the code Carlos shipped and exercise the endpoint with curl.",

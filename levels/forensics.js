@@ -50,6 +50,9 @@ export const forensicsLevels = {
   "level0@forensics": {
     password: null,
     track: "forensics",
+    title: "Reed's soccer alibi (EXIF)",
+    difficulty: "Easy",
+    estimatedMinutes: 10,
     playerUser: "secops",
     objective: "Forensically verify the alibi photo Reed Connolly submitted to Polaris's in-house counsel. Confirm — or refute — that the photo was taken when and where Reed claims.",
     lesson: "Polaris Defense Systems is one of Driftwood's defense-industrial clients — a mid-sized subcontractor (~$80M annual revenue, ~250 engineers) building electronics subsystems for prime contractors. CMMC Level 2 and NIST 800-171 are in scope across all production environments. Polaris's in-house counsel, Dana Reyes, opened an internal investigation last Tuesday: badge logs put one of their senior manufacturing engineers (Reed Connolly) in a secured fabrication bay on a Saturday morning that had no scheduled work. When asked informally, Reed said he was at his daughter's youth soccer tournament that morning and sent Dana a photo as proof. Dana wants forensic verification of the photo before HR escalates. You're on Driftwood's forensics-analysis workstation (the shell calls you `secops`, the shared service account the security team uses for evidence triage). Read welcome.md first — it explains how `file` and `exif` work. Then read engagement-notes.md, then case-summary.txt, then look at the photo. Read lessons-learned.md once you've decided whether the alibi holds.",
@@ -688,6 +691,9 @@ Return to the lobby:    ssh guest@d3cyph3r`
   "level1@forensics": {
     password: "POL-IIS-2026-0007-handoff",
     track: "forensics",
+    title: "What the logs saw (evtx)",
+    difficulty: "Hard",
+    estimatedMinutes: 18,
     playerUser: "secops",
     objective: "Triage Reed Connolly's workstation Security event log. Reconstruct his Saturday-morning activity inside the OS, identify any CUI exfiltration evidence, and flag any other findings Polaris's security team needs to know about.",
     lesson: "Dana Reyes escalated the Reed case to Polaris's formal insider-threat track Friday afternoon, right after your alibi finding closed the informal phase. Sgt. Chen (Polaris FSO) authorized a live forensic image of Reed's workstation POL-WS-0418 Tuesday night, packaged the EnCase E01 set with a single-use handoff password (POL-IIS-2026-0007-handoff — the same string that just gated this shell), and pushed it to Driftwood through Polaris's secure portal. The image is mounted read-only on a separate analysis volume; for today's narrow task only the Windows Security event log was extracted into this working directory. Read welcome.md first — it explains the new `evtx` command and how Windows event logs work. Then read engagement-notes.md, then case-summary.txt, then triage Security.evtx. Dana wants two things: a reconstruction of Reed's Saturday-morning activity at the keyboard, and any other findings the IR team needs to know about. Read lessons-learned.md once you've delivered both.",

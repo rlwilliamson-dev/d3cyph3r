@@ -135,6 +135,9 @@ export const cloudLevels = {
   "level0@cloud": {
     password: null,
     track: "cloud",
+    title: "Coverline's S3 audit",
+    difficulty: "Medium",
+    estimatedMinutes: 12,
     playerUser: "cloudsec",
     objective: "Walk Coverline's 6-bucket SOC 2 audit worksheet from outside the Coverline account. For each bucket, run an unauthenticated `aws s3 ls --no-sign-request` probe and record the response. Flag any bucket that isn't behaving the way the worksheet says it should.",
     lesson: "Coverline Insurance is one of Driftwood's insurtech clients — a mid-sized property & casualty carrier specializing in small-business policies (~150 engineers, founded 2019, HQ in Hartford, Connecticut). They sell direct AND white-label their product to ~40 regional insurance carriers, which is why the SOC 2 Type II report is non-negotiable — every carrier customer requires it before they'll resell. State-insurance regs add layers: NAIC Insurance Data Security Model Law has been adopted in ~25 states Coverline operates in, and NYDFS 23 NYCRR 500 applies because they're licensed in New York. Coverline is mid-SOC-2-cycle right now and the audit firm flagged a gap last week: there's no documented evidence trail for the 'S3 bucket public-access review' control (CC6.1). The auditors produced a 6-bucket worksheet with the expected access state for each, and Coverline needs each one walked and the response recorded as evidence. Coverline's DevOps team is fully committed on an us-east-1-to-us-east-2 cutover; Jordan Nguyen (Coverline's Sr. Director of Cloud Infrastructure) asked Driftwood to fill in. You're on Driftwood's cloud-audit workstation (the shell calls you `cloudsec`, the shared service account the cloud-security team uses for client recon). Read welcome.md first — it explains how the unauthenticated S3 probe works. Then read engagement-notes.md, then audit-worksheet.txt, then walk the buckets. Read lessons-learned.md once you've found the bucket that doesn't match the worksheet.",
@@ -1238,6 +1241,9 @@ Return to the lobby:    ssh guest@d3cyph3r`
   "level1@cloud": {
     password: "Cl41ms-Pr0d-M4st3r-2024",
     track: "cloud",
+    title: "The migration table (psql)",
+    difficulty: "Hard",
+    estimatedMinutes: 20,
     playerUser: "cloudsec",
     objective: "Enumerate the coverline_claims production database with the leaked RDS master credential. Identify any other credentials stored in row data, dormant employee accounts, or anomalous audit-log entries that change the breach-notification math. Read-only audit only — no INSERT/UPDATE/DELETE.",
     lesson: "After Friday's S3 finding closed the CC6.1 control gap, Coverline's CISO (Sloane Becker) + GC + outside counsel spent the weekend on the breach-notification math. The leaked RDS master credential (Cl41ms-Pr0d-M4st3r-2024) is rotation-pending; before they rotate, Sloane wants Driftwood to enumerate what's actually in the database — every abandoned migration artifact, every dormant employee account, every credential stashed in row data — so the notification analysis can cover the full secondary-exposure surface. Jordan Nguyen authorized the follow-on engagement Monday morning and pre-staged the leaked credential in `~/.pgpass` on Coverline's cloud-audit bastion host (the shell you're on now). Read welcome.md first — it explains the new `psql` command. Then read engagement-notes.md and bastion-handoff.txt. Walk the coverline_claims schema with `psql`. Read lessons-learned.md once you've surfaced the findings.",

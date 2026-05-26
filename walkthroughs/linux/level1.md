@@ -463,6 +463,28 @@ The rule, fed into Halton's SIEM, would alert on the next `sudo cp` operation th
 - **Train the engineering team on the shadow-copy pattern specifically.** It's the most common single-engineer convenience anti-pattern in modern production systems. A 30-minute internal-wiki article + a quarterly "spot-check" exercise (find the shadow copies on a sample of production systems) closes the institutional gap.
 - **For contractors and consultants specifically:** the engagement-closeout checklist should include *audit the contractor's home directory and `~/.bash_history` for any sensitive content before the laptop is wiped and the access is revoked.* This is exactly what level0@linux's audit found on Daniel's laptop; the same discipline applied at engagement-end at *every* client would have caught the shadow copy on the Halton jumphost months earlier.
 
+## §7.5 — Optional exploration: the pivot host
+
+The solve above ends when you've recovered the production DB credential and read `lessons-learned.md`. Everything in this section is *bonus* — no breadcrumb to level2 lives down this path, and you can skip it without missing anything load-bearing.
+
+That said, the staging-worker box (this level) isn't the *destination* of Daniel's exfil pattern; it's the *source*. Daniel's nightly `backup.sh` script (referenced in `cron.d/`) tar's the staging-worker home directory and ships the archive to a separate host. That host is reachable from here via agent-forwarded SSH:
+
+```bash
+ssh dbsvc@halton-bastion
+```
+
+No password — Daniel set up agent forwarding so the cron job could run unattended. You'll land in `dbsvc`'s home directory with read access to the backup landing zone (`~/backups/`) and the staging-worker service journal that ships alongside (`~/logs/postgresql.log`).
+
+What's there that's useful:
+
+1. **The backup archive itself** — confirms what Daniel was *actually* pulling off the staging box every night. The contents are the same files you just audited from the other side, which gives you a chain-of-custody record: at every backup-creation moment, the shadow copy was already in place. The credential exposure window is *months*, not "since the last incident."
+2. **The postgresql.log excerpt** — staging-worker's own journal records a permission-denial sequence when it falls back from the production env file (mode 600, can't read) to the shadow copy (mode 644, can). The system was logging its own bug to the journal continuously; a defender pulling routine log review would have seen this on day one. This is the same "self-logged bug" the bonus-find banner surfaces if you `journalctl -u staging-worker` on the way to the solve.
+3. **`exit` returns you to the staging-worker shell** — the pivot is a stacked SSH session, not a level-switch. Your job table, environment variables, and current working directory on staging-worker are preserved across the round trip. (This is the engine's multi-host pivot semantics, new in v1.9.0; the player-facing UX is bash-identical.)
+
+If you want to see this lateral-movement pattern documented in the wild, the **MITRE ATT&CK T1021.004 — Remote Services: SSH** technique writeup is the canonical reference. The agent-forwarded-cron variant specifically is one of the most common single-engineer convenience patterns that produces real-world lateral access (and one of the hardest to detect without explicit `AllowAgentForwarding no` policy + named-host audit).
+
+This pivot exists in level1@linux specifically to let curious players exercise the multi-host workflow without leaving the engagement; **the credential chain works without it.** If you're racing to level2 once it ships, skip this section.
+
 ## §8 — Key takeaways
 
 - **The lock on the front door doesn't matter when there's a key under the mat.** The legitimate `staging-worker.env` file at mode 600 was properly protected; the shadow copy at mode 644 carrying the same content nullified that protection entirely. Permission misconfiguration is the most common single source of CWE-732 findings in real consulting work.

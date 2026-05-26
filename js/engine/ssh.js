@@ -73,7 +73,42 @@ export function handlePasswordInput(val) {
     setTimeout(() => connectTo(target), 300);
   } else {
     print("Permission denied, please try again.", "err");
+    // Cold-start hint (v1.10.0): if the player tried to enter
+    // level<N>@<host> without first visiting level<N-1>@<host>, they
+    // can't possibly know the password — it's only seeded by the
+    // previous level in the chain. Surface a friendly yellow nudge
+    // pointing them at the prerequisite. Skipped for pivot hosts and
+    // anything that isn't a `level<N>@<host>` pattern.
+    const hint = prerequisiteHint(target);
+    if (hint) print(hint, "warn");
   }
+}
+
+/**
+ * If `target` is a `level<N>@<host>` with N > 0 and the player has
+ * NOT visited `level<N-1>@<host>` in this session, return a hint
+ * string. Otherwise return null (no hint — player has either earned
+ * the credential or isn't trying a numbered level).
+ *
+ * @param {string} target - e.g. "level2@linux"
+ * @returns {string | null}
+ */
+function prerequisiteHint(target) {
+  const m = /^level(\d+)@(.+)$/.exec(target);
+  if (!m) return null;                   // pivot host or other non-numbered target
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const host = m[2];
+  const prev = `level${n - 1}@${host}`;
+  // If the prerequisite level doesn't exist in the registry, there's
+  // no useful hint to give (defensive — shouldn't happen for shipped
+  // chains, but level<N> may exist before level<N-1> is built).
+  if (!LEVELS[prev]) return null;
+  let visited;
+  try { visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]")); }
+  catch (_) { visited = new Set(); }
+  if (visited.has(prev)) return null;    // player has the credential
+  return `Tip: this level gates on a credential discovered in ${prev}. Try 'ssh ${prev}' first.`;
 }
 
 /**

@@ -31,6 +31,7 @@ import { readonlyStubCommands } from "./readonly-stubs.js";
 import { learningCommands }  from "./learning.js";
 import { envCommands }       from "./env.js";
 import { jobCommands }       from "./jobs.js";
+import { lobbyCommands }     from "./lobby.js";
 
 export const COMMANDS = {
   ...linuxCommands,
@@ -52,6 +53,7 @@ export const COMMANDS = {
   ...learningCommands,
   ...envCommands,
   ...jobCommands,
+  ...lobbyCommands,
 };
 
 // Names used by the Tab-autocomplete hint.

@@ -501,6 +501,32 @@ Current commercial offerings: **Microsoft Defender External Attack Surface Manag
 
 For internal-perimeter visibility specifically, **Project Sonar** (Rapid7's continuous internet-wide scanning project) publishes its data; you can query Sonar for your own org's exposed services. The value of running an ASM tool against your own org is the same as the value of running today's AXFR query — you find out what an attacker would find, before they look.
 
+## §7.5 — Optional verification: walk the perimeter you just enumerated
+
+The credential lifts straight out of the AXFR TXT record; you don't need anything below to solve the level. This section is *bonus* — a set of cross-check commands the level supports so you can confirm in-band what the zone transfer told you out-of-band. The commands shipped with the engine in v1.7.0, but the walkthrough above predates them.
+
+After the solve, on `staging-db.atlas.health`, you can run:
+
+```bash
+ip addr            # confirm you're on Atlas's internal staging segment
+ip route           # see which gateway you'd traverse to reach the puzzle targets
+arp -a             # ARP cache shows hosts staging-db has already talked to
+nslookup atlas.internal
+ping audit-bypass.atlas.internal
+traceroute audit-bypass.atlas.internal
+```
+
+What you'll see:
+
+- **`ip addr`** — `eth0` carries staging-db's primary IPv4. The address sits inside Atlas's RFC 1918 internal segment, which is the orthogonal datapoint the AXFR query *didn't* give you. Zone-file enumeration tells you *what hostnames exist*; `ip addr` tells you *where you are in the topology that resolves them*. A real-world auditor wants both.
+- **`ip route`** — the default route points at Atlas's internal gateway. Combined with `ip addr`, this is enough to draw a rough segment diagram on the engagement-notes whiteboard: staging-db lives on subnet X, routes outbound through gateway Y, and the AXFR-named internal hosts sit one hop deeper.
+- **`arp -a`** — entries for the gateway and any hosts staging-db has already exchanged packets with. This is post-hoc evidence of which AXFR targets are *reachable in practice* (a Layer-2 ARP entry only forms after a successful ARP request/reply round trip), not just *named in the zone file*. The two sets often differ in real engagements: zone files have stale entries, dev hosts that were decommed but never deregistered, etc.
+- **`nslookup atlas.internal`** — confirms the internal resolver from a different angle than `dig`. If you're documenting findings for an Atlas SRE who's used to nslookup output, having both renderings in the report is small-but-real polish.
+- **`ping audit-bypass.atlas.internal`** — confirms the breadcrumb host responds to ICMP (it does). A "host named in AXFR but unreachable" outcome would change the threat-model interpretation: you'd flag the AXFR but downgrade the blast-radius finding from "credentials reachable" to "credentials *named* but network-segmented from staging-db." Worth verifying every time.
+- **`traceroute audit-bypass.atlas.internal`** — shows the gateway hop sequence. Useful if you want to document *which* network segment the breadcrumb host lives in versus the gateway you'd traverse to reach it. For the level the answer is "one hop," but in real engagements this is how you find out whether a "reachable" host is actually multi-hop deep into a different team's environment (and therefore whose problem it is to fix).
+
+None of this changes the solve. It does change how a written-up finding *reads* — moving from "we found a credential in the AXFR response" to "we found a credential in the AXFR response, **and** confirmed network reachability from staging-db, **and** documented the network segmentation between staging-db and the credential's host." The second framing is what a senior reviewer will ask for during peer review of your engagement report.
+
 ## §8 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*

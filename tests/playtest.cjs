@@ -1917,6 +1917,117 @@ async function termText(page) {
   // Clear the input so it doesn't dirty subsequent assertions.
   await page.locator("#cmd-input").fill("");
 
+  // ──── v1.10.0: lobby tree (tracks command) ──────────────────────
+  // We're in the lobby (exit from web at line 1862). Test the
+  // tracks verb + the expanded tree rendering.
+
+  await typeAndEnter(page, "tracks");
+  t = await termText(page);
+  check("tracks (no args) prints expand-state report",                t.includes("Track expand state:"));
+  check("tracks status lists linux track",                            t.includes("linux"));
+  check("tracks status lists network track",                          t.includes("network"));
+
+  // Toggle linux (will be expanded since level0@linux was visited
+  // earlier — collapse it first to get a known state, then expand).
+  await typeAndEnter(page, "tracks reset");
+  t = await termText(page);
+  check("tracks reset prints 'All tracks collapsed.'",                t.includes("All tracks collapsed"));
+
+  // After reset, expand linux explicitly.
+  await typeAndEnter(page, "tracks linux");
+  t = await termText(page);
+  check("tracks linux prints toggle success",                         t.includes("Track 'linux' expanded"));
+
+  // Lobby has been re-rendered. The expanded tree should now show
+  // each linux level's `ssh levelN@linux` line, plus the title we
+  // added in v1.10.0.
+  t = await termText(page);
+  check("Expanded linux tree shows ssh level1@linux entry",           t.includes("ssh level1@linux"));
+  check("Expanded linux tree shows the v1.10.0 title 'Halton Bank staging bastion'",
+        t.includes("Halton Bank staging bastion"));
+  check("Expanded linux tree shows the v1.10.0 title 'Daniel'",       t.includes("Daniel's laptop handoff"));
+
+  // Unknown-track guard.
+  await typeAndEnter(page, "tracks doesnotexist");
+  t = await termText(page);
+  check("tracks <unknown> errors with helpful message",               t.includes("is not a known track"));
+
+  // tracks all expands every track.
+  await typeAndEnter(page, "tracks all");
+  t = await termText(page);
+  check("tracks all reports 'All tracks expanded.'",                  t.includes("All tracks expanded"));
+
+  // After tracks all, the lobby re-renders with everything open;
+  // a non-linux track's level1 should now be visible.
+  check("After 'tracks all', network/level1 row visible",             t.includes("ssh level1@network"));
+
+  // Reset state for tidy session end.
+  await typeAndEnter(page, "tracks reset");
+
+  // ──── v1.10.0: progress --detail ────────────────────────────────
+  await typeAndEnter(page, "progress --detail");
+  t = await termText(page);
+  check("progress --detail prints session summary",                   /\d+ \/ \d+ levels visited this session/.test(t));
+  check("progress --detail prints bonus-find aggregate counter",      /\d+ \/ \d+ bonus finds discovered/.test(t));
+  // All three bonus finds (Daniel's muscle-memory pattern, Daniel's
+  // backup script, Self-logged config-fallback bug) were unlocked
+  // earlier in the run (see the "bonus-find fires on …" checks),
+  // so in --detail mode every find renders by name with the ✦
+  // marker. Verify all three appear verbatim.
+  check("progress --detail names a discovered bonus find verbatim",   t.includes("Daniel's muscle-memory pattern"));
+  check("progress --detail also names the backup-script bonus",       t.includes("Daniel's backup script"));
+  check("progress --detail also names the self-logged-bug bonus",     t.includes("Self-logged config-fallback bug"));
+  // The [?] hidden branch (anti-spoiler render for un-found finds)
+  // can't be exercised here without restarting the session — all
+  // three finds are already unlocked. The branch is a single
+  // hard-coded string in learning.js's progress(); it's covered by
+  // code review + the positive cases above prove the iteration
+  // works.
+
+  // ──── v1.10.0: cold-start gate hint ─────────────────────────────
+  // Clear the visited set so we can simulate a player ssh-ing into
+  // level1@linux without having earned the credential. The yellow
+  // hint should follow "Permission denied".
+  await page.evaluate(() => {
+    sessionStorage.removeItem("visited");
+    // Also reset lobby expand state so this section doesn't pollute it.
+    sessionStorage.removeItem("lobbyExpanded");
+  });
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(120);
+  // Password prompt — type a bogus password.
+  await page.keyboard.type("not-the-password");
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("Cold-start: wrong-password still prints 'Permission denied'",
+        t.includes("Permission denied, please try again."));
+  check("Cold-start gate hint suggests visiting the prerequisite level",
+        t.includes("Tip: this level gates on a credential discovered in level0@linux"));
+
+  // Sanity: the hint is suppressed when the player HAS visited the
+  // prereq. Re-seed `visited` with level0@linux and retry.
+  await page.evaluate(() => {
+    sessionStorage.setItem("visited", JSON.stringify(["level0@linux"]));
+  });
+  // The current shell is still at the password prompt (because we
+  // didn't connect). The previous wrong password dropped us out of
+  // password mode, so we need to ssh again to re-enter it.
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(120);
+  await page.keyboard.type("still-wrong");
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  // After the second wrong attempt, the most recent line should be
+  // "Permission denied" without a follow-up tip. Slice to the most
+  // recent occurrence and check the next few lines don't include
+  // the tip prefix.
+  const lastDenied = t.lastIndexOf("Permission denied, please try again.");
+  const after = t.slice(lastDenied, lastDenied + 400);
+  check("Cold-start hint is suppressed when prereq IS visited",
+        !after.includes("Tip: this level gates on a credential"));
+
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
 
