@@ -111,6 +111,8 @@ d3cyph3r/
 │   │   ├── text.js          wc / sort / uniq / cut / tr / awk (pipe-friendly)
 │   │   ├── system.js        which / type / id / uname / date / uptime / hostname
 │   │   ├── sysinspect.js    crontab / last / who / w / lsof / ss / journalctl / systemctl / dmesg
+│   │   ├── netinspect.js    ip / arp / ping / traceroute / nslookup
+│   │   ├── format.js        openssl x509 / tar / gunzip / zcat
 │   │   ├── learning.js      hint / man / what-is (player self-help layer)
 │   │   ├── man-pages.js     NAME/SYNOPSIS/DESCRIPTION/EXAMPLES for every command
 │   │   ├── glossary.js      what-is term definitions (frameworks / regs / CWEs)
@@ -167,7 +169,7 @@ If you open DevTools on the live site you may see CSP errors blocking scripts fr
 
 See `help` inside the terminal for the full reference. Track-by-track:
 
-- **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `readlink` / `realpath` / `env`
+- **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `readlink` / `realpath` / `basename` / `dirname` / `env`
 - **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `AXFR`)
 - **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
 - **Web:** `curl` (+ `-I`) / `gobuster` / `cookies`
@@ -177,6 +179,8 @@ See `help` inside the terminal for the full reference. Track-by-track:
 - **Text processing (pipe-friendly):** `wc` (+ `-l` / `-w` / `-c`) / `sort` (+ `-n` / `-r` / `-u`) / `uniq` (+ `-c` / `-d` / `-u`) / `cut` (+ `-d <delim>` / `-f <fields>`) / `tr` (+ `-d` / `-s`) / `awk` (`'{print $N}'`, `'/pat/ {print $N}'`, `-F SEP`)
 - **System info:** `which` / `type` / `id` / `uname` (+ `-a` / `-s` / `-n` / `-r` / `-v` / `-m`) / `date` / `uptime` / `hostname`
 - **System inspection:** `crontab -l` (+ `-u`) / `last` / `who` / `w` / `lsof` (+ `-i` / `-p`) / `ss` (+ `-l` / `-t` / `-u` / `-n` / `-a`) / `journalctl` (+ `-u` / `-n` / `-r`) / `systemctl status` / `dmesg`
+- **Network inspection:** `ip addr` / `ip route` / `arp -a` / `ping` / `traceroute` / `nslookup`
+- **Format inspection:** `openssl x509 -text -noout -in <file>` / `tar tvf` / `tar xvf` / `gunzip` / `zcat`
 - **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout`
 

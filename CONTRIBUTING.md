@@ -69,16 +69,24 @@ The lobby's track list (`js/engine/tracks.js`) is the third place —
 it's the canonical track registry that both the lobby and the
 "scaffolded but no levels yet" warm-message code read from.
 
-**Filesystem dual representation.** Level content lives as a nested
-tree under `level.fs` (dirs with `children`, files with `content`).
+**Filesystem tri-representation.** Level content lives as a nested
+tree under `level.fs`. Three node types:
+
+- `{ type: "dir",     children: { ... } }` — directory
+- `{ type: "file",    content: "..." }`    — file with string content
+- `{ type: "symlink", target: "..." }`     — symbolic link (v1.5.0+)
+
 At module init, `js/fs/flatten.js#initLevels` walks every level's
 `fs` tree and produces a flat `level.files` map
-(`"path/to/file": "contents"`, dirs as `"path/": null`). Most newer
-commands (`ls`, `cd`, `cat`) read the tree; legacy/cross-cutting
-commands (`grep`, `find`, `base64`, `xxd`, etc.) read the flat map.
-When adding new commands, prefer the tree via
-`getFSNode(level, pathParts)` for cwd-aware behavior; reach for
-`level.files` only when you genuinely need a flat enumeration.
+(`"path/to/file": "contents"`, dirs as `"path/": null`; symlinks are
+*not* in the flat map — they only exist in the tree). Most newer
+commands (`ls`, `cd`, `cat`, `head`, `tail`, `grep`) read the tree
+via `getFSNode(level, pathParts)` in `js/fs/resolve.js` — which
+follows symlinks transparently with a 16-hop cycle cap. Legacy /
+cross-cutting commands (`base64`, `xxd`, `strings`, `file`, etc.)
+read the flat map. When adding new commands, prefer the tree-aware
+`getFSNode` for cwd-aware behavior; reach for `level.files` only
+when you genuinely need a flat enumeration.
 
 **Engine state lives in one module.** `js/engine/state.js` exports
 `currentLevelKey`, `currentPath`, `awaitingPassword` as live
@@ -92,13 +100,22 @@ dispatcher called per Enter press. Order:
 
 1. Echo the line.
 2. Password mode (route to `handlePasswordInput`).
-3. `ssh` (route to `handleSSH`).
-4. `COMMANDS[cmd]` lookup.
-5. "command not found."
+3. Shell-variable expansion (`js/engine/expand.js` — `$USER`,
+   `${VAR}`, `$$` escape).
+4. `ssh` special-case (can't appear in a pipe; route to `handleSSH`).
+5. Split on top-level `|` and run each segment left-to-right,
+   threading stdout into the next segment's stdin.
+6. `COMMANDS[cmd]` lookup per segment.
+7. "command not found."
 
 Each command handler has the signature
-`(level, arg) → { text, cls } | null`. Returning `null` suppresses
-output; otherwise the dispatcher prints with the given CSS class
+`(level, arg, stdin?) → { text, cls } | null`. The `stdin`
+parameter is `undefined` for standalone invocations and a string
+when the command sits downstream of a pipe. Pipe-friendly commands
+(`grep`, `head`, `tail`, `wc`, `sort`, `uniq`, `cut`, `tr`, `awk`)
+read from `stdin` when no file arg is given; non-pipe-friendly
+commands ignore it cleanly. Returning `null` suppresses output;
+otherwise the dispatcher prints with the given CSS class
 (`out`, `err`, `dim`, `warn`, `success`, `info`, `cmd`, `ascii`,
 `banner`).
 
@@ -175,27 +192,55 @@ level1 block.
 
 ## How to add a new command
 
-Three places to touch:
+Decide first whether the command is **track-specific** (only
+meaningful in one track's puzzles — e.g. `nmap`, `jwt`, `evtx`) or
+**infrastructure** (shell-shaped, useful everywhere — e.g. `wc`,
+`uname`, `crontab`). Track commands live in `js/commands/<track>.js`;
+infrastructure commands live in one of the cross-cutting modules
+(`shell.js`, `text.js`, `system.js`, `sysinspect.js`, `netinspect.js`,
+`format.js`, `learning.js`). Pick the module whose responsibility
+matches; create a new module if none fit.
 
-1. **Per-track command file** (`js/commands/<track>.js`) — add an
-   entry to the exported `<track>Commands` object with the signature
-   `(level, arg) => { text, cls } | null`. `text` is the output
-   string; `cls` is a CSS class (`out`, `err`, `dim`, `warn`,
+Three places to touch in either case:
+
+1. **Command module** — add an entry to the exported `<...>Commands`
+   object with the signature
+   `(level, arg, stdin?) => { text, cls } | null`. `text` is the
+   output string; `cls` is a CSS class (`out`, `err`, `dim`, `warn`,
    `success`, `info`, `cmd`, `ascii`, `banner`). Returning `null`
-   suppresses output.
+   suppresses output. If you create a new module, also wire it into
+   `js/commands/index.js` (import + spread into `COMMANDS`).
 
 2. **Help reference** (`js/commands/shell.js`) — add a line to the
-   appropriate track section of `HELP_SECTIONS`. The `help` command
-   reads from this list at runtime.
+   appropriate section. Track-keyed sections live in `HELP_SECTIONS`
+   (one per track + dimmed for tracks-without-levels-yet);
+   infrastructure sections live in `HELP_INFRA` (TEXT PROCESSING,
+   SYSTEM INFO, SYSTEM INSPECTION, FORMAT INSPECTION) and `HELP_LEARNING`
+   (hint / man / what-is) / `HELP_TERMINAL` (clear / ssh / exit /
+   report / help). The `help` command renders these at runtime.
 
-3. **Playtest lobby usage probe** (`tests/playtest.cjs`) — add the
-   new command to the `usageProbes` array so the lobby smoke test
-   verifies it returns its usage string when called with no args.
+3. **Manpage** (`js/commands/man-pages.js`) — add an entry to the
+   `MAN_PAGES` map so `man <newcmd>` doesn't 404. Follow the
+   NAME / SYNOPSIS / DESCRIPTION / EXAMPLES format used by the
+   ~70 existing entries.
+
+4. **Playtest coverage** (`tests/playtest.cjs`) — add a lobby smoke
+   test that the command degrades gracefully when its level data is
+   absent (a usage line, an empty-state message, or both). For
+   commands that read per-level data, also seed a level (or use an
+   existing one) and assert on the rendered output.
 
 If the command reads per-level data, document the schema at the top
-of `levels/<track>.js` so the next person knows what to populate.
-Example: `levels/forensics.js` documents `evtxLogs`, `levels/osint.js`
-documents `github`, `levels/cloud.js` documents `postgres`.
+of the relevant track file so future authors know what to populate.
+Examples already shipped: `evtxLogs` (forensics), `github` (osint),
+`postgres` (cloud), `system` (system.js — uname / id / uptime
+overrides), `crontab` / `lastLogins` / `activeSessions` / `openFiles`
+/ `sockets` / `journal` / `systemdUnits` / `dmesg` (sysinspect.js,
+documented at the top of `levels/linux.js`),
+`netInterfaces` / `routes` / `arpCache` / `pingResults` /
+`tracerouteResults` / `nslookupResults` (netinspect.js, same
+location), `certs` / `tarArchives` / `gzipArchives` (format.js),
+`hints` (learning.js).
 
 ## How to add a new track
 
