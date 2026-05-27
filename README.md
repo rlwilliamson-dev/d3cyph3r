@@ -216,6 +216,7 @@ The terminal supports a real bash-shaped composition layer (v1.8.0 + v1.9.0):
 - Per-level time tracking: total time + first-solve elapsed, surfaced in `progress --detail` and the connection banner on revisit (v1.16.0)
 - Standardized `cmd --help` across every command — short usage block + pointer to `man <cmd>` (v1.17.0)
 - Lobby polish for returning players: welcome-back summary, next-up suggestion, completion glyph on fully-cleared tracks, achievements teaser (v1.18.0)
+- Lobby visual polish: chip-styled progress/tier badges in the engagement list, bolder bare-glyph chevrons (▼/▶/✓) replacing the bracketed `[▾]`/`[▸]`/`[✓]` (v1.19.0)
 
 The terminal also supports the shell features players carry in from bash:
 

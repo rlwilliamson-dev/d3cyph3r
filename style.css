@@ -401,6 +401,44 @@ body[data-theme-mode="light"] .theme-toggle .theme-icon-sun  { display: block; }
   margin: 8px 0 4px;
 }
 
+/* ─── Lobby chip styling (v1.19.0) ───────────────────────────────────
+   Used by the engagement-list rows in js/engine/lobby.js (via the
+   printRich helper in js/terminal/output.js). Each "chip" is a span
+   inside the line — the chip class colors it, the bracket characters
+   are part of the text content so the line stays cleanly monospace
+   and copy-pastes as readable plain text.
+
+   Why two layers of class (.chip + .chip-tier-routine etc.)?
+   .chip is the visual base (font-weight + a touch of letter-spacing
+   so the bracketed content reads as a discrete block). The variant
+   class adds the color. Keeping them separate means we can swap
+   either independently — e.g., a forker could re-skin the chips by
+   editing only .chip and leave the per-tier color logic alone.
+
+   All colors are theme-flippable via the existing CSS variables so
+   chips reskin correctly across all 11 themes. */
+.chip {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+/* Progress chips — "[N/M]" coloring depends on completeness. */
+.chip-progress-empty    { color: var(--dim); }
+.chip-progress-partial  { color: var(--yellow); }
+.chip-progress-complete { color: var(--green); }
+/* Tier chips — "[Routine]" / "[Live]" / etc. Each tier owns its
+   own color even though the engine currently only ships Routine-
+   tier levels (the others light up automatically when level6+
+   ships in v2.0+). */
+.chip-tier-routine      { color: var(--accent); }
+.chip-tier-live         { color: var(--yellow); }
+.chip-tier-escalated    { color: var(--yellow); font-weight: 700; }
+.chip-tier-critical     { color: var(--red); }
+.chip-tier-crisis       { color: var(--red); font-weight: 700; }
+/* Time chip — used for the "~10 min" estimate in expanded rows. */
+.chip-time              { color: var(--dim); }
+/* Title chip — emphasizes the level title in expanded rows. */
+.chip-title             { color: var(--fg-bright); }
+
 /* Per-letter logo glyphs — each character in the lobby wordmark is its
    own span so we can mix fonts/colors and evoke a "code being deciphered"
    look. All fonts are terminal/monospace family; classes are mixed-and-

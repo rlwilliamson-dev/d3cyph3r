@@ -2818,11 +2818,12 @@ async function termText(page) {
   check("v1.18.0 welcome-back summary shows achievements count",
         /\d+\/20 achievements/.test(lobbyBeforeEngagements));
   // Linux track is fully visited at this point — check for completion glyph.
-  check("v1.18.0 fully-visited linux track shows [✓] glyph",
-        /ssh level0@linux\s+\[✓\]/.test(lobbyTail));
+  // v1.19.0: chevrons are now bare ✓ / ▼ / ▶ (no brackets).
+  check("v1.18.0 fully-visited linux track shows ✓ glyph",
+        /ssh level0@linux\s+✓/.test(lobbyTail));
   // Other tracks (e.g., network) are still untouched — expand chevron.
-  check("v1.18.0 untouched network track still shows [▸] chevron",
-        /ssh level0@network\s+\[▸\]/.test(lobbyTail));
+  check("v1.18.0 untouched network track still shows ▶ chevron",
+        /ssh level0@network\s+▶/.test(lobbyTail));
   // Next-up should NOT appear — linux is done, nothing else started.
   check("v1.18.0 next-up does NOT fire when started tracks are done",
         !lobbyBeforeEngagements.includes("Continue: ssh"));
@@ -2846,6 +2847,52 @@ async function termText(page) {
   const lobbyAfterReset = tLobby.split("AVAILABLE ENGAGEMENTS").slice(-2, -1)[0] || "";
   check("v1.18.0 next-up fires when player has progress to continue",
         lobbyAfterReset.includes("Continue: ssh level1@linux"));
+
+  // ──────────────────────────────────────────────────────────────────
+  // v1.19.0 — Visual polish (chip badges + bolder chevrons)
+  // ──────────────────────────────────────────────────────────────────
+  //
+  // The engagement list now renders progress / tier / time as
+  // inline-colored chips via printRich. Chevrons swap from bracketed
+  // [▾]/[▸]/[✓] to bare ▼/▶/✓. Verify both the text rendering
+  // (so existing infrastructure stays correct) AND the DOM-level
+  // chip CSS classes (so the colors are actually applied).
+
+  // Text-level: bare chevrons should appear in the engagement list
+  // (no bracketed forms left). lobbyAfterReset is the welcome-back
+  // chunk before "AVAILABLE ENGAGEMENTS" — for chevrons we need the
+  // engagement list itself, which is the LAST chunk after the
+  // most-recent header.
+  const lobbyEngagementsAfterReset = tLobby.split("AVAILABLE ENGAGEMENTS").slice(-1)[0] || "";
+  check("v1.19.0 lobby shows bare ▶ chevron (not bracketed)",
+        lobbyEngagementsAfterReset.includes("▶") && !lobbyEngagementsAfterReset.includes("[▸]"));
+  // Network track is untouched at this point, so [0/2 visited]
+  // should appear with the empty-progress chip class.
+  const progressChipEmpty = await page.evaluate(() => {
+    const els = document.querySelectorAll(".chip-progress-empty");
+    return Array.from(els).map(e => e.textContent);
+  });
+  check("v1.19.0 DOM has at least one .chip-progress-empty span",
+        progressChipEmpty.length > 0);
+  check("v1.19.0 empty-progress chip reads '[0/2 visited]'",
+        progressChipEmpty.some(t => t === "[0/2 visited]"));
+
+  // Linux track is fully visited (visited list was reset to just
+  // level0@linux earlier, but the chip class still depends on the
+  // current visited set — make sure SOME .chip-progress-* is in
+  // the DOM as proof the helper renders chips correctly).
+  const anyTierChip = await page.evaluate(() => {
+    return document.querySelectorAll(".chip-tier-routine").length;
+  });
+  check("v1.19.0 DOM has tier chips (.chip-tier-routine present)",
+        anyTierChip > 0);
+
+  // The printRich helper exists and is exported — sanity check
+  // via a forced render. (We don't import in the test page; just
+  // assert the lobby's chip rendering produced at least one .chip.)
+  const totalChips = await page.evaluate(() => document.querySelectorAll(".chip").length);
+  check("v1.19.0 DOM has multiple .chip elements (printRich is rendering)",
+        totalChips >= 2);
 
   // ──────────────────────────────────────────────────────────────────
   // v1.17.0 — Standardized `cmd --help`

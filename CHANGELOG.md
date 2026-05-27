@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-05-27
+
+**Lobby visual polish — chip badges + bolder chevrons.** Second of
+three lobby-polish releases (after v1.18.0's content polish). The
+engagement-list rows now render progress + tier + time as inline-
+colored chips instead of plain text, and the expand chevrons swap
+from bracketed `[▾]`/`[▸]`/`[✓]` to bare bolder glyphs `▼`/`▶`/`✓`.
+
+### Added
+
+- **`printRich(segments, baseCls)` helper in
+  `js/terminal/output.js`** — Accepts an array of strings + `{text,
+  cls}` segments and builds a single `.line` div with one or more
+  styled spans. Used by the lobby's chip rendering; safely escapes
+  text content so untrusted input (none today) would still render
+  as plain text.
+- **Chip CSS classes** in `style.css`:
+  - `.chip` (base — font-weight + slight letter-spacing)
+  - Progress: `.chip-progress-empty` (dim), `.chip-progress-partial`
+    (yellow), `.chip-progress-complete` (green)
+  - Tier: `.chip-tier-routine` (accent), `.chip-tier-live` (yellow),
+    `.chip-tier-escalated` (bold yellow), `.chip-tier-critical`
+    (red), `.chip-tier-crisis` (bold red)
+  - `.chip-time` (dim, for `[~10 min]` estimates)
+  - `.chip-title` (bright, for level titles in expanded rows)
+  - All colors flip correctly across all 11 themes via existing
+    CSS variables.
+- **Cache-bust bumped to `?v=1.19.0`** on the main app's
+  stylesheet link (walkthroughs/walkthrough.css unchanged so the
+  walkthroughs subsite stays at `?v=1.13.0`).
+
+### Changed
+
+- **`js/engine/lobby.js#engagementList`** — Track headers + per-
+  level expanded rows now return `{ segments, cls }` shape that
+  routes to `printRich`. Scaffolded-only fallback + description +
+  blank-separator rows keep the original `{ line, cls }` shape and
+  route to `print` — both shapes coexist in the returned array.
+- **`js/engine/lobby.js#showLobby`** — Engagement-list loop
+  branches on row shape (`row.segments` vs `row.line`) and calls
+  the appropriate helper.
+- **Chevrons swap** from 3-char bracketed `[▾]`/`[▸]`/`[✓]` to
+  bolder bare `▼`/`▶`/`✓` followed by 2 spaces of padding so
+  column alignment is preserved exactly.
+- **`tests/playtest.cjs`** — 5 new v1.19.0 assertions plus 2
+  updated v1.18.0 chevron regex patterns (782 / 782 total).
+
+### Forker notes
+
+- The `printRich` helper is a new public API in
+  `js/terminal/output.js`. Forks adding new chip-styled surfaces
+  (e.g., a tier display in the connection banner, the progress
+  command's per-level rows) can use the same helper without
+  changes.
+- Chip color choices live in `style.css` only — no JS coupling.
+  Re-theming chips is a CSS edit; the engine doesn't care.
+- Tier classes are defined for all five tiers even though only
+  Routine ships today. The classes light up automatically when
+  level6+ ships in v2.0+ and crosses tier boundaries.
+
 ## [1.18.0] - 2026-05-27
 
 **Lobby polish bundle for returning players.** The first-visit lobby
@@ -3228,7 +3288,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.18.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.19.0...HEAD
+[1.19.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.15.0...v1.16.0

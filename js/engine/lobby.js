@@ -10,7 +10,7 @@
 // render — once they've started a track, it stays expanded until they
 // explicitly collapse it.
 
-import { print, printSlow } from "../terminal/output.js";
+import { print, printSlow, printRich } from "../terminal/output.js";
 import { termEl } from "../terminal/dom.js";
 import { LEVELS } from "../../levels/index.js";
 import { connectTo } from "./ssh.js";
@@ -188,24 +188,38 @@ function engagementList() {
       continue;
     }
 
-    // v1.18.0: fully-solved tracks get the success-green checkmark glyph
-    // instead of the expand chevron. Still toggleable via `tracks` — the
-    // body still expands; the header just signals "you're done here".
+    // v1.18.0: fully-solved tracks get the success-green checkmark
+    // glyph instead of the expand chevron. v1.19.0: chevrons swap
+    // from bracketed `[▾]/[▸]/[✓]` (3 chars) to bare `▼/▶/✓` (1 char
+    // + 2 spaces of padding) — bolder, more terminal-conventional,
+    // same column width.
     const isComplete = visitedCount === shippedCount && shippedCount > 0;
     const chevron = isComplete
-      ? "[✓]"
-      : (isExpanded ? "[▾]" : "[▸]");
+      ? "✓  "
+      : (isExpanded ? "▼  " : "▶  ");
     // Tier surface (v1.10.0): compute from level0's ordinal (always
     // 0 → "Routine" for any track's entry point). The collapsed
     // header reads as "tier at the entry point"; the expanded body
     // shows each level's own tier if/when the track gets deeper.
     const entryTier = tierForLevel(levelNumberFromKey(levels[0]?.key));
-    const progressStr     = `${visitedCount}/${shippedCount} visited`;
-    const meta = entryTier
-      ? `${progressStr} · ${entryTier}`
-      : progressStr;
+    // v1.19.0: progress + tier render as colored chips via printRich.
+    // The progress chip class depends on completeness (empty / partial
+    // / complete); the tier chip class is per-tier.
+    const progressCls = isComplete
+      ? "chip chip-progress-complete"
+      : (visitedCount === 0
+        ? "chip chip-progress-empty"
+        : "chip chip-progress-partial");
+    const tierCls = entryTier
+      ? `chip chip-tier-${entryTier.toLowerCase()}`
+      : "chip";
     out.push({
-      line: `  ${entryCmd.padEnd(24)} ${chevron} ${t.label.padEnd(22)}  ${meta}`,
+      segments: [
+        `  ${entryCmd.padEnd(24)} ${chevron}${t.label.padEnd(22)}  `,
+        { text: `[${visitedCount}/${shippedCount} visited]`, cls: progressCls },
+        entryTier ? "  " : "",
+        entryTier ? { text: `[${entryTier}]`, cls: tierCls } : "",
+      ],
       cls: isComplete ? "success" : "out",
     });
 
@@ -219,13 +233,27 @@ function engagementList() {
         const last = i === levels.length - 1;
         const branch = last ? "└──" : "├──";
         const mark   = visited ? "✓" : "·";
-        const title  = level.title ? `   ${level.title}` : "";
         const tier   = tierForLevel(levelNumberFromKey(key));
-        const tierTag = tier ? `   [${tier}]` : "";
-        const time   = level.estimatedMinutes ? `   ~${level.estimatedMinutes} min` : "";
         const cmd    = `ssh ${key}`.padEnd(24);
+        // v1.19.0: per-level rows also use chip styling — title gets
+        // a brightness bump, tier + time render as colored chips.
+        const segments = [
+          `              ${branch} ${cmd} ${mark}`,
+        ];
+        if (level.title) {
+          segments.push("   ");
+          segments.push({ text: level.title, cls: "chip-title" });
+        }
+        if (tier) {
+          segments.push("   ");
+          segments.push({ text: `[${tier}]`, cls: `chip chip-tier-${tier.toLowerCase()}` });
+        }
+        if (level.estimatedMinutes) {
+          segments.push("   ");
+          segments.push({ text: `[~${level.estimatedMinutes} min]`, cls: "chip chip-time" });
+        }
         out.push({
-          line: `              ${branch} ${cmd} ${mark}${title}${tierTag}${time}`,
+          segments,
           cls: visited ? "success" : "out",
         });
       }
@@ -402,7 +430,15 @@ export function showLobby() {
   print("  AVAILABLE ENGAGEMENTS", "success");
   print(DIVIDER, "dim");
   print("", "out");
-  engagementList().forEach(({ line, cls }) => print(line, cls));
+  // v1.19.0: rows have two possible shapes. Plain `{ line, cls }`
+  // entries (scaffolded-only tracks, description lines, blank
+  // separators) route to print(); chip-styled `{ segments, cls }`
+  // entries (track headers + per-level expanded rows) route to
+  // printRich() so the inline color spans render correctly.
+  engagementList().forEach(row => {
+    if (row.segments) printRich(row.segments, row.cls);
+    else              print(row.line, row.cls);
+  });
   print(DIVIDER, "dim");
   print("  Type 'tracks <name>' to expand a track, 'tracks all' to expand all.", "dim");
   print("  Type 'tiers' to see what each difficulty label (Routine / Live / Escalated / …) means.", "dim");
