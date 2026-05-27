@@ -7,6 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-05-27
+
+**Did-you-mean typo suggestions on unknown commands.** First of three
+small engine-polish MINORs queued after the v1.11–v1.14 Quality-of-Life
+arc and before the v2.0 "Apprentice" level2 push. When a player types
+something the dispatcher doesn't recognize, the existing red "command
+not found" line now gets a yellow follow-up suggesting the closest
+registered command — when one is close enough. Conservative on purpose:
+no false-positive nudges on genuine nonsense input.
+
+### Added
+
+- **`js/engine/suggest.js`** — New module owning Levenshtein distance,
+  the per-length threshold rule, and the best-match picker. Pure
+  functions; no DOM or state coupling. Easy to unit-test, easy to
+  swap algorithms later (e.g., Damerau-Levenshtein for transposition
+  awareness) without touching the dispatcher.
+- **Conservative threshold rule:** distance ≤ 1 for typed strings of
+  length 1–3, distance ≤ 2 for length 4+. Short-string tightening
+  prevents nonsense like `xy → ls` (distance 2 in raw Levenshtein,
+  absurd as a suggestion) from triggering.
+- **Case-insensitive matching with explicit case-mismatch tip:** `LS`
+  matches `ls` at distance 0 — but rather than print a confusing
+  "Did you mean: ls?" loop, the dispatcher recognizes the
+  same-string-different-case pattern and prints
+  `Did you mean: ls? (command names are lowercase)` instead.
+- **Candidate pool includes ssh**, which lives outside `COMMANDS`
+  but is a real command from the player's point of view. `sshh`
+  → `ssh`.
+- **Tie-breaking:** when multiple candidates share the best
+  distance, the shorter one wins (`lss` → `ls`, not `lsof`); on
+  equal length, alphabetical (deterministic for tests).
+
+### Changed
+
+- **`js/engine/execute.js`** — `runSegment()`'s "command not found"
+  branch now consults `suggestCommand()` and prints a yellow tip
+  underneath the red error when a match exists. The not-found
+  message itself is unchanged; the tip is purely additive. The
+  `$(...)` substitution path in `runForOutput()` deliberately
+  skips suggestions — substitution failures are programmatic, not
+  interactive typos.
+- **`tests/playtest.cjs`** — 5 new v1.15.0 assertions covering
+  the four suggestion shapes (typo → command, case-mismatch tip,
+  ssh in candidate pool) and a no-false-positive guard against
+  the existing `definitelynotacommand` nonsense input.
+
+### Forker notes
+
+- Threshold rule lives in `thresholdFor(length)` in
+  `js/engine/suggest.js` — one-line tweak to widen or tighten.
+  If you're shipping a fork with shorter command names overall,
+  consider raising the short-string threshold to 2; the current
+  pool's median command length is ~5 chars so 1/2 works well.
+- The candidate iterable is whatever you pass into
+  `suggestCommand()`. The current dispatcher uses `ALL_CMDS`
+  (the COMMANDS keys + `"ssh"`); if you want to include aliases
+  or per-level commands later, just extend the iterable.
+
 ## [1.14.0] - 2026-05-27
 
 **20-achievement layer over bonus finds.** Fourth and final of the
@@ -2975,7 +3034,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.14.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.15.0...HEAD
+[1.15.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.11.0...v1.12.0
