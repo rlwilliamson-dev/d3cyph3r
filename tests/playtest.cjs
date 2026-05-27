@@ -408,6 +408,36 @@ async function termText(page) {
   await typeAndEnter(page, "definitelynotacommand");
   t = await termText(page);
   check("Unknown command shows 'command not found'", t.includes("command not found"));
+  // Far from any command — confirm v1.15.0 did-you-mean does NOT
+  // false-positive on nonsense input. 22 chars is well outside the
+  // distance-2 ceiling for any registered command.
+  check("v1.15.0 long nonsense gets NO 'Did you mean' suggestion",
+        !/definitelynotacommand[\s\S]*?Did you mean/.test(t));
+
+  // ── v1.15.0 — Did-you-mean typo suggestions ───────────────────────
+  // Conservative thresholds (≤1 for typed length ≤3, ≤2 for length
+  // 4+), case-insensitive match against COMMANDS keys + 'ssh'.
+  await typeAndEnter(page, "lss");
+  t = await termText(page);
+  check("v1.15.0 'lss' suggests 'ls'",      t.includes("Did you mean: ls?"));
+
+  await typeAndEnter(page, "catt");
+  t = await termText(page);
+  check("v1.15.0 'catt' suggests 'cat'",    t.includes("Did you mean: cat?"));
+
+  await typeAndEnter(page, "sshh");
+  t = await termText(page);
+  check("v1.15.0 'sshh' suggests 'ssh' (ssh is in candidate pool)",
+        t.includes("Did you mean: ssh?"));
+
+  // Pure case-mismatch: confirm the lowercase tip fires so we don't
+  // print a confusing "did you mean: ls?" when the player essentially
+  // typed `ls` but capitalized.
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, "LS");
+  t = await termText(page);
+  check("v1.15.0 'LS' suggests 'ls' with lowercase tip",
+        t.includes("Did you mean: ls?") && t.includes("command names are lowercase"));
 
   await typeAndEnter(page, "ssh level0@linux");
   await page.waitForTimeout(300);

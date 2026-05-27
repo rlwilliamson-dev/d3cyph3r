@@ -212,6 +212,7 @@ The terminal supports a real bash-shaped composition layer (v1.8.0 + v1.9.0):
 - Persistent command history across tab sessions (localStorage)
 - Replay mode: re-entering a solved level skips the password gate
 - Bonus finds: optional discoverable nuggets surfaced in `progress`
+- Typo suggestions: closest-match "Did you mean: `<cmd>`?" on unknown commands (v1.15.0)
 
 The terminal also supports the shell features players carry in from bash:
 

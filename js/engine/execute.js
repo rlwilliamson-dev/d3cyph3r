@@ -27,7 +27,7 @@
 // they're not affected by the chain semantics.
 
 import { LEVELS } from "../../levels/index.js";
-import { COMMANDS } from "../../js/commands/index.js";
+import { COMMANDS, ALL_CMDS } from "../../js/commands/index.js";
 import { print } from "../terminal/output.js";
 import {
   currentLevelKey, awaitingPassword, awaitingPersistenceConsent,
@@ -44,6 +44,7 @@ import { recordMilestone, checkAchievements } from "./achievements.js";
 import { parseLine, unquote, expandBraces } from "./parse.js";
 import { expandTokenVars, getEnv } from "./expand.js";
 import { checkBonusFinds } from "./bonus.js";
+import { suggestCommand } from "./suggest.js";
 import { renderPrompt } from "../terminal/prompt.js";
 import { dequoteAssignmentValue } from "../commands/env.js";
 
@@ -285,6 +286,21 @@ function runSegment(level, rawTokens, stdin) {
   const handler = COMMANDS[cmd];
   if (!handler) {
     print(`${cmd}: command not found. Type 'help' for available commands.`, "err");
+    // v1.15.0: did-you-mean. Conservative thresholds (≤1 for short
+    // typos, ≤2 for length 4+) keep false positives low; the
+    // matcher is case-insensitive so `LS` resolves to `ls` and
+    // we surface an explicit "command names are lowercase" tip
+    // rather than a confusing "did you mean LS?" loop. ALL_CMDS
+    // includes ssh, which isn't in COMMANDS but is a real
+    // command from the player's point of view.
+    const suggestion = suggestCommand(cmd, ALL_CMDS);
+    if (suggestion) {
+      if (cmd.toLowerCase() === suggestion) {
+        print(`Did you mean: ${suggestion}? (command names are lowercase)`, "warn");
+      } else {
+        print(`Did you mean: ${suggestion}?`, "warn");
+      }
+    }
     return { result: null, exitCode: 127 };  // bash uses 127 for not-found
   }
 
