@@ -2164,6 +2164,97 @@ async function termText(page) {
         !after.includes("Tip: this level gates on a credential"));
 
   // ──────────────────────────────────────────────────────────────────
+  // v1.14.0 — 20-achievement layer
+  // ──────────────────────────────────────────────────────────────────
+  //
+  // The achievements engine has been firing throughout the playtest
+  // — by this point in the run, the player has visited many levels,
+  // discovered many bonus finds, used pipes, opened walkthroughs,
+  // etc. Verify the layer is working: `achievements` lists all 20,
+  // some have been earned given prior playtest activity, --detail
+  // shows progress fractions where measurable, the registry covers
+  // all four tiers.
+
+  // Clean reset for this block so we have a known earned set.
+  await page.evaluate(() => {
+    localStorage.removeItem("d3cyph3r-progress-enabled");
+    localStorage.removeItem("d3cyph3r-progress");
+    sessionStorage.clear();
+  });
+  await page.reload();
+  await page.waitForTimeout(1200);
+
+  // Run the command from the empty lobby — should list all 20 with
+  // 0 earned.
+  await typeAndEnter(page, "achievements");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("v1.14.0 'achievements' prints header with 0/20 earned",
+        /Achievements\s*\(0\/20\s+earned\)/.test(t));
+  // Each of the 4 tier sections should be present.
+  check("v1.14.0 'achievements' shows EASY tier section",          /\bEASY\b/.test(t));
+  check("v1.14.0 'achievements' shows MEDIUM tier section",        /\bMEDIUM\b/.test(t));
+  check("v1.14.0 'achievements' shows HARD tier section",          /\bHARD\b/.test(t));
+  check("v1.14.0 'achievements' shows COMPLETIONIST tier section", /\bCOMPLETIONIST\b/.test(t));
+  // Spot-check 4 of the 20 achievement names from different tiers.
+  check("v1.14.0 'achievements' lists 'First Steps'",          t.includes("First Steps"));
+  check("v1.14.0 'achievements' lists 'Multi-Host Pivot'",     t.includes("Multi-Host Pivot"));
+  check("v1.14.0 'achievements' lists 'Polymath'",             t.includes("Polymath"));
+  check("v1.14.0 'achievements' lists 'Completionist'",        t.includes("Completionist"));
+
+  // --- 1985 unlocks when theme is set to crt-green ---
+  await typeAndEnter(page, "theme crt-green");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  check("v1.14.0 '1985' achievement unlocks on theme crt-green",
+        /Achievement unlocked:\s*1985/.test(t));
+
+  // --- First Steps unlocks on first non-lobby connect ---
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(300);
+  // Dismiss the persistence prompt that fires for fresh-session connects.
+  await typeAndEnter(page, "n");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("v1.14.0 'First Steps' achievement unlocks on first level visit",
+        /Achievement unlocked:\s*First Steps/.test(t));
+
+  // --- Asked for Help unlocks on `man <cmd>` ---
+  await typeAndEnter(page, "man ls");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("v1.14.0 'Asked for Help' achievement unlocks on man read",
+        /Achievement unlocked:\s*Asked for Help/.test(t));
+
+  // --- achievements --detail shows progress fractions ---
+  await typeAndEnter(page, "achievements --detail");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("v1.14.0 'achievements --detail' shows tracks-visited progress",
+        /progress:\s*\d+\/\d+ tracks visited/.test(t));
+  check("v1.14.0 'achievements --detail' shows bonus-finds progress",
+        /progress:\s*\d+\/\d+ bonus finds/.test(t));
+
+  // --- earned set persists in localStorage if persistence is enabled ---
+  await typeAndEnter(page, "progress save-on");
+  await page.waitForTimeout(120);
+  const earnedInLs = await page.evaluate(() => {
+    const raw = localStorage.getItem("d3cyph3r-progress");
+    if (!raw) return [];
+    try { return JSON.parse(raw)["d3cyph3r:earnedAchievements"]; } catch (_) { return []; }
+  });
+  check("v1.14.0 earned achievements mirror to localStorage when opted in",
+        typeof earnedInLs === "string" && earnedInLs.includes("first-steps"));
+
+  // Clean up — go back to default theme + dismiss any persistence
+  // state so the v1.13.0 block (which runs after this) starts from
+  // a known position.
+  await typeAndEnter(page, "theme dark");
+  await page.waitForTimeout(80);
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(120);
+
+  // ──────────────────────────────────────────────────────────────────
   // v1.13.0 — 11-theme picker
   // ──────────────────────────────────────────────────────────────────
   //
@@ -2517,11 +2608,34 @@ async function termText(page) {
   check("v1.11.0 D1: 'progress reset' confirms wipe", t.includes("Progress wiped"));
 
   const flagAfterReset    = await page.evaluate(() => localStorage.getItem("d3cyph3r-progress-enabled"));
-  const blobAfterReset    = await page.evaluate(() => localStorage.getItem("d3cyph3r-progress"));
+  // v1.14.0 update: 'progress reset' wipes the blob, but the
+  // post-dispatch achievement check immediately re-earns
+  // achievements whose criteria don't depend on the cleared data
+  // (e.g. "Persistent Player" — the opt-in flag is preserved by
+  // design, so the achievement stays earned). The blob therefore
+  // gets repopulated with the achievements set within the same
+  // dispatch tick. The intent of D3 is "tracked PROGRESS keys
+  // (visited, bonuses, hint counters) are gone" — achievements
+  // re-populating is correct behavior.
+  const blobAfterReset    = await page.evaluate(() => {
+    const raw = localStorage.getItem("d3cyph3r-progress");
+    if (raw === null) return { state: "null" };
+    try {
+      const obj = JSON.parse(raw);
+      return {
+        state: "exists",
+        hasVisited:    "visited" in obj,
+        hasBonuses:    "d3cyph3r:bonusFinds" in obj,
+        hasAnyHintKey: Object.keys(obj).some(k => k.startsWith("d3cyph3r-hint-")),
+      };
+    } catch (_) { return { state: "malformed" }; }
+  });
   const visitedAfterReset = await page.evaluate(() => sessionStorage.getItem("visited"));
   const hintAfterReset    = await page.evaluate(() => sessionStorage.getItem("d3cyph3r-hint-level0@linux"));
   check("v1.11.0 D2: enabled flag preserved across reset", flagAfterReset === "1");
-  check("v1.11.0 D3: blob cleared by reset", blobAfterReset === null);
+  check("v1.11.0 D3: blob no longer carries visited/bonuses/hint keys after reset",
+        blobAfterReset.state === "null" ||
+        (!blobAfterReset.hasVisited && !blobAfterReset.hasBonuses && !blobAfterReset.hasAnyHintKey));
   check("v1.11.0 D4: sessionStorage.visited cleared by reset", visitedAfterReset === null);
   check("v1.11.0 D5: hint counter cleared by reset", hintAfterReset === null);
 

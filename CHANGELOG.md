@@ -7,6 +7,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-05-27
+
+**20-achievement layer over bonus finds.** Fourth and final of the
+Quality-of-Life MINORs queued before the v2.0 "Apprentice" level2
+push. Layers 20 achievements on top of existing tracked state
+(visited levels + bonus finds + hint counters + theme + persistence
+flag) plus a small "milestones" flag store for "ever done X"
+tracking. Achievement criteria are visible from the start —
+they're motivation, not hidden objectives.
+
+### Added
+
+- **`js/engine/achievements.js`** — New module owning the 20-row
+  registry, milestone flag tracking, the achievement check + unlock
+  banner, and the derived-state aggregator that achievement check
+  functions read. Single source of truth; new achievements are
+  one-row appends.
+- **20 achievements across 4 tiers:**
+  - *Easy:* First Steps, First Discovery, Going Deep, Branching
+    Out, Pipe Apprentice, Asked for Help, Studious, Tutorial
+    Graduate, Style Points, 1985, Persistent Player
+  - *Medium:* All Hands, Sleuth, Multi-Host Pivot, Job Runner
+  - *Hard:* Thorough, Polymath, The Hint Avoider
+  - *Completionist:* Track Master, Completionist
+- **`achievements` command** + `achievements --detail` — Lists every
+  achievement grouped by tier with `★` (success-green) for earned
+  and `·` (dim) for unearned. `--detail` adds a progress fraction
+  for the 8 achievements where progress is measurable.
+- **Unlock banner** — When an achievement is first earned, a yellow
+  callout fires inline:
+  ```
+  ★ Achievement unlocked: <Name>
+    <Description>
+  ```
+- **Milestone tracking** — Lightweight "have you ever done X?"
+  flags in sessionStorage, populated by `recordMilestone(key)` calls
+  scattered through 7 existing handlers. Used by the achievements
+  whose criteria aren't otherwise derivable from existing state
+  (Pipe Apprentice, Asked for Help, Studious, Tutorial Graduate,
+  Style Points themes-tried, Multi-Host Pivot, Job Runner).
+
+### Changed
+
+- **`js/engine/execute.js`** — Post-dispatch `checkAchievements()`
+  call runs once per top-level dispatch, alongside the existing
+  `checkBonusFinds()` hook. Pipe + background-job detection wired
+  in (one-line `recordMilestone()` for each).
+- **`js/engine/ssh.js`** — Explicit `checkAchievements()` call at
+  the end of `connectTo()` because ssh short-circuits before the
+  execute.js post-dispatch hook. `pushHost()` site records the
+  `multiHostPivot` milestone.
+- **`js/engine/persistence.js`** — Persistence consent handler
+  (the `y/N` prompt path) explicitly fires `checkAchievements()`
+  after enabling so "Persistent Player" unlocks immediately on
+  opt-in (the consent path bypasses execute.js). Two new keys
+  added to TRACKED_KEYS: `d3cyph3r:earnedAchievements` and
+  `d3cyph3r:milestones`.
+- **`js/terminal/theme.js`** — `setTheme()` records the new theme
+  to the milestone store's themes-seen array. Dynamic import to
+  avoid the circular dependency between achievements.js and
+  theme.js (achievements.js reads the current theme name).
+- **`js/commands/learning.js`** — `man` handler records the
+  `manRead` milestone on successful lookup; `walkthrough` handler
+  records `walkthroughOpened`.
+- **`js/commands/tutorial.js`** — Tour-complete branch (final step
+  of `tutorial start`) records the `tutorialCompleted` milestone.
+- **`js/commands/man-pages.js`** — Added `man achievements`.
+- **`js/commands/shell.js`** — Help reference adds `achievements`
+  + `achievements --detail` rows.
+- **`tests/playtest.cjs`** — 15 new v1.14.0 assertions covering
+  the `achievements` command surface, tier sections, 4 spot-checks
+  on registry names, 1985 + First Steps + Asked for Help unlock
+  detection, `--detail` progress fractions, localStorage mirror
+  on opt-in. The pre-existing v1.11.0 D3 assertion was updated
+  from "blob === null after reset" to "blob doesn't carry
+  visited/bonuses/hint keys" to reflect the new re-earn behavior
+  (Persistent Player re-grants immediately after `progress reset`
+  because the opt-in flag is preserved by design).
+
+### Notes for forkers
+
+- **The registry is one constant.** To add a 21st achievement, add
+  a row to `ACHIEVEMENTS` in `js/engine/achievements.js` with id /
+  name / tier / description / check function. The check receives
+  a derived-state object — see `computeAggregates()` for what's
+  exposed; extend it if you need a new aggregate. The command
+  surface, unlock banner, persistence, and `--detail` rendering
+  all pick the new row up automatically.
+- **Anti-spoiler rule does NOT apply here.** Bonus finds and
+  `progress --detail` carefully hide undiscovered finds; achievements
+  are public from the start. The criteria for "Polymath: find a
+  bonus on every track" doesn't spoil any puzzle — it tells the
+  player what they're working toward. Forkers should preserve this
+  posture if extending the registry.
+- **Re-earning after reset is intentional.** `progress reset` wipes
+  the earned-achievements key alongside everything else, but the
+  post-reset achievement check immediately re-grants any
+  achievements whose criteria still hold (e.g. Persistent Player
+  if the opt-in flag is still set). This is correct: the player
+  IS still persistent, they just lost their visit/bonus history.
+
 ## [1.13.0] - 2026-05-27
 
 **11-theme picker.** Third of four Quality-of-Life MINORs queued
@@ -2874,7 +2975,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.13.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.1...v1.11.0

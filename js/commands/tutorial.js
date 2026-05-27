@@ -29,6 +29,7 @@
 
 import { print } from "../terminal/output.js";
 import { tourStep, setTourStep, currentLevelKey } from "../engine/state.js";
+import { recordMilestone } from "../engine/achievements.js";
 
 // ──────────────────────────────────────────────────────────────────
 // Shared content
@@ -211,6 +212,11 @@ export function handleTourInput(input) {
 
   const wasLastStep = tourStep === TOUR_STEPS.length - 1;
   setTourStep(wasLastStep ? -1 : tourStep + 1);
+  if (wasLastStep) {
+    // v1.14.0: tour finished — record for the "Tutorial Graduate"
+    // achievement. recordMilestone is idempotent.
+    recordMilestone("tutorialCompleted");
+  }
   return wasLastStep ? TOUR_RESULT.COMPLETE : TOUR_RESULT.ADVANCE;
 }
 

@@ -70,7 +70,17 @@ const PROMPT_SEEN = "d3cyph3r-prompt-seen";        // sessionStorage: "1" once a
 // the listed string (used for the dynamic `d3cyph3r-hint-<levelKey>`
 // family — one entry per visited level).
 const TRACKED_KEYS = {
-  static: ["visited", "d3cyph3r:bonusFinds", "lobbyExpanded", "seenOnboarding"],
+  static: [
+    "visited",
+    "d3cyph3r:bonusFinds",
+    "lobbyExpanded",
+    "seenOnboarding",
+    // v1.14.0 — achievement layer keys. Mirrored so opted-in
+    // players' earned achievements + milestone flags survive
+    // closing the tab.
+    "d3cyph3r:earnedAchievements",
+    "d3cyph3r:milestones",
+  ],
   prefix: ["d3cyph3r-hint-"],
 };
 
@@ -330,6 +340,16 @@ export function handlePersistenceConsent(val) {
   if (yes) {
     enablePersistence();
     print("Progress will be saved to this browser. Type 'progress save-off' to stop saving, or 'progress reset' to wipe.", "success");
+    // v1.14.0: the consent path bypasses the normal execute.js
+    // dispatch loop (where checkAchievements normally runs), so
+    // fire one explicit achievement check now — this is when
+    // "Persistent Player" unlocks. Dynamic import to avoid the
+    // circular dependency between persistence.js and
+    // achievements.js (achievements.js imports mirrorSession +
+    // isPersistenceEnabled from here).
+    import("./achievements.js")
+      .then(m => m.checkAchievements())
+      .catch(() => { /* silent — non-critical */ });
   } else {
     // We don't print anything about THIS session — sessionStorage
     // keeps working as it always did. Just acknowledge and move on.

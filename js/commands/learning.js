@@ -35,6 +35,7 @@ import {
   isPersistenceEnabled, enablePersistence, disablePersistence,
   clearAllProgress, mirrorSession,
 } from "../engine/persistence.js";
+import { recordMilestone } from "../engine/achievements.js";
 
 // Storage key for the per-level hint counter. The key includes the
 // level identifier so multiple levels don't collide.
@@ -139,6 +140,10 @@ export const learningCommands = {
     if (!cmd) return { text: "Usage: man <command>\n  e.g. man ls, man grep, man jwt", cls: "err" };
     const page = MAN_PAGES[cmd];
     if (!page) return { text: `No manual entry for ${cmd}`, cls: "err" };
+    // v1.14.0: record for the "Asked for Help" achievement. Only on
+    // successful lookups — we want this to mean "read a real manpage,"
+    // not "typo'd a command."
+    recordMilestone("manRead");
     return { text: page, cls: "out" };
   },
 
@@ -163,6 +168,8 @@ export const learningCommands = {
     try {
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (_) { /* popup blocked or non-browser env */ }
+    // v1.14.0: record for the "Studious" achievement.
+    recordMilestone("walkthroughOpened");
     return {
       text: `Opening walkthrough in new tab: ${url}\n(if your browser blocked the popup, navigate to /walkthroughs/ and pick ${level.track} / ${slot})`,
       cls: "info",

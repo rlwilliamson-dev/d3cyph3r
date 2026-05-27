@@ -18,6 +18,7 @@ import { showLobby } from "./lobby.js";
 import { SCAFFOLDED_HOSTS } from "./tracks.js";
 import { tierForLevel, levelNumberFromKey } from "./tiers.js";
 import { maybePromptForPersistence } from "./persistence.js";
+import { recordMilestone, checkAchievements } from "./achievements.js";
 
 export function handleSSH(target) {
   const level = LEVELS[target];
@@ -171,6 +172,9 @@ export function connectTo(key, opts) {
       // can return there. Push only when we're forward-navigating from
       // a non-lobby shell (pivoting from the lobby has no meaning).
       pushHost({ levelKey: currentLevelKey });
+      // v1.14.0: record the multi-host pivot for the Multi-Host
+      // Pivot achievement. recordMilestone is idempotent.
+      recordMilestone("multiHostPivot");
     } else if (!incoming?.pivot) {
       // Forward-navigating to a top-level destination: any pivots in
       // the stack are abandoned, since we're leaving the pivot chain.
@@ -233,6 +237,14 @@ export function connectTo(key, opts) {
   // original solve. That's intentional — give returning players
   // a chance to opt in.
   maybePromptForPersistence();
+
+  // v1.14.0: ssh is special-cased in execute.js and returns
+  // before that file's post-dispatch checkAchievements() fires.
+  // markVisited above just added a level to the visited set, so
+  // First Steps / Going Deep / Branching Out / All Hands / Track
+  // Master could all fire here. Call the check explicitly so the
+  // unlock banner shows immediately on connect.
+  checkAchievements();
 }
 
 function updatePrompt() {
