@@ -1,49 +1,118 @@
-// Theme toggle — dark (default) and light.
+// Theme registry + apply / cycle / persist (v1.13.0).
 //
-// Two-state toggle persisted to localStorage so the choice survives
-// across sessions AND across the main app ↔ walkthroughs subsite
-// boundary (both share the d3cyph3r.com origin, so the storage key
-// is visible from both contexts).
+// Pre-v1.13.0 this module was a binary dark↔light toggle. v1.13.0
+// expands to 11 themes — the original dark/light pair plus 9 new
+// looks (CRT phosphor green, VT220 amber, synthwave neon,
+// Solarized dark+light, high-contrast accessibility, Nord,
+// Gruvbox, Dracula). The CSS palettes live in style.css (and
+// walkthroughs/walkthrough.css) under `body[data-theme="<name>"]`
+// blocks; this module owns the JS side: the registry, the
+// localStorage persistence, the topbar cycle button, and the
+// `theme` / `themes` command surface (those live in
+// js/commands/themes.js but read from THEMES here).
 //
-// The actual color flip is pure CSS — `body.light` overrides the
-// CSS custom properties defined in style.css's :root block. This
-// module just toggles the class and writes the persistence flag.
+// PERSISTENCE
+//   localStorage key: "d3cyph3r-theme" (unchanged from v0.x for
+//   compatibility — returning users who set "light" pre-v1.13.0
+//   will hydrate cleanly into data-theme="light").
 //
-// localStorage is the ONE persistent thing this app uses (sessionStorage
-// covers level-progress; everything else is ephemeral). The privacy
-// note in README is explicit about this.
-
-const KEY = "d3cyph3r-theme";
+// MODE ATTRIBUTE
+//   Each theme has a `mode` of "dark" or "light" describing the
+//   surface luminance. This drives the moon/sun icon swap in the
+//   topbar toggle button (see CSS .theme-icon-sun rules). The
+//   attribute lives on body alongside the data-theme attribute.
+//
+// CROSS-SUBSITE
+//   The walkthroughs subsite (separately-served, same origin)
+//   reads the same localStorage key and applies the same
+//   data-theme attribute — see walkthroughs/walkthrough.js.
 
 /**
- * Read saved preference and apply on page load. Called once from
- * main.js before any rendering. No-op if the user has never toggled
- * (dark stays default).
+ * Theme registry — single source of truth for what themes exist,
+ * the cycle order, the human-readable name shown by `themes`, and
+ * the mode classification used for the moon/sun icon.
+ *
+ * Adding a theme:
+ *   1. Add a row here.
+ *   2. Add a matching `body[data-theme="<name>"]` block in
+ *      style.css (main app) AND walkthroughs/walkthrough.css.
+ *   3. Bump the CSS cache-bust query in BOTH `index.html` files.
+ *   4. Done — the `theme` / `themes` commands and the topbar
+ *      cycle button pick it up automatically.
  */
-export function initTheme() {
-  try {
-    if (localStorage.getItem(KEY) === "light") {
-      document.body.classList.add("light");
-    }
-  } catch (_) {
-    // localStorage may throw in private-browsing mode or when site
-    // storage is disabled. Fall back to default (dark).
-  }
+export const THEMES = [
+  { name: "dark",             mode: "dark",  label: "Dark — GitHub-flavored default (D3CYPH3R original)" },
+  { name: "light",            mode: "light", label: "Light — GitHub-flavored daytime" },
+  { name: "crt-green",        mode: "dark",  label: "CRT Green — phosphor terminal, 1980s hacker movie" },
+  { name: "amber",            mode: "dark",  label: "Amber — VT220 / IBM 3270 retro Unix" },
+  { name: "synthwave",        mode: "dark",  label: "Synthwave — outrun neon on deep purple" },
+  { name: "solarized-dark",   mode: "dark",  label: "Solarized Dark — Ethan Schoonover, calm and muted" },
+  { name: "solarized-light",  mode: "light", label: "Solarized Light — Schoonover daytime sibling" },
+  { name: "high-contrast",    mode: "dark",  label: "High Contrast — accessibility / max-readability" },
+  { name: "nord",             mode: "dark",  label: "Nord — calm icy palette" },
+  { name: "gruvbox",          mode: "dark",  label: "Gruvbox — warm earthy" },
+  { name: "dracula",          mode: "dark",  label: "Dracula — popular dev theme" },
+];
+
+const KEY = "d3cyph3r-theme";
+const DEFAULT_THEME = "dark";
+
+/**
+ * Resolve a theme name to its registry entry. Returns null if the
+ * name isn't known. Case-insensitive lookup.
+ */
+export function findTheme(name) {
+  if (!name) return null;
+  const lower = String(name).toLowerCase();
+  return THEMES.find(t => t.name === lower) || null;
 }
 
 /**
- * Flip the current theme and persist the choice. Returns the new
- * state ("light" | "dark") in case the caller wants to update icon
- * visibility or similar.
+ * Apply a theme to the document. Sets `data-theme` + `data-theme-
+ * mode` attributes on body and writes the choice to localStorage.
+ * Returns the applied theme entry, or null if the name was unknown
+ * (no change applied — caller decides whether to error).
  */
-export function toggleTheme() {
-  const isLight = document.body.classList.toggle("light");
-  try {
-    localStorage.setItem(KEY, isLight ? "light" : "dark");
-  } catch (_) {
-    // Persistence failure is non-fatal — the class is still toggled
-    // for the rest of the session, the choice just won't survive a
-    // reload.
-  }
-  return isLight ? "light" : "dark";
+export function setTheme(name) {
+  const theme = findTheme(name);
+  if (!theme) return null;
+  document.body.setAttribute("data-theme",      theme.name);
+  document.body.setAttribute("data-theme-mode", theme.mode);
+  try { localStorage.setItem(KEY, theme.name); } catch (_) { /* private mode */ }
+  return theme;
+}
+
+/** Return the currently-active theme entry. */
+export function getTheme() {
+  const name = document.body.getAttribute("data-theme") || DEFAULT_THEME;
+  return findTheme(name) || THEMES[0];
+}
+
+/**
+ * Advance to the next theme in the registry order (wraps around
+ * past the end). Returns the new theme entry. Used by the topbar
+ * cycle button and `theme next`.
+ */
+export function cycleTheme(direction = 1) {
+  const current = getTheme();
+  const idx = THEMES.findIndex(t => t.name === current.name);
+  const next = ((idx === -1 ? 0 : idx) + direction + THEMES.length) % THEMES.length;
+  return setTheme(THEMES[next].name);
+}
+
+/**
+ * Read the saved preference and apply on page load. Called once
+ * from main.js before any rendering — gating it on first paint
+ * avoids a flash of the wrong palette.
+ *
+ * Migration note: pre-v1.13.0 stored only "dark" or "light". Both
+ * names still exist in the new registry, so existing values
+ * round-trip cleanly. Anything else (a never-set storage entry,
+ * a value corrupted by a different app sharing the key) falls
+ * back to DEFAULT_THEME without erroring.
+ */
+export function initTheme() {
+  let saved;
+  try { saved = localStorage.getItem(KEY); } catch (_) { saved = null; }
+  setTheme(findTheme(saved)?.name || DEFAULT_THEME);
 }

@@ -1732,6 +1732,61 @@ DESCRIPTION
 EXAMPLES
     walkthrough`,
 
+  theme: `NAME
+    theme — switch the terminal palette (v1.13.0)
+
+SYNOPSIS
+    theme
+    theme <name>
+    theme next
+    theme prev
+
+DESCRIPTION
+    With no arguments, print the currently-active theme. With a
+    theme name, switch the entire UI palette — both the main
+    terminal and the walkthroughs subsite — to that theme and
+    persist the choice to localStorage so it survives reloads
+    and tab closes.
+
+    'theme next' / 'theme prev' cycle through the registry order
+    (same as clicking the topbar moon/sun icon, which is wired to
+    'theme next' under the hood). Wraps at both ends.
+
+    Theme names are case-insensitive. Unknown names print an
+    error and leave the current theme untouched. Run 'themes'
+    (plural) for the full list with one-line descriptions.
+
+EXAMPLES
+    theme
+    theme crt-green
+    theme synthwave
+    theme solarized-light
+    theme next`,
+
+  themes: `NAME
+    themes — list every available theme (v1.13.0)
+
+SYNOPSIS
+    themes
+
+DESCRIPTION
+    Print a per-theme one-liner for all 11 themes shipped in
+    v1.13.0. The currently-active theme is marked with a '→'
+    arrow at the left. Use 'theme <name>' to switch.
+
+    The 11 themes break into three groups:
+      * D3CYPH3R originals — dark, light
+      * Retro terminal     — crt-green, amber
+      * Dev-community favs — synthwave, solarized-dark,
+                             solarized-light, high-contrast,
+                             nord, gruvbox, dracula
+
+    Each theme spans the entire UI (terminal + walkthroughs
+    subsite) and persists across reloads via localStorage.
+
+EXAMPLES
+    themes`,
+
   tutorial: `NAME
     tutorial — guided introduction for new players (v1.12.0)
 

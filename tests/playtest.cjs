@@ -2164,6 +2164,102 @@ async function termText(page) {
         !after.includes("Tip: this level gates on a credential"));
 
   // ──────────────────────────────────────────────────────────────────
+  // v1.13.0 — 11-theme picker
+  // ──────────────────────────────────────────────────────────────────
+  //
+  // Exercise the theme registry, the data-theme attribute toggling,
+  // the data-theme-mode side-attribute, the four-shape command
+  // surface (`themes`, `theme`, `theme <name>`, `theme next/prev`),
+  // and the localStorage round-trip on reload.
+
+  // Reset to a known clean state (default dark theme).
+  await page.evaluate(() => { localStorage.removeItem("d3cyph3r-theme"); });
+  await page.reload();
+  await page.waitForTimeout(1200);
+
+  // --- `themes` lists all 11 ---
+  await typeAndEnter(page, "themes");
+  await page.waitForTimeout(80);
+  t = await termText(page);
+  for (const name of ["dark", "light", "crt-green", "amber", "synthwave",
+                      "solarized-dark", "solarized-light", "high-contrast",
+                      "nord", "gruvbox", "dracula"]) {
+    check(`v1.13.0 'themes' lists '${name}'`, t.includes(name));
+  }
+  check("v1.13.0 'themes' marks current theme with arrow",
+        /→\s+dark\b/.test(t));
+
+  // --- `theme` (no arg) reports current ---
+  await typeAndEnter(page, "theme");
+  await page.waitForTimeout(80);
+  t = await termText(page);
+  check("v1.13.0 'theme' (no arg) reports current is 'dark'",
+        /Current theme:\s*dark/.test(t));
+
+  // --- `theme crt-green` switches the body attribute ---
+  await typeAndEnter(page, "theme crt-green");
+  await page.waitForTimeout(80);
+  const themeAttr = await page.evaluate(() => document.body.getAttribute("data-theme"));
+  const modeAttr  = await page.evaluate(() => document.body.getAttribute("data-theme-mode"));
+  check("v1.13.0 'theme crt-green' sets data-theme=crt-green", themeAttr === "crt-green");
+  check("v1.13.0 crt-green theme has data-theme-mode='dark'",   modeAttr === "dark");
+
+  // --- mode flips to 'light' for a light theme ---
+  await typeAndEnter(page, "theme solarized-light");
+  await page.waitForTimeout(80);
+  const lightModeAttr = await page.evaluate(() => document.body.getAttribute("data-theme-mode"));
+  check("v1.13.0 solarized-light theme has data-theme-mode='light'", lightModeAttr === "light");
+
+  // --- invalid name errors gracefully ---
+  await typeAndEnter(page, "theme purple-monkey-dishwasher");
+  await page.waitForTimeout(80);
+  t = await termText(page);
+  check("v1.13.0 'theme <invalid>' prints error",
+        /unknown theme/i.test(t));
+  // Check theme was NOT changed by the invalid command.
+  const stillLight = await page.evaluate(() => document.body.getAttribute("data-theme"));
+  check("v1.13.0 invalid name does NOT change current theme",
+        stillLight === "solarized-light");
+
+  // --- `theme next` cycles ---
+  await typeAndEnter(page, "theme next");
+  await page.waitForTimeout(80);
+  const afterNext = await page.evaluate(() => document.body.getAttribute("data-theme"));
+  check("v1.13.0 'theme next' advances past solarized-light",
+        afterNext !== "solarized-light");
+
+  // --- `theme prev` reverses ---
+  await typeAndEnter(page, "theme prev");
+  await page.waitForTimeout(80);
+  const afterPrev = await page.evaluate(() => document.body.getAttribute("data-theme"));
+  check("v1.13.0 'theme prev' returns to solarized-light",
+        afterPrev === "solarized-light");
+
+  // --- localStorage persists the choice across reload ---
+  await typeAndEnter(page, "theme dracula");
+  await page.waitForTimeout(80);
+  const lsBefore = await page.evaluate(() => localStorage.getItem("d3cyph3r-theme"));
+  check("v1.13.0 'theme dracula' writes to localStorage", lsBefore === "dracula");
+  await page.reload();
+  await page.waitForTimeout(1200);
+  const afterReload = await page.evaluate(() => document.body.getAttribute("data-theme"));
+  check("v1.13.0 dracula theme survives reload (hydrated from localStorage)",
+        afterReload === "dracula");
+
+  // --- topbar click cycles to next theme ---
+  await typeAndEnter(page, "theme dark");
+  await page.waitForTimeout(80);
+  await page.locator("#theme-toggle").click();
+  await page.waitForTimeout(80);
+  const afterClick = await page.evaluate(() => document.body.getAttribute("data-theme"));
+  check("v1.13.0 topbar theme toggle cycles past 'dark'",
+        afterClick !== "dark");
+
+  // Clean up — back to dark for downstream tests.
+  await typeAndEnter(page, "theme dark");
+  await page.waitForTimeout(80);
+
+  // ──────────────────────────────────────────────────────────────────
   // v1.12.0 — first-visit guided tour (interactive state machine)
   // ──────────────────────────────────────────────────────────────────
   //

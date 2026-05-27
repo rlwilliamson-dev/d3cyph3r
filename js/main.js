@@ -34,7 +34,7 @@ if (isMobile()) {
   // side effects are only triggered if we actually call into them.
   const { initInput, setCommandSet } = await import("./terminal/input.js");
   const { startClock }               = await import("./terminal/clock.js");
-  const { initTheme, toggleTheme }   = await import("./terminal/theme.js");
+  const { initTheme, cycleTheme, getTheme } = await import("./terminal/theme.js");
   const { boot }                     = await import("./engine/lobby.js");
   const { ALL_CMDS }                 = await import("./commands/index.js");
   const { VERSION_DISPLAY }          = await import("./engine/version.js");
@@ -56,7 +56,17 @@ if (isMobile()) {
 
   document.getElementById("topbar-title").textContent = `D3CYPH3R ${VERSION_DISPLAY}`;
 
-  if (themeToggle) themeToggle.addEventListener("click", toggleTheme);
+  // v1.13.0: the topbar button cycles through ALL 11 themes (was a
+  // binary dark/light toggle). The button's title is refreshed
+  // after every click so hovering shows the new theme name.
+  if (themeToggle) {
+    const refreshTitle = () => {
+      const t = getTheme();
+      themeToggle.title = `Theme: ${t.name} — click to cycle (or run 'themes' / 'theme <name>')`;
+    };
+    refreshTitle();
+    themeToggle.addEventListener("click", () => { cycleTheme(); refreshTitle(); });
+  }
 
   setCommandSet(ALL_CMDS);
   initInput();

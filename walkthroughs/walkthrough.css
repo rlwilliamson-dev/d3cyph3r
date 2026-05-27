@@ -33,11 +33,18 @@
                 'Consolas', monospace;
 }
 
-/* ─── Light theme ─────────────────────────────────────────────
-   Mirrors the main app's `body.light` overlay (same palette + same
-   localStorage key). Walkthroughs subsite reads the same preference
-   so toggling theme on either site applies to both. */
-body.light {
+/* ═══ Theme variants (v1.13.0) ════════════════════════════════
+   Mirrors the main app's per-theme blocks (same localStorage key,
+   same data-theme attribute on body). Walkthroughs subsite reads
+   the same preference so switching theme on either site applies
+   to both. The walkthrough stylesheet has one extra variable —
+   --bg-card — for the reader's card-style surface; the wordmark
+   glyph variables are NOT mirrored here since the subsite has no
+   lobby logo.
+
+   When adding a theme, mirror it in BOTH files. */
+
+body[data-theme="light"] {
   --bg:        #ffffff;
   --bg-elev:   #f6f8fa;
   --bg-card:   #f0f3f6;
@@ -50,6 +57,141 @@ body.light {
   --yellow:    #9a6700;
   --dim:       #59636e;
   --border:    #d0d7de;
+}
+
+body[data-theme="crt-green"] {
+  --bg:        #000800;
+  --bg-elev:   #001500;
+  --bg-card:   #001a00;
+  --fg:        #33ff33;
+  --fg-bright: #99ff99;
+  --accent:    #66ffaa;
+  --green:     #44ff66;
+  --cyan:      #aaff77;
+  --red:       #ff5050;
+  --yellow:    #ffff44;
+  --dim:       #1c8a1c;
+  --border:    #1a4a1a;
+}
+
+body[data-theme="amber"] {
+  --bg:        #120800;
+  --bg-elev:   #1c0d00;
+  --bg-card:   #221000;
+  --fg:        #ffaa00;
+  --fg-bright: #ffdd66;
+  --accent:    #ffcc66;
+  --green:     #ccbb33;
+  --cyan:      #ddbb44;
+  --red:       #ff5544;
+  --yellow:    #ffee77;
+  --dim:       #884400;
+  --border:    #553300;
+}
+
+body[data-theme="synthwave"] {
+  --bg:        #1a0a3e;
+  --bg-elev:   #2a1a5e;
+  --bg-card:   #2f1f6a;
+  --fg:        #ff71ce;
+  --fg-bright: #ffffff;
+  --accent:    #01cdfe;
+  --green:     #05ffa1;
+  --cyan:      #00e5ff;
+  --red:       #ff6188;
+  --yellow:    #fffb96;
+  --dim:       #6e4faa;
+  --border:    #4a2e7a;
+}
+
+body[data-theme="solarized-dark"] {
+  --bg:        #002b36;
+  --bg-elev:   #073642;
+  --bg-card:   #094149;
+  --fg:        #839496;
+  --fg-bright: #93a1a1;
+  --accent:    #268bd2;
+  --green:     #859900;
+  --cyan:      #2aa198;
+  --red:       #dc322f;
+  --yellow:    #b58900;
+  --dim:       #586e75;
+  --border:    #073642;
+}
+
+body[data-theme="solarized-light"] {
+  --bg:        #fdf6e3;
+  --bg-elev:   #eee8d5;
+  --bg-card:   #f4eecf;
+  --fg:        #657b83;
+  --fg-bright: #586e75;
+  --accent:    #268bd2;
+  --green:     #859900;
+  --cyan:      #2aa198;
+  --red:       #dc322f;
+  --yellow:    #b58900;
+  --dim:       #93a1a1;
+  --border:    #eee8d5;
+}
+
+body[data-theme="high-contrast"] {
+  --bg:        #000000;
+  --bg-elev:   #0a0a0a;
+  --bg-card:   #141414;
+  --fg:        #ffffff;
+  --fg-bright: #ffffff;
+  --accent:    #ffff00;
+  --green:     #00ff00;
+  --cyan:      #00ffff;
+  --red:       #ff5555;
+  --yellow:    #ffff00;
+  --dim:       #cccccc;
+  --border:    #ffffff;
+}
+
+body[data-theme="nord"] {
+  --bg:        #2e3440;
+  --bg-elev:   #3b4252;
+  --bg-card:   #434c5e;
+  --fg:        #d8dee9;
+  --fg-bright: #eceff4;
+  --accent:    #88c0d0;
+  --green:     #a3be8c;
+  --cyan:      #8fbcbb;
+  --red:       #bf616a;
+  --yellow:    #ebcb8b;
+  --dim:       #4c566a;
+  --border:    #4c566a;
+}
+
+body[data-theme="gruvbox"] {
+  --bg:        #282828;
+  --bg-elev:   #3c3836;
+  --bg-card:   #45413a;
+  --fg:        #ebdbb2;
+  --fg-bright: #fbf1c7;
+  --accent:    #83a598;
+  --green:     #b8bb26;
+  --cyan:      #8ec07c;
+  --red:       #fb4934;
+  --yellow:    #fabd2f;
+  --dim:       #928374;
+  --border:    #504945;
+}
+
+body[data-theme="dracula"] {
+  --bg:        #282a36;
+  --bg-elev:   #44475a;
+  --bg-card:   #4d5167;
+  --fg:        #f8f8f2;
+  --fg-bright: #ffffff;
+  --accent:    #bd93f9;
+  --green:     #50fa7b;
+  --cyan:      #8be9fd;
+  --red:       #ff5555;
+  --yellow:    #f1fa8c;
+  --dim:       #6272a4;
+  --border:    #44475a;
 }
 body, #site-header, .footer-link {
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
