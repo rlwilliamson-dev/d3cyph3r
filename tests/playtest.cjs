@@ -2788,6 +2788,99 @@ async function termText(page) {
   await typeAndEnter(page, "exit");
   await page.waitForTimeout(300);
 
+  // ──────────────────────────────────────────────────────────────────
+  // v1.17.0 — Standardized `cmd --help`
+  // ──────────────────────────────────────────────────────────────────
+  //
+  // Every command in COMMANDS now responds to `--help` with a short
+  // usage block. Curated entries in HELP_STRINGS override the
+  // auto-synthesized version (which is derived from MAN_PAGES NAME +
+  // SYNOPSIS). Standalone-only — pipelines pass --help through as a
+  // normal argument.
+
+  // Stay in the lobby — these tests don't require level state.
+  await typeAndEnter(page, "ls --help");
+  await page.waitForTimeout(80);
+  let tHelp = await termText(page);
+  check("v1.17.0 'ls --help' prints auto-extracted block",
+        /ls — list directory contents/.test(tHelp));
+  check("v1.17.0 'ls --help' includes 'usage:' line",
+        /usage: ls/.test(tHelp));
+  check("v1.17.0 'ls --help' includes 'man ls' pointer",
+        tHelp.includes("See 'man ls' for full details"));
+
+  await typeAndEnter(page, "grep --help");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  check("v1.17.0 'grep --help' prints auto-extracted block",
+        /grep — search for a pattern in files/.test(tHelp));
+
+  // Curated override: progress has subcommands that the auto-extracted
+  // version wouldn't surface clearly.
+  await typeAndEnter(page, "progress --help");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  check("v1.17.0 'progress --help' surfaces save-on / save-off / reset",
+        tHelp.includes("save-on") && tHelp.includes("save-off") && tHelp.includes("reset"));
+
+  // Curated override: git (multi-subcommand)
+  await typeAndEnter(page, "git --help");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  check("v1.17.0 'git --help' surfaces subcommand list",
+        /git — version-control inspector/.test(tHelp) && tHelp.includes("log"));
+
+  // Curated override: read-only-stub
+  await typeAndEnter(page, "chmod --help");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  check("v1.17.0 'chmod --help' surfaces sandbox-stub message",
+        tHelp.includes("read-only sandbox stub"));
+
+  // Curated override: theme has 'next' / 'prev' / <name> forms
+  await typeAndEnter(page, "theme --help");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  check("v1.17.0 'theme --help' shows next/prev cycle forms",
+        tHelp.includes("next") && tHelp.includes("prev"));
+
+  // achievements override
+  await typeAndEnter(page, "achievements --help");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  check("v1.17.0 'achievements --help' mentions --detail flag",
+        /--detail/.test(tHelp));
+
+  // openssl (multi-mode toolkit)
+  await typeAndEnter(page, "openssl --help");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  check("v1.17.0 'openssl --help' surfaces x509 / rand / dgst",
+        tHelp.includes("x509") && tHelp.includes("rand") && tHelp.includes("dgst"));
+
+  // Typo: --help on an unknown command should NOT intercept; it
+  // should still get the "command not found" + did-you-mean nudge.
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, "lss --help");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  check("v1.17.0 typo + --help still routes to command-not-found",
+        tHelp.includes("command not found") && tHelp.includes("Did you mean: ls?"));
+
+  // Pipeline: `echo --help | wc -c` should pass --help through as
+  // literal data (NOT intercept on the echo segment). Use wc (which
+  // is stdin-aware) so the pipe surfaces echo's output as a byte
+  // count. "--help" is 6 chars + trailing newline = 7.
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, "echo --help | wc -c");
+  await page.waitForTimeout(80);
+  tHelp = await termText(page);
+  const echoTail = tHelp.split("echo --help | wc -c").slice(-1)[0] || "";
+  // Output should be a single digit / small number (the byte count
+  // of "--help\n" — 6 or 7 chars) and NOT the help block from echo.
+  check("v1.17.0 'echo --help | wc -c' passes --help through (no echo intercept)",
+        /\b[67]\b/.test(echoTail) && !echoTail.includes("See 'man echo'"));
+
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
 
