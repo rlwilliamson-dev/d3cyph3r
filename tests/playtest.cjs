@@ -2789,6 +2789,65 @@ async function termText(page) {
   await page.waitForTimeout(300);
 
   // ──────────────────────────────────────────────────────────────────
+  // v1.18.0 — Lobby polish (welcome-back / next-up / completion glyph
+  //           / achievements teaser / bonus + time summary)
+  // ──────────────────────────────────────────────────────────────────
+  //
+  // At this point we just exited back to the lobby with linux level0
+  // AND level1 visited (from the v1.16.0 block's navigation). That
+  // means:
+  //   - seenOnboarding is true (set on the boot-time lobby render)
+  //     → welcome-back banner fires instead of the first-visit walls
+  //   - 2 / 14 levels visited
+  //   - linux track is fully cleared → [✓] glyph
+  //   - no next-up (linux is the only track touched and it's done)
+  //   - achievements earned > 0 (First Steps, etc.)
+  let tLobby = await termText(page);
+  // The lobby just rendered — split on the most-recent "AVAILABLE
+  // ENGAGEMENTS" header so we look at THIS render's content, not
+  // earlier renders in scrollback.
+  const lobbyTail = tLobby.split("AVAILABLE ENGAGEMENTS").slice(-1)[0] || "";
+  const lobbyBeforeEngagements = tLobby.split("AVAILABLE ENGAGEMENTS").slice(-2, -1)[0] || "";
+
+  check("v1.18.0 returning-visit lobby prints 'WELCOME BACK'",
+        lobbyBeforeEngagements.includes("WELCOME BACK"));
+  check("v1.18.0 welcome-back summary shows X/14 levels visited",
+        /\d+\/14 levels visited/.test(lobbyBeforeEngagements));
+  check("v1.18.0 welcome-back summary shows bonus-finds count",
+        /\d+\/\d+ bonus finds/.test(lobbyBeforeEngagements));
+  check("v1.18.0 welcome-back summary shows achievements count",
+        /\d+\/20 achievements/.test(lobbyBeforeEngagements));
+  // Linux track is fully visited at this point — check for completion glyph.
+  check("v1.18.0 fully-visited linux track shows [✓] glyph",
+        /ssh level0@linux\s+\[✓\]/.test(lobbyTail));
+  // Other tracks (e.g., network) are still untouched — expand chevron.
+  check("v1.18.0 untouched network track still shows [▸] chevron",
+        /ssh level0@network\s+\[▸\]/.test(lobbyTail));
+  // Next-up should NOT appear — linux is done, nothing else started.
+  check("v1.18.0 next-up does NOT fire when started tracks are done",
+        !lobbyBeforeEngagements.includes("Continue: ssh"));
+  // Achievements teaser in the footer — earned count is > 0 by now.
+  check("v1.18.0 footer shows '★ N/20 achievements earned' teaser",
+        /★\s+\d+\/20 achievements earned/.test(lobbyTail));
+
+  // Force a fresh next-up state: clear visited entirely, then put
+  // ONLY level0@linux in. The lobby should now show "Continue: ssh
+  // level1@linux" because level0 is visited and level1 isn't.
+  await page.evaluate(() => {
+    sessionStorage.setItem("visited", JSON.stringify(["level0@linux"]));
+  });
+  // Trigger a fresh lobby render. Exit at lobby prints "Already at
+  // the lobby" (no re-render); ssh + exit does a full round-trip.
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(400);
+  tLobby = await termText(page);
+  const lobbyAfterReset = tLobby.split("AVAILABLE ENGAGEMENTS").slice(-2, -1)[0] || "";
+  check("v1.18.0 next-up fires when player has progress to continue",
+        lobbyAfterReset.includes("Continue: ssh level1@linux"));
+
+  // ──────────────────────────────────────────────────────────────────
   // v1.17.0 — Standardized `cmd --help`
   // ──────────────────────────────────────────────────────────────────
   //
