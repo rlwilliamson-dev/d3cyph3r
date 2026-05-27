@@ -192,7 +192,7 @@ See `help` inside the terminal for the full reference. Track-by-track:
 - **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>` / `walkthrough` / `progress` (+ `--detail` for bonus-find listing, v1.10.0; + `save-on` / `save-off` / `reset` for opt-in localStorage persistence, v1.11.0) / `tutorial` (+ `start` for the interactive walk-through, v1.12.0) / `search <term>`
 - **Shell environment (v1.9.0):** `export` / `env` / `unset` / `set` / `FOO=bar` / `FOO=bar cmd` / `PS1` substitution (`\u`, `\h`, `\H`, `\w`, `\W`, `\$`)
 - **Job control (v1.9.0):** `cmd &` / `jobs` / `fg` / `bg` / `kill` / `wait` / `disown`
-- **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout` / `tracks` (lobby tree expand/collapse, v1.10.0) / `tiers` (difficulty-tier legend, v1.10.0)
+- **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout` / `tracks` (lobby tree expand/collapse, v1.10.0) / `tiers` (difficulty-tier legend, v1.10.0) / `themes` + `theme <name>` (11-theme picker, v1.13.0)
 
 The terminal supports a real bash-shaped composition layer (v1.8.0 + v1.9.0):
 

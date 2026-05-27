@@ -7,6 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-05-27
+
+**11-theme picker.** Third of four Quality-of-Life MINORs queued
+before the v2.0 "Apprentice" level2 push. Replaces the binary
+dark↔light toggle with a registry of 11 themes spanning the
+D3CYPH3R originals, retro-terminal looks (CRT phosphor, VT220
+amber), modern cyberpunk (synthwave), classic dev community
+favorites (Solarized dark + light, Nord, Gruvbox, Dracula), and
+accessibility (high-contrast). Themes carry across both the main
+terminal and the walkthroughs subsite, persist via localStorage,
+and switch via the topbar cycle button OR the new player-facing
+`theme` / `themes` commands.
+
+### Added
+
+- **`js/commands/themes.js`** — New module exposing two commands.
+  `themes` (plural) lists every available theme with a one-line
+  description and marks the current one with `→`. `theme` (no
+  arg) prints the active theme and how to switch. `theme <name>`
+  switches by name (case-insensitive). `theme next` / `theme prev`
+  cycle through the registry order. Unknown names error
+  gracefully without changing the active theme.
+- **9 new themes** in `style.css` + `walkthroughs/walkthrough.css`:
+  `crt-green` (phosphor on near-black, iconic hacker-movie
+  aesthetic), `amber` (VT220 / IBM 3270 retro Unix), `synthwave`
+  (outrun neon on deep purple), `solarized-dark` and
+  `solarized-light` (Ethan Schoonover's classics, dark + daytime
+  siblings), `high-contrast` (pure white on pure black with
+  saturated accents — accessibility AND movie-hacker look),
+  `nord` (calm icy palette), `gruvbox` (warm earthy), and
+  `dracula` (popular dev theme). Existing `dark` (default) and
+  `light` are kept as-is. Total: 11 themes.
+- **`data-theme-mode` body attribute.** Each theme is classified
+  as `dark` or `light` based on surface luminance; this drives
+  the topbar moon ↔ sun icon swap (was: hardcoded to the
+  `body.light` class). Returning users on the light theme see
+  the sun; everyone on the 9 dark variants sees the moon.
+- **23 new playtest assertions.** Cover the full theme surface:
+  `themes` lists all 11, `theme` reports current, `theme <name>`
+  switches the body attribute, mode flips correctly for light
+  themes, invalid names don't change state, `theme next` / `prev`
+  cycle, localStorage round-trips across reload, the topbar click
+  cycles. Total: 726 checks, all passing.
+
+### Changed
+
+- **`js/terminal/theme.js`** — Rewritten from the binary
+  `toggleTheme()` / `initTheme()` pair to a multi-theme API:
+  `THEMES` registry export, `setTheme(name)`, `getTheme()`,
+  `cycleTheme(direction)`, `findTheme(name)`, `initTheme()`.
+  `setTheme` applies both `data-theme` and `data-theme-mode`
+  attributes to body. localStorage key unchanged (`d3cyph3r-theme`)
+  for backwards compatibility — pre-v1.13.0 saved values of
+  `"dark"` or `"light"` round-trip cleanly through the new
+  registry.
+- **`style.css`** — Removed the `body.light` overlay block and
+  the dead `.glyph-white/.glyph-green/.glyph-cyan/.glyph-accent/
+  .glyph-yellow/.glyph-red` legacy classes (unused since the
+  v1.10.0 wordmark refresh; confirmed via grep that no JS
+  references them). Replaced with 10 `body[data-theme="<name>"]`
+  blocks (light + 9 new themes) that override the full palette +
+  wordmark glyph variables in one place. The `:root` block is
+  now the canonical "dark" theme.
+- **`walkthroughs/walkthrough.css`** — Mirror of the main app's
+  per-theme blocks (without the `--glyph-*` family, since the
+  subsite has no lobby logo). Adds the `--bg-card` variable per
+  theme for the docs-reader card surface.
+- **`js/main.js`** — Topbar button now calls `cycleTheme()` and
+  refreshes the button's `title` after each click to show the
+  current theme name on hover.
+- **`js/commands/man-pages.js`** — Added `man theme` and
+  `man themes` entries covering the full command surface and the
+  three-group taxonomy of available themes.
+- **`js/commands/shell.js`** — Help reference adds `themes`,
+  `theme <name>`, and `theme next / prev` rows in the TERMINAL
+  section alongside `tiers`, `tracks`, `report`.
+- **`index.html` + `walkthroughs/index.html`** — Stylesheet
+  cache-bust queries bumped to `?v=1.13.0` so returning visitors
+  pick up the new CSS without the typical 4-hour Cloudflare-CDN
+  stale-cache window.
+
+### Notes for forkers
+
+- **Theme registry is one constant.** Adding a 12th theme:
+  add a row to `THEMES` in `js/terminal/theme.js`, add matching
+  `body[data-theme="<name>"]` blocks in both stylesheets, bump
+  the CSS cache-bust query in both `index.html` files. The
+  `theme`/`themes` commands and the topbar cycle button pick it
+  up automatically — no further wiring.
+- **Cross-subsite theming.** Both stylesheets reference the same
+  CSS variable names (`--bg`, `--fg`, etc) for the same purposes,
+  so each `body[data-theme="<name>"]` block is duplicated across
+  the two files. Future cleanup could extract a shared
+  `themes.css` both subsites link, but that's a v3.x architecture
+  consideration; for v1.13.0 the duplication is intentional and
+  documented at the top of each per-theme block.
+- **Glyph cascade variables (`--glyph-bright/--glyph-mid/
+  --glyph-dim/--glyph-bracket`) live in the main app's
+  `style.css` only.** The walkthroughs subsite has no lobby
+  wordmark, so duplicating them there would be dead weight.
+- **The `data-theme-mode` attribute is computed, not configured.**
+  It's set by `setTheme()` based on the theme's `mode` field in
+  the registry. CSS uses it to swap the topbar icon (moon vs
+  sun) and could be used by future styles that depend on
+  surface luminance (focus rings, accent saturation, etc).
+
 ## [1.12.0] - 2026-05-26
 
 **First-visit guided tour.** Second of four Quality-of-Life MINORs
@@ -2768,7 +2874,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.0...v1.10.1

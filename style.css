@@ -48,9 +48,11 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Share+Tech+Mono&family=VT323&display=swap');
 
 :root {
-  /* Base tones — GitHub dark palette. */
-  --bg:        #06080b;   /* page background — slightly darker than GH for terminal feel */
-  --bg-elev:   #0d1117;   /* elevated surfaces (topbar separators, progress track) */
+  /* Base tones — GitHub dark palette. This block IS the "dark"
+     theme; alternate themes below override these variables via
+     body[data-theme="<name>"]. */
+  --bg:        #06080b;   /* page background */
+  --bg-elev:   #0d1117;   /* elevated surfaces */
   --fg:        #c9d1d9;   /* default foreground for command output */
   --fg-bright: #f0f6fc;   /* echo of the command line itself; topbar title */
 
@@ -65,44 +67,219 @@
   /* Structural */
   --border:    #30363d;   /* hairline borders (topbar bottom, scrollbar thumb) */
   --font:      'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  /* Lobby logo wordmark brightness cascade (D3CYPH3R glyphs). */
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #c9d1d9;
+  --glyph-dim:     #6e7681;
+  --glyph-bracket: #6e7681;
 }
 
-/* ─── Light theme ─────────────────────────────────────────────
-   Activated by adding `body.light` (toggled via js/terminal/theme.js,
-   persisted in localStorage). The CSS-variable overlay below inherits
-   from the dark base — every color that needs to flip for readability
-   on a light background is overridden here in one block. Colors are
-   based on GitHub's light palette so the visual identity stays
-   familiar for the same audience that lives in GitHub. */
-body.light {
+/* ═══ Theme variants (v1.13.0) ════════════════════════════════
+   Selected via body[data-theme="<name>"] by js/terminal/theme.js
+   and persisted in localStorage. Each block overrides every
+   themable variable in one place so a partial palette can't leak.
+   The :root block above is the default "dark" theme.
+
+   When adding a theme: also mirror the same block in
+   walkthroughs/walkthrough.css (which uses the same variables
+   minus the --glyph-* family — no wordmark in the subsite). */
+
+body[data-theme="light"] {
   --bg:        #ffffff;
   --bg-elev:   #f6f8fa;
   --fg:        #1f2328;
   --fg-bright: #000000;
-  --dim:       #59636e;
-  --border:    #d0d7de;
   --accent:    #0969da;
   --green:     #1a7f37;
   --cyan:      #1b7c83;
   --red:       #cf222e;
   --yellow:    #9a6700;
+  --dim:       #59636e;
+  --border:    #d0d7de;
+  --glyph-bright:  #000000;
+  --glyph-mid:     #444444;
+  --glyph-dim:     #99a0aa;
+  --glyph-bracket: #888e9a;
 }
+
+/* Iconic "hacker-movie" phosphor green on near-black. */
+body[data-theme="crt-green"] {
+  --bg:        #000800;
+  --bg-elev:   #001500;
+  --fg:        #33ff33;
+  --fg-bright: #99ff99;
+  --accent:    #66ffaa;
+  --green:     #44ff66;
+  --cyan:      #aaff77;
+  --red:       #ff5050;
+  --yellow:    #ffff44;
+  --dim:       #1c8a1c;
+  --border:    #1a4a1a;
+  --glyph-bright:  #aaffaa;
+  --glyph-mid:     #33ff33;
+  --glyph-dim:     #1c8a1c;
+  --glyph-bracket: #1c8a1c;
+}
+
+/* VT220 / IBM 3270 amber on warm black. */
+body[data-theme="amber"] {
+  --bg:        #120800;
+  --bg-elev:   #1c0d00;
+  --fg:        #ffaa00;
+  --fg-bright: #ffdd66;
+  --accent:    #ffcc66;
+  --green:     #ccbb33;
+  --cyan:      #ddbb44;
+  --red:       #ff5544;
+  --yellow:    #ffee77;
+  --dim:       #884400;
+  --border:    #553300;
+  --glyph-bright:  #ffdd66;
+  --glyph-mid:     #ffaa00;
+  --glyph-dim:     #884400;
+  --glyph-bracket: #884400;
+}
+
+/* Outrun / cyberpunk neon on deep purple. */
+body[data-theme="synthwave"] {
+  --bg:        #1a0a3e;
+  --bg-elev:   #2a1a5e;
+  --fg:        #ff71ce;
+  --fg-bright: #ffffff;
+  --accent:    #01cdfe;
+  --green:     #05ffa1;
+  --cyan:      #00e5ff;
+  --red:       #ff6188;
+  --yellow:    #fffb96;
+  --dim:       #6e4faa;
+  --border:    #4a2e7a;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #ff71ce;
+  --glyph-dim:     #6e4faa;
+  --glyph-bracket: #01cdfe;
+}
+
+/* Ethan Schoonover's Solarized — calm dark. */
+body[data-theme="solarized-dark"] {
+  --bg:        #002b36;
+  --bg-elev:   #073642;
+  --fg:        #839496;
+  --fg-bright: #93a1a1;
+  --accent:    #268bd2;
+  --green:     #859900;
+  --cyan:      #2aa198;
+  --red:       #dc322f;
+  --yellow:    #b58900;
+  --dim:       #586e75;
+  --border:    #073642;
+  --glyph-bright:  #93a1a1;
+  --glyph-mid:     #839496;
+  --glyph-dim:     #586e75;
+  --glyph-bracket: #586e75;
+}
+
+/* Solarized light — daytime sibling. */
+body[data-theme="solarized-light"] {
+  --bg:        #fdf6e3;
+  --bg-elev:   #eee8d5;
+  --fg:        #657b83;
+  --fg-bright: #586e75;
+  --accent:    #268bd2;
+  --green:     #859900;
+  --cyan:      #2aa198;
+  --red:       #dc322f;
+  --yellow:    #b58900;
+  --dim:       #93a1a1;
+  --border:    #eee8d5;
+  --glyph-bright:  #073642;
+  --glyph-mid:     #586e75;
+  --glyph-dim:     #93a1a1;
+  --glyph-bracket: #93a1a1;
+}
+
+/* Accessibility (also doubles as "movie-hacker" max contrast). */
+body[data-theme="high-contrast"] {
+  --bg:        #000000;
+  --bg-elev:   #0a0a0a;
+  --fg:        #ffffff;
+  --fg-bright: #ffffff;
+  --accent:    #ffff00;
+  --green:     #00ff00;
+  --cyan:      #00ffff;
+  --red:       #ff5555;
+  --yellow:    #ffff00;
+  --dim:       #cccccc;
+  --border:    #ffffff;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #ffff00;
+  --glyph-dim:     #cccccc;
+  --glyph-bracket: #cccccc;
+}
+
+/* Nord — calm icy palette. */
+body[data-theme="nord"] {
+  --bg:        #2e3440;
+  --bg-elev:   #3b4252;
+  --fg:        #d8dee9;
+  --fg-bright: #eceff4;
+  --accent:    #88c0d0;
+  --green:     #a3be8c;
+  --cyan:      #8fbcbb;
+  --red:       #bf616a;
+  --yellow:    #ebcb8b;
+  --dim:       #4c566a;
+  --border:    #4c566a;
+  --glyph-bright:  #eceff4;
+  --glyph-mid:     #88c0d0;
+  --glyph-dim:     #4c566a;
+  --glyph-bracket: #4c566a;
+}
+
+/* Gruvbox — warm earthy. */
+body[data-theme="gruvbox"] {
+  --bg:        #282828;
+  --bg-elev:   #3c3836;
+  --fg:        #ebdbb2;
+  --fg-bright: #fbf1c7;
+  --accent:    #83a598;
+  --green:     #b8bb26;
+  --cyan:      #8ec07c;
+  --red:       #fb4934;
+  --yellow:    #fabd2f;
+  --dim:       #928374;
+  --border:    #504945;
+  --glyph-bright:  #fbf1c7;
+  --glyph-mid:     #fabd2f;
+  --glyph-dim:     #928374;
+  --glyph-bracket: #928374;
+}
+
+/* Dracula — popular dev theme. */
+body[data-theme="dracula"] {
+  --bg:        #282a36;
+  --bg-elev:   #44475a;
+  --fg:        #f8f8f2;
+  --fg-bright: #ffffff;
+  --accent:    #bd93f9;
+  --green:     #50fa7b;
+  --cyan:      #8be9fd;
+  --red:       #ff5555;
+  --yellow:    #f1fa8c;
+  --dim:       #6272a4;
+  --border:    #44475a;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #bd93f9;
+  --glyph-dim:     #6272a4;
+  --glyph-bracket: #6272a4;
+}
+
 /* Smooth transition between themes — only on the colored properties
    so layout-affecting transitions (width/height) aren't accidentally
    animated. 180ms feels snappy without being jarring. */
 body, .line, #topbar, #site-footer, .theme-toggle, .footer-link {
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
 }
-
-/* The lobby logo glyphs use hardcoded brand colors. Provide a light-
-   mode variant set that maintains the same five-color identity but
-   stays readable on white. The greens, cyans, and accents shift to
-   their darker GitHub-light equivalents; bright white flips to black. */
-body.light .glyph-white  { color: #000000; }
-body.light .glyph-green  { color: #1a7f37; }
-body.light .glyph-cyan   { color: #1b7c83; }
-body.light .glyph-accent { color: #0969da; }
-body.light .glyph-red    { color: #cf222e; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -176,11 +353,14 @@ html, body {
   outline: none;
 }
 .theme-toggle .theme-icon { display: block; }
-/* Default (dark mode): show the moon → click to go light. */
+/* v1.13.0: 11 themes total, so the moon/sun pair no longer maps
+   cleanly to dark/light. Show the moon for any "dark-mode" theme
+   (the default) and the sun for any "light-mode" theme. theme.js
+   sets `data-theme-mode` on body to "dark" or "light" based on
+   the active theme's surface luminance. */
 .theme-toggle .theme-icon-sun  { display: none; }
-/* Light mode: show the sun → click to go back dark. */
-body.light .theme-toggle .theme-icon-moon { display: none; }
-body.light .theme-toggle .theme-icon-sun  { display: block; }
+body[data-theme-mode="light"] .theme-toggle .theme-icon-moon { display: none; }
+body[data-theme-mode="light"] .theme-toggle .theme-icon-sun  { display: block; }
 
 #progress-bar  { height: 2px; background: var(--bg-elev); margin-bottom: 12px; flex-shrink: 0; }
 #progress-fill { height: 100%; width: 0; background: var(--green); transition: width 0.6s ease; }
@@ -234,37 +414,13 @@ body.light .theme-toggle .theme-icon-sun  { display: block; }
 .glyph-share-tech        { font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: 0.98em; }
 .glyph-share-tech-italic { font-family: 'Share Tech Mono', 'Courier New', monospace; font-size: 0.98em; font-style: italic; }
 
-/* Glyph color palette — saturated ANSI console colors, deliberately
-   bolder than the GitHub-Dark --green/--cyan/etc the rest of the UI
-   uses. Only applies to the logo wordmark. (Legacy mixed-color
-   variants — current logo uses the brightness-cascade classes below
-   instead, but these are kept available for future logo experiments.) */
-.glyph-white             { color: #ffffff; }
-.glyph-green             { color: #00ff00; }
-.glyph-cyan              { color: #00ffff; }
-.glyph-accent            { color: #5b8fff; }
-.glyph-yellow            { color: #ffff00; }
-.glyph-red               { color: #cc0000; }
-
 /* Brightness-cascade palette — the current logo style. Each character
    in the wordmark is one of three brightness levels (bright/mid/dim)
    creating a "decoded message" cadence. Theme-flippable via CSS vars
-   so the cascade reads correctly in both dark and light modes (dark:
-   white→light-gray→mid-gray; light: black→dark-gray→medium-gray).
+   declared in the per-theme blocks at the top of this file, so the
+   cascade reads correctly across all 11 v1.13.0 themes.
    The bracket sits between the dim and mid range — a frame, not a
    wordmark character. */
-:root {
-  --glyph-bright:  #ffffff;
-  --glyph-mid:     #c9d1d9;
-  --glyph-dim:     #6e7681;
-  --glyph-bracket: #6e7681;
-}
-body.light {
-  --glyph-bright:  #000000;
-  --glyph-mid:     #444444;
-  --glyph-dim:     #99a0aa;
-  --glyph-bracket: #888e9a;
-}
 .glyph-bright  { color: var(--glyph-bright); }
 .glyph-mid     { color: var(--glyph-mid);    }
 .glyph-dim     { color: var(--glyph-dim);    }

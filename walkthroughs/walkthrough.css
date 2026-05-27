@@ -14,6 +14,8 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=VT323&display=swap');
 
 :root {
+  /* Defaults = dark theme. Each body[data-theme="<name>"] block
+     below overrides these. */
   --bg:        #06080b;
   --bg-elev:   #0d1117;
   --bg-card:   #11161d;
@@ -27,17 +29,31 @@
   --dim:       #6e7681;
   --border:    #30363d;
 
+  /* Wordmark brightness cascade — same as main app's style.css.
+     The [D3CYPH3R] header in the walkthroughs site reads these. */
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #c9d1d9;
+  --glyph-dim:     #6e7681;
+  --glyph-bracket: #6e7681;
+
   --font-prose: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
                 'Helvetica Neue', Arial, sans-serif;
   --font-mono:  'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo',
                 'Consolas', monospace;
 }
 
-/* ─── Light theme ─────────────────────────────────────────────
-   Mirrors the main app's `body.light` overlay (same palette + same
-   localStorage key). Walkthroughs subsite reads the same preference
-   so toggling theme on either site applies to both. */
-body.light {
+/* ═══ Theme variants (v1.13.0) ════════════════════════════════
+   Mirrors the main app's per-theme blocks (same localStorage key,
+   same data-theme attribute on body). Walkthroughs subsite reads
+   the same preference so switching theme on either site applies
+   to both. The walkthrough stylesheet has one extra variable —
+   --bg-card — for the reader's card-style surface; the wordmark
+   glyph variables are NOT mirrored here since the subsite has no
+   lobby logo.
+
+   When adding a theme, mirror it in BOTH files. */
+
+body[data-theme="light"] {
   --bg:        #ffffff;
   --bg-elev:   #f6f8fa;
   --bg-card:   #f0f3f6;
@@ -50,6 +66,181 @@ body.light {
   --yellow:    #9a6700;
   --dim:       #59636e;
   --border:    #d0d7de;
+  --glyph-bright:  #000000;
+  --glyph-mid:     #444444;
+  --glyph-dim:     #99a0aa;
+  --glyph-bracket: #888e9a;
+}
+
+body[data-theme="crt-green"] {
+  --bg:        #000800;
+  --bg-elev:   #001500;
+  --bg-card:   #001a00;
+  --fg:        #33ff33;
+  --fg-bright: #99ff99;
+  --accent:    #66ffaa;
+  --green:     #44ff66;
+  --cyan:      #aaff77;
+  --red:       #ff5050;
+  --yellow:    #ffff44;
+  --dim:       #1c8a1c;
+  --border:    #1a4a1a;
+  --glyph-bright:  #aaffaa;
+  --glyph-mid:     #33ff33;
+  --glyph-dim:     #1c8a1c;
+  --glyph-bracket: #1c8a1c;
+}
+
+body[data-theme="amber"] {
+  --bg:        #120800;
+  --bg-elev:   #1c0d00;
+  --bg-card:   #221000;
+  --fg:        #ffaa00;
+  --fg-bright: #ffdd66;
+  --accent:    #ffcc66;
+  --green:     #ccbb33;
+  --cyan:      #ddbb44;
+  --red:       #ff5544;
+  --yellow:    #ffee77;
+  --dim:       #884400;
+  --border:    #553300;
+  --glyph-bright:  #ffdd66;
+  --glyph-mid:     #ffaa00;
+  --glyph-dim:     #884400;
+  --glyph-bracket: #884400;
+}
+
+body[data-theme="synthwave"] {
+  --bg:        #1a0a3e;
+  --bg-elev:   #2a1a5e;
+  --bg-card:   #2f1f6a;
+  --fg:        #ff71ce;
+  --fg-bright: #ffffff;
+  --accent:    #01cdfe;
+  --green:     #05ffa1;
+  --cyan:      #00e5ff;
+  --red:       #ff6188;
+  --yellow:    #fffb96;
+  --dim:       #6e4faa;
+  --border:    #4a2e7a;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #ff71ce;
+  --glyph-dim:     #6e4faa;
+  --glyph-bracket: #01cdfe;
+}
+
+body[data-theme="solarized-dark"] {
+  --bg:        #002b36;
+  --bg-elev:   #073642;
+  --bg-card:   #094149;
+  --fg:        #839496;
+  --fg-bright: #93a1a1;
+  --accent:    #268bd2;
+  --green:     #859900;
+  --cyan:      #2aa198;
+  --red:       #dc322f;
+  --yellow:    #b58900;
+  --dim:       #586e75;
+  --border:    #073642;
+  --glyph-bright:  #93a1a1;
+  --glyph-mid:     #839496;
+  --glyph-dim:     #586e75;
+  --glyph-bracket: #586e75;
+}
+
+body[data-theme="solarized-light"] {
+  --bg:        #fdf6e3;
+  --bg-elev:   #eee8d5;
+  --bg-card:   #f4eecf;
+  --fg:        #657b83;
+  --fg-bright: #586e75;
+  --accent:    #268bd2;
+  --green:     #859900;
+  --cyan:      #2aa198;
+  --red:       #dc322f;
+  --yellow:    #b58900;
+  --dim:       #93a1a1;
+  --border:    #eee8d5;
+  --glyph-bright:  #073642;
+  --glyph-mid:     #586e75;
+  --glyph-dim:     #93a1a1;
+  --glyph-bracket: #93a1a1;
+}
+
+body[data-theme="high-contrast"] {
+  --bg:        #000000;
+  --bg-elev:   #0a0a0a;
+  --bg-card:   #141414;
+  --fg:        #ffffff;
+  --fg-bright: #ffffff;
+  --accent:    #ffff00;
+  --green:     #00ff00;
+  --cyan:      #00ffff;
+  --red:       #ff5555;
+  --yellow:    #ffff00;
+  --dim:       #cccccc;
+  --border:    #ffffff;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #ffff00;
+  --glyph-dim:     #cccccc;
+  --glyph-bracket: #cccccc;
+}
+
+body[data-theme="nord"] {
+  --bg:        #2e3440;
+  --bg-elev:   #3b4252;
+  --bg-card:   #434c5e;
+  --fg:        #d8dee9;
+  --fg-bright: #eceff4;
+  --accent:    #88c0d0;
+  --green:     #a3be8c;
+  --cyan:      #8fbcbb;
+  --red:       #bf616a;
+  --yellow:    #ebcb8b;
+  --dim:       #4c566a;
+  --border:    #4c566a;
+  --glyph-bright:  #eceff4;
+  --glyph-mid:     #88c0d0;
+  --glyph-dim:     #4c566a;
+  --glyph-bracket: #4c566a;
+}
+
+body[data-theme="gruvbox"] {
+  --bg:        #282828;
+  --bg-elev:   #3c3836;
+  --bg-card:   #45413a;
+  --fg:        #ebdbb2;
+  --fg-bright: #fbf1c7;
+  --accent:    #83a598;
+  --green:     #b8bb26;
+  --cyan:      #8ec07c;
+  --red:       #fb4934;
+  --yellow:    #fabd2f;
+  --dim:       #928374;
+  --border:    #504945;
+  --glyph-bright:  #fbf1c7;
+  --glyph-mid:     #fabd2f;
+  --glyph-dim:     #928374;
+  --glyph-bracket: #928374;
+}
+
+body[data-theme="dracula"] {
+  --bg:        #282a36;
+  --bg-elev:   #44475a;
+  --bg-card:   #4d5167;
+  --fg:        #f8f8f2;
+  --fg-bright: #ffffff;
+  --accent:    #bd93f9;
+  --green:     #50fa7b;
+  --cyan:      #8be9fd;
+  --red:       #ff5555;
+  --yellow:    #f1fa8c;
+  --dim:       #6272a4;
+  --border:    #44475a;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #bd93f9;
+  --glyph-dim:     #6272a4;
+  --glyph-bracket: #6272a4;
 }
 body, #site-header, .footer-link {
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
@@ -111,20 +302,8 @@ body {
 
 /* Brightness-cascade glyph classes — mirrors the main app's lobby logo
    (style.css) so the [D3CYPH3R] wordmark renders consistently across
-   both subsites. Theme-flippable via CSS vars so the cascade reads
-   correctly in dark and light mode. */
-:root {
-  --glyph-bright:  #ffffff;
-  --glyph-mid:     #c9d1d9;
-  --glyph-dim:     #6e7681;
-  --glyph-bracket: #6e7681;
-}
-body.light {
-  --glyph-bright:  #000000;
-  --glyph-mid:     #444444;
-  --glyph-dim:     #99a0aa;
-  --glyph-bracket: #888e9a;
-}
+   both subsites. Variables are defined per theme in the
+   body[data-theme="<name>"] blocks at the top of this file. */
 .glyph-vt323   { font-family: 'VT323', 'Courier New', monospace; font-size: 1.25em; }
 .glyph-bright  { color: var(--glyph-bright); }
 .glyph-mid     { color: var(--glyph-mid);    }
