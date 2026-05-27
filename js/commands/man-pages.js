@@ -2333,10 +2333,14 @@ DESCRIPTION
     'restore --preview <code>' to inspect a code without overwriting
     your current progress.
 
-    Format: "D3CY1-" prefix + base64url payload (8-char hyphen-
-    grouped) + 8-char CRC32 checksum. Hyphens and whitespace in the
-    code are decorative — the decoder ignores both, so the code can
-    be wrapped, line-broken, or compacted at will.
+    Format: "D3C2-" prefix + packed binary payload (base64url-
+    encoded, 8-char hyphen-grouped) + 8-char CRC32 checksum. The
+    binary payload uses stable append-only registries to encode
+    levels / achievements / themes as small indexes, plus bitmasks
+    and varints for everything else — so a completionist's code
+    sits around 150-250 chars instead of ~3KB of raw JSON. Hyphens
+    and whitespace are decorative; the decoder ignores both, so
+    codes can be wrapped, line-broken, or compacted at will.
 
 EXAMPLES
     save                             # generate + print a code
@@ -2368,19 +2372,19 @@ DESCRIPTION
     both, so the code can be wrapped freely when copy-pasting.
 
     INVALID CODES — the command rejects with a specific error:
-      - Missing or wrong 'D3CY1' header  → "Not a D3CYPH3R code"
+      - Missing or wrong 'D3C2' header   → "Not a D3CYPH3R code"
       - Truncated input                  → "Looks truncated"
       - Mistyped chars                   → "Checksum failed"
-      - Newer schema version             → "Update D3CYPH3R and retry"
+      - Newer schema version             → "Schema vN not supported"
 
     PRIVACY: the persistence opt-in flag is per-device, not part of
     a save. Restoring on a fresh browser does not silently opt you
     into localStorage persistence — that's still a separate choice.
 
 EXAMPLES
-    restore D3CY1-eJyrV...0a4f9c2d   # apply (will prompt y/N first)
-    restore --preview D3CY1-eJyrV... # inspect, do not apply
-    restore -p D3CY1-eJyrV...        # short form of --preview
+    restore D3C2-AAAA...0a4f9c2d   # apply (will prompt y/N first)
+    restore --preview D3C2-AAAA... # inspect, do not apply
+    restore -p D3C2-AAAA...        # short form of --preview
 
 SEE ALSO
     save, progress save-on, progress save-off`,

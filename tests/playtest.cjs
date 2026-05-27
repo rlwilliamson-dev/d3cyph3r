@@ -3006,8 +3006,11 @@ async function termText(page) {
     sessionStorage.setItem("d3cyph3r:earnedAchievements", JSON.stringify([
       "first-steps", "going-deep",
     ]));
+    // Use a real bonus-find id that's in BONUS_REGISTRY (the binary
+    // encoder drops any id it doesn't know about, by design — codes
+    // can't carry arbitrary in-the-wild strings).
     sessionStorage.setItem("d3cyph3r:bonusFinds", JSON.stringify([
-      "level0@linux:sloan-leftover-key",
+      "level0@linux:daniel-history-pattern",
     ]));
     sessionStorage.setItem("d3cyph3r-hint-level0@linux", "2");
   });
@@ -3037,17 +3040,23 @@ async function termText(page) {
   tSave = await termText(page);
   check("v1.20.0 'save' prints 'Your D3CYPH3R progress code' header",
         tSave.includes("Your D3CYPH3R progress code"));
-  // Codes are "D3CY1-" + base64url groups (8-char hyphen-grouped) +
-  // a final "-XXXXXXXX" CRC32. Extract the longest D3CY1- run we
+  // Codes are "D3C2-" + base64url groups (8-char hyphen-grouped) +
+  // a final "-XXXXXXXX" CRC32. Extract the longest D3C2- run we
   // see; allow A-Za-z0-9, "-" and "_" (base64url chars + hyphens).
-  const codeMatch = tSave.match(/D3CY1-[A-Za-z0-9_-]+/);
-  check("v1.20.0 'save' output contains a D3CY1-prefixed code",
+  const codeMatch = tSave.match(/D3C2-[A-Za-z0-9_-]+/);
+  check("v1.20.0 'save' output contains a D3C2-prefixed code",
         !!codeMatch);
   const code = codeMatch ? codeMatch[0] : "";
-  check("v1.20.0 generated code is long enough to be real (> 40 chars)",
-        code.length > 40);
+  check("v1.20.0 generated code is long enough to be real (> 30 chars)",
+        code.length > 30);
   check("v1.20.0 code ends with 8-char hex checksum suffix",
         /-[0-9a-f]{8}$/.test(code));
+  // The packed binary format produces dramatically smaller codes
+  // than the previous JSON-based draft (~3KB → ~150-250 chars for
+  // a completionist). The mid-game state staged below should yield
+  // a code well under 300 chars.
+  check("v1.20.0 binary format keeps the code compact (< 300 chars)",
+        code.length < 300);
 
   // --- Error handling ---
   // No arg → usage hint
@@ -3062,11 +3071,11 @@ async function termText(page) {
   await typeAndEnter(page, "restore not-a-real-code-without-magic-prefix-anywhere-junk");
   await page.waitForTimeout(80);
   tSave = await termText(page);
-  check("v1.20.0 'restore <bad>' rejects code missing 'D3CY1' header",
-        tSave.includes("D3CY1") || tSave.toLowerCase().includes("not a d3cyph3r"));
+  check("v1.20.0 'restore <bad>' rejects code missing 'D3C2' header",
+        tSave.includes("D3C2") || tSave.toLowerCase().includes("not a d3cyph3r"));
 
   // Valid magic but mangled checksum → rejected with checksum error
-  await typeAndEnter(page, "restore D3CY1-eJyrVnIs8szLLEnNS-aaaaaaaa");
+  await typeAndEnter(page, "restore D3C2-AAAAAAAA-BBBBBBBB-aaaaaaaa");
   await page.waitForTimeout(80);
   tSave = await termText(page);
   check("v1.20.0 'restore' with mangled checksum surfaces 'checksum' error",
@@ -3137,7 +3146,7 @@ async function termText(page) {
 
   const bonusFindsAfterRestore = await page.evaluate(() => sessionStorage.getItem("d3cyph3r:bonusFinds"));
   check("v1.20.0 restore brings bonus-find marker back",
-        !!(bonusFindsAfterRestore && bonusFindsAfterRestore.includes("sloan-leftover-key")));
+        !!(bonusFindsAfterRestore && bonusFindsAfterRestore.includes("daniel-history-pattern")));
 
   const hintAfterRestore = await page.evaluate(() => sessionStorage.getItem("d3cyph3r-hint-level0@linux"));
   check("v1.20.0 restore brings hint counter back (value preserved)",

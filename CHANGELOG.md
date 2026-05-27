@@ -23,15 +23,42 @@ themselves, paper). The pattern is the password-save mechanic from
 
 - **`js/engine/savecode.js`** — Pure module owning the
   encode/decode/checksum logic. Format is
-  `"D3CY1-XXXXXXXX-...-CCCCCCCC"`: 5-char magic (4 brand + 1 schema
-  version), base64url-encoded JSON payload grouped into 8-char
-  hyphenated blocks for visual readability, and an 8-char CRC32 hex
-  checksum tail. Hyphens and whitespace in the code are decorative
-  — the decoder strips both before parsing, so the code can be
-  wrapped or line-broken freely when copy-pasting. Compact JSON
-  field names (`vis`, `bf`, `ach`, `ms`, `lt`, `hc`, `th`, `ob`,
-  `le`) keep payload size reasonable. CRC32 catches typos,
-  truncation, and accidental concatenation of two separate codes.
+  `"D3C2-XXXXXXXX-...-CCCCCCCC"`: 4-char magic ("D3" brand + "C2"
+  format version), base64url-encoded **packed binary** payload
+  grouped into 8-char hyphenated blocks for visual readability,
+  and an 8-char CRC32 hex checksum tail. Hyphens and whitespace
+  in the code are decorative — the decoder strips both before
+  parsing, so the code can be wrapped or line-broken freely
+  when copy-pasting. CRC32 catches typos, truncation, and
+  accidental concatenation of two separate codes.
+- **Stable append-only registries** for the wire format's small-
+  integer indexes: `LEVEL_REGISTRY` (14 levels → 4-bit index),
+  `ACHIEVEMENT_REGISTRY` (20 achievements → 1-bit slot in a uint32
+  mask), `THEME_REGISTRY` (11 themes → 4-bit index),
+  `TRACK_REGISTRY` (7 tracks → 1-bit slot in a uint8 mask),
+  `MILESTONE_REGISTRY` (6 booleans → 1-bit slot in a uint8 mask),
+  and `BONUS_REGISTRY` (per-level bonus-find ids → 1-bit slot in
+  per-level uint8 masks). HARD RULE: once shipped, NEVER reorder
+  or delete entries; new entries APPEND to the end. The numeric
+  index of an existing entry is burned into every code that
+  references it.
+- **Code size impact** (measured against fixture states):
+
+  | Player state              | Code length |
+  |---------------------------|-------------|
+  | Brand new (no progress)   | 35 chars    |
+  | Solved level0+1 on one track | 52 chars |
+  | Mid-game (5 visited, 4 bonuses, 6 achievements) | 84 chars |
+  | Completionist (all 14 levels, all 20 achievements) | 182 chars |
+
+  A completionist's code now fits on a single line in any notes
+  app — even potentially typeable in a pinch — instead of the
+  ~3KB JSON blob an earlier draft of the format would have
+  produced. The savings come from encoding levels / achievements
+  / themes as small integer indexes (instead of long string
+  IDs), packing per-level flags into 1-byte bitfields, varint-
+  encoding time fields with second-resolution quantization,
+  and dropping all JSON structural overhead.
 - **`save` command** — Generates a code from the current
   session's state and prints it inside divider lines for easy
   copy. Surfaces a usage hint underneath.

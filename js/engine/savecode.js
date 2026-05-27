@@ -1,105 +1,285 @@
-// Progress codes (v1.20.0) — stateless save/restore.
+// Progress codes (v1.20.0) — stateless save/restore via a packed
+// binary format.
 //
-// Encodes the player's progress (visited levels, achievements, bonus
-// finds, milestones, per-level times, hint counters, theme,
+// Encodes the player's progress (visited levels, achievements,
+// bonus finds, milestones, per-level times, hint counters, theme,
 // onboarding flag, lobby-tree expand state) into a self-contained
-// portable string. The player can paste it back into D3CYPH3R running
-// on any other browser/device to resume from the same point.
+// portable string the player can paste into D3CYPH3R running on
+// any other browser/device to resume from the same point.
 //
-// "Stateless" in the sense that the server side is unaware — the
-// code is entirely client-generated and client-consumed. Same
-// privacy posture as the rest of the engine: no server, no account,
-// no telemetry. The string lives wherever the player puts it
-// (notes app, email to themselves, paper, etc.).
-//
-// FORMAT
-// ------
-//   "D3CY1-XXXXXXXX-XXXXXXXX-...-CCCCCCCC"
-//
-//   - "D3CY1"  : 5-char magic + schema-version digit. The trailing
-//                "1" lets future format changes co-exist (a future
-//                "D3CY2" decoder can refuse v1 codes or migrate
-//                them). Hard-coded — never rename.
-//   - Payload  : base64url-encoded JSON, no padding, grouped into
-//                8-char blocks with hyphens between for visual
-//                readability. Hyphens are decorative — the decoder
-//                strips them along with all whitespace before
-//                parsing, so the player can wrap / line-break the
-//                code freely when copy-pasting.
-//   - Checksum : 8-char hex CRC32 of the base64url payload (computed
-//                AFTER grouping/encoding, BEFORE the leading magic).
-//                Catches typos, truncation, and accidental
-//                concatenation of two separate codes.
-//
-// THE PAYLOAD
-// -----------
-// JSON.stringify({ v: 1, t: <epoch>, d: <state> }):
-//   v   schema version (currently 1).
-//   t   timestamp the code was minted; used for the "created N ago"
-//       line in `restore --preview`.
-//   d   the state map, with compact field names to keep codes small:
-//         vis  array of visited level keys ("level0@linux", ...)
-//         bf   array of bonus-find composite keys ("level0@linux:id")
-//         ach  array of earned achievement ids
-//         ms   milestones flag object
-//         lt   per-level times { "level0@linux": { t,f,s } }
-//                t = totalMs, f = firstSolveMs, s = isSolved (1/absent)
-//         hc   hint counters { "level0@linux": 3 }
-//         th   theme name
-//         ob   onboarding-seen flag (1 / absent)
-//         le   lobby-expanded array
-//
-// The compact keys are part of the wire format — once shipped, never
-// rename. New fields can be added in a v2 schema without breaking v1
-// codes (the v1 decoder reads only the v1 keys).
-//
-// WHAT WE DO NOT ENCODE
-// ---------------------
-//   - The persistence opt-in flag. Opting in to localStorage is a
-//     per-device decision (it controls where progress is saved
-//     automatically on THIS browser); restoring a save shouldn't
-//     silently opt the player in on a new machine.
-//   - The CSS theme cache-bust query, viewport size, or anything UI
-//     transient.
-//   - Anything sensitive — codes don't contain level passwords or
-//     bonus content. Visited level keys are facts about progress,
-//     not credentials: knowing the player visited "level3@linux"
-//     doesn't reveal how to solve "level2@linux".
-//
-// FAILURE POSTURE
+// SHAPE OF A CODE
 // ---------------
-// All decode failures return { ok: false, error: <reason> } rather
-// than throwing — the command layer surfaces the error directly to
-// the player. The only thing that throws is internal logic bugs
-// (e.g. encodeProgress called in a context without sessionStorage),
-// which would be developer-visible regardless.
+//   "D3C2-XXXXXXXX-XXXXXXXX-...-CCCCCCCC"
+//
+//   - "D3C2"   : 4-char magic. The "2" is the format version (binary,
+//                shipped with v1.20.0). A future "D3C3" decoder would
+//                refuse v2 codes and migrate them; the v2 decoder
+//                refuses anything that isn't "D3C2".
+//   - Payload  : base64url-encoded BINARY payload (see WIRE FORMAT
+//                below), grouped into 8-char blocks with hyphens
+//                between for visual readability. Hyphens are
+//                decorative — the decoder strips them along with
+//                whitespace before parsing, so codes can be wrapped
+//                or line-broken freely when copy-pasting.
+//   - Checksum : 8-char hex CRC32 over the base64url payload,
+//                appended after a final hyphen. Catches typos,
+//                truncation, and accidental concatenation.
+//
+// WIRE FORMAT (binary, big-endian)
+// --------------------------------
+//   byte 0          : schema version (= 0x02). Lets a future v3
+//                     decoder accept v2 payloads without a magic
+//                     change. Redundant with the magic above but
+//                     cheap and safer.
+//   bytes 1-4       : timestamp (uint32 seconds since epoch). Used
+//                     only for the "Created N ago" preview line.
+//   bytes 5-8       : achievement bitmask (uint32). Bit N is set if
+//                     ACHIEVEMENT_REGISTRY[N] is earned.
+//   byte 9          : flag byte. Bit positions:
+//                       0  onboarding_seen
+//                       1  has_theme               (next byte = theme_index)
+//                       2  has_milestones          (next: 1 byte mask)
+//                       3  has_themes_seen         (next: uint16 mask)
+//                       4  has_lobby_expanded      (next: 1 byte mask)
+//                       5-7 reserved (must be 0)
+//   (theme_index)   : uint8, present iff flag bit 1 set.
+//   byte N          : level_count (uint8). 0..255 levels follow.
+//   For each level entry (level_count entries, in any order):
+//     byte: level_index (uint8, position in LEVEL_REGISTRY)
+//     byte: level_flags
+//       bit 0  visited
+//       bit 1  has_time_total
+//       bit 2  is_solved              (implies first_solve also set
+//                                       if has_time_solved bit also on)
+//       bit 3  has_time_solved
+//       bit 4  has_bonus_finds        (next: 1 byte bonus-bitmask)
+//       bit 5  has_hint_counter       (next: varint hint count)
+//       bits 6-7 reserved
+//     if has_time_total:    varint total_seconds (quantized ms→s)
+//     if has_time_solved:   varint first_solve_seconds
+//     if has_bonus_finds:   1 byte (bit N = BONUS_REGISTRY[level][N] found)
+//     if has_hint_counter:  varint hint_count
+//   (milestones_mask)  : uint8, present iff flag bit 2.
+//   (themes_seen_mask) : uint16 BE, present iff flag bit 3.
+//   (lobby_mask)       : uint8, present iff flag bit 4.
+//
+// STABLE INDEXES — APPEND-ONLY REGISTRIES
+// ---------------------------------------
+// The binary format compresses long strings to small integer
+// indexes. Once a code is shipped to a player, the numeric index of
+// every existing entry is BURNED IN — renaming or reordering an
+// entry would silently corrupt every code that references it.
+//
+// HARD RULES for the five registries below:
+//   1. NEW entries go AT THE END. Never insert in the middle.
+//   2. DO NOT rename, reorder, or delete entries.
+//   3. Removed-from-game items should still occupy their slot
+//      (mark with a comment) so the index of every subsequent
+//      entry stays stable.
+//
+// If an old code references a registry index that doesn't exist in
+// the current build (e.g. a future-version code on an older
+// deploy), the decoder treats it as "unknown" and skips/ignores it
+// rather than throwing. Players never lose state, but the new
+// entries don't activate until they update.
+//
+// HARDWARE/PRIVACY POSTURE
+// ------------------------
+// Same as the rest of the engine: no server, no account, no
+// telemetry, no third-party scripts. Codes don't contain level
+// passwords or bonus content. The localStorage persistence opt-in
+// flag is deliberately not in the payload — that's a per-device
+// privacy choice.
 
 import { mirrorSession, clearAllProgress } from "./persistence.js";
 import { clearInMemoryProgress, loadBonusesFromStorage } from "./state.js";
 import { initLevelTimer } from "./leveltimer.js";
 
-const MAGIC          = "D3CY1";   // 4-char brand + 1-digit schema version
-const SCHEMA_VERSION = 1;
-const HYPHEN_GROUP   = 8;         // Visual grouping every N base64url chars
+// ── Stable registries (APPEND-ONLY) ────────────────────────────────
+
+/**
+ * Level registry. Position in this array IS the wire-format index.
+ * Adding a new level to the game: APPEND to the end here. Removing
+ * a shipped level: comment-out the slot but leave the position to
+ * keep subsequent indexes stable.
+ *
+ * Capped at 256 entries (uint8 level_index). Plenty of headroom for
+ * the v6.0 "Veteran" milestone (~7 tracks × maybe 5 levels each).
+ */
+export const LEVEL_REGISTRY = Object.freeze([
+  // Linux
+  "level0@linux",        // 0
+  "level1@linux",        // 1
+  // Network
+  "level0@network",      // 2
+  "level1@network",      // 3
+  // Crypto
+  "level0@crypto",       // 4
+  "level1@crypto",       // 5
+  // Web
+  "level0@web",          // 6
+  "level1@web",          // 7
+  // Forensics
+  "level0@forensics",    // 8
+  "level1@forensics",    // 9
+  // OSINT
+  "level0@osint",        // 10
+  "level1@osint",        // 11
+  // Cloud
+  "level0@cloud",        // 12
+  "level1@cloud",        // 13
+]);
+const LEVEL_INDEX = new Map(LEVEL_REGISTRY.map((k, i) => [k, i]));
+
+/**
+ * Achievement ID registry. Bit position N in the uint32 achievement
+ * mask = ACHIEVEMENT_REGISTRY[N]. Max 32 today; if we ever cross
+ * that, bump the mask to uint64 (will be a wire-format bump).
+ */
+export const ACHIEVEMENT_REGISTRY = Object.freeze([
+  "first-steps",          // 0
+  "first-discovery",      // 1
+  "going-deep",           // 2
+  "branching-out",        // 3
+  "pipe-apprentice",      // 4
+  "asked-for-help",       // 5
+  "studious",             // 6
+  "tutorial-graduate",    // 7
+  "style-points",         // 8
+  "nineteen-eighty-five", // 9
+  "persistent-player",    // 10
+  "all-hands",            // 11
+  "sleuth",               // 12
+  "multi-host-pivot",     // 13
+  "job-runner",           // 14
+  "thorough",             // 15
+  "polymath",             // 16
+  "hint-avoider",         // 17
+  "track-master",         // 18
+  "completionist",        // 19
+]);
+const ACHIEVEMENT_INDEX = new Map(ACHIEVEMENT_REGISTRY.map((id, i) => [id, i]));
+
+/**
+ * Theme name registry. uint8 theme_index = THEME_REGISTRY[N].
+ * Max 256 themes; we're at 11.
+ */
+export const THEME_REGISTRY = Object.freeze([
+  "dark",             // 0
+  "light",            // 1
+  "crt-green",        // 2
+  "amber",            // 3
+  "synthwave",        // 4
+  "solarized-dark",   // 5
+  "solarized-light",  // 6
+  "high-contrast",    // 7
+  "nord",             // 8
+  "gruvbox",          // 9
+  "dracula",          // 10
+]);
+const THEME_INDEX = new Map(THEME_REGISTRY.map((n, i) => [n, i]));
+
+/**
+ * Track key registry — used for the lobbyExpanded bitmask. Bit N
+ * set = TRACKS[N] is expanded. Max 8 today (uint8); if we ever
+ * cross 8 tracks, widen to uint16 (will be a wire-format bump).
+ */
+export const TRACK_REGISTRY = Object.freeze([
+  "linux",      // 0
+  "network",    // 1
+  "crypto",     // 2
+  "web",        // 3
+  "forensics",  // 4
+  "osint",      // 5
+  "cloud",      // 6
+]);
+const TRACK_INDEX = new Map(TRACK_REGISTRY.map((k, i) => [k, i]));
+
+/**
+ * Milestone key registry — used for the milestones bitmask. Bit N
+ * set = MILESTONE_REGISTRY[N] is true. Max 8 today (uint8); widen
+ * to uint16 when we cross 8.
+ *
+ * NOTE: "themesSeen" is NOT in this registry — it's an array, not
+ * a boolean. It's encoded separately as themes_seen_bitmask.
+ */
+export const MILESTONE_REGISTRY = Object.freeze([
+  "pipeUsed",          // 0
+  "manRead",           // 1
+  "walkthroughOpened", // 2
+  "tutorialCompleted", // 3
+  "multiHostPivot",    // 4
+  "jobRun",            // 5
+]);
+
+/**
+ * Bonus-find ID registry per level. Bit N of a level's bonus-mask
+ * byte = BONUS_REGISTRY[levelKey][N] is found. Max 8 bonuses per
+ * level (uint8); widen if any level ever ships more than 8.
+ *
+ * Levels not listed here have no bonus finds. When adding a new
+ * bonus find to a level, APPEND to the level's array.
+ */
+export const BONUS_REGISTRY = Object.freeze({
+  // Mirrors the `id:` fields declared in each level's bonusFinds[]
+  // array. When adding a new bonus find to an existing level: APPEND
+  // its id to that level's array here (don't reorder existing
+  // entries). When adding a new level entirely: add a new entry.
+  // Forensics levels currently have no bonus finds shipped — they
+  // get no entry here and contribute 0 bytes per level.
+  "level0@linux":     Object.freeze(["daniel-history-pattern"]),
+  "level1@linux":     Object.freeze(["backup-script"]),
+  "level0@network":   Object.freeze(["five-sprint-rotation"]),
+  "level1@network":   Object.freeze(["dbadmin-shell-drift"]),
+  "level0@crypto":    Object.freeze(["daniel-coffee-vendor"]),
+  "level1@crypto":    Object.freeze(["most-downloaded-fallacy"]),
+  "level0@web":       Object.freeze(["robots-txt-billboard"]),
+  "level1@web":       Object.freeze(["ten-year-session-token"]),
+  "level0@osint":     Object.freeze(["adobe-hint-as-intel"]),
+  "level1@osint":     Object.freeze(["strava-segment-pattern"]),
+  "level0@cloud":     Object.freeze(["sts-identity-confirmation"]),
+  "level1@cloud":     Object.freeze(["ttl-without-enforcement"]),
+});
+// Build a reverse-lookup: "<levelKey>:<findId>" → { levelIdx, bitN }.
+// The progress code's stored bonus-finds set lives at the "<key>:<id>"
+// granularity; this lets the encoder map each entry back to a (level,
+// bit) pair without iterating BONUS_REGISTRY for every find.
+const BONUS_INDEX = new Map();
+for (const [levelKey, ids] of Object.entries(BONUS_REGISTRY)) {
+  ids.forEach((id, bit) => BONUS_INDEX.set(`${levelKey}:${id}`, { levelKey, bit }));
+}
+
+// ── Constants ─────────────────────────────────────────────────────
+
+const MAGIC          = "D3C2";     // 4-char magic; the 2 is schema/format version
+const SCHEMA_VERSION = 0x02;       // byte 0 of binary payload
+const HYPHEN_GROUP   = 8;          // visual grouping every N base64url chars
+
+// Flag bits in the global flag byte (binary offset 9).
+const FLAG_ONBOARDING        = 0x01;
+const FLAG_HAS_THEME         = 0x02;
+const FLAG_HAS_MILESTONES    = 0x04;
+const FLAG_HAS_THEMES_SEEN   = 0x08;
+const FLAG_HAS_LOBBY_EXPAND  = 0x10;
+
+// Flag bits in each level entry's level_flags byte.
+const LF_VISITED       = 0x01;
+const LF_TIME_TOTAL    = 0x02;
+const LF_SOLVED        = 0x04;
+const LF_TIME_SOLVED   = 0x08;
+const LF_BONUS_FINDS   = 0x10;
+const LF_HINT_COUNTER  = 0x20;
 
 // ── CRC32 ──────────────────────────────────────────────────────────
-// Standard CRC-32 (IEEE 802.3 polynomial, reflected). Table-driven so
-// encoding/decoding of even multi-KB payloads stays under a
-// millisecond. Built once at module load.
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
   for (let i = 0; i < 256; i++) {
     let c = i;
-    for (let k = 0; k < 8; k++) {
-      c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    }
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
     t[i] = c >>> 0;
   }
   return t;
 })();
-
-/** CRC-32 of a string's UTF-16 code units (sufficient for base64url
- *  input, which is pure ASCII). Returns an unsigned 32-bit number. */
 function crc32(str) {
   let c = 0xFFFFFFFF;
   for (let i = 0; i < str.length; i++) {
@@ -109,48 +289,85 @@ function crc32(str) {
 }
 
 // ── base64url ──────────────────────────────────────────────────────
-// btoa/atob operate on Latin-1 strings. To safely round-trip the
-// JSON (which may contain non-ASCII chars in theme names or level
-// titles), we go through TextEncoder → byte-string → btoa.
-
-function b64urlEncode(str) {
-  const bytes = new TextEncoder().encode(str);
+function b64urlEncodeBytes(bytes) {
   let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin)
-    .replace(/=/g, "")     // strip padding (we re-derive on decode)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+  return btoa(bin).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
-
-function b64urlDecode(b64) {
+function b64urlDecodeBytes(b64) {
   let std = b64.replace(/-/g, "+").replace(/_/g, "/");
   while (std.length % 4 !== 0) std += "=";
   const bin = atob(std);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
 }
 
-// ── grouping helpers ───────────────────────────────────────────────
-
-/** Insert hyphens every HYPHEN_GROUP chars. Pure visual aid. */
+// ── Decoration helpers ─────────────────────────────────────────────
 function formatGroups(s) {
   const parts = [];
-  for (let i = 0; i < s.length; i += HYPHEN_GROUP) {
-    parts.push(s.slice(i, i + HYPHEN_GROUP));
-  }
+  for (let i = 0; i < s.length; i += HYPHEN_GROUP) parts.push(s.slice(i, i + HYPHEN_GROUP));
   return parts.join("-");
 }
-
-/** Strip whitespace + hyphens. Called before parsing a user-entered
- *  code so we accept whatever decoration the player kept (or didn't). */
 function stripDecoration(s) {
   return String(s).replace(/[\s\-]+/g, "");
 }
 
-// ── sessionStorage helpers ─────────────────────────────────────────
+// ── Tiny binary writer / reader ───────────────────────────────────
+// In-memory writer that builds a Uint8Array. All integer writes are
+// big-endian. Varints use the standard MSB-continuation encoding
+// (7 data bits per byte, MSB=1 means "more bytes follow").
+class ByteWriter {
+  constructor() { this.bytes = []; }
+  u8(v)  { this.bytes.push(v & 0xFF); return this; }
+  u16(v) { this.bytes.push((v >>> 8) & 0xFF, v & 0xFF); return this; }
+  u32(v) {
+    this.bytes.push((v >>> 24) & 0xFF, (v >>> 16) & 0xFF, (v >>> 8) & 0xFF, v & 0xFF);
+    return this;
+  }
+  varint(v) {
+    v = v >>> 0;
+    while (v >= 0x80) { this.bytes.push((v & 0x7F) | 0x80); v >>>= 7; }
+    this.bytes.push(v & 0x7F);
+    return this;
+  }
+  finish() { return new Uint8Array(this.bytes); }
+}
+class ByteReader {
+  constructor(bytes) { this.bytes = bytes; this.pos = 0; }
+  remaining() { return this.bytes.length - this.pos; }
+  u8()  {
+    if (this.pos + 1 > this.bytes.length) throw new Error("u8 past end");
+    return this.bytes[this.pos++];
+  }
+  u16() {
+    if (this.pos + 2 > this.bytes.length) throw new Error("u16 past end");
+    const v = (this.bytes[this.pos] << 8) | this.bytes[this.pos + 1];
+    this.pos += 2;
+    return v >>> 0;
+  }
+  u32() {
+    if (this.pos + 4 > this.bytes.length) throw new Error("u32 past end");
+    const b = this.bytes;
+    const v = (b[this.pos] * 0x01000000) +
+              ((b[this.pos + 1] << 16) | (b[this.pos + 2] << 8) | b[this.pos + 3]);
+    this.pos += 4;
+    return v >>> 0;
+  }
+  varint() {
+    let result = 0, shift = 0;
+    while (true) {
+      if (this.pos >= this.bytes.length) throw new Error("varint past end");
+      const b = this.bytes[this.pos++];
+      result |= (b & 0x7F) << shift;
+      if ((b & 0x80) === 0) return result >>> 0;
+      shift += 7;
+      if (shift > 35) throw new Error("varint too long");
+    }
+  }
+}
 
+// ── sessionStorage helpers ─────────────────────────────────────────
 function readJSON(key, fallback) {
   try {
     const raw = sessionStorage.getItem(key);
@@ -160,9 +377,6 @@ function readJSON(key, fallback) {
     return fallback;
   }
 }
-
-/** Read every "d3cyph3r-hint-*" entry in sessionStorage. Returns an
- *  object keyed by the trailing level key, value = integer counter. */
 function readHintCounters() {
   const out = {};
   try {
@@ -176,166 +390,406 @@ function readHintCounters() {
   return out;
 }
 
-// ── encoder ────────────────────────────────────────────────────────
-
-/**
- * Build a snapshot of every piece of state we encode. Sparse — fields
- * with no data (empty arrays, missing keys) are omitted so a brand-
- * new player's code is small. The compact field names (vis/bf/ach/
- * ms/lt/hc/th/ob/le) come from the FORMAT comment above.
- *
- * @param {string|null} [themeName] — current theme name, passed in by
- *   the command layer (this module avoids importing the theme module
- *   to keep its dep graph minimal).
- */
+// ── Snapshot builder ──────────────────────────────────────────────
+//
+// Builds an intermediate "snapshot" object from sessionStorage. The
+// binary encoder consumes this; the summarize helpers also use it.
+// Keeps the wire-format-specific logic separate from the
+// sessionStorage read paths.
 function buildSnapshot(themeName) {
-  const data = {};
+  const snap = {
+    timestampSec: Math.floor(Date.now() / 1000),
+    onboarding:   false,
+    theme:        null,
+    achievements: [],
+    milestones:   {},
+    themesSeen:   [],
+    lobbyExpanded:[],
+    levels:       {},  // levelKey → { visited, totalMs, firstSolveMs, isSolved, bonusFinds[], hintCounter }
+  };
 
+  // Visited (and create level placeholders).
   const visited = readJSON("visited", []);
-  if (Array.isArray(visited) && visited.length) data.vis = visited;
-
-  const bf = readJSON("d3cyph3r:bonusFinds", []);
-  if (Array.isArray(bf) && bf.length) data.bf = bf;
-
-  const ach = readJSON("d3cyph3r:earnedAchievements", []);
-  if (Array.isArray(ach) && ach.length) data.ach = ach;
-
-  const ms = readJSON("d3cyph3r:milestones", null);
-  if (ms && typeof ms === "object" && Object.keys(ms).length) data.ms = ms;
-
-  // Level times — compact { totalMs, firstSolveMs, isSolved } → { t, f, s }.
-  const lt = readJSON("d3cyph3r:levelTimes", null);
-  if (lt && typeof lt === "object" && Object.keys(lt).length) {
-    const compact = {};
-    for (const [key, rec] of Object.entries(lt)) {
-      if (!rec || typeof rec !== "object") continue;
-      const row = {};
-      if (Number.isFinite(rec.totalMs)      && rec.totalMs > 0)      row.t = rec.totalMs;
-      if (Number.isFinite(rec.firstSolveMs) && rec.firstSolveMs > 0) row.f = rec.firstSolveMs;
-      if (rec.isSolved)                                              row.s = 1;
-      if (Object.keys(row).length) compact[key] = row;
+  if (Array.isArray(visited)) {
+    for (const k of visited) {
+      if (!snap.levels[k]) snap.levels[k] = blankLevel();
+      snap.levels[k].visited = true;
     }
-    if (Object.keys(compact).length) data.lt = compact;
   }
 
+  // Bonus finds (entries like "level0@linux:sloan-leftover-key").
+  const bf = readJSON("d3cyph3r:bonusFinds", []);
+  if (Array.isArray(bf)) {
+    for (const entry of bf) {
+      const idx = String(entry).indexOf(":");
+      if (idx < 0) continue;
+      const levelKey = entry.slice(0, idx);
+      const findId   = entry.slice(idx + 1);
+      if (!snap.levels[levelKey]) snap.levels[levelKey] = blankLevel();
+      snap.levels[levelKey].bonusFinds.push(findId);
+    }
+  }
+
+  // Achievements.
+  const ach = readJSON("d3cyph3r:earnedAchievements", []);
+  if (Array.isArray(ach)) snap.achievements = ach;
+
+  // Milestones (object with boolean flags + a themesSeen array).
+  const ms = readJSON("d3cyph3r:milestones", null);
+  if (ms && typeof ms === "object") {
+    for (const key of MILESTONE_REGISTRY) {
+      if (ms[key] === true) snap.milestones[key] = true;
+    }
+    if (Array.isArray(ms.themesSeen)) snap.themesSeen = ms.themesSeen.slice();
+  }
+
+  // Level times.
+  const lt = readJSON("d3cyph3r:levelTimes", null);
+  if (lt && typeof lt === "object") {
+    for (const [k, rec] of Object.entries(lt)) {
+      if (!rec || typeof rec !== "object") continue;
+      if (!snap.levels[k]) snap.levels[k] = blankLevel();
+      if (Number.isFinite(rec.totalMs)      && rec.totalMs > 0)      snap.levels[k].totalMs = rec.totalMs;
+      if (Number.isFinite(rec.firstSolveMs) && rec.firstSolveMs > 0) snap.levels[k].firstSolveMs = rec.firstSolveMs;
+      if (rec.isSolved) snap.levels[k].isSolved = true;
+    }
+  }
+
+  // Hint counters.
   const hc = readHintCounters();
-  if (Object.keys(hc).length) data.hc = hc;
+  for (const [k, n] of Object.entries(hc)) {
+    if (!snap.levels[k]) snap.levels[k] = blankLevel();
+    snap.levels[k].hintCounter = n;
+  }
 
-  if (themeName && typeof themeName === "string") data.th = themeName;
+  // Theme.
+  if (themeName && typeof themeName === "string") snap.theme = themeName;
 
-  try {
-    if (sessionStorage.getItem("seenOnboarding") === "true") data.ob = 1;
-  } catch (_) { /* silent */ }
+  // Onboarding flag.
+  try { if (sessionStorage.getItem("seenOnboarding") === "true") snap.onboarding = true; } catch (_) { /* silent */ }
 
+  // Lobby expanded (array of track keys).
   const le = readJSON("lobbyExpanded", []);
-  if (Array.isArray(le) && le.length) data.le = le;
+  if (Array.isArray(le)) snap.lobbyExpanded = le;
 
-  return data;
+  return snap;
 }
+function blankLevel() {
+  return { visited: false, totalMs: 0, firstSolveMs: 0, isSolved: false, bonusFinds: [], hintCounter: 0 };
+}
+
+// ── Encoder ───────────────────────────────────────────────────────
 
 /**
  * Encode the current sessionStorage state into a portable progress
- * code. Returns the string to print to the player.
+ * code. Returns the formatted string.
  *
- * @param {string|null} [themeName] — pass the active theme name (from
- *   theme.js#getTheme().name) so the restore brings it back.
+ * @param {string|null} [themeName] — pass the active theme name (the
+ *   command layer reads it from theme.js#getTheme().name).
  */
 export function encodeProgress(themeName = null) {
-  const data    = buildSnapshot(themeName);
-  const payload = JSON.stringify({ v: SCHEMA_VERSION, t: Date.now(), d: data });
-  const b64     = b64urlEncode(payload);
+  const snap = buildSnapshot(themeName);
+  const bytes = snapshotToBytes(snap);
+  const b64    = b64urlEncodeBytes(bytes);
   const checksum = crc32(b64).toString(16).padStart(8, "0");
   return MAGIC + "-" + formatGroups(b64) + "-" + checksum;
 }
 
-// ── decoder ────────────────────────────────────────────────────────
+/**
+ * Convert a snapshot object to the wire-format byte sequence.
+ * Exported separately so tests can round-trip without the
+ * base64/checksum/grouping wrapper.
+ */
+function snapshotToBytes(snap) {
+  const w = new ByteWriter();
+  w.u8(SCHEMA_VERSION);
+  w.u32(snap.timestampSec >>> 0);
+
+  // Achievement bitmask.
+  let achMask = 0;
+  for (const id of snap.achievements) {
+    const bit = ACHIEVEMENT_INDEX.get(id);
+    if (bit != null) achMask |= (1 << bit) >>> 0;
+  }
+  w.u32(achMask >>> 0);
+
+  // Pre-compute optional sections so we can set flag bits accordingly.
+  const milestoneMask = computeMilestoneMask(snap.milestones);
+  const themesSeenMask = computeThemesSeenMask(snap.themesSeen);
+  const lobbyMask = computeLobbyMask(snap.lobbyExpanded);
+  const themeIdx  = snap.theme != null ? THEME_INDEX.get(snap.theme) : undefined;
+
+  let flagByte = 0;
+  if (snap.onboarding)                 flagByte |= FLAG_ONBOARDING;
+  if (themeIdx != null)                flagByte |= FLAG_HAS_THEME;
+  if (milestoneMask !== 0)             flagByte |= FLAG_HAS_MILESTONES;
+  if (themesSeenMask !== 0)            flagByte |= FLAG_HAS_THEMES_SEEN;
+  if (lobbyMask !== 0)                 flagByte |= FLAG_HAS_LOBBY_EXPAND;
+  w.u8(flagByte);
+
+  if (themeIdx != null) w.u8(themeIdx);
+
+  // Levels: only emit entries that have ANY recordable state. An
+  // entry the player has never touched contributes nothing.
+  const entries = [];
+  for (const [levelKey, data] of Object.entries(snap.levels)) {
+    const idx = LEVEL_INDEX.get(levelKey);
+    if (idx == null) continue;  // unknown level (shouldn't happen for shipped data)
+    const has = data.visited
+             || data.totalMs > 0
+             || data.firstSolveMs > 0
+             || data.isSolved
+             || data.bonusFinds.length > 0
+             || data.hintCounter > 0;
+    if (!has) continue;
+    entries.push({ idx, levelKey, data });
+  }
+  w.u8(entries.length & 0xFF);
+
+  for (const { idx, levelKey, data } of entries) {
+    w.u8(idx);
+
+    const bonusMask = computeBonusMask(levelKey, data.bonusFinds);
+    const hasBonus  = bonusMask !== 0;
+
+    let lf = 0;
+    if (data.visited)            lf |= LF_VISITED;
+    if (data.totalMs > 0)        lf |= LF_TIME_TOTAL;
+    if (data.isSolved)           lf |= LF_SOLVED;
+    if (data.firstSolveMs > 0)   lf |= LF_TIME_SOLVED;
+    if (hasBonus)                lf |= LF_BONUS_FINDS;
+    if (data.hintCounter > 0)    lf |= LF_HINT_COUNTER;
+    w.u8(lf);
+
+    // Time fields: quantize ms → s for a more compact varint. The UI
+    // re-multiplies by 1000 on read, so subsecond precision is lost
+    // — fine for "you spent 7 minutes on this level".
+    if (data.totalMs > 0)      w.varint(Math.round(data.totalMs / 1000));
+    if (data.firstSolveMs > 0) w.varint(Math.round(data.firstSolveMs / 1000));
+    if (hasBonus)              w.u8(bonusMask);
+    if (data.hintCounter > 0)  w.varint(data.hintCounter);
+  }
+
+  if (milestoneMask !== 0)  w.u8(milestoneMask);
+  if (themesSeenMask !== 0) w.u16(themesSeenMask);
+  if (lobbyMask !== 0)      w.u8(lobbyMask);
+
+  return w.finish();
+}
+
+function computeMilestoneMask(ms) {
+  let m = 0;
+  if (!ms) return 0;
+  for (let i = 0; i < MILESTONE_REGISTRY.length; i++) {
+    if (ms[MILESTONE_REGISTRY[i]] === true) m |= (1 << i);
+  }
+  return m & 0xFF;
+}
+function computeThemesSeenMask(themesSeen) {
+  let m = 0;
+  if (!Array.isArray(themesSeen)) return 0;
+  for (const name of themesSeen) {
+    const i = THEME_INDEX.get(name);
+    if (i != null) m |= (1 << i);
+  }
+  return m & 0xFFFF;
+}
+function computeLobbyMask(expanded) {
+  let m = 0;
+  if (!Array.isArray(expanded)) return 0;
+  for (const k of expanded) {
+    const i = TRACK_INDEX.get(k);
+    if (i != null) m |= (1 << i);
+  }
+  return m & 0xFF;
+}
+function computeBonusMask(levelKey, foundIds) {
+  const ids = BONUS_REGISTRY[levelKey];
+  if (!ids) return 0;
+  let m = 0;
+  for (const id of foundIds) {
+    const bit = ids.indexOf(id);
+    if (bit >= 0 && bit < 8) m |= (1 << bit);
+  }
+  return m & 0xFF;
+}
+
+// ── Decoder ───────────────────────────────────────────────────────
 
 /**
  * Decode a player-entered progress code. Returns either
- *   { ok: true,  version, ts, data }   on success
+ *   { ok: true,  version, ts, data }   on success — where `data` is
+ *                                       a snapshot in the same
+ *                                       shape buildSnapshot returns
  *   { ok: false, error: <string> }     on any validation failure
  *
  * Does NOT touch state — the caller decides whether to apply via
  * applyDecoded(). Idempotent + side-effect-free.
  */
 export function decodeProgress(code) {
-  if (!code || typeof code !== "string") {
-    return { ok: false, error: "Empty progress code." };
-  }
+  if (!code || typeof code !== "string") return { ok: false, error: "Empty progress code." };
 
   const cleaned = stripDecoration(code);
-
-  // Length floor: 5 (magic) + 8 (checksum) + at least 4 bytes of
-  // payload. A real code is much longer, but this catches obvious
-  // truncation before we waste a CRC pass.
   if (cleaned.length < MAGIC.length + 8 + 4) {
     return { ok: false, error: "Progress code looks truncated. Make sure you copied the whole thing." };
   }
   if (!cleaned.startsWith(MAGIC)) {
-    return { ok: false, error: "Not a D3CYPH3R progress code (missing 'D3CY1' header)." };
+    return { ok: false, error: "Not a D3CYPH3R progress code (missing 'D3C2' header)." };
   }
 
   const after    = cleaned.slice(MAGIC.length);
   const checksum = after.slice(-8);
   const b64      = after.slice(0, -8);
 
-  // Checksum is 8 hex digits — anything else is a malformed code.
   if (!/^[0-9a-f]{8}$/i.test(checksum)) {
     return { ok: false, error: "Progress code checksum is malformed." };
   }
-
   const computed = crc32(b64).toString(16).padStart(8, "0");
   if (computed !== checksum.toLowerCase()) {
     return { ok: false, error: "Progress code checksum failed — likely mistyped or corrupted. Re-copy the original code." };
   }
 
-  let payload;
+  let bytes;
+  try { bytes = b64urlDecodeBytes(b64); }
+  catch (_) { return { ok: false, error: "Progress code could not be decoded (not valid base64)." }; }
+
+  let snap;
   try {
-    payload = JSON.parse(b64urlDecode(b64));
-  } catch (_) {
-    return { ok: false, error: "Progress code payload could not be decoded (not valid base64 or JSON)." };
+    snap = bytesToSnapshot(bytes);
+  } catch (e) {
+    return { ok: false, error: `Progress code payload is malformed (${e.message || "decoder error"}).` };
   }
 
-  if (!payload || typeof payload !== "object") {
-    return { ok: false, error: "Progress code payload shape is invalid." };
-  }
-  if (typeof payload.v !== "number") {
-    return { ok: false, error: "Progress code is missing its schema version." };
-  }
-  if (payload.v > SCHEMA_VERSION) {
-    return { ok: false, error: `Progress code was created by a newer schema (v${payload.v}). Update D3CYPH3R and try again.` };
-  }
-  const data = payload.d;
-  if (!data || typeof data !== "object") {
-    return { ok: false, error: "Progress code payload is missing the data section." };
-  }
-
-  return { ok: true, version: payload.v, ts: payload.t, data };
+  return { ok: true, version: snap._wireVersion, ts: snap.timestampSec * 1000, data: snap };
 }
 
 /**
- * Quick lookups for the preview / confirmation diff — counts of each
- * field without unpacking the whole structure. Shared helper that
- * builds the summary from a compact-data object (the `.d` of a
- * payload), used by both summarizeDecoded() and summarizeCurrent().
+ * Read the wire-format byte sequence and reconstruct a snapshot.
+ * Throws on malformed input; the public decodeProgress wraps that
+ * into an { ok: false } envelope.
  */
-function summarizeData(d, timestamp = null) {
-  d = d || {};
-  const lt = d.lt && typeof d.lt === "object" ? d.lt : {};
-  let solvedCount = 0;
-  for (const rec of Object.values(lt)) {
-    if (rec && rec.s) solvedCount++;
+function bytesToSnapshot(bytes) {
+  const r = new ByteReader(bytes);
+  const wireVersion = r.u8();
+  if (wireVersion !== SCHEMA_VERSION) {
+    throw new Error(`schema v${wireVersion} not supported (this build understands v${SCHEMA_VERSION})`);
+  }
+
+  const timestampSec = r.u32();
+  const achMask      = r.u32();
+  const flagByte     = r.u8();
+
+  const onboarding      = (flagByte & FLAG_ONBOARDING)       !== 0;
+  const hasTheme        = (flagByte & FLAG_HAS_THEME)        !== 0;
+  const hasMilestones   = (flagByte & FLAG_HAS_MILESTONES)   !== 0;
+  const hasThemesSeen   = (flagByte & FLAG_HAS_THEMES_SEEN)  !== 0;
+  const hasLobbyExpand  = (flagByte & FLAG_HAS_LOBBY_EXPAND) !== 0;
+
+  let theme = null;
+  if (hasTheme) {
+    const themeIdx = r.u8();
+    theme = THEME_REGISTRY[themeIdx] || null;
+  }
+
+  const levelCount = r.u8();
+  const levels = {};
+  for (let i = 0; i < levelCount; i++) {
+    const levelIdx = r.u8();
+    const lf       = r.u8();
+    const levelKey = LEVEL_REGISTRY[levelIdx];
+
+    // Always advance through the data even if the level index is
+    // unknown (e.g. a newer code on an older deploy) so subsequent
+    // entries decode correctly. Unknown entries are silently
+    // dropped from the reconstructed snapshot.
+    const rec = blankLevel();
+    if (lf & LF_VISITED)      rec.visited      = true;
+    if (lf & LF_TIME_TOTAL)   rec.totalMs      = r.varint() * 1000;
+    if (lf & LF_TIME_SOLVED)  rec.firstSolveMs = r.varint() * 1000;
+    if (lf & LF_SOLVED)       rec.isSolved     = true;
+    if (lf & LF_BONUS_FINDS) {
+      const mask = r.u8();
+      const ids = (levelKey && BONUS_REGISTRY[levelKey]) || [];
+      for (let b = 0; b < 8; b++) {
+        if ((mask & (1 << b)) && ids[b] != null) rec.bonusFinds.push(ids[b]);
+      }
+    }
+    if (lf & LF_HINT_COUNTER) rec.hintCounter = r.varint();
+
+    if (levelKey) levels[levelKey] = rec;
+  }
+
+  const milestones = {};
+  if (hasMilestones) {
+    const m = r.u8();
+    for (let i = 0; i < MILESTONE_REGISTRY.length; i++) {
+      if (m & (1 << i)) milestones[MILESTONE_REGISTRY[i]] = true;
+    }
+  }
+
+  const themesSeen = [];
+  if (hasThemesSeen) {
+    const m = r.u16();
+    for (let i = 0; i < THEME_REGISTRY.length; i++) {
+      if (m & (1 << i)) themesSeen.push(THEME_REGISTRY[i]);
+    }
+  }
+
+  const lobbyExpanded = [];
+  if (hasLobbyExpand) {
+    const m = r.u8();
+    for (let i = 0; i < TRACK_REGISTRY.length; i++) {
+      if (m & (1 << i)) lobbyExpanded.push(TRACK_REGISTRY[i]);
+    }
+  }
+
+  // Reconstruct achievements from the bitmask.
+  const achievements = [];
+  for (let i = 0; i < ACHIEVEMENT_REGISTRY.length; i++) {
+    if (achMask & (1 << i)) achievements.push(ACHIEVEMENT_REGISTRY[i]);
+  }
+
+  return {
+    _wireVersion: wireVersion,
+    timestampSec,
+    onboarding,
+    theme,
+    achievements,
+    milestones,
+    themesSeen,
+    lobbyExpanded,
+    levels,
+  };
+}
+
+// ── Summarize helpers ─────────────────────────────────────────────
+
+/**
+ * Quick-count summary used by `restore --preview` and the
+ * confirmation diff. Same shape whether the snapshot came from a
+ * decoded code or the current session.
+ */
+function summarizeSnapshot(snap, timestamp) {
+  if (!snap) return null;
+  const levels = snap.levels || {};
+  let visited = 0, solved = 0, timed = 0, hints = 0, bonus = 0;
+  for (const rec of Object.values(levels)) {
+    if (rec.visited)        visited++;
+    if (rec.isSolved)       solved++;
+    if (rec.totalMs > 0)    timed++;
+    if (rec.hintCounter > 0) hints++;
+    if (rec.bonusFinds && rec.bonusFinds.length) bonus += rec.bonusFinds.length;
   }
   return {
-    visitedCount:        Array.isArray(d.vis) ? d.vis.length : 0,
-    bonusFindsCount:     Array.isArray(d.bf)  ? d.bf.length  : 0,
-    achievementsCount:   Array.isArray(d.ach) ? d.ach.length : 0,
-    solvedCount,
-    timedLevelsCount:    Object.keys(lt).length,
-    hintCountersCount:   d.hc && typeof d.hc === "object" ? Object.keys(d.hc).length : 0,
-    theme:               typeof d.th === "string" ? d.th : null,
-    onboardingSeen:      d.ob === 1,
-    expandedTracksCount: Array.isArray(d.le) ? d.le.length : 0,
+    visitedCount:        visited,
+    bonusFindsCount:     bonus,
+    achievementsCount:   Array.isArray(snap.achievements) ? snap.achievements.length : 0,
+    solvedCount:         solved,
+    timedLevelsCount:    timed,
+    hintCountersCount:   hints,
+    theme:               snap.theme || null,
+    onboardingSeen:      !!snap.onboarding,
+    expandedTracksCount: Array.isArray(snap.lobbyExpanded) ? snap.lobbyExpanded.length : 0,
     timestamp,
   };
 }
@@ -343,105 +797,83 @@ function summarizeData(d, timestamp = null) {
 /** Summary counts from a successfully decoded payload. */
 export function summarizeDecoded(decoded) {
   if (!decoded || !decoded.ok) return null;
-  return summarizeData(decoded.data, typeof decoded.ts === "number" ? decoded.ts : null);
+  return summarizeSnapshot(decoded.data, typeof decoded.ts === "number" ? decoded.ts : null);
 }
 
 /**
  * Summary counts from the player's CURRENT session state — used by
- * `restore` to show a before-vs-after diff in the confirmation
- * prompt. Same shape as summarizeDecoded().
- *
- * @param {string|null} [themeName] Pass the current theme name (the
- *   command layer reads it from theme.js#getTheme().name).
+ * `restore` to show a before-vs-after diff in the confirmation prompt.
  */
 export function summarizeCurrent(themeName = null) {
-  return summarizeData(buildSnapshot(themeName), null);
+  return summarizeSnapshot(buildSnapshot(themeName), null);
 }
 
-// ── applier ────────────────────────────────────────────────────────
+// ── Applier ───────────────────────────────────────────────────────
 
 /**
  * Replace the current session state with the decoded payload. Called
- * AFTER the player has confirmed; up to this point the decode is
- * purely informational.
+ * AFTER the player has confirmed.
  *
- * Semantics (per v1.20.0 design):
- *   - REPLACE, not merge. Clear every tracked progress key in
- *     sessionStorage + the localStorage blob first, then write the
- *     restored values via mirrorSession() so they propagate to the
- *     localStorage blob if persistence is enabled on this device.
- *   - Reinitialize in-memory mirrors (foundBonuses Set in state.js,
- *     levelTimes map in leveltimer.js).
- *   - Theme application is NOT done here — the caller (command
- *     layer) calls setTheme() so the apply uses the theme module's
- *     existing API and side effects (localStorage write + DOM
- *     attribute swap).
- *
- * @returns {{ themeName: string|null }} The theme name to apply, if
- *   any. Returned so the command layer can drive setTheme() without
- *   this module importing the theme module.
+ * Wipe-then-write semantics. Returns the theme name to apply (or null);
+ * the caller drives setTheme() so this module avoids importing the
+ * theme module.
  */
 export function applyDecoded(decoded) {
   if (!decoded || !decoded.ok) return { themeName: null };
-  const d = decoded.data || {};
+  const snap = decoded.data || {};
 
-  // Wipe-then-write semantics. clearAllProgress removes every key
-  // listed in persistence.js#TRACKED_KEYS plus the localStorage blob.
-  // clearInMemoryProgress resets state.js#foundBonuses to an empty
-  // Set. We then write the restored values back through mirrorSession
-  // so they re-populate sessionStorage AND propagate to the blob if
-  // persistence is on.
   clearAllProgress();
   clearInMemoryProgress();
 
-  if (Array.isArray(d.vis) && d.vis.length) {
-    mirrorSession("visited", JSON.stringify(d.vis));
-  }
-  if (Array.isArray(d.bf) && d.bf.length) {
-    mirrorSession("d3cyph3r:bonusFinds", JSON.stringify(d.bf));
-  }
-  if (Array.isArray(d.ach) && d.ach.length) {
-    mirrorSession("d3cyph3r:earnedAchievements", JSON.stringify(d.ach));
-  }
-  if (d.ms && typeof d.ms === "object") {
-    mirrorSession("d3cyph3r:milestones", JSON.stringify(d.ms));
-  }
-
-  // Level times — re-expand compact { t,f,s } → { totalMs, firstSolveMs, isSolved }.
-  if (d.lt && typeof d.lt === "object") {
-    const expanded = {};
-    for (const [key, row] of Object.entries(d.lt)) {
-      if (!row || typeof row !== "object") continue;
-      expanded[key] = {
-        totalMs:      Number.isFinite(row.t) ? row.t : 0,
-        firstSolveMs: Number.isFinite(row.f) ? row.f : null,
-        isSolved:     row.s === 1,
+  // Visited.
+  const visited = [];
+  const levelTimesOut = {};
+  const bonusFindsOut = [];
+  for (const [levelKey, rec] of Object.entries(snap.levels || {})) {
+    if (rec.visited) visited.push(levelKey);
+    if (rec.totalMs > 0 || rec.firstSolveMs > 0 || rec.isSolved) {
+      levelTimesOut[levelKey] = {
+        totalMs:      rec.totalMs      > 0 ? rec.totalMs      : 0,
+        firstSolveMs: rec.firstSolveMs > 0 ? rec.firstSolveMs : null,
+        isSolved:     !!rec.isSolved,
       };
     }
-    if (Object.keys(expanded).length) {
-      mirrorSession("d3cyph3r:levelTimes", JSON.stringify(expanded));
+    for (const id of rec.bonusFinds || []) {
+      bonusFindsOut.push(`${levelKey}:${id}`);
+    }
+    if (rec.hintCounter > 0) {
+      mirrorSession(`d3cyph3r-hint-${levelKey}`, String(rec.hintCounter));
     }
   }
+  if (visited.length)            mirrorSession("visited",                       JSON.stringify(visited));
+  if (bonusFindsOut.length)      mirrorSession("d3cyph3r:bonusFinds",           JSON.stringify(bonusFindsOut));
+  if (Object.keys(levelTimesOut).length) mirrorSession("d3cyph3r:levelTimes",   JSON.stringify(levelTimesOut));
 
-  // Hint counters — restore each "d3cyph3r-hint-<levelKey>" entry.
-  if (d.hc && typeof d.hc === "object") {
-    for (const [levelKey, count] of Object.entries(d.hc)) {
-      if (!Number.isFinite(count) || count <= 0) continue;
-      mirrorSession(`d3cyph3r-hint-${levelKey}`, String(count));
-    }
+  // Achievements.
+  if (Array.isArray(snap.achievements) && snap.achievements.length) {
+    mirrorSession("d3cyph3r:earnedAchievements", JSON.stringify(snap.achievements));
   }
 
-  if (d.ob === 1) {
-    mirrorSession("seenOnboarding", "true");
+  // Milestones (rebuild a plain object including themesSeen).
+  const milestonesOut = { ...(snap.milestones || {}) };
+  if (Array.isArray(snap.themesSeen) && snap.themesSeen.length) {
+    milestonesOut.themesSeen = snap.themesSeen.slice();
   }
-  if (Array.isArray(d.le) && d.le.length) {
-    mirrorSession("lobbyExpanded", JSON.stringify(d.le));
+  if (Object.keys(milestonesOut).length) {
+    mirrorSession("d3cyph3r:milestones", JSON.stringify(milestonesOut));
   }
 
-  // Rehydrate in-memory mirrors so the running session reflects the
-  // newly-written sessionStorage data without waiting for a reload.
+  // Lobby expanded.
+  if (Array.isArray(snap.lobbyExpanded) && snap.lobbyExpanded.length) {
+    mirrorSession("lobbyExpanded", JSON.stringify(snap.lobbyExpanded));
+  }
+
+  // Onboarding.
+  if (snap.onboarding) mirrorSession("seenOnboarding", "true");
+
+  // Rehydrate in-memory mirrors.
   loadBonusesFromStorage();
   initLevelTimer();
 
-  return { themeName: typeof d.th === "string" ? d.th : null };
+  return { themeName: typeof snap.theme === "string" ? snap.theme : null };
 }
