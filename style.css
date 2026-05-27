@@ -874,6 +874,22 @@ body.mobile-mode #terminal {
 }
 body.mobile-mode #input-area {
   flex-shrink: 0;
+  /* On mobile, beef up the input row's tap target — desktop's
+     compact 8px padding gives a thin 14px-tall input which is hard
+     to hit with a fingertip. 12px padding + min-height 36px gets
+     us close to Apple's 44px guideline without disrupting the
+     prompt label's vertical centering. */
+  padding: 12px 0;
+  min-height: 36px;
+}
+/* Show a subtle accent-color underline beneath the input wrapper
+   on mobile, so the player can SEE where typing happens (the
+   cursor-mirror ▋ glyph alone is easy to miss on a small screen,
+   especially when the input is empty). */
+body.mobile-mode #input-wrapper {
+  border-bottom: 1px dashed var(--accent);
+  padding-bottom: 4px;
+  min-height: 20px;
 }
 
 .softkey-btn {

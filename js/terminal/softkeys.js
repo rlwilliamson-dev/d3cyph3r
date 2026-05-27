@@ -136,31 +136,46 @@ function handleKey(k) {
 }
 
 /**
- * Tap-to-focus: tapping anywhere on the terminal background should
- * trigger the on-screen keyboard. The hidden input element doesn't
- * naturally get focus from a touch on its visible mirror, so we
- * wire an explicit click handler.
+ * Tap-to-focus: tapping anywhere outside the soft-key row should
+ * trigger the on-screen keyboard. The hidden cmd-input element
+ * doesn't naturally get focus from a touch on its visible mirror,
+ * so we wire explicit click handlers on multiple areas.
  *
- * Skipped if the tap landed on text the player is trying to select
- * (sel.toString().length > 0) — selection-then-focus would
- * collapse the selection which is annoying.
+ * v1.21.0-r3 expansion: the initial draft only handled clicks on
+ * #terminal, which left the prompt row + footer area focus-dead on
+ * Android. Now we listen on the parent #screen and just exclude
+ * clicks that landed on soft-key buttons (those self-manage focus).
+ *
+ * Skipped if the tap landed on selected text — selection-then-focus
+ * would collapse the selection which is annoying.
  */
 export function initTapToFocus() {
   if (!isMobileMode) return;
-  const termEl = document.getElementById("terminal");
-  if (!termEl) return;
+  const screenEl = document.getElementById("screen");
+  if (!screenEl) return;
 
-  termEl.addEventListener("click", () => {
+  const focusIfAllowed = (event) => {
+    // Don't steal focus from soft-key buttons — they handle their
+    // own focus management via mousedown.preventDefault.
+    if (event.target && event.target.closest && event.target.closest(".softkey-btn")) return;
     try {
       const sel = window.getSelection();
       if (sel && sel.toString().length > 0) return;
     } catch (_) { /* getSelection unavailable */ }
     cmdInput.focus();
-  });
+  };
 
-  // Also focus on first interaction with the page itself (some
+  // Click handles desktop + most mobile browsers; touchend handles
+  // edge cases where a tap doesn't dispatch a synthetic click (e.g.
+  // when there's a scroll gesture in flight).
+  screenEl.addEventListener("click", focusIfAllowed);
+  screenEl.addEventListener("touchend", focusIfAllowed, { passive: true });
+
+  // Also focus the input proactively on first user gesture — some
   // browsers won't show the soft-keyboard until the input has
-  // received explicit focus from a user gesture).
+  // received explicit focus from a user gesture, and waiting for
+  // the player to find the tiny input mirror is a bad first
+  // experience.
   document.body.addEventListener("touchend", () => {
     if (document.activeElement !== cmdInput) cmdInput.focus();
   }, { passive: true, once: true });
