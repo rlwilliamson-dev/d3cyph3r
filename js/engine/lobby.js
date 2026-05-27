@@ -17,6 +17,7 @@ import { connectTo } from "./ssh.js";
 import { VERSION_DISPLAY } from "./version.js";
 import { TRACKS } from "./tracks.js";
 import { tierForLevel, levelNumberFromKey } from "./tiers.js";
+import { mirrorSession } from "./persistence.js";
 
 // Wordmark rendered char-by-char inside `[ ]` brackets — uniform VT323
 // font with a brightness cascade across the 8 characters (bright / mid /
@@ -101,8 +102,7 @@ export function readExpandedTracks() {
     const tk = LEVELS[key]?.track;
     if (tk) seeded.add(tk);
   }
-  try { sessionStorage.setItem(EXPAND_STORAGE_KEY, JSON.stringify([...seeded])); }
-  catch (_) { /* storage disabled — silent */ }
+  mirrorSession(EXPAND_STORAGE_KEY, JSON.stringify([...seeded]));
   return seeded;
 }
 
@@ -114,9 +114,7 @@ export function readExpandedTracks() {
  * @param {Set<string>} set
  */
 export function writeExpandedTracks(set) {
-  try {
-    sessionStorage.setItem(EXPAND_STORAGE_KEY, JSON.stringify([...set]));
-  } catch (_) { /* storage disabled — silent */ }
+  mirrorSession(EXPAND_STORAGE_KEY, JSON.stringify([...set]));
 }
 
 /**
@@ -236,7 +234,7 @@ export function showLobby() {
 
   const firstVisit = !sessionStorage.getItem("seenOnboarding");
   if (firstVisit) {
-    sessionStorage.setItem("seenOnboarding", "true");
+    mirrorSession("seenOnboarding", "true");
 
     print(DIVIDER, "dim");
     print("  WELCOME TO DRIFTWOOD SYSTEMS", "success");

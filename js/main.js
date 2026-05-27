@@ -41,10 +41,18 @@ if (isMobile()) {
   const { themeToggle }              = await import("./terminal/dom.js");
   const { renderPrompt }             = await import("./terminal/prompt.js");
   const { loadBonusesFromStorage }   = await import("./engine/state.js");
+  const { hydrateFromLocal }         = await import("./engine/persistence.js");
 
   // Apply saved theme BEFORE the boot sequence renders so the player
   // doesn't see a flash of the wrong palette.
   initTheme();
+
+  // Hydrate sessionStorage from the persistence blob BEFORE any
+  // module reads session state (loadBonusesFromStorage immediately
+  // below, the lobby's first render inside boot()). If the player
+  // opted into persistence on a prior visit, this is where their
+  // progress comes back. No-op if they never opted in.
+  hydrateFromLocal();
 
   document.getElementById("topbar-title").textContent = `D3CYPH3R ${VERSION_DISPLAY}`;
 

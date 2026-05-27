@@ -309,6 +309,21 @@ async function termText(page) {
   check("Prompt host updated to linux", (await promptText(page)).includes("@linux:"));
   check("Prompt user shows in-world identity 'daniel'", (await promptText(page)).startsWith("daniel@"));
 
+  // v1.11.0 — opt-in persistence prompt fires once per session after
+  // the first successful non-lobby connect. Verify it appeared with
+  // its privacy-posture copy, then dismiss it ('n' = skip) so the
+  // rest of the playtest types normal commands instead of having
+  // them swallowed by the consent handler. (A dedicated v1.11.0 test
+  // block later in this file exercises the opt-IN path and the
+  // save-on/save-off/reset subcommands.)
+  check("Persistence prompt fires on first connect (v1.11.0)", t.includes("Save your progress across browser sessions?"));
+  check("Persistence prompt names localStorage privacy posture",  t.includes("Never sent to a"));
+  check("Persistence prompt offers a y/N choice",                 t.includes("[y/N]"));
+  await typeAndEnter(page, "n");
+  await page.waitForTimeout(100);
+  t = await termText(page);
+  check("Persistence prompt dismiss-with-n prints sessionStorage reminder", t.includes("Progress stays in this tab only"));
+
   await typeAndEnter(page, "ls");
   t = await termText(page);
   for (const f of ["welcome.md", "handoff.md", "tasks.md", "notes.txt", "creds.txt", "lessons-learned.md"]) {
@@ -2134,6 +2149,164 @@ async function termText(page) {
   const after = t.slice(lastDenied, lastDenied + 400);
   check("Cold-start hint is suppressed when prereq IS visited",
         !after.includes("Tip: this level gates on a credential"));
+
+  // ──────────────────────────────────────────────────────────────────
+  // v1.11.0 — opt-in localStorage progress persistence
+  // ──────────────────────────────────────────────────────────────────
+  //
+  // The smoke check earlier in this file already verified the prompt
+  // fires once per session and dismisses on 'n'. This block exercises
+  // the FULL flow: opt-in path, hydration on reload, the three
+  // `progress` subcommands (save-on / save-off / reset), and storage
+  // isolation from the unrelated `d3cyph3r-history` / `d3cyph3r-theme`
+  // localStorage keys.
+  //
+  // The block does a hard storage reset + reload before each scenario
+  // so prior state from the long playtest doesn't pollute the result.
+
+  // --- Scenario A: opt-in path + hydration roundtrip ---
+  await page.evaluate(() => {
+    localStorage.removeItem("d3cyph3r-progress-enabled");
+    localStorage.removeItem("d3cyph3r-progress");
+    sessionStorage.clear();
+  });
+  await page.reload();
+  await page.waitForTimeout(1500);
+
+  // Connect to level0@linux fresh; the level has no password (it's the
+  // entry point for the linux track), so connectTo runs immediately and
+  // the persistence prompt fires after the connection banner / lesson /
+  // objective lines.
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(400);
+  t = await termText(page);
+  check("v1.11.0 A1: prompt fires on first non-lobby connect of a fresh session",
+        t.includes("Save your progress across browser sessions?"));
+
+  // Type 'y' to opt in.
+  await typeAndEnter(page, "y");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  check("v1.11.0 A2: 'y' opt-in prints success confirmation",
+        t.includes("Progress will be saved to this browser"));
+
+  const enabledFlag = await page.evaluate(() => localStorage.getItem("d3cyph3r-progress-enabled"));
+  check("v1.11.0 A3: localStorage flag set to '1' after opt-in", enabledFlag === "1");
+
+  const blob = await page.evaluate(() => {
+    const raw = localStorage.getItem("d3cyph3r-progress");
+    return raw ? JSON.parse(raw) : null;
+  });
+  check("v1.11.0 A4: persistence blob created on opt-in", blob && typeof blob === "object");
+  check("v1.11.0 A5: blob contains 'visited' including level0@linux",
+        blob && blob.visited && blob.visited.includes("level0@linux"));
+
+  // Advance the hint counter twice so we can test that it persists.
+  await typeAndEnter(page, "hint");
+  await typeAndEnter(page, "hint");
+  await page.waitForTimeout(100);
+  const hintBlobBefore = await page.evaluate(() => {
+    const raw = localStorage.getItem("d3cyph3r-progress");
+    return raw ? JSON.parse(raw) : {};
+  });
+  check("v1.11.0 A6: hint counter mirrored to blob (level0@linux at 2)",
+        hintBlobBefore["d3cyph3r-hint-level0@linux"] === "2");
+
+  // Reload — sessionStorage gets wiped, but the blob should rehydrate.
+  await page.reload();
+  await page.waitForTimeout(1500);
+  const visitedAfterReload = await page.evaluate(() => sessionStorage.getItem("visited"));
+  check("v1.11.0 A7: sessionStorage.visited rehydrated after reload",
+        visitedAfterReload && JSON.parse(visitedAfterReload).includes("level0@linux"));
+  const hintAfterReload = await page.evaluate(() => sessionStorage.getItem("d3cyph3r-hint-level0@linux"));
+  check("v1.11.0 A8: hint counter rehydrated after reload", hintAfterReload === "2");
+
+  // Reconnect — prompt should NOT fire again (already enabled).
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(400);
+  t = await termText(page);
+  // Trim to most recent occurrence so we don't see the earlier prompt
+  // from before the reload. After reload the term was cleared, so the
+  // text from before isn't there anyway, but be defensive.
+  check("v1.11.0 A9: prompt does NOT fire on subsequent connect when already enabled",
+        !t.includes("Save your progress across browser sessions?"));
+
+  // --- Scenario B: progress save-off ---
+  // We're currently in level0@linux with persistence enabled. Disable
+  // it via the subcommand and verify the blob disappears.
+  await typeAndEnter(page, "progress save-off");
+  await page.waitForTimeout(100);
+  t = await termText(page);
+  check("v1.11.0 B1: 'progress save-off' confirms persistence disabled",
+        t.includes("Persistence disabled"));
+
+  const flagAfterOff = await page.evaluate(() => localStorage.getItem("d3cyph3r-progress-enabled"));
+  const blobAfterOff = await page.evaluate(() => localStorage.getItem("d3cyph3r-progress"));
+  check("v1.11.0 B2: enabled flag cleared after save-off", flagAfterOff === null);
+  check("v1.11.0 B3: persistence blob removed after save-off", blobAfterOff === null);
+  const visitedAfterOff = await page.evaluate(() => sessionStorage.getItem("visited"));
+  check("v1.11.0 B4: sessionStorage.visited untouched by save-off",
+        visitedAfterOff && JSON.parse(visitedAfterOff).includes("level0@linux"));
+
+  // --- Scenario C: progress save-on re-enable ---
+  await typeAndEnter(page, "progress save-on");
+  await page.waitForTimeout(100);
+  t = await termText(page);
+  check("v1.11.0 C1: 'progress save-on' confirms persistence re-enabled",
+        t.includes("Progress will be saved to this browser"));
+  const flagAfterOn = await page.evaluate(() => localStorage.getItem("d3cyph3r-progress-enabled"));
+  check("v1.11.0 C2: enabled flag set after save-on", flagAfterOn === "1");
+  const blobAfterOn = await page.evaluate(() => {
+    const raw = localStorage.getItem("d3cyph3r-progress");
+    return raw ? JSON.parse(raw) : null;
+  });
+  check("v1.11.0 C3: blob snapshot captures current progress on re-enable",
+        blobAfterOn && blobAfterOn.visited && blobAfterOn.visited.includes("level0@linux"));
+
+  // --- Scenario D: progress reset ---
+  // Storage-isolation setup: plant a known d3cyph3r-theme value
+  // BEFORE the reset (we test theme survival, not history — the
+  // command history is auto-rewritten every time the player types
+  // something, so a planted sentinel there gets clobbered by the
+  // act of typing `progress reset` itself, which doesn't prove the
+  // reset is to blame).
+  await page.evaluate(() => {
+    localStorage.setItem("d3cyph3r-theme", "light");
+  });
+  await typeAndEnter(page, "progress reset");
+  await page.waitForTimeout(100);
+  t = await termText(page);
+  check("v1.11.0 D1: 'progress reset' confirms wipe", t.includes("Progress wiped"));
+
+  const flagAfterReset    = await page.evaluate(() => localStorage.getItem("d3cyph3r-progress-enabled"));
+  const blobAfterReset    = await page.evaluate(() => localStorage.getItem("d3cyph3r-progress"));
+  const visitedAfterReset = await page.evaluate(() => sessionStorage.getItem("visited"));
+  const hintAfterReset    = await page.evaluate(() => sessionStorage.getItem("d3cyph3r-hint-level0@linux"));
+  check("v1.11.0 D2: enabled flag preserved across reset", flagAfterReset === "1");
+  check("v1.11.0 D3: blob cleared by reset", blobAfterReset === null);
+  check("v1.11.0 D4: sessionStorage.visited cleared by reset", visitedAfterReset === null);
+  check("v1.11.0 D5: hint counter cleared by reset", hintAfterReset === null);
+
+  // Storage isolation — d3cyph3r-history and d3cyph3r-theme are NOT
+  // tracked by the persistence layer and must survive 'progress reset'.
+  // Theme is unaffected by typing commands so it's the clean check
+  // here; for history we just verify the key still exists after the
+  // reset (its contents will have been updated by the typing flow
+  // itself, but the key shouldn't be deleted).
+  const historyAfter = await page.evaluate(() => localStorage.getItem("d3cyph3r-history"));
+  const themeAfter   = await page.evaluate(() => localStorage.getItem("d3cyph3r-theme"));
+  check("v1.11.0 D6: d3cyph3r-history key not removed by progress reset",
+        historyAfter !== null);
+  check("v1.11.0 D7: d3cyph3r-theme NOT affected by progress reset", themeAfter === "light");
+
+  // Clean up: leave persistence off for any post-block work and reset
+  // the theme so we don't influence anything downstream.
+  await page.evaluate(() => {
+    localStorage.removeItem("d3cyph3r-progress-enabled");
+    localStorage.removeItem("d3cyph3r-progress");
+    localStorage.removeItem("d3cyph3r-history");
+    localStorage.removeItem("d3cyph3r-theme");
+  });
 
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));

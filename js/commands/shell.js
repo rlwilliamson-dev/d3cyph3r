@@ -246,6 +246,8 @@ const HELP_LEARNING = {
     "walkthrough              – open the current level's walkthrough in a new tab",
     "progress                 – visited levels + bonus-find counts",
     "progress --detail        – list discovered bonus finds by name",
+    "progress save-on/off     – opt in / out of saving progress across browser sessions",
+    "progress reset           – wipe visited levels, bonus finds, hint counters",
     "search <term>            – search visited levels' lessons-learned for <term>",
   ],
 };
