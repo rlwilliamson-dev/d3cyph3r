@@ -19,6 +19,8 @@ import { TRACKS } from "./tracks.js";
 import { tierForLevel, levelNumberFromKey } from "./tiers.js";
 import { mirrorSession } from "./persistence.js";
 import { FIRST_STEPS_LINES } from "../commands/tutorial.js";
+import { ACHIEVEMENTS, getEarnedAchievements } from "./achievements.js";
+import { getLevelTime, formatTime } from "./leveltimer.js";
 
 // Wordmark rendered char-by-char inside `[ ]` brackets — uniform VT323
 // font with a brightness cascade across the 8 characters (bright / mid /
@@ -186,7 +188,13 @@ function engagementList() {
       continue;
     }
 
-    const chevron = isExpanded ? "[▾]" : "[▸]";
+    // v1.18.0: fully-solved tracks get the success-green checkmark glyph
+    // instead of the expand chevron. Still toggleable via `tracks` — the
+    // body still expands; the header just signals "you're done here".
+    const isComplete = visitedCount === shippedCount && shippedCount > 0;
+    const chevron = isComplete
+      ? "[✓]"
+      : (isExpanded ? "[▾]" : "[▸]");
     // Tier surface (v1.10.0): compute from level0's ordinal (always
     // 0 → "Routine" for any track's entry point). The collapsed
     // header reads as "tier at the entry point"; the expanded body
@@ -198,7 +206,7 @@ function engagementList() {
       : progressStr;
     out.push({
       line: `  ${entryCmd.padEnd(24)} ${chevron} ${t.label.padEnd(22)}  ${meta}`,
-      cls: "out",
+      cls: isComplete ? "success" : "out",
     });
 
     // ----- Expanded body -----
@@ -225,6 +233,93 @@ function engagementList() {
     }
   }
   return out;
+}
+
+/**
+ * Compute the lobby's progress-summary numbers. Reads from the same
+ * sessionStorage / module state that the rest of the engine uses, so
+ * the numbers stay consistent with `progress`, `achievements`, etc.
+ *
+ * @returns {{
+ *   visited:   number,  totalLevels:   number,
+ *   foundFinds:number,  totalFinds:    number,
+ *   earnedAch: number,  totalAch:      number,
+ *   totalTimeMs: number,
+ * }}
+ */
+function computeLobbySummary() {
+  let visited;
+  try { visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]")); }
+  catch (_) { visited = new Set(); }
+
+  // All shipped non-lobby, non-pivot levels.
+  const realLevels = Object.entries(LEVELS)
+    .filter(([, l]) => !l.isLobby && !l.pivot && l.track);
+  const totalLevels = realLevels.length;
+
+  // Bonus finds — count totals + discovered.
+  let totalFinds = 0;
+  for (const [, l] of realLevels) {
+    if (Array.isArray(l.bonusFinds)) totalFinds += l.bonusFinds.length;
+  }
+  let foundFinds = 0;
+  try {
+    const arr = JSON.parse(sessionStorage.getItem("d3cyph3r:bonusFinds") || "[]");
+    foundFinds = Array.isArray(arr) ? arr.length : 0;
+  } catch (_) { foundFinds = 0; }
+
+  // Achievements.
+  const earnedAch = getEarnedAchievements().size;
+  const totalAch  = ACHIEVEMENTS.length;
+
+  // Total time across all timed levels. getLevelTime returns the
+  // zero-record default for never-timed levels so this is safe.
+  let totalTimeMs = 0;
+  for (const [key] of realLevels) {
+    totalTimeMs += (getLevelTime(key).totalMs || 0);
+  }
+
+  return {
+    visited: visited.size,
+    totalLevels,
+    foundFinds,
+    totalFinds,
+    earnedAch,
+    totalAch,
+    totalTimeMs,
+  };
+}
+
+/**
+ * Find the player's most logical "next" level — the lowest unvisited
+ * `level<N+1>@<track>` whose `level<N>@<track>` predecessor has been
+ * visited. Returns the level key string, or null when there's no
+ * next-up to suggest (no progress yet, or all reachable levels done).
+ *
+ * Ranks by (next-level ordinal, alphabetical track) so a player with
+ * progress on multiple tracks gets a deterministic recommendation:
+ * the next level1 (or level2) in alphabetical track order, not a
+ * random pick.
+ */
+function findNextUpLevel() {
+  let visited;
+  try { visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]")); }
+  catch (_) { return null; }
+  if (visited.size === 0) return null;  // no progress — FIRST STEPS guides
+
+  const candidates = [];
+  for (const key of visited) {
+    const m = /^level(\d+)@(.+)$/.exec(key);
+    if (!m) continue;
+    const n    = parseInt(m[1], 10);
+    const next = `level${n + 1}@${m[2]}`;
+    if (LEVELS[next] && !visited.has(next) && !LEVELS[next].pivot) {
+      candidates.push({ key: next, ord: n + 1, track: m[2] });
+    }
+  }
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => a.ord - b.ord || a.track.localeCompare(b.track));
+  return candidates[0].key;
 }
 
 export function showLobby() {
@@ -267,6 +362,40 @@ export function showLobby() {
     print("  move to the next box (e.g. ssh level1@linux once you have", "dim");
     print("  the credential from level0@linux).", "dim");
     print("", "out");
+  } else {
+    // v1.18.0: returning-visitor welcome-back greeting. Tight
+    // single-screen summary that replaces the 3-block first-visit
+    // intro. Reads from the same state that progress / achievements
+    // do, so numbers stay consistent across surfaces.
+    const s = computeLobbySummary();
+    print(DIVIDER, "dim");
+    print("  WELCOME BACK", "success");
+    print(DIVIDER, "dim");
+    print("", "out");
+    // Build the summary line piecewise so we can drop the time
+    // segment when it's still zero (e.g., very early in the
+    // session — no need to show "0s" prominently).
+    const bits = [
+      `${s.visited}/${s.totalLevels} levels visited`,
+      `${s.foundFinds}/${s.totalFinds} bonus finds`,
+      `${s.earnedAch}/${s.totalAch} achievements`,
+    ];
+    if (s.totalTimeMs > 0) bits.push(`${formatTime(s.totalTimeMs)} engaged`);
+    print("  " + bits.join("  ·  "), "out");
+    print("", "out");
+
+    // Next-up recommendation. We compute the lowest unvisited
+    // level<N+1>@<track> whose level<N>@<track> has been visited.
+    // Skipped when:
+    //   - no progress yet (the FIRST STEPS surface is gone on
+    //     return visits — but the engagement list below still
+    //     shows level0@linux etc., so the player has a path forward)
+    //   - all reachable levels are done (no next-up to point at)
+    const nextUp = findNextUpLevel();
+    if (nextUp) {
+      print(`  Continue: ssh ${nextUp}`, "info");
+      print("", "out");
+    }
   }
 
   print(DIVIDER, "dim");
@@ -277,6 +406,15 @@ export function showLobby() {
   print(DIVIDER, "dim");
   print("  Type 'tracks <name>' to expand a track, 'tracks all' to expand all.", "dim");
   print("  Type 'tiers' to see what each difficulty label (Routine / Live / Escalated / …) means.", "dim");
+  // v1.18.0: surface the achievement layer (v1.14.0) from the lobby
+  // footer. Shape changes based on earned count so the line stays
+  // motivating regardless of whether the player has unlocked any yet.
+  const earned = getEarnedAchievements().size;
+  if (earned > 0) {
+    print(`  ★ ${earned}/${ACHIEVEMENTS.length} achievements earned — type 'achievements' to view.`, "dim");
+  } else {
+    print("  Type 'achievements' to see what's available — they unlock as you play.", "dim");
+  }
   print("  Type 'help' for available commands.", "warn");
   print("", "out");
 }

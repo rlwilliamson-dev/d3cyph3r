@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-05-27
+
+**Lobby polish bundle for returning players.** The first-visit lobby
+walls (WELCOME / FIRST STEPS / FIRST ASSIGNMENT) only fire once;
+returning visitors used to land in a near-empty version-tagline + the
+engagement list. v1.18.0 fills that gap with a tight progress summary,
+a next-up recommendation, a completion glyph on fully-cleared tracks,
+and an achievements footer teaser.
+
+### Added
+
+- **Welcome-back greeting for returning visits.** A `WELCOME BACK`
+  block replaces the 3-block first-visit intro on second+ visits.
+  Compact single-line summary: `N/14 levels visited  ·  N/M bonus
+  finds  ·  N/20 achievements  ·  <time> engaged`. Time bit is
+  omitted when total elapsed is zero (very-early-session).
+- **"Continue: ssh level<N+1>@<track>" next-up recommendation.**
+  Computed from the visited set: finds the lowest unvisited
+  `level<N+1>@<track>` whose predecessor `level<N>@<track>` has
+  been visited. Ranked deterministically (lowest ordinal, then
+  alphabetical track). Skipped when the player has no progress yet
+  (FIRST STEPS still guides them via the engagement list) or has
+  reached all reachable shipped levels.
+- **Completion glyph `[✓]` on fully-visited tracks.** When
+  `visitedCount === shippedCount` for a track, the header glyph
+  swaps from `[▸]`/`[▾]` to `[✓]` and the line uses the success-green
+  CSS class. Track is still expandable via `tracks` — the chevron
+  just signals "you're done here".
+- **Achievements teaser in the lobby footer.** One-line surface for
+  the v1.14.0 achievement layer. Shape depends on earned count:
+    - earned > 0: `★ N/20 achievements earned — type 'achievements' to view.`
+    - earned == 0: `Type 'achievements' to see what's available — they unlock as you play.`
+
+### Changed
+
+- **`js/engine/lobby.js`** — `computeLobbySummary()` aggregates the
+  numbers shown in the welcome-back line (reads from sessionStorage
+  + the achievements / leveltimer modules). `findNextUpLevel()`
+  computes the next-up recommendation. Both pure functions; no DOM
+  coupling.
+- **`engagementList()`** — track header reads `[✓]` for fully-
+  visited tracks and applies the success class.
+- **`tests/playtest.cjs`** — 9 new v1.18.0 assertions covering
+  the welcome-back banner, the bonus-finds + achievement summary
+  bits, completion glyph on a fully-visited track, untouched-track
+  chevron preservation, no-next-up when done, footer teaser
+  presence, and next-up fires correctly with mid-progress state.
+
+### Forker notes
+
+- The welcome-back greeting is gated on `sessionStorage.seenOnboarding
+  === "true"`. The flag is set during the first-visit block, so the
+  branch is automatic — no per-fork wiring needed.
+- `findNextUpLevel()` is strict: only `level<N+1>@<same-track>` is
+  considered a candidate. Forks with non-numbered level chains will
+  need a different signal (consider a `next?: "<key>"` field on
+  the level schema and reading it from `findNextUpLevel()`).
+- Recommended-tier hint (item 10 from the original v1.18.0 scope)
+  intentionally deferred — all 14 shipped levels are Routine tier,
+  so there'd be nothing to suggest yet. Wire it up when level6+
+  ships in v2.0+ and crosses the Routine → Live boundary.
+
 ## [1.17.0] - 2026-05-27
 
 **Standardized `cmd --help` across every command.** Third and final
@@ -3166,7 +3228,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.17.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.18.0...HEAD
+[1.18.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.15.0...v1.16.0
 [1.15.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.14.0...v1.15.0
