@@ -30,10 +30,12 @@ import { LEVELS } from "../../levels/index.js";
 import { COMMANDS } from "../../js/commands/index.js";
 import { print } from "../terminal/output.js";
 import {
-  currentLevelKey, awaitingPassword, lastExitCode, setLastExitCode,
+  currentLevelKey, awaitingPassword, awaitingPersistenceConsent,
+  lastExitCode, setLastExitCode,
   setEnvVar, addJob,
 } from "./state.js";
 import { handleSSH, handlePasswordInput } from "./ssh.js";
+import { handlePersistenceConsent } from "./persistence.js";
 import { parseLine, unquote, expandBraces } from "./parse.js";
 import { expandTokenVars, getEnv } from "./expand.js";
 import { checkBonusFinds } from "./bonus.js";
@@ -49,13 +51,21 @@ const VAR_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*=/;
  */
 export function execute(raw) {
   const input = raw.trim();
-  if (!input) return;
+  // Blank input is a no-op for normal dispatch BUT must still route
+  // to the persistence-consent handler when one is pending — the
+  // prompt explicitly tells the player that pressing Enter alone
+  // counts as opt-out, so we can't drop it on the floor.
+  if (!input && !awaitingPersistenceConsent) return;
 
   // Echo the raw line (before any expansion) so the user sees what
   // they actually typed in history. We echo with the canonical
   // user@host:cwd$ prefix even when the player has customized PS1 —
   // the transcript stays grep-friendly that way.
-  if (!awaitingPassword) {
+  //
+  // Skip the echo for password input (masked elsewhere) AND for
+  // the v1.11.0 persistence-consent prompt — those are interactive
+  // micro-dialogs, not transcript-worthy command lines.
+  if (!awaitingPassword && !awaitingPersistenceConsent) {
     const env  = getEnv();
     const user = env.USER || "user";
     const host = (env.HOSTNAME || "host").split(".")[0];
@@ -68,6 +78,14 @@ export function execute(raw) {
   // Password-prompt mode short-circuits everything else.
   if (awaitingPassword) {
     handlePasswordInput(input);
+    return;
+  }
+
+  // Persistence-consent prompt (v1.11.0) — same short-circuit pattern
+  // as the password prompt. The handler restores normal dispatch by
+  // clearing awaitingPersistenceConsent in state.js.
+  if (awaitingPersistenceConsent) {
+    handlePersistenceConsent(input);
     return;
   }
 

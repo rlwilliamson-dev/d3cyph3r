@@ -27,10 +27,14 @@
 // state beyond the theme preference. Closing the tab resets hint
 // position alongside the visited-levels list.
 
-import { currentLevelKey, isBonusFound } from "../engine/state.js";
+import { currentLevelKey, isBonusFound, clearInMemoryProgress } from "../engine/state.js";
 import { LEVELS } from "../../levels/index.js";
 import { MAN_PAGES } from "./man-pages.js";
 import { GLOSSARY } from "./glossary.js";
+import {
+  isPersistenceEnabled, enablePersistence, disablePersistence,
+  clearAllProgress, mirrorSession,
+} from "../engine/persistence.js";
 
 // Storage key for the per-level hint counter. The key includes the
 // level identifier so multiple levels don't collide.
@@ -47,9 +51,7 @@ function readHintIndex() {
 }
 
 function writeHintIndex(i) {
-  try {
-    sessionStorage.setItem(hintKey(currentLevelKey), String(i));
-  } catch (_) { /* sessionStorage unavailable — silent */ }
+  mirrorSession(hintKey(currentLevelKey), String(i));
 }
 
 // Walkthrough URL hint for the current track + level — used as the
@@ -181,8 +183,55 @@ export const learningCommands = {
   // `[?] hidden — keep exploring`. Same for un-visited levels: we
   // do not surface the per-level find titles until the player has
   // at least entered the level.
+  //
+  // v1.11.0 subcommands manage the opt-in persistence layer:
+  //   progress save-on   — mirror session progress to localStorage
+  //                        going forward (and snapshot current state).
+  //   progress save-off  — stop mirroring + delete the localStorage
+  //                        blob. Current tab keeps its sessionStorage
+  //                        state until the tab closes.
+  //   progress reset     — wipe every tracked sessionStorage key + the
+  //                        localStorage blob + in-memory state. Does
+  //                        NOT change the opt-in flag — a player who
+  //                        explicitly opted in stays opted in.
   progress(_level, arg) {
-    const detail = (arg || "").trim() === "--detail";
+    const trimmed = (arg || "").trim();
+
+    // v1.11.0 subcommands (parse before --detail since they don't
+    // share argv with the renderer).
+    if (trimmed === "save-on") {
+      if (isPersistenceEnabled()) {
+        return { text: "progress: already saving to this browser. Use 'progress save-off' to stop.", cls: "dim" };
+      }
+      enablePersistence();
+      return {
+        text: "Progress will be saved to this browser (localStorage). Stored only here, never sent to a server. Use 'progress save-off' to stop, or 'progress reset' to wipe.",
+        cls: "success",
+      };
+    }
+    if (trimmed === "save-off") {
+      if (!isPersistenceEnabled()) {
+        return { text: "progress: not currently saving across sessions.", cls: "dim" };
+      }
+      disablePersistence();
+      return {
+        text: "Persistence disabled. The browser-stored blob has been deleted; this tab's progress lives only in sessionStorage and will be lost when you close the tab.",
+        cls: "warn",
+      };
+    }
+    if (trimmed === "reset") {
+      clearAllProgress();
+      clearInMemoryProgress();
+      const tail = isPersistenceEnabled()
+        ? "(Persistence is still ON — new progress will be saved going forward. Use 'progress save-off' to disable it.)"
+        : "(Persistence was off; nothing else to clean up.)";
+      return {
+        text: `Progress wiped — visited levels, bonus finds, hint counters, and lobby state all cleared.\n${tail}\nReload or return to the lobby to see the cleaned state.`,
+        cls: "success",
+      };
+    }
+
+    const detail = trimmed === "--detail";
     let visited;
     try {
       visited = new Set(JSON.parse(sessionStorage.getItem("visited") || "[]"));
@@ -244,7 +293,14 @@ export const learningCommands = {
         lines.push(`  (Run 'progress --detail' to list discovered finds by name.)`);
       }
     }
-    lines.push(`  (Progress is per-tab; closing the tab resets the visited list.)`);
+    // Footer reflects the actual persistence state — v1.11.0 added
+    // an opt-in localStorage mirror, and players should see at a
+    // glance whether their progress will survive closing the tab.
+    if (isPersistenceEnabled()) {
+      lines.push(`  (Progress is saved to this browser. 'progress save-off' to stop saving, 'progress reset' to wipe.)`);
+    } else {
+      lines.push(`  (Progress is per-tab; closing the tab resets it. 'progress save-on' to persist across sessions.)`);
+    }
     return { text: lines.join("\n"), cls: "out" };
   },
 

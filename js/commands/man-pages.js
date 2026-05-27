@@ -1733,18 +1733,20 @@ EXAMPLES
     walkthrough`,
 
   progress: `NAME
-    progress — list levels you've visited and bonus finds discovered
+    progress — list visited levels, bonus finds, and persistence state
 
 SYNOPSIS
     progress
     progress --detail
+    progress save-on
+    progress save-off
+    progress reset
 
 DESCRIPTION
     Print a per-track checklist of every level, marked with ✓ for
     visited or · for not-yet-visited. Levels that declare bonus
     finds also display a [bonuses N/M] counter showing how many
-    you've unlocked. Progress is per-tab; closing the tab resets
-    everything (visited list AND bonus finds).
+    you've unlocked.
 
     With --detail, each level's bonus finds are expanded:
     discovered finds list by name with a ✦ marker; un-discovered
@@ -1754,9 +1756,23 @@ DESCRIPTION
     line — no per-find titles surface until you've entered the
     level once.
 
+    By default, progress lives in sessionStorage — closing the tab
+    resets the visited list, bonus finds, and hint counters.
+    'progress save-on' opts in to a localStorage mirror so progress
+    survives across browser sessions. The data is stored only in
+    this browser, never sent to a server, never visible to other
+    players. 'progress save-off' stops mirroring AND deletes the
+    stored blob (the current tab's sessionStorage is untouched).
+    'progress reset' wipes every tracked progress key in BOTH
+    stores; the opt-in flag stays as it was, so future progress is
+    still saved if you previously opted in.
+
 EXAMPLES
     progress
-    progress --detail`,
+    progress --detail
+    progress save-on
+    progress save-off
+    progress reset`,
 
   tiers: `NAME
     tiers — print the difficulty-tier legend

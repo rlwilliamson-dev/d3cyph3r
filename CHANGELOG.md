@@ -7,6 +7,128 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-05-26
+
+**Opt-in localStorage progress persistence.** First of four Quality-
+of-Life MINORs queued before the v2.0 "Apprentice" level2 push (the
+others: first-visit guided tour, multi-theme picker, achievement
+layer over bonus finds). Default behavior is unchanged — every
+returning player who opts out (or never opts in) keeps the
+sessionStorage-only model: progress survives reloads within the
+tab but resets when the tab closes. Opting in mirrors progress to
+localStorage so it survives across browser sessions on the same
+device.
+
+### Added
+
+- **`js/engine/persistence.js`** — New module owning the opt-in
+  persistence layer. Exports `mirrorSession(key, value)` (writes
+  to sessionStorage AND, if enabled, to a single JSON blob in
+  localStorage), `hydrateFromLocal()` (called from `main.js` boot
+  order before `loadBonusesFromStorage()`, copies the blob back
+  into sessionStorage), `enablePersistence()` /
+  `disablePersistence()` / `clearAllProgress()`, plus the prompt
+  helpers `maybePromptForPersistence()` and
+  `handlePersistenceConsent()`. Single chokepoint for every
+  tracked write — the registry of tracked keys is one constant at
+  the top of the file.
+- **Opt-in prompt** — Fires once per session, immediately after
+  the first successful non-lobby connect (post-banner, post-
+  lesson, post-objective). Yellow callout with the privacy posture
+  spelled out: stored only in this browser on this device, never
+  sent to a server, never visible to other players, never used
+  for analytics; clear any time with `progress reset` or the
+  browser's site-data clear button. Defaults to opt-OUT — only
+  explicit "y"/"yes" enables; anything else (including blank
+  Enter) skips. The cautious default matches the privacy-conscious
+  posture the rest of the project takes.
+- **`progress save-on` / `save-off` / `reset` subcommands** —
+  Player-facing controls for the persistence layer. `save-on`
+  enables mirroring and snapshots whatever progress already
+  exists in the current session (so opting in mid-play doesn't
+  lose what came before). `save-off` disables mirroring AND
+  deletes the localStorage blob (current tab's sessionStorage is
+  untouched). `reset` wipes every tracked sessionStorage key plus
+  the blob; the opt-in flag is preserved so future progress is
+  still saved if the player had previously opted in.
+- **`awaitingPersistenceConsent` state flag** — Routes the next
+  Enter press to `handlePersistenceConsent` instead of normal
+  dispatch. Mirrors the existing `awaitingPassword` pattern.
+  Blank-Enter handling intentionally bypasses the
+  `if (!input) return;` early-exit in `execute.js` so that
+  Enter-as-skip works exactly as the prompt promises.
+- **23 new playtest assertions** — Smoke checks for the prompt
+  + privacy-posture copy + `[y/N]` defaulting at the entry point;
+  a dedicated v1.11.0 block at the end of the playtest exercises
+  the full opt-in roundtrip (opt-in → reload → progress survives;
+  prompt does NOT re-fire when already enabled), `save-on` /
+  `save-off` / `reset` semantics including flag preservation
+  across reset, and storage isolation (the existing
+  `d3cyph3r-theme` / `d3cyph3r-history` localStorage keys are NOT
+  touched by any persistence command). Total: 681 checks, all
+  passing.
+
+### Changed
+
+- **`js/engine/state.js`** — Added `awaitingPersistenceConsent`
+  live binding + `setAwaitingPersistenceConsent()` setter
+  alongside the existing `awaitingPassword` infrastructure.
+  `markBonusFound()`'s sessionStorage write now routes through
+  `mirrorSession()`. Added `clearInMemoryProgress()` so
+  `progress reset` can drop the in-memory `foundBonuses` Set
+  without forcing a reload.
+- **`js/engine/progress.js`** — `markVisited()` writes through
+  `mirrorSession()`. Header comment updated to reference the
+  optional persistence layer.
+- **`js/engine/lobby.js`** — Three tracked write sites converted:
+  the seed-from-visited path inside `readExpandedTracks()`, the
+  `writeExpandedTracks()` setter, and `seenOnboarding`.
+- **`js/engine/ssh.js`** — `connectTo()` calls
+  `maybePromptForPersistence()` at the end of every successful
+  non-lobby connect. Skipped silently when already enabled or
+  already prompted this session.
+- **`js/engine/execute.js`** — Short-circuit route added after the
+  password handler: `awaitingPersistenceConsent → handlePersistenceConsent()`.
+  The blank-input early-return at the top of `execute()` now
+  bypasses for consent mode so the prompt's "Enter to skip"
+  promise actually works.
+- **`js/main.js`** — Added `hydrateFromLocal()` call between
+  `initTheme()` and `loadBonusesFromStorage()` so the rehydrated
+  blob is in place before any downstream module reads
+  sessionStorage.
+- **`js/commands/learning.js`** — `progress` command extended with
+  three new subcommands and a dynamic footer that reflects whether
+  persistence is currently enabled (replaces the static
+  "Progress is per-tab" footer). Hint-counter write site routes
+  through `mirrorSession()`.
+- **`js/commands/man-pages.js`** — `man progress` updated with the
+  new SYNOPSIS lines + a paragraph describing the persistence
+  privacy posture.
+- **`js/commands/shell.js`** — `help` learning-aids section adds
+  `progress save-on/off` and `progress reset` entries.
+- **README.md** — Learning-aids inline reference picks up the new
+  `progress` subcommands with their v1.11.0 marker.
+
+### Notes for forkers
+
+- The persistence module is the new chokepoint for any
+  sessionStorage write that should survive across sessions for
+  opted-in players. New sessionStorage keys: add them to
+  `TRACKED_KEYS` in `js/engine/persistence.js` (static set OR
+  prefix family) AND route writes through `mirrorSession(key, value)`.
+  Reads continue to use sessionStorage directly — the layer is
+  asymmetric on purpose.
+- Conflict policy on hydration: sessionStorage wins. If both
+  stores have a value for a tracked key, the in-tab value is
+  treated as authoritative. This makes `hydrateFromLocal()`
+  idempotent and prevents stale localStorage data from clobbering
+  the current tab's in-progress work.
+- All storage operations are wrapped in try/catch and silently
+  degrade on failure. Persistence is a convenience, not a hard
+  requirement — private-browsing players, players with site data
+  disabled, and players whose localStorage quota is exhausted
+  keep playing without any errors surfaced to them.
+
 ## [1.10.1] - 2026-05-26
 
 **Docs catch-up + dead-code purge.** Patch release covering
@@ -2541,7 +2663,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.8.1...v1.9.0

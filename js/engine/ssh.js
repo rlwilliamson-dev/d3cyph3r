@@ -17,6 +17,7 @@ import { markVisited } from "./progress.js";
 import { showLobby } from "./lobby.js";
 import { SCAFFOLDED_HOSTS } from "./tracks.js";
 import { tierForLevel, levelNumberFromKey } from "./tiers.js";
+import { maybePromptForPersistence } from "./persistence.js";
 
 export function handleSSH(target) {
   const level = LEVELS[target];
@@ -218,6 +219,20 @@ export function connectTo(key, opts) {
     print(`Objective: ${level.objective}`, "info");
     print("", "out");
   }
+
+  // Opt-in persistence prompt (v1.11.0). Fires once per session,
+  // ONLY after a successful non-lobby connect (which is exactly
+  // this code path). Skipped silently if the player has already
+  // enabled persistence on a prior visit, or already seen the
+  // prompt this session.
+  //
+  // Replay-mode re-entries (the cheap "you've already visited"
+  // path in handleSSH above) ALSO end up here via connectTo, so
+  // the prompt will fire on the first replay if the player closed
+  // and reopened the tab without enabling persistence on the
+  // original solve. That's intentional — give returning players
+  // a chance to opt in.
+  maybePromptForPersistence();
 }
 
 function updatePrompt() {
