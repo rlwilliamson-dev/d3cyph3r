@@ -150,28 +150,28 @@ import { initLevelTimer } from "./leveltimer.js";
  * Capped at 256 entries (uint8 level_index). Plenty of headroom for
  * the v6.0 "Veteran" milestone (~7 tracks × maybe 5 levels each).
  */
+// The track groupings below are COSMETIC for human-reading. The
+// canonical ordering is "added-when": every new level appends to
+// the end of this array regardless of which track it belongs to.
+// A v2.0 level2@linux lands at index 14, NOT next to level1@linux.
+// (That's enforced by Object.freeze + the append-only rule above.)
 export const LEVEL_REGISTRY = Object.freeze([
-  // Linux
+  // ── v1.0.0 launch lineup (all level0 + level1 per track) ──
   "level0@linux",        // 0
   "level1@linux",        // 1
-  // Network
   "level0@network",      // 2
   "level1@network",      // 3
-  // Crypto
   "level0@crypto",       // 4
   "level1@crypto",       // 5
-  // Web
   "level0@web",          // 6
   "level1@web",          // 7
-  // Forensics
   "level0@forensics",    // 8
   "level1@forensics",    // 9
-  // OSINT
   "level0@osint",        // 10
   "level1@osint",        // 11
-  // Cloud
   "level0@cloud",        // 12
   "level1@cloud",        // 13
+  // ── future levels append here at index 14, 15, 16, ... ──
 ]);
 const LEVEL_INDEX = new Map(LEVEL_REGISTRY.map((k, i) => [k, i]));
 
