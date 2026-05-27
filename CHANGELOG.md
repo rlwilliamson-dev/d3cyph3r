@@ -7,6 +7,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-05-26
+
+**First-visit guided tour.** Second of four Quality-of-Life MINORs
+queued before the v2.0 "Apprentice" level2 push. Layers two new
+surfaces on top of the existing first-visit welcome banner: an
+annotated FIRST STEPS quickstart that appears automatically on a
+new player's first lobby render, and an opt-in interactive
+walk-through (`tutorial start`) that hand-holds them through their
+first four commands. Returning players who skip both surfaces see
+no UX change.
+
+### Added
+
+- **`js/commands/tutorial.js`** — New module owning the tour. Exports
+  the `tutorial` command (with subcommands: no-arg reprints the
+  FIRST STEPS list, `start` enters the interactive walk-through,
+  `skip` exits the walk-through, `reset` clears the welcome-banner
+  gate), the `FIRST_STEPS_LINES` shared content (imported by lobby.js
+  so the banner and the command never drift), and the dispatch
+  helpers `handleTourInput`, `reprintStepAfterAdvance`,
+  `printTourCompleteBanner`.
+- **Annotated FIRST STEPS section** in the lobby first-visit welcome
+  banner. Five numbered commands: `help`, `tracks`, `tiers`,
+  `progress`, `ssh level0@linux`. Each one is meaningfully useful
+  for a new player and the list is read-once, not a state machine —
+  so a returning player who already knows the basics can skim past
+  it without interruption. The block tells the player about
+  `tutorial start` for the interactive option.
+- **Interactive walk-through** triggered by `tutorial start`. Four
+  steps: type `help` → `tracks` → `tiers` → `ssh level0@linux`. Each
+  step prints its own intro in yellow, waits for the expected
+  command, advances when matched, and prints a one-line nudge if a
+  different command is typed (but still lets the typed command
+  run — the player is never trapped). Typing `skip` or `tutorial
+  skip` exits cleanly at any prompt. The completion banner prints
+  before the final ssh dispatch so it appears above the level-entry
+  chrome (connection banner, lesson, objective, persistence prompt)
+  rather than buried beneath it.
+- **`tourStep` state binding** in `js/engine/state.js`. `-1` when
+  no tour is running; `0..N-1` for the current step. Mirrors the
+  existing `awaitingPassword` / `awaitingPersistenceConsent`
+  pattern.
+- **22 new playtest assertions.** Smoke checks on the FIRST STEPS
+  banner content (numbered commands present, `tutorial start`
+  named); a dedicated v1.12.0 block exercises the interactive tour
+  end-to-end including the mismatch-nudge-doesn't-advance behavior,
+  the four-step walk, the order-check (completion banner BEFORE
+  connection banner), `skip` cleanup, and the lobby-only guardrail
+  on `tutorial start`. Total: 703 checks, all passing.
+
+### Changed
+
+- **`js/engine/lobby.js`** — Imports `FIRST_STEPS_LINES` from
+  `tutorial.js` and prints them as a new FIRST STEPS section in the
+  first-visit welcome banner, between the Driftwood-world intro and
+  the existing FIRST ASSIGNMENT section. FIRST ASSIGNMENT was
+  trimmed slightly since the ssh invocation now appears in FIRST
+  STEPS as step 5 (it kept the credential-chain context line).
+- **`js/engine/state.js`** — Added `tourStep` + `setTourStep`.
+- **`js/engine/execute.js`** — New dispatch route between the
+  persistence-consent short-circuit and the ssh special-case.
+  Branches on the tour outcome: SKIP suppresses dispatch (the input
+  was 'skip', not a real command); COMPLETE prints the banner
+  BEFORE dispatch; ADVANCE prints the next step's instructions AFTER
+  dispatch; STAY / INACTIVE pass through to normal dispatch.
+- **`js/commands/index.js`** — Registers `tutorialCommands`.
+- **`js/commands/shell.js`** — Help reference adds `tutorial` and
+  `tutorial start` rows alongside `progress`.
+- **`js/commands/man-pages.js`** — New `man tutorial` page covering
+  all four subcommands, the lobby-only guardrail, and the
+  relationship to the welcome-banner gate.
+- **README.md** — Learning-aids inline reference picks up
+  `tutorial` and `tutorial start` with their v1.12.0 marker.
+
+### Notes for forkers
+
+- The tour's per-step content is a small array of objects in
+  `tutorial.js#TOUR_STEPS`. Each entry is `{ instruction, expected,
+  humanized? }`. To extend or modify the tour, edit that array — no
+  changes to the dispatch loop or state machine required. The
+  `expected` field accepts a string (exact match after trim) or a
+  RegExp (anchored, whitespace-tolerant). RegExp authors should
+  supply a `humanized` string so the mismatch-nudge message stays
+  readable.
+- The walk-through does NOT have a "you've completed this" flag —
+  it's always replayable via `tutorial start`. The annotated banner
+  IS gated, by the existing `seenOnboarding` sessionStorage key
+  (which the v1.11.0 persistence layer already mirrors to
+  localStorage for opted-in players). Players who want to re-see
+  the banner without rejoining as a fresh user run `tutorial reset`.
+- Dispatch loop ordering: the tour check runs AFTER the
+  `awaitingPassword` / `awaitingPersistenceConsent` short-circuits
+  in `execute.js`. This means the password and consent gates always
+  take priority — you can never get trapped in a tour state while
+  a password is pending.
+
 ## [1.11.0] - 2026-05-26
 
 **Opt-in localStorage progress persistence.** First of four Quality-
@@ -2663,7 +2759,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.9.0...v1.10.0

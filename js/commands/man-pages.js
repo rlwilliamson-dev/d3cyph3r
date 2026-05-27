@@ -1732,6 +1732,43 @@ DESCRIPTION
 EXAMPLES
     walkthrough`,
 
+  tutorial: `NAME
+    tutorial — guided introduction for new players (v1.12.0)
+
+SYNOPSIS
+    tutorial
+    tutorial start
+    tutorial skip
+    tutorial reset
+
+DESCRIPTION
+    With no arguments, reprint the FIRST STEPS quickstart list — a
+    numbered set of commands ('help', 'tracks', 'tiers', 'progress',
+    'ssh level0@linux') that orient a new player in the lobby. The
+    same list is shown automatically in the lobby's first-visit
+    welcome banner; this command exists so returning players can
+    surface it on demand.
+
+    'tutorial start' begins an interactive walk-through that waits
+    for the player to type each of those commands in order. If a
+    different command is typed, a one-line nudge prints suggesting
+    the expected next step but the typed command still runs — the
+    walk-through never traps the player. At any prompt, 'skip' (or
+    'tutorial skip') exits the walk-through cleanly.
+
+    The walk-through is replayable any time — there's no completion
+    flag tied to it. The first-visit welcome banner IS gated, by the
+    'seenOnboarding' sessionStorage flag (mirrored to localStorage
+    for opted-in players), and 'tutorial reset' clears that flag so
+    the banner shows again on the next lobby render (mostly a debug
+    aid for forkers).
+
+EXAMPLES
+    tutorial
+    tutorial start
+    tutorial skip
+    tutorial reset`,
+
   progress: `NAME
     progress — list visited levels, bonus finds, and persistence state
 

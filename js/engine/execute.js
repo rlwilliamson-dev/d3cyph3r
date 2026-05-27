@@ -36,6 +36,10 @@ import {
 } from "./state.js";
 import { handleSSH, handlePasswordInput } from "./ssh.js";
 import { handlePersistenceConsent } from "./persistence.js";
+import {
+  handleTourInput, reprintStepAfterAdvance, printTourCompleteBanner,
+  TOUR_RESULT,
+} from "../commands/tutorial.js";
 import { parseLine, unquote, expandBraces } from "./parse.js";
 import { expandTokenVars, getEnv } from "./expand.js";
 import { checkBonusFinds } from "./bonus.js";
@@ -89,6 +93,28 @@ export function execute(raw) {
     return;
   }
 
+  // First-visit guided tour (v1.12.0). Runs AFTER password + consent
+  // so the gated modes always take priority. Outcomes:
+  //   SKIP     — player typed 'skip'; tutorial.js already printed
+  //              the skipped banner and reset tourStep. Suppress
+  //              dispatch (the input wasn't a real command).
+  //   COMPLETE — step matched AND was the final step. We print the
+  //              completion banner BEFORE dispatch so it lands above
+  //              the level0 connection banner / lesson / objective /
+  //              persistence prompt that the ssh dispatch will
+  //              produce.
+  //   ADVANCE  — step matched (not last). Dispatch runs first; the
+  //              new step's instructions print AFTER, so they're the
+  //              last thing on screen and the player sees what to do
+  //              next without scrolling up.
+  //   STAY     — mismatch. tutorial.js already printed the nudge.
+  //              Continue with normal dispatch so the player still
+  //              sees the result of whatever they typed.
+  //   INACTIVE — no tour running; no-op pass-through.
+  const tourResult = handleTourInput(input);
+  if (tourResult === TOUR_RESULT.SKIP) return;
+  if (tourResult === TOUR_RESULT.COMPLETE) printTourCompleteBanner();
+
   // ssh is special-cased above the chain layer — it can't appear in
   // a pipe or be chained with &&/|| (changing levels mid-pipeline
   // would have undefined semantics). We detect it from the raw
@@ -98,12 +124,18 @@ export function execute(raw) {
     const tokens = input.split(/\s+/);
     const res = handleSSH(tokens[1]);
     if (res) print(res.text, res.cls);
+    // No ADVANCE re-print needed here — the only tour step that uses
+    // ssh is the final one, which already produced COMPLETE above.
     return;
   }
 
   // Parse + run.
   const stmts = parseLine(input);
   runStatements(stmts);
+
+  // Post-dispatch tour hook — print the NEXT step's instructions so
+  // they appear after the just-dispatched command's output.
+  if (tourResult === TOUR_RESULT.ADVANCE) reprintStepAfterAdvance();
 
   // Refresh the prompt label — cd may have changed PWD, export may
   // have changed PS1, FOO=bar assignments may have shadowed built-ins,

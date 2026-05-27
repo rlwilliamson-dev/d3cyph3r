@@ -189,7 +189,7 @@ See `help` inside the terminal for the full reference. Track-by-track:
 - **Version control:** `git log` / `git show` / `git diff` / `git status` / `git blame` / `git config` / `git remote` / `git branch`
 - **Crypto inspection:** `gpg --list-keys` / `gpg --verify` / `gpg --decrypt`
 - **Read-only stubs** (sandbox-friendly errors): `chmod` / `chown` / `mv` / `cp` / `rm` / `mkdir` / `rmdir` / `touch` / `ln` / `sudo` / `su` / `useradd` / `passwd`
-- **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>` / `walkthrough` / `progress` (+ `--detail` for bonus-find listing, v1.10.0; + `save-on` / `save-off` / `reset` for opt-in localStorage persistence, v1.11.0) / `search <term>`
+- **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>` / `walkthrough` / `progress` (+ `--detail` for bonus-find listing, v1.10.0; + `save-on` / `save-off` / `reset` for opt-in localStorage persistence, v1.11.0) / `tutorial` (+ `start` for the interactive walk-through, v1.12.0) / `search <term>`
 - **Shell environment (v1.9.0):** `export` / `env` / `unset` / `set` / `FOO=bar` / `FOO=bar cmd` / `PS1` substitution (`\u`, `\h`, `\H`, `\w`, `\W`, `\$`)
 - **Job control (v1.9.0):** `cmd &` / `jobs` / `fg` / `bg` / `kill` / `wait` / `disown`
 - **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout` / `tracks` (lobby tree expand/collapse, v1.10.0) / `tiers` (difficulty-tier legend, v1.10.0)

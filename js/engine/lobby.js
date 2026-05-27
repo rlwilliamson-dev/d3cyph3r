@@ -18,6 +18,7 @@ import { VERSION_DISPLAY } from "./version.js";
 import { TRACKS } from "./tracks.js";
 import { tierForLevel, levelNumberFromKey } from "./tiers.js";
 import { mirrorSession } from "./persistence.js";
+import { FIRST_STEPS_LINES } from "../commands/tutorial.js";
 
 // Wordmark rendered char-by-char inside `[ ]` brackets — uniform VT323
 // font with a brightness cascade across the 8 characters (bright / mid /
@@ -248,14 +249,23 @@ export function showLobby() {
     print("  Find what shouldn't be there.", "out");
     print("", "out");
 
+    // v1.12.0 — annotated FIRST STEPS section. Imported from
+    // tutorial.js so the in-game `tutorial` command and this banner
+    // share a single source of truth.
+    print(DIVIDER, "dim");
+    print("  FIRST STEPS", "success");
+    print(DIVIDER, "dim");
+    print("", "out");
+    FIRST_STEPS_LINES.forEach(line => print(line, "out"));
+    print("", "out");
+
     print(DIVIDER, "dim");
     print("  FIRST ASSIGNMENT", "success");
     print(DIVIDER, "dim");
     print("", "out");
-    print("  ssh level0@linux", "cmd");
-    print("", "out");
     print("  Each box hides a password. Find it, use it with ssh to", "dim");
-    print("  move to the next box (e.g. ssh level1@linux once you have it).", "dim");
+    print("  move to the next box (e.g. ssh level1@linux once you have", "dim");
+    print("  the credential from level0@linux).", "dim");
     print("", "out");
   }
 
