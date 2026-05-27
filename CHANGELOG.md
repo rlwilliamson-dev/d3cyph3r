@@ -80,6 +80,15 @@ no UX change.
   relationship to the welcome-banner gate.
 - **README.md** — Learning-aids inline reference picks up
   `tutorial` and `tutorial start` with their v1.12.0 marker.
+- **`style.css`** — Terminal-area font sizes scaled to ~80% of
+  the prior values so the app looks right at 100% browser zoom
+  instead of expecting players to zoom out to 80% themselves.
+  Affected: body (14→11px), topbar (12→10px), logo wordmark
+  (42→34px), input wrapper + caret-input mirror (14→11px each),
+  tab hint (13→10px), site footer (11→9px). Error pages and
+  the mobile gate were left at their existing sizes since
+  they're not part of the terminal flow. Cache-bust query in
+  `index.html` (`style.css?v=1.12.0`) bumped accordingly.
 
 ### Notes for forkers
 
