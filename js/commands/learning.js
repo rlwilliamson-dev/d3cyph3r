@@ -28,6 +28,7 @@
 // position alongside the visited-levels list.
 
 import { currentLevelKey, isBonusFound, clearInMemoryProgress } from "../engine/state.js";
+import { getLiveLevelTime, formatTime, clearLevelTimes } from "../engine/leveltimer.js";
 import { LEVELS } from "../../levels/index.js";
 import { MAN_PAGES } from "./man-pages.js";
 import { GLOSSARY } from "./glossary.js";
@@ -229,6 +230,13 @@ export const learningCommands = {
     if (trimmed === "reset") {
       clearAllProgress();
       clearInMemoryProgress();
+      // v1.16.0: drop in-memory level-times too. The sessionStorage
+      // key + localStorage blob were already wiped by clearAllProgress
+      // (d3cyph3r:levelTimes is in TRACKED_KEYS.static), but the
+      // in-memory map persists across the reset call — without this,
+      // the next progress --detail would still show stale times until
+      // the next page load.
+      clearLevelTimes();
       const tail = isPersistenceEnabled()
         ? "(Persistence is still ON — new progress will be saved going forward. Use 'progress save-off' to disable it.)"
         : "(Persistence was off; nothing else to clean up.)";
@@ -271,7 +279,22 @@ export const learningCommands = {
         const bonusTag = finds.length > 0
           ? `   [bonuses ${foundCount}/${finds.length}]`
           : "";
-        lines.push(`    ${mark} ${k}${bonusTag}`);
+        // v1.16.0: per-level time tag. Visited levels show their
+        // accumulated time (live-running for the active level);
+        // solved levels also surface the first-solve elapsed. Pivot
+        // hosts aren't in this loop (skipped above), so no tag-
+        // collision concerns there.
+        let timeTag = "";
+        if (visited.has(k)) {
+          const t = getLiveLevelTime(k);
+          if (t.totalMs > 0) {
+            timeTag = `   ${formatTime(t.totalMs)}`;
+            if (t.isSolved && Number.isFinite(t.firstSolveMs)) {
+              timeTag += ` (solve: ${formatTime(t.firstSolveMs)})`;
+            }
+          }
+        }
+        lines.push(`    ${mark} ${k}${bonusTag}${timeTag}`);
         if (visited.has(k)) totalSolved++;
         totalLevels++;
         // --detail expansion: only if this level has bonus finds.

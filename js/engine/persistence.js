@@ -80,6 +80,11 @@ const TRACKED_KEYS = {
     // closing the tab.
     "d3cyph3r:earnedAchievements",
     "d3cyph3r:milestones",
+    // v1.16.0 — per-level time tracking. The blob is a single
+    // JSON object keyed by level (see js/engine/leveltimer.js
+    // for the shape). Mirroring it preserves total time spent
+    // + first-solve elapsed across sessions for opted-in players.
+    "d3cyph3r:levelTimes",
   ],
   prefix: ["d3cyph3r-hint-"],
 };

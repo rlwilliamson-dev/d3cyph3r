@@ -42,6 +42,7 @@ if (isMobile()) {
   const { renderPrompt }             = await import("./terminal/prompt.js");
   const { loadBonusesFromStorage }   = await import("./engine/state.js");
   const { hydrateFromLocal }         = await import("./engine/persistence.js");
+  const { initLevelTimer, flushCurrentLevel } = await import("./engine/leveltimer.js");
 
   // Apply saved theme BEFORE the boot sequence renders so the player
   // doesn't see a flash of the wrong palette.
@@ -76,5 +77,19 @@ if (isMobile()) {
   renderPrompt();
   // Restore bonus-finds discovered earlier in this session.
   loadBonusesFromStorage();
+  // v1.16.0: rehydrate per-level timing data from sessionStorage
+  // (which hydrateFromLocal above will have populated from the
+  // localStorage blob, if persistence is on). Runs AFTER bonus-finds
+  // load so module init order stays alphabetical-ish; no ordering
+  // dependency between the two.
+  initLevelTimer();
+  // v1.16.0: flush the running level timer on tab close so the
+  // time accumulated in the currently-open level isn't lost.
+  // beforeunload is best-effort — some browsers skip it during
+  // hard tab close, but for the common refresh-and-navigate case
+  // it captures the trailing elapsed.
+  window.addEventListener("beforeunload", () => {
+    try { flushCurrentLevel(); } catch (_) { /* silent */ }
+  });
   boot();
 }
