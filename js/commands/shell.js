@@ -248,6 +248,8 @@ const HELP_LEARNING = {
     "progress --detail        – list discovered bonus finds by name",
     "progress save-on/off     – opt in / out of saving progress across browser sessions",
     "progress reset           – wipe visited levels, bonus finds, hint counters",
+    "tutorial                 – reprint the FIRST STEPS list (lobby quickstart, v1.12.0)",
+    "tutorial start           – begin an interactive walk-through; 'skip' exits",
     "search <term>            – search visited levels' lessons-learned for <term>",
   ],
 };

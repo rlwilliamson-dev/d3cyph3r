@@ -17,6 +17,13 @@ export let awaitingPassword  = null; // { target, password } or null
 export let awaitingPersistenceConsent = false; // routes next input to consent handler
 export let lastExitCode      = 0;    // $? — last statement's exit code
 
+// First-visit guided tour (v1.12.0). -1 means not in a tour; 0..N
+// means the player is on step N of the interactive walk-through
+// started by `tutorial start`. The dispatch loop in execute.js
+// intercepts input while >= 0 to advance / nudge / skip; the per-
+// step content + matching logic lives in js/commands/tutorial.js.
+export let tourStep = -1;
+
 // User-writable env vars (export / FOO=bar). Layered ABOVE the built-in
 // var map computed in expand.js, so `export USER=root` overrides the
 // derived built-in. Reset on level switch (a new shell starts clean).
@@ -48,6 +55,7 @@ export function resetPath()           { currentPath = []; }
 export function setAwaitingPassword(v){ awaitingPassword = v; }
 export function setAwaitingPersistenceConsent(v) { awaitingPersistenceConsent = v; }
 export function setLastExitCode(n)    { lastExitCode = n; }
+export function setTourStep(n)        { tourStep = n; }
 
 // Env-var ops.
 export function setEnvVar(k, v)   { processEnv.set(k, String(v)); }

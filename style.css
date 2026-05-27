@@ -111,7 +111,11 @@ html, body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font);
-  font-size: 14px;
+  /* v1.12.0: base size dropped from 14px to 11px (~80%) so the
+     terminal looks right at 100% browser zoom instead of needing the
+     player to zoom to 80% themselves. All other terminal-area
+     font-sizes below were scaled by the same factor. */
+  font-size: 11px;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -131,7 +135,7 @@ html, body {
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 12px;
-  font-size: 12px;
+  font-size: 10px;                /* v1.12.0: was 12px (scaled with base) */
   color: var(--dim);
   letter-spacing: 0.3px;
   flex-shrink: 0;
@@ -210,7 +214,7 @@ body.light .theme-toggle .theme-icon-sun  { display: block; }
 }
 .line.banner {
   color: var(--fg-bright);
-  font-size: 42px;
+  font-size: 34px;                /* v1.12.0: was 42px (~80%) */
   font-weight: 700;
   letter-spacing: 8px;
   line-height: 1.1;
@@ -300,7 +304,7 @@ body.light {
   align-items: center;
   overflow: hidden;
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 11px;                /* v1.12.0: was 14px (~80%) */
 }
 
 #cmd-input {
@@ -313,7 +317,7 @@ body.light {
   color: transparent;
   caret-color: transparent;
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 11px;                /* v1.12.0: was 14px (~80%) — must match #input-wrapper */
   z-index: 2;
 }
 #cmd-input.password { color: var(--fg-bright); caret-color: transparent; }
@@ -338,7 +342,7 @@ body.light {
 
 #tab-hint {
   color: var(--dim);
-  font-size: 13px;
+  font-size: 10px;                /* v1.12.0: was 13px (~80%) */
   margin-left: 2px;
   pointer-events: none;
   flex-shrink: 0;
@@ -371,7 +375,7 @@ body.light {
   padding: 8px 0 2px;
   margin-top: 8px;
   border-top: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 9px;                 /* v1.12.0: was 11px (~80%) */
   color: var(--dim);
   letter-spacing: 0.2px;
   flex-shrink: 0;

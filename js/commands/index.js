@@ -32,6 +32,7 @@ import { learningCommands }  from "./learning.js";
 import { envCommands }       from "./env.js";
 import { jobCommands }       from "./jobs.js";
 import { lobbyCommands }     from "./lobby.js";
+import { tutorialCommands }  from "./tutorial.js";
 
 export const COMMANDS = {
   ...linuxCommands,
@@ -54,6 +55,7 @@ export const COMMANDS = {
   ...envCommands,
   ...jobCommands,
   ...lobbyCommands,
+  ...tutorialCommands,
 };
 
 // Names used by the Tab-autocomplete hint.

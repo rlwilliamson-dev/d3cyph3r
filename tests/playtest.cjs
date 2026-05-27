@@ -52,6 +52,19 @@ async function termText(page) {
   check("Lobby lists Cloud track",                      t.includes("ssh level0@cloud"));
   check("Lobby shows no scaffolded-only tracks (all 7 have levels)", !t.includes("(no levels yet)"));
 
+  // v1.12.0 — first-visit guided tour. Annotated FIRST STEPS list
+  // should print in the welcome banner the very first time the player
+  // hits the lobby, alongside the existing WELCOME TO DRIFTWOOD
+  // SYSTEMS / FIRST ASSIGNMENT sections.
+  check("v1.12.0 FIRST STEPS header in first-visit banner", t.includes("FIRST STEPS"));
+  check("v1.12.0 FIRST STEPS lists 'help' as step 1",       /1\.\s+help\b/.test(t));
+  check("v1.12.0 FIRST STEPS lists 'tracks' as step 2",     /2\.\s+tracks\b/.test(t));
+  check("v1.12.0 FIRST STEPS lists 'tiers' as step 3",      /3\.\s+tiers\b/.test(t));
+  check("v1.12.0 FIRST STEPS lists 'progress' as step 4",   /4\.\s+progress\b/.test(t));
+  check("v1.12.0 FIRST STEPS lists 'ssh level0@linux' as step 5", /5\.\s+ssh level0@linux\b/.test(t));
+  check("v1.12.0 FIRST STEPS mentions 'tutorial start' for hand-held option",
+        t.includes("tutorial start"));
+
   // ── Engine command-surface smoke test ─────────────────────────────
   // Exercise every new command from the lobby (where no level data
   // exists) and confirm it returns its usage string / graceful empty
@@ -2149,6 +2162,135 @@ async function termText(page) {
   const after = t.slice(lastDenied, lastDenied + 400);
   check("Cold-start hint is suppressed when prereq IS visited",
         !after.includes("Tip: this level gates on a credential"));
+
+  // ──────────────────────────────────────────────────────────────────
+  // v1.12.0 — first-visit guided tour (interactive state machine)
+  // ──────────────────────────────────────────────────────────────────
+  //
+  // Smoke checks on the annotated FIRST STEPS banner live earlier in
+  // this file (right after the initial lobby render). This block
+  // exercises the interactive `tutorial start` state machine: each
+  // expected command advances the step, mismatched input nudges
+  // without trapping, 'skip' exits cleanly, and the completion banner
+  // fires after the final step's ssh dispatch.
+
+  await page.evaluate(() => {
+    localStorage.removeItem("d3cyph3r-progress-enabled");
+    localStorage.removeItem("d3cyph3r-progress");
+    sessionStorage.clear();
+  });
+  await page.reload();
+  await page.waitForTimeout(1500);
+
+  // Kick off the interactive tour from a fresh lobby.
+  await typeAndEnter(page, "tutorial start");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  check("v1.12.0 tour: 'tutorial start' prints step 1 header",
+        t.includes("TUTORIAL  (1/4)"));
+  check("v1.12.0 tour: step 1 instructs 'help'",
+        /Type 'help' and press Enter/i.test(t));
+
+  // Wrong-command nudge — type 'ls' instead of 'help'. Tour should
+  // print a nudge but still let the dispatch run.
+  const beforeMistype = t.length;
+  await typeAndEnter(page, "ls");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  const afterMistype = t.slice(beforeMistype);
+  check("v1.12.0 tour: mistyped command triggers nudge",
+        /tutorial: type 'help'/i.test(afterMistype));
+  // Tour should still be at step 1 — verify by checking step header
+  // didn't advance. The most recent TUTORIAL header should still say
+  // (1/4).
+  check("v1.12.0 tour: mismatched input does NOT advance the step",
+        !afterMistype.includes("TUTORIAL  (2/4)"));
+
+  // Correct command — advances to step 2.
+  await typeAndEnter(page, "help");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  check("v1.12.0 tour: 'help' dispatches normally (help output still appears)",
+        t.includes("OPEN-SOURCE INTEL"));
+  check("v1.12.0 tour: advance to step 2 after correct command",
+        t.includes("TUTORIAL  (2/4)"));
+  check("v1.12.0 tour: step 2 instructs 'tracks'",
+        /Type 'tracks'|expand the engagement tree/i.test(t));
+
+  // Step 2 → 3.
+  await typeAndEnter(page, "tracks");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  check("v1.12.0 tour: advance to step 3 after 'tracks'",
+        t.includes("TUTORIAL  (3/4)"));
+
+  // Step 3 → 4.
+  await typeAndEnter(page, "tiers");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  check("v1.12.0 tour: advance to step 4 after 'tiers'",
+        t.includes("TUTORIAL  (4/4)"));
+
+  // Step 4 — the final ssh that completes the tour. This is the only
+  // step whose completion message prints BEFORE dispatch (so the
+  // banner lands above the level0@linux connection banner / lesson /
+  // objective / persistence prompt).
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(400);
+  t = await termText(page);
+  check("v1.12.0 tour: completion banner fires after final step",
+        t.includes("TUTORIAL COMPLETE"));
+  check("v1.12.0 tour: ssh dispatch ran (connection banner present)",
+        t.includes("Connected: level0@linux"));
+  // Order check — TUTORIAL COMPLETE should appear BEFORE the
+  // connection banner in the transcript so the player sees the tour
+  // outro before the level-entry chrome.
+  const tutCompleteIdx = t.lastIndexOf("TUTORIAL COMPLETE");
+  const connectIdx     = t.lastIndexOf("Connected: level0@linux");
+  check("v1.12.0 tour: TUTORIAL COMPLETE prints BEFORE connection banner",
+        tutCompleteIdx >= 0 && connectIdx >= 0 && tutCompleteIdx < connectIdx);
+
+  // Now we're in level0@linux with the persistence prompt pending
+  // (fresh session, never opted in). Dismiss it with 'n' so the
+  // playtest can continue.
+  await typeAndEnter(page, "n");
+  await page.waitForTimeout(150);
+
+  // 'skip' path — restart tour, type 'skip' at step 1.
+  // Need to exit level0 first since 'tutorial start' is lobby-only.
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(150);
+  await typeAndEnter(page, "tutorial start");
+  await page.waitForTimeout(150);
+  await typeAndEnter(page, "skip");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  check("v1.12.0 tour: 'skip' prints skipped banner",
+        t.lastIndexOf("TUTORIAL SKIPPED") > 0);
+
+  // Verify tour is no longer intercepting input — a normal command
+  // dispatches without a tutorial nudge.
+  await typeAndEnter(page, "help");
+  await page.waitForTimeout(150);
+  t = await termText(page);
+  const lastHelp  = t.lastIndexOf("OPEN-SOURCE INTEL");
+  const lastNudge = t.lastIndexOf("(tutorial: type");
+  check("v1.12.0 tour: after 'skip', 'help' runs without tutorial nudge",
+        lastHelp > 0 && (lastNudge < 0 || lastNudge < lastHelp - 1000));
+
+  // Lobby-only guardrail — running 'tutorial start' from inside a
+  // level should print a friendly redirect, not enter the tour.
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(200);
+  await typeAndEnter(page, "tutorial start");
+  await page.waitForTimeout(120);
+  t = await termText(page);
+  check("v1.12.0 tour: 'tutorial start' from non-lobby level is gated",
+        t.includes("run 'tutorial start' from the lobby"));
+
+  // Clean up — return to lobby for downstream tests.
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(150);
 
   // ──────────────────────────────────────────────────────────────────
   // v1.11.0 — opt-in localStorage progress persistence
