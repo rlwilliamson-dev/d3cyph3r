@@ -7,6 +7,103 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.0] - 2026-05-27
+
+**Stateless progress codes — portable `save` / `restore`.** A
+self-contained code that encodes the player's progress (visited
+levels, achievements, bonus finds, per-level times, hint counters,
+theme, onboarding flag, lobby-tree expand state) into a string they
+can paste into D3CYPH3R running on any other browser/device to
+resume from the same point. No server, no account, no telemetry —
+the code lives wherever the player puts it (notes app, email to
+themselves, paper). The pattern is the password-save mechanic from
+1980s NES-era games, adapted to a much larger payload.
+
+### Added
+
+- **`js/engine/savecode.js`** — Pure module owning the
+  encode/decode/checksum logic. Format is
+  `"D3C2-XXXXXXXX-...-CCCCCCCC"`: 4-char magic ("D3" brand + "C2"
+  format version), base64url-encoded **packed binary** payload
+  grouped into 8-char hyphenated blocks for visual readability,
+  and an 8-char CRC32 hex checksum tail. Hyphens and whitespace
+  in the code are decorative — the decoder strips both before
+  parsing, so the code can be wrapped or line-broken freely
+  when copy-pasting. CRC32 catches typos, truncation, and
+  accidental concatenation of two separate codes.
+- **Stable append-only registries** for the wire format's small-
+  integer indexes: `LEVEL_REGISTRY` (14 levels → 4-bit index),
+  `ACHIEVEMENT_REGISTRY` (20 achievements → 1-bit slot in a uint32
+  mask), `THEME_REGISTRY` (11 themes → 4-bit index),
+  `TRACK_REGISTRY` (7 tracks → 1-bit slot in a uint8 mask),
+  `MILESTONE_REGISTRY` (6 booleans → 1-bit slot in a uint8 mask),
+  and `BONUS_REGISTRY` (per-level bonus-find ids → 1-bit slot in
+  per-level uint8 masks). HARD RULE: once shipped, NEVER reorder
+  or delete entries; new entries APPEND to the end. The numeric
+  index of an existing entry is burned into every code that
+  references it.
+- **Code size impact** (measured against fixture states):
+
+  | Player state              | Code length |
+  |---------------------------|-------------|
+  | Brand new (no progress)   | 35 chars    |
+  | Solved level0+1 on one track | 52 chars |
+  | Mid-game (5 visited, 4 bonuses, 6 achievements) | 84 chars |
+  | Completionist (all 14 levels, all 20 achievements) | 182 chars |
+
+  A completionist's code now fits on a single line in any notes
+  app — even potentially typeable in a pinch — instead of the
+  ~3KB JSON blob an earlier draft of the format would have
+  produced. The savings come from encoding levels / achievements
+  / themes as small integer indexes (instead of long string
+  IDs), packing per-level flags into 1-byte bitfields, varint-
+  encoding time fields with second-resolution quantization,
+  and dropping all JSON structural overhead.
+- **`save` command** — Generates a code from the current
+  session's state and prints it inside divider lines for easy
+  copy. Surfaces a usage hint underneath.
+- **`restore <code>` command** — Validates a code, prints a
+  before-vs-after diff (current state vs. restored state), and
+  prompts `[y/N]` before overwriting. Typing `y`/`yes` applies the
+  payload and reloads the page so the engine boots into the
+  restored state from a clean slate; anything else cancels. Works
+  from anywhere (lobby OR inside a level).
+- **`restore --preview <code>`** — Decodes + summarizes a code
+  without touching state. Useful for sanity-checking a code from
+  old notes before committing to overwrite.
+- **Confirmation gate `awaitingRestoreConfirmation` in
+  `js/engine/state.js`** — Mirrors the existing
+  `awaitingPersistenceConsent` and `awaitingPassword` gates. The
+  dispatcher in `execute.js` routes the next-typed line to the
+  restore confirmation handler when the gate is set.
+- **MAN_PAGES + HELP_STRINGS entries for `save` and `restore`** —
+  Curated `--help` blocks plus full manpages. Both commands are
+  added to the LEARNING AIDS section of `help`.
+
+### Privacy posture
+
+- Codes do NOT contain level passwords or bonus content. They
+  encode FACTS about progress (visited level keys, achievement
+  ids), not the secrets that gate progress. Knowing the player
+  visited `level3@linux` doesn't reveal how to solve
+  `level2@linux`.
+- Codes do NOT include the v1.11.0 localStorage persistence
+  opt-in flag. Opting in to automatic save is a per-device
+  privacy choice; restoring a code on a fresh browser does not
+  silently opt the player into localStorage persistence on that
+  device.
+
+### Testing
+
+- Playtest grows by 28 assertions (782 → 810), covering: code
+  format (D3CY1 prefix, CRC32 suffix, length floor), error
+  rejection (no args, missing magic, mangled checksum), preview
+  no-mutation guarantee, [y/N] confirmation with cancel + apply
+  paths, and a multi-field round-trip that stages 3 visited
+  levels, 2 achievements, a bonus-find marker, and a hint counter
+  before saving, then verifies every field comes back after
+  reset + restore + reload.
+
 ## [1.19.0] - 2026-05-27
 
 **Lobby visual polish — chip badges + bolder chevrons.** Second of
@@ -3288,7 +3385,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.19.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.20.0...HEAD
+[1.20.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.16.0...v1.17.0

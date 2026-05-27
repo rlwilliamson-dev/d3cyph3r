@@ -4,6 +4,7 @@ node_modules/
 .env.local
 .idea/
 .vscode/
+.claude/
 *.log
 
 # Local Claude Code onboarding — kept out of the public repo

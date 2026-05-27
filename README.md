@@ -217,6 +217,7 @@ The terminal supports a real bash-shaped composition layer (v1.8.0 + v1.9.0):
 - Standardized `cmd --help` across every command — short usage block + pointer to `man <cmd>` (v1.17.0)
 - Lobby polish for returning players: welcome-back summary, next-up suggestion, completion glyph on fully-cleared tracks, achievements teaser (v1.18.0)
 - Lobby visual polish: chip-styled progress/tier badges in the engagement list, bolder bare-glyph chevrons (▼/▶/✓) replacing the bracketed `[▾]`/`[▸]`/`[✓]` (v1.19.0)
+- Stateless progress codes: `save` generates a portable string encoding visited levels, achievements, bonus finds, per-level times, hint counters, theme, onboarding flag, lobby-expand state — a brand-new player's code is ~35 chars, a completionist's is ~180. `restore <code>` validates + diffs + prompts `[y/N]` before applying; `restore --preview <code>` decodes without changing anything. Same privacy posture as the rest of the engine — no server, no account (v1.20.0)
 
 The terminal also supports the shell features players carry in from bash:
 

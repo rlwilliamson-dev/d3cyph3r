@@ -96,6 +96,23 @@ usage: hint [reset | list]
   list       show every hint already revealed
 See 'man hint' for full details.`,
 
+  save: `save — generate a portable progress code (v1.20.0)
+usage: save
+Encodes session progress into a self-contained string you can paste
+back on any browser to resume. No server, no account — the code
+lives wherever you put it (notes app, email, paper). Pair with
+'restore' to apply elsewhere.
+See 'man save' for full details.`,
+
+  restore: `restore — apply a progress code (v1.20.0)
+usage: restore <code>
+       restore --preview <code>
+  <code>      validate + show a diff vs. current state, prompt [y/N]
+  --preview   decode + summarize without changing anything
+Codes are long; paste-don't-type. Hyphens / line breaks inside the
+code are decorative — the decoder ignores both.
+See 'man restore' for full details.`,
+
   // ─── Filesystem / read-only stubs: short curated message because
   // their MAN_PAGES entries are deliberately terse and the sandbox
   // refusal posture is itself the most useful thing to surface ────

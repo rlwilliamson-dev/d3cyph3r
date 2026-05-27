@@ -2987,6 +2987,181 @@ async function termText(page) {
   check("v1.17.0 'echo --help | wc -c' passes --help through (no echo intercept)",
         /\b[67]\b/.test(echoTail) && !echoTail.includes("See 'man echo'"));
 
+  // ===== v1.20.0 — Stateless progress codes (save / restore) =====
+  //
+  // By this point the player has level-times state from the v1.16.0
+  // block, but the v1.18.0 block deliberately rewrote sessionStorage
+  // "visited" to just ["level0@linux"] for its next-up assertion. To
+  // exercise multi-field round-trip (multiple visited levels, an
+  // achievement, a bonus-find marker, a hint counter), we stage a
+  // known richer state here BEFORE saving, then verify each field
+  // round-trips intact. Bypassing the engine to set state directly is
+  // intentional — this block tests savecode encode/decode/apply, not
+  // the gameplay that produces the state.
+
+  await page.evaluate(() => {
+    sessionStorage.setItem("visited", JSON.stringify([
+      "level0@linux", "level1@linux", "level0@network",
+    ]));
+    sessionStorage.setItem("d3cyph3r:earnedAchievements", JSON.stringify([
+      "first-steps", "going-deep",
+    ]));
+    // Use a real bonus-find id that's in BONUS_REGISTRY (the binary
+    // encoder drops any id it doesn't know about, by design — codes
+    // can't carry arbitrary in-the-wild strings).
+    sessionStorage.setItem("d3cyph3r:bonusFinds", JSON.stringify([
+      "level0@linux:daniel-history-pattern",
+    ]));
+    sessionStorage.setItem("d3cyph3r-hint-level0@linux", "2");
+  });
+
+  // --help blocks — curated entries in HELP_STRINGS.
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, "save --help");
+  await page.waitForTimeout(80);
+  let tSave = await termText(page);
+  check("v1.20.0 'save --help' references portable progress code",
+        tSave.includes("portable progress code"));
+  check("v1.20.0 'save --help' points at 'restore'",
+        /\brestore\b/.test(tSave));
+
+  await typeAndEnter(page, "restore --help");
+  await page.waitForTimeout(80);
+  tSave = await termText(page);
+  check("v1.20.0 'restore --help' mentions --preview flag",
+        tSave.includes("--preview"));
+  check("v1.20.0 'restore --help' references the [y/N] confirmation",
+        tSave.toLowerCase().includes("y/n") || tSave.includes("validate"));
+
+  // --- Generate a code with `save` ---
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, "save");
+  await page.waitForTimeout(120);
+  tSave = await termText(page);
+  check("v1.20.0 'save' prints 'Your D3CYPH3R progress code' header",
+        tSave.includes("Your D3CYPH3R progress code"));
+  // Codes are "D3C2-" + base64url groups (8-char hyphen-grouped) +
+  // a final "-XXXXXXXX" CRC32. Extract the longest D3C2- run we
+  // see; allow A-Za-z0-9, "-" and "_" (base64url chars + hyphens).
+  const codeMatch = tSave.match(/D3C2-[A-Za-z0-9_-]+/);
+  check("v1.20.0 'save' output contains a D3C2-prefixed code",
+        !!codeMatch);
+  const code = codeMatch ? codeMatch[0] : "";
+  check("v1.20.0 generated code is long enough to be real (> 30 chars)",
+        code.length > 30);
+  check("v1.20.0 code ends with 8-char hex checksum suffix",
+        /-[0-9a-f]{8}$/.test(code));
+  // The packed binary format produces dramatically smaller codes
+  // than the previous JSON-based draft (~3KB → ~150-250 chars for
+  // a completionist). The mid-game state staged below should yield
+  // a code well under 300 chars.
+  check("v1.20.0 binary format keeps the code compact (< 300 chars)",
+        code.length < 300);
+
+  // --- Error handling ---
+  // No arg → usage hint
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, "restore");
+  await page.waitForTimeout(80);
+  tSave = await termText(page);
+  check("v1.20.0 'restore' with no args prints usage hint",
+        tSave.includes("Usage:") && tSave.includes("--preview"));
+
+  // Garbage (no magic header) → rejected
+  await typeAndEnter(page, "restore not-a-real-code-without-magic-prefix-anywhere-junk");
+  await page.waitForTimeout(80);
+  tSave = await termText(page);
+  check("v1.20.0 'restore <bad>' rejects code missing 'D3C2' header",
+        tSave.includes("D3C2") || tSave.toLowerCase().includes("not a d3cyph3r"));
+
+  // Valid magic but mangled checksum → rejected with checksum error
+  await typeAndEnter(page, "restore D3C2-AAAAAAAA-BBBBBBBB-aaaaaaaa");
+  await page.waitForTimeout(80);
+  tSave = await termText(page);
+  check("v1.20.0 'restore' with mangled checksum surfaces 'checksum' error",
+        tSave.toLowerCase().includes("checksum") || tSave.toLowerCase().includes("could not be decoded"));
+
+  // --- `restore --preview <code>` — must NOT mutate state ---
+  await typeAndEnter(page, "clear");
+  const visitedBefore = await page.evaluate(() => sessionStorage.getItem("visited"));
+  await typeAndEnter(page, `restore --preview ${code}`);
+  await page.waitForTimeout(120);
+  tSave = await termText(page);
+  check("v1.20.0 'restore --preview' prints preview header",
+        tSave.includes("Progress code preview"));
+  check("v1.20.0 'restore --preview' surfaces Visited levels count",
+        /Visited levels:\s+\d+/.test(tSave));
+  const visitedAfterPreview = await page.evaluate(() => sessionStorage.getItem("visited"));
+  check("v1.20.0 'restore --preview' does NOT mutate sessionStorage",
+        visitedBefore === visitedAfterPreview);
+
+  // --- `restore <code>` — confirmation prompt, cancel with 'n' ---
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, `restore ${code}`);
+  await page.waitForTimeout(150);
+  tSave = await termText(page);
+  check("v1.20.0 'restore <code>' shows OVERWRITE warning before applying",
+        tSave.includes("OVERWRITE your current progress"));
+  check("v1.20.0 'restore <code>' shows [y/N] confirmation prompt",
+        tSave.includes("[y/N]"));
+  await typeAndEnter(page, "n");
+  await page.waitForTimeout(100);
+  tSave = await termText(page);
+  check("v1.20.0 typing 'n' surfaces 'Restore cancelled' line",
+        tSave.includes("Restore cancelled"));
+  const visitedAfterCancel = await page.evaluate(() => sessionStorage.getItem("visited"));
+  check("v1.20.0 cancel leaves sessionStorage unchanged",
+        visitedBefore === visitedAfterCancel);
+
+  // --- Full round trip: reset → restore → reload → state back ---
+  await typeAndEnter(page, "progress reset");
+  await page.waitForTimeout(120);
+  const visitedAfterResetV120 = await page.evaluate(() => sessionStorage.getItem("visited"));
+  check("v1.20.0 'progress reset' wipes 'visited' from sessionStorage",
+        visitedAfterResetV120 === null || visitedAfterResetV120 === "[]" || visitedAfterResetV120 === "");
+
+  // Restore from a clean slate, confirm with 'y'. The handler triggers
+  // window.location.reload() after a 1200ms delay; sessionStorage
+  // survives the reload (same tab) so we can verify state is back.
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, `restore ${code}`);
+  await page.waitForTimeout(150);
+  await typeAndEnter(page, "y");
+  // Wait for the success line, the 1200ms delay, the reload itself,
+  // and the boot sequence to finish.
+  await page.waitForTimeout(3500);
+  const visitedAfterRestore = await page.evaluate(() => sessionStorage.getItem("visited"));
+  check("v1.20.0 'y' applies restore — visited has level0@linux back",
+        !!(visitedAfterRestore && visitedAfterRestore.includes("level0@linux")));
+  check("v1.20.0 restore brings level1@linux back too",
+        !!(visitedAfterRestore && visitedAfterRestore.includes("level1@linux")));
+  check("v1.20.0 restore brings level0@network back (cross-track)",
+        !!(visitedAfterRestore && visitedAfterRestore.includes("level0@network")));
+
+  const achievementsAfterRestore = await page.evaluate(() => sessionStorage.getItem("d3cyph3r:earnedAchievements"));
+  check("v1.20.0 restore brings 'first-steps' achievement back",
+        !!(achievementsAfterRestore && achievementsAfterRestore.includes("first-steps")));
+  check("v1.20.0 restore brings 'going-deep' achievement back",
+        !!(achievementsAfterRestore && achievementsAfterRestore.includes("going-deep")));
+
+  const bonusFindsAfterRestore = await page.evaluate(() => sessionStorage.getItem("d3cyph3r:bonusFinds"));
+  check("v1.20.0 restore brings bonus-find marker back",
+        !!(bonusFindsAfterRestore && bonusFindsAfterRestore.includes("daniel-history-pattern")));
+
+  const hintAfterRestore = await page.evaluate(() => sessionStorage.getItem("d3cyph3r-hint-level0@linux"));
+  check("v1.20.0 restore brings hint counter back (value preserved)",
+        hintAfterRestore === "2");
+
+  const levelTimesAfterRestore = await page.evaluate(() => sessionStorage.getItem("d3cyph3r:levelTimes"));
+  check("v1.20.0 restore brings level-times blob back",
+        !!(levelTimesAfterRestore && levelTimesAfterRestore.includes("level0@linux")));
+
+  // Onboarding flag should also have round-tripped (the player had
+  // seen the welcome banner before saving).
+  const onboardingAfterRestore = await page.evaluate(() => sessionStorage.getItem("seenOnboarding"));
+  check("v1.20.0 restore preserves the seenOnboarding flag",
+        onboardingAfterRestore === "true");
+
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
 
