@@ -656,14 +656,29 @@ body.error-404 {
    `light` theme persisted from an earlier desktop visit, the gate
    inherits the light palette automatically. ─────────────────────── */
 .mobile-gate {
+  /* Dynamic viewport units (dvh) account for iOS Safari's URL bar
+     dynamics — `100vh` measures the LARGEST possible viewport (URL
+     bar collapsed), which clips the bottom of the content on first
+     load when the bar is still visible. `100dvh` resizes with the
+     bar. Fall back to `100vh` on browsers without dvh support. */
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--fg);
   font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
-  padding: 32px 20px 48px;
+  /* Add room at the bottom for iPhone X+ home-indicator safe area;
+     `env(safe-area-inset-bottom)` is 0 on older devices, ~34px on
+     newer ones. `max(48px, …)` keeps the original 48px floor. */
+  padding: 32px 20px max(48px, env(safe-area-inset-bottom));
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  /* Allow the gate to scroll if the boot log + final block exceeds
+     viewport (common on iPhone-portrait once the Continue button +
+     explanatory note are added). Without this the bottom content
+     was unreachable on iOS Safari. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   -webkit-font-smoothing: antialiased;
 }
 .mobile-gate-inner {
@@ -810,6 +825,11 @@ body.error-404 {
    $ / && / etc.). Only visible when body.mobile-mode is set. Tap
    targets meet the 44×44 minimum for touch-friendly UIs.
 
+   DOM placement: softkeys.js inserts #softkey-row as a SIBLING of
+   #input-area (not a child). The parent #screen is flex column, so
+   the soft-key row naturally lands BELOW the prompt + cmd input
+   without competing for horizontal space inside the input row.
+
    Hard-coded order matches the KEYS array in
    js/terminal/softkeys.js — special keys first (Tab, Esc, arrows,
    ^C), then commonly-needed symbols. The buttons inherit theme
@@ -823,12 +843,38 @@ body.mobile-mode .softkey-row {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   padding: 6px 8px;
-  margin-top: 6px;
+  /* Pull tight against the bottom of the screen. Negative left/right
+     margin counteracts #screen's 24px side padding so the soft-key
+     row spans edge-to-edge, giving the OS keyboard a clean horizon
+     to butt up against. */
+  margin: 6px -24px 0;
+  /* Add home-indicator safe-area padding on iPhone X+ — without this
+     the bottom row of keys sits behind the indicator on landscape. */
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
   background: var(--bg-soft, var(--bg));
   border-top: 1px solid var(--border);
   scrollbar-width: none;  /* Firefox */
+  flex-shrink: 0;
 }
 body.mobile-mode .softkey-row::-webkit-scrollbar { display: none; }
+
+/* ─── v1.21.0 mobile-mode #screen + #input-area adjustments ────────
+   On mobile the OS keyboard shrinks the visible viewport. We make
+   #screen use dynamic viewport units (100dvh) so it tracks the
+   actual visible area, and ensure the input row + soft-keys stay
+   pinned at the bottom (flex-shrink: 0). #terminal flexes to fill
+   whatever's left above them, scrolling internally. */
+body.mobile-mode #screen {
+  height: 100vh;
+  height: 100dvh;
+}
+body.mobile-mode #terminal {
+  flex: 1 1 auto;
+  min-height: 0;        /* allow shrink below content size */
+}
+body.mobile-mode #input-area {
+  flex-shrink: 0;
+}
 
 .softkey-btn {
   flex: 0 0 auto;

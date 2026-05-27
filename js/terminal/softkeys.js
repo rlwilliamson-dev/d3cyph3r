@@ -63,7 +63,9 @@ export function initSoftKeys() {
   if (!isMobileMode) return;
   if (document.getElementById("softkey-row")) return;  // idempotent
 
-  const inputArea = document.getElementById("input-area") || document.body;
+  const inputArea = document.getElementById("input-area");
+  if (!inputArea || !inputArea.parentNode) return;
+
   const row = document.createElement("div");
   row.id = "softkey-row";
   row.className = "softkey-row";
@@ -85,9 +87,13 @@ export function initSoftKeys() {
     row.appendChild(btn);
   }
 
-  // Insert AFTER the input row so the soft-key row sits at the very
-  // bottom of the input area, hugging the on-screen keyboard.
-  inputArea.appendChild(row);
+  // Insert as a SIBLING AFTER #input-area (not inside it). The parent
+  // #screen is `display: flex; flex-direction: column`, so this lands
+  // the soft-key row directly below the prompt + cmd input — without
+  // competing for horizontal space inside #input-area's flex row
+  // (which is what squeezed the input field to 0 width on Android in
+  // the first v1.21.0 draft).
+  inputArea.parentNode.insertBefore(row, inputArea.nextSibling);
 }
 
 /**
