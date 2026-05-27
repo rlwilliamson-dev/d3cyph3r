@@ -14,6 +14,8 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=VT323&display=swap');
 
 :root {
+  /* Defaults = dark theme. Each body[data-theme="<name>"] block
+     below overrides these. */
   --bg:        #06080b;
   --bg-elev:   #0d1117;
   --bg-card:   #11161d;
@@ -26,6 +28,13 @@
   --yellow:    #d29922;
   --dim:       #6e7681;
   --border:    #30363d;
+
+  /* Wordmark brightness cascade — same as main app's style.css.
+     The [D3CYPH3R] header in the walkthroughs site reads these. */
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #c9d1d9;
+  --glyph-dim:     #6e7681;
+  --glyph-bracket: #6e7681;
 
   --font-prose: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
                 'Helvetica Neue', Arial, sans-serif;
@@ -57,6 +66,10 @@ body[data-theme="light"] {
   --yellow:    #9a6700;
   --dim:       #59636e;
   --border:    #d0d7de;
+  --glyph-bright:  #000000;
+  --glyph-mid:     #444444;
+  --glyph-dim:     #99a0aa;
+  --glyph-bracket: #888e9a;
 }
 
 body[data-theme="crt-green"] {
@@ -72,6 +85,10 @@ body[data-theme="crt-green"] {
   --yellow:    #ffff44;
   --dim:       #1c8a1c;
   --border:    #1a4a1a;
+  --glyph-bright:  #aaffaa;
+  --glyph-mid:     #33ff33;
+  --glyph-dim:     #1c8a1c;
+  --glyph-bracket: #1c8a1c;
 }
 
 body[data-theme="amber"] {
@@ -87,6 +104,10 @@ body[data-theme="amber"] {
   --yellow:    #ffee77;
   --dim:       #884400;
   --border:    #553300;
+  --glyph-bright:  #ffdd66;
+  --glyph-mid:     #ffaa00;
+  --glyph-dim:     #884400;
+  --glyph-bracket: #884400;
 }
 
 body[data-theme="synthwave"] {
@@ -102,6 +123,10 @@ body[data-theme="synthwave"] {
   --yellow:    #fffb96;
   --dim:       #6e4faa;
   --border:    #4a2e7a;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #ff71ce;
+  --glyph-dim:     #6e4faa;
+  --glyph-bracket: #01cdfe;
 }
 
 body[data-theme="solarized-dark"] {
@@ -117,6 +142,10 @@ body[data-theme="solarized-dark"] {
   --yellow:    #b58900;
   --dim:       #586e75;
   --border:    #073642;
+  --glyph-bright:  #93a1a1;
+  --glyph-mid:     #839496;
+  --glyph-dim:     #586e75;
+  --glyph-bracket: #586e75;
 }
 
 body[data-theme="solarized-light"] {
@@ -132,6 +161,10 @@ body[data-theme="solarized-light"] {
   --yellow:    #b58900;
   --dim:       #93a1a1;
   --border:    #eee8d5;
+  --glyph-bright:  #073642;
+  --glyph-mid:     #586e75;
+  --glyph-dim:     #93a1a1;
+  --glyph-bracket: #93a1a1;
 }
 
 body[data-theme="high-contrast"] {
@@ -147,6 +180,10 @@ body[data-theme="high-contrast"] {
   --yellow:    #ffff00;
   --dim:       #cccccc;
   --border:    #ffffff;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #ffff00;
+  --glyph-dim:     #cccccc;
+  --glyph-bracket: #cccccc;
 }
 
 body[data-theme="nord"] {
@@ -162,6 +199,10 @@ body[data-theme="nord"] {
   --yellow:    #ebcb8b;
   --dim:       #4c566a;
   --border:    #4c566a;
+  --glyph-bright:  #eceff4;
+  --glyph-mid:     #88c0d0;
+  --glyph-dim:     #4c566a;
+  --glyph-bracket: #4c566a;
 }
 
 body[data-theme="gruvbox"] {
@@ -177,6 +218,10 @@ body[data-theme="gruvbox"] {
   --yellow:    #fabd2f;
   --dim:       #928374;
   --border:    #504945;
+  --glyph-bright:  #fbf1c7;
+  --glyph-mid:     #fabd2f;
+  --glyph-dim:     #928374;
+  --glyph-bracket: #928374;
 }
 
 body[data-theme="dracula"] {
@@ -192,6 +237,10 @@ body[data-theme="dracula"] {
   --yellow:    #f1fa8c;
   --dim:       #6272a4;
   --border:    #44475a;
+  --glyph-bright:  #ffffff;
+  --glyph-mid:     #bd93f9;
+  --glyph-dim:     #6272a4;
+  --glyph-bracket: #6272a4;
 }
 body, #site-header, .footer-link {
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
@@ -253,20 +302,8 @@ body {
 
 /* Brightness-cascade glyph classes — mirrors the main app's lobby logo
    (style.css) so the [D3CYPH3R] wordmark renders consistently across
-   both subsites. Theme-flippable via CSS vars so the cascade reads
-   correctly in dark and light mode. */
-:root {
-  --glyph-bright:  #ffffff;
-  --glyph-mid:     #c9d1d9;
-  --glyph-dim:     #6e7681;
-  --glyph-bracket: #6e7681;
-}
-body.light {
-  --glyph-bright:  #000000;
-  --glyph-mid:     #444444;
-  --glyph-dim:     #99a0aa;
-  --glyph-bracket: #888e9a;
-}
+   both subsites. Variables are defined per theme in the
+   body[data-theme="<name>"] blocks at the top of this file. */
 .glyph-vt323   { font-family: 'VT323', 'Courier New', monospace; font-size: 1.25em; }
 .glyph-bright  { color: var(--glyph-bright); }
 .glyph-mid     { color: var(--glyph-mid);    }

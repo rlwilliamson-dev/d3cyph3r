@@ -17,6 +17,7 @@
 // don't need to write any HTML.
 
 import { marked } from "./vendor/marked.esm.min.js";
+import { initTheme, cycleTheme, getTheme } from "../js/terminal/theme.js";
 
 // ─── Manifest ────────────────────────────────────────────────
 //
@@ -403,29 +404,28 @@ function route() {
 window.addEventListener("hashchange", route);
 route();
 
-// ─── Theme toggle ─────────────────────────────────────────────
+// ─── Theme bootstrap ──────────────────────────────────────────
 //
-// Inline theme bootstrap (rather than importing the main app's
-// js/terminal/theme.js) keeps the walkthroughs subsite a fully
-// self-contained ES-module bundle. Same localStorage key as the
-// main app so the choice carries across the lobby ↔ walkthroughs
-// boundary.
-
-const THEME_KEY = "d3cyph3r-theme";
+// v1.13.0: imports the same THEMES registry + setTheme/cycleTheme
+// helpers used by the main app's terminal (../js/terminal/theme.js)
+// so the walkthroughs subsite picks up every theme without
+// duplicating the registry. localStorage key is shared (d3cyph3r-
+// theme), so toggling on either subsite applies to both.
+//
+// initTheme() reads the saved theme name (defaulting to "dark"),
+// applies it via the body data-theme + data-theme-mode attributes
+// CSS uses. The topbar moon/sun button on this page cycles
+// through the same 11-theme list as the main app's button.
 
 (function initThemeWalkthroughs() {
-  try {
-    if (localStorage.getItem(THEME_KEY) === "light") {
-      document.body.classList.add("light");
-    }
-  } catch (_) { /* localStorage unavailable — default to dark */ }
+  initTheme();
 
   const btn = document.getElementById("theme-toggle");
   if (!btn) return;
-  btn.addEventListener("click", () => {
-    const isLight = document.body.classList.toggle("light");
-    try {
-      localStorage.setItem(THEME_KEY, isLight ? "light" : "dark");
-    } catch (_) { /* persistence failure non-fatal */ }
-  });
+  const refreshTitle = () => {
+    const t = getTheme();
+    btn.title = `Theme: ${t.name} — click to cycle (or set via 'theme <name>' in the main terminal)`;
+  };
+  refreshTitle();
+  btn.addEventListener("click", () => { cycleTheme(); refreshTitle(); });
 })();
