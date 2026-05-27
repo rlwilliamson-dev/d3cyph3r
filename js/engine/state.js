@@ -15,6 +15,12 @@ export let currentLevelKey   = "guest@d3cyph3r";
 export let currentPath       = [];   // dir parts relative to fs root
 export let awaitingPassword  = null; // { target, password } or null
 export let awaitingPersistenceConsent = false; // routes next input to consent handler
+// Pending `restore <code>` confirmation (v1.20.0). Holds the decoded
+// payload from savecode.js so the y/N handler can apply it without
+// re-decoding. null when no restore is pending. Cleared on any
+// response — even one that cancels — so the gate is strictly
+// one-shot per `restore` invocation.
+export let awaitingRestoreConfirmation = null;
 export let lastExitCode      = 0;    // $? — last statement's exit code
 
 // First-visit guided tour (v1.12.0). -1 means not in a tour; 0..N
@@ -54,6 +60,7 @@ export function setCurrentPath(p)     { currentPath = p; }
 export function resetPath()           { currentPath = []; }
 export function setAwaitingPassword(v){ awaitingPassword = v; }
 export function setAwaitingPersistenceConsent(v) { awaitingPersistenceConsent = v; }
+export function setAwaitingRestoreConfirmation(v) { awaitingRestoreConfirmation = v; }
 export function setLastExitCode(n)    { lastExitCode = n; }
 export function setTourStep(n)        { tourStep = n; }
 

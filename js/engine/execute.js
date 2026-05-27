@@ -31,11 +31,13 @@ import { COMMANDS, ALL_CMDS } from "../../js/commands/index.js";
 import { print } from "../terminal/output.js";
 import {
   currentLevelKey, awaitingPassword, awaitingPersistenceConsent,
+  awaitingRestoreConfirmation,
   lastExitCode, setLastExitCode,
   setEnvVar, addJob,
 } from "./state.js";
 import { handleSSH, handlePasswordInput } from "./ssh.js";
 import { handlePersistenceConsent } from "./persistence.js";
+import { handleRestoreConfirmation } from "../commands/savecode.js";
 import {
   handleTourInput, reprintStepAfterAdvance, printTourCompleteBanner,
   TOUR_RESULT,
@@ -61,18 +63,21 @@ export function execute(raw) {
   // Blank input is a no-op for normal dispatch BUT must still route
   // to the persistence-consent handler when one is pending — the
   // prompt explicitly tells the player that pressing Enter alone
-  // counts as opt-out, so we can't drop it on the floor.
-  if (!input && !awaitingPersistenceConsent) return;
+  // counts as opt-out, so we can't drop it on the floor. Same
+  // exception applies to the v1.20.0 restore-confirmation prompt:
+  // blank Enter is a valid "no" answer there too.
+  if (!input && !awaitingPersistenceConsent && !awaitingRestoreConfirmation) return;
 
   // Echo the raw line (before any expansion) so the user sees what
   // they actually typed in history. We echo with the canonical
   // user@host:cwd$ prefix even when the player has customized PS1 —
   // the transcript stays grep-friendly that way.
   //
-  // Skip the echo for password input (masked elsewhere) AND for
-  // the v1.11.0 persistence-consent prompt — those are interactive
-  // micro-dialogs, not transcript-worthy command lines.
-  if (!awaitingPassword && !awaitingPersistenceConsent) {
+  // Skip the echo for password input (masked elsewhere), the v1.11.0
+  // persistence-consent prompt, and the v1.20.0 restore-confirmation
+  // prompt — those are interactive micro-dialogs, not transcript-
+  // worthy command lines.
+  if (!awaitingPassword && !awaitingPersistenceConsent && !awaitingRestoreConfirmation) {
     const env  = getEnv();
     const user = env.USER || "user";
     const host = (env.HOSTNAME || "host").split(".")[0];
@@ -93,6 +98,16 @@ export function execute(raw) {
   // clearing awaitingPersistenceConsent in state.js.
   if (awaitingPersistenceConsent) {
     handlePersistenceConsent(input);
+    return;
+  }
+
+  // Restore-confirmation prompt (v1.20.0). Same short-circuit
+  // pattern. The decoded payload is captured in
+  // awaitingRestoreConfirmation; the handler clears it after applying
+  // (y) or cancelling (anything else). On apply, the handler
+  // schedules a page reload, so subsequent dispatch never runs.
+  if (awaitingRestoreConfirmation) {
+    handleRestoreConfirmation(input, awaitingRestoreConfirmation);
     return;
   }
 
