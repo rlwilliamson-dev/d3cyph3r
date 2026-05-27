@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D3CYPH3R icon mockups</title>
+<!-- Embed the VT323 Google font so mockups render with the same
+     font the topbar uses. CDN-loaded; needs internet for accurate
+     rendering. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d1117;
+    --bg-soft:   #161b22;
+    --fg:        #c9d1d9;
+    --dim:       #8b949e;
+    --accent:    #58a6ff;
+    --border:    #30363d;
+  }
+  body {
+    margin: 0;
+    padding: 32px;
+    background: #1a1f26;
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  h1 { color: var(--accent); font-size: 22px; margin: 0 0 6px; }
+  h3 { color: var(--accent); font-size: 14px; margin: 18px 0 8px; }
+  .lede { color: var(--dim); margin: 0 0 18px; max-width: 720px; }
+
+  /* ── Palette picker ────────────────────────────────────────────── */
+  .palette-bar {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .swatch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.05s;
+    font-size: 12px;
+  }
+  .swatch:hover { border-color: var(--accent); }
+  .swatch.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.18);
+  }
+  .swatch-chip {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .swatch-name {
+    color: var(--fg);
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .swatch-hex {
+    color: var(--dim);
+    font-size: 10px;
+    margin-top: 2px;
+  }
+  .palette-custom {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    color: var(--dim);
+    font-size: 12px;
+  }
+  .palette-custom label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .palette-custom input[type="color"] {
+    width: 36px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  /* ── Variant grid ──────────────────────────────────────────────── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+  .card {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .card h2 {
+    color: var(--accent);
+    font-size: 16px;
+    margin: 0 0 4px;
+  }
+  .card .desc {
+    color: var(--dim);
+    font-size: 12px;
+    margin: 0 0 16px;
+  }
+  .sizes {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .sample {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .sample .label {
+    color: var(--dim);
+    font-size: 10px;
+  }
+  canvas.preview {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    image-rendering: pixelated;
+  }
+  .masked-preview {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .masked-preview canvas {
+    border: 0;
+    border-radius: 0;
+  }
+  .pick-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .download {
+    background: var(--accent);
+    color: var(--bg);
+    border: 0;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .download:hover { background: #79b8ff; }
+  .footnote {
+    margin-top: 36px;
+    color: var(--dim);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+  }
+  code {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<h1>D3CYPH3R icon — `$_` variants × color presets</h1>
+<p class="lede">
+  Pick a color preset (or custom-mix below), then pick a variant. Download the set
+  to save four PNGs (192 / 512 / maskable / iOS-180) tinted with your active palette.
+  Drop them in the repo root; tell me the preset name + variant, and I'll wire them up.
+</p>
+
+<div class="palette-bar">
+  <h3 style="margin-top:0">Color preset</h3>
+  <div class="palette-grid" id="palette-grid"><!-- swatch chips inserted here --></div>
+
+  <div class="palette-custom">
+    <span style="color: var(--fg); font-weight: 700;">or custom:</span>
+    <label>BG <input type="color" id="bg-picker" value="#0d1117"></label>
+    <label>FG <input type="color" id="fg-picker" value="#58a6ff"></label>
+    <span id="active-label">Active: <strong style="color: var(--fg);">Classic</strong> — <code>#0d1117</code> / <code>#58a6ff</code></span>
+  </div>
+</div>
+
+<div class="grid" id="grid"><!-- variant cards inserted here --></div>
+
+<p class="footnote">
+  Once you pick: drop <code>icon-192.png</code>, <code>icon-512.png</code>,
+  <code>icon-maskable.png</code>, and <code>icon-180.png</code> into the repo
+  root, then tell me which <strong>variant</strong> (1–5) and which <strong>palette</strong>
+  (preset name or "custom #HEX/#HEX") you picked so I can document it accurately.
+</p>
+
+<script>
+  // ─── Palette presets ──────────────────────────────────────────────
+  // Each preset declares a name, a background color, a foreground/
+  // accent color, and an optional vibe note. The "active" preset is
+  // applied to every variant card; per-variant colors are NOT
+  // independent (one palette × five variants).
+  const PALETTES = [
+    { name: "Classic",        bg: "#0d1117", fg: "#58a6ff", note: "GitHub-dark + accent blue (current default)" },
+    { name: "Phosphor",       bg: "#0d1117", fg: "#56d364", note: "Dark canvas + CRT-green" },
+    { name: "Amber",          bg: "#1a1410", fg: "#d29922", note: "Warm-dark + VT220 amber" },
+    { name: "Synthwave",      bg: "#1d0a3a", fg: "#ff79c6", note: "Deep purple + neon pink" },
+    { name: "Dracula",        bg: "#282a36", fg: "#bd93f9", note: "Slate + lavender" },
+    { name: "Solarized",      bg: "#002b36", fg: "#b58900", note: "Dark teal + Solarized yellow" },
+    { name: "Nord",           bg: "#2e3440", fg: "#88c0d0", note: "Calm icy blue" },
+    { name: "Gruvbox",        bg: "#282828", fg: "#fabd2f", note: "Warm earth dark + gold" },
+    { name: "Pure CRT",       bg: "#000000", fg: "#00ffff", note: "True black + neon cyan" },
+    { name: "Phosphor green", bg: "#000000", fg: "#00ff66", note: "True black + pure phosphor" },
+    { name: "High contrast",  bg: "#000000", fg: "#ffffff", note: "Maximum legibility" },
+    { name: "Inverted",       bg: "#f6f8fa", fg: "#1f6feb", note: "Light canvas + GitHub blue" },
+  ];
+
+  // ─── Active palette state ─────────────────────────────────────────
+  let activeBg = PALETTES[0].bg;
+  let activeFg = PALETTES[0].fg;
+  let activeName = PALETTES[0].name;
+
+  // ─── Variant definitions ──────────────────────────────────────────
+  // Each variant's draw function takes (ctx, size, opts) and uses
+  // the ACTIVE palette from the closure above.
+  //
+  // opts.safeZone : if true, content is inset by 20% on each edge
+  //                  (for Android maskable adaptive-icon rendering).
+  const variants = [
+    {
+      id: "v1-plain",
+      name: "1. Plain `$_`",
+      desc: "Minimal: just the prompt + cursor centered on the canvas. Reads as 'terminal' instantly.",
+      draw(ctx, size, opts) {
+        const inset = (opts && opts.safeZone) ? size * 0.2 : 0;
+        const inner = size - inset * 2;
+        ctx.fillStyle = activeBg;
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = activeFg;
+        ctx.font = `${Math.floor(inner * 0.55)}px "VT323", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("$_", size / 2, size / 2 + size * 0.03);
+      },
+    },
+    {
+      id: "v2-frame",
+      name: "2. `$_` with terminal frame",
+      desc: "Same glyph with a thin border + corner accent dot — suggests a terminal window.",
+      draw(ctx, size, opts) {
+        const inset = (opts && opts.safeZone) ? size * 0.2 : 0;
+        const inner = size - inset * 2;
+        const cx = size / 2, cy = size / 2;
+
+        ctx.fillStyle = activeBg;
+        ctx.fillRect(0, 0, size, size);
+
+        const frameMargin = inset + inner * 0.12;
+        const frameSize = size - frameMargin * 2;
+        ctx.strokeStyle = activeFg;
+        ctx.globalAlpha = 0.35;  // softer than the glyph so it doesn't compete
+        ctx.lineWidth = Math.max(2, size * 0.012);
+        ctx.strokeRect(frameMargin, frameMargin, frameSize, frameSize);
+        ctx.globalAlpha = 1;
+
+        // Corner dot — full-strength accent
+        ctx.fillStyle = activeFg;
+        ctx.beginPath();
+        ctx.arc(frameMargin + frameSize * 0.06, frameMargin + frameSize * 0.06, frameSize * 0.028, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = `${Math.floor(inner * 0.45)}px "VT323", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("$_", cx, cy + size * 0.03);
+      },
+    },
+    {
+      id: "v3-prompt",
+      name: "3. `> $_` chevron prompt",
+      desc: "Chevron + `$_`. Reads as an interactive shell prompt mid-conversation. (Tight custom spacing between `>` and `$_`.)",
+      draw(ctx, size, opts) {
+        const inset = (opts && opts.safeZone) ? size * 0.2 : 0;
+        const inner = size - inset * 2;
+        const cx = size / 2, cy = size / 2;
+        ctx.fillStyle = activeBg;
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = activeFg;
+
+        // Draw `>` and `$_` as separate glyphs so we control the gap
+        // ourselves — VT323's literal space is ~0.5em wide which made
+        // the previous "> $_" feel airy. Drop to ~0.18em (~30% of a
+        // natural space) for a tighter, prompt-line feel.
+        const fontSize = Math.floor(inner * 0.45);
+        ctx.font = `${fontSize}px "VT323", monospace`;
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "left";
+        const gap = fontSize * 0.18;
+        const chevW = ctx.measureText(">").width;
+        const promptW = ctx.measureText("$_").width;
+        const totalW = chevW + gap + promptW;
+        const startX = cx - totalW / 2;
+        const baselineY = cy + size * 0.03;
+        ctx.fillText(">",  startX, baselineY);
+        ctx.fillText("$_", startX + chevW + gap, baselineY);
+      },
+    },
+    {
+      id: "v4-big-dollar",
+      name: "4. Big `$` + cursor block",
+      desc: "Oversized `$` with a smaller solid cursor next to it. Reads at very small sizes (favicon).",
+      draw(ctx, size, opts) {
+        const inset = (opts && opts.safeZone) ? size * 0.2 : 0;
+        const inner = size - inset * 2;
+        const cx = size / 2, cy = size / 2;
+        ctx.fillStyle = activeBg;
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = activeFg;
+        ctx.font = `${Math.floor(inner * 0.75)}px "VT323", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("$", cx - inner * 0.12, cy + size * 0.04);
+        // Block cursor
+        const cursorW = inner * 0.18;
+        const cursorH = inner * 0.45;
+        ctx.fillRect(cx + inner * 0.05, cy - cursorH / 2 + size * 0.03, cursorW, cursorH);
+      },
+    },
+    {
+      id: "v5-block-cursor",
+      name: "5. `$█` solid block cursor",
+      desc: "Cursor is the full block char instead of underscore — looks 'alive' even when static. Retro-CRT.",
+      draw(ctx, size, opts) {
+        const inset = (opts && opts.safeZone) ? size * 0.2 : 0;
+        const inner = size - inset * 2;
+        const cx = size / 2, cy = size / 2;
+        ctx.fillStyle = activeBg;
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = activeFg;
+        ctx.font = `${Math.floor(inner * 0.6)}px "VT323", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("$█", cx, cy + size * 0.03);
+      },
+    },
+  ];
+
+  // ─── DOM build helpers ────────────────────────────────────────────
+
+  // Build the palette swatch chips at the top of the page.
+  function buildPaletteSwatches() {
+    const container = document.getElementById("palette-grid");
+    container.innerHTML = "";
+    PALETTES.forEach((p, i) => {
+      const sw = document.createElement("div");
+      sw.className = "swatch" + (p.name === activeName ? " active" : "");
+      sw.dataset.idx = i;
+      sw.innerHTML = `
+        <div class="swatch-chip" style="background:${p.bg};color:${p.fg};">$_</div>
+        <div>
+          <div class="swatch-name">${p.name}</div>
+          <div class="swatch-hex">${p.bg} / ${p.fg}</div>
+        </div>
+      `;
+      sw.addEventListener("click", () => applyPreset(i));
+      container.appendChild(sw);
+    });
+  }
+
+  // Build the variant grid (cards + small previews). Each card has
+  // 3 preview canvases: 96px install-size, 128px splash-size, and
+  // 128px maskable (rendered inside a circle to mimic Android clip).
+  // The render() function (defined below) is what actually fills the
+  // canvases — we call it whenever the active palette changes.
+  function buildVariantCards() {
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+
+    for (const v of variants) {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.dataset.variant = v.id;
+      card.innerHTML = `
+        <h2>${v.name}</h2>
+        <p class="desc">${v.desc}</p>
+        <div class="sizes" data-variant="${v.id}"></div>
+        <div class="pick-row">
+          <button class="download" data-variant="${v.id}">Download set</button>
+        </div>
+      `;
+      grid.appendChild(card);
+
+      const sizesEl = card.querySelector(".sizes");
+
+      // Three previews per variant: 192-style, 512-style, maskable.
+      // We use small render sizes (96 / 128) here for layout; the
+      // download button regenerates at full resolution.
+      const previews = [
+        { size: 96,  label: "192px",    safeZone: false, masked: false },
+        { size: 128, label: "512px",    safeZone: false, masked: false },
+        { size: 128, label: "maskable", safeZone: true,  masked: true  },
+      ];
+
+      for (const p of previews) {
+        const wrap = document.createElement("div");
+        wrap.className = "sample";
+
+        // Canvas always goes through a single appendTarget so we don't
+        // have to mirror the conditional logic in two places. If this
+        // is the maskable preview, the canvas sits inside a circle-
+        // clipped wrapper.
+        let appendTarget = wrap;
+        if (p.masked) {
+          const maskWrap = document.createElement("div");
+          maskWrap.className = "masked-preview";
+          wrap.appendChild(maskWrap);
+          appendTarget = maskWrap;
+        }
+
+        const c = document.createElement("canvas");
+        c.className = "preview";
+        c.width = p.size;
+        c.height = p.size;
+        c.dataset.variant = v.id;
+        c.dataset.safezone = p.safeZone ? "1" : "0";
+        appendTarget.appendChild(c);
+
+        const lbl = document.createElement("div");
+        lbl.className = "label";
+        lbl.textContent = p.label;
+        wrap.appendChild(lbl);
+
+        sizesEl.appendChild(wrap);
+      }
+    }
+  }
+
+  // ─── Render all preview canvases with the active palette ──────────
+  function renderAllPreviews() {
+    document.querySelectorAll("canvas.preview").forEach((c) => {
+      const v = variants.find(x => x.id === c.dataset.variant);
+      if (!v) return;
+      const ctx = c.getContext("2d");
+      ctx.clearRect(0, 0, c.width, c.height);
+      v.draw(ctx, c.width, { safeZone: c.dataset.safezone === "1" });
+    });
+  }
+
+  // ─── Active-palette label refresh ─────────────────────────────────
+  function refreshActiveLabel() {
+    const el = document.getElementById("active-label");
+    if (el) {
+      el.innerHTML = `Active: <strong style="color: var(--fg);">${activeName}</strong> &mdash; <code>${activeBg}</code> / <code>${activeFg}</code>`;
+    }
+  }
+
+  // ─── Apply a preset (by index) ────────────────────────────────────
+  function applyPreset(idx) {
+    const p = PALETTES[idx];
+    activeBg = p.bg;
+    activeFg = p.fg;
+    activeName = p.name;
+    document.getElementById("bg-picker").value = p.bg;
+    document.getElementById("fg-picker").value = p.fg;
+    document.querySelectorAll(".swatch").forEach((sw, i) => {
+      sw.classList.toggle("active", i === idx);
+    });
+    refreshActiveLabel();
+    renderAllPreviews();
+  }
+
+  // ─── Custom-color picker handlers ─────────────────────────────────
+  document.getElementById("bg-picker").addEventListener("input", (e) => {
+    activeBg = e.target.value;
+    activeName = "Custom";
+    document.querySelectorAll(".swatch").forEach(sw => sw.classList.remove("active"));
+    refreshActiveLabel();
+    renderAllPreviews();
+  });
+  document.getElementById("fg-picker").addEventListener("input", (e) => {
+    activeFg = e.target.value;
+    activeName = "Custom";
+    document.querySelectorAll(".swatch").forEach(sw => sw.classList.remove("active"));
+    refreshActiveLabel();
+    renderAllPreviews();
+  });
+
+  // ─── Download wiring ──────────────────────────────────────────────
+  //
+  // We bundle all 4 PNGs into a single ZIP file so the player gets ONE
+  // download click. Modern browsers (Chrome especially) block multi-
+  // file downloads from a single user gesture as a security measure,
+  // so the previous "loop + setTimeout per file" approach was
+  // unreliable — only the first one would actually save.
+  //
+  // The ZIP is built inline (no library) using the "stored" (no
+  // compression) method since PNGs are already compressed. The only
+  // computation needed is CRC-32 of each entry, which we implement
+  // below with the standard IEEE 802.3 polynomial — same one
+  // js/engine/savecode.js uses.
+
+  // CRC-32 table-driven (built once at module load).
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) {
+        c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      }
+      t[i] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) {
+      c = (CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8)) >>> 0;
+    }
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  /**
+   * Bundle an array of {name, bytes} entries into a ZIP file (Blob).
+   *
+   * Format reference: PKWARE APPNOTE.TXT. Each file gets a Local File
+   * Header followed by raw bytes (no compression — "stored" method 0).
+   * After all files comes a Central Directory listing each entry's
+   * offset, ending with an End-Of-Central-Directory record.
+   */
+  function buildZip(entries) {
+    const encoder = new TextEncoder();
+    const parts = [];
+    const cdRecords = [];
+    let offset = 0;
+
+    // Local File Headers + raw data
+    for (const entry of entries) {
+      const nameBytes = encoder.encode(entry.name);
+      const data = entry.bytes;
+      const crc = crc32(data);
+      const size = data.length;
+
+      const lfh = new ArrayBuffer(30);
+      const v = new DataView(lfh);
+      v.setUint32(0,  0x04034b50, true);  // local file header signature
+      v.setUint16(4,  20, true);           // version needed (2.0)
+      v.setUint16(6,  0, true);            // general purpose bit flags
+      v.setUint16(8,  0, true);            // compression method (0 = stored)
+      v.setUint16(10, 0, true);            // last mod time (don't care)
+      v.setUint16(12, 0, true);            // last mod date (don't care)
+      v.setUint32(14, crc, true);          // CRC-32
+      v.setUint32(18, size, true);         // compressed size
+      v.setUint32(22, size, true);         // uncompressed size
+      v.setUint16(26, nameBytes.length, true);  // filename length
+      v.setUint16(28, 0, true);            // extra field length
+
+      parts.push(new Uint8Array(lfh));
+      parts.push(nameBytes);
+      parts.push(data);
+
+      cdRecords.push({ nameBytes, crc, size, offset });
+      offset += 30 + nameBytes.length + size;
+    }
+
+    // Central Directory (one record per entry)
+    const cdStart = offset;
+    for (const r of cdRecords) {
+      const cd = new ArrayBuffer(46);
+      const v = new DataView(cd);
+      v.setUint32(0,  0x02014b50, true);  // central directory signature
+      v.setUint16(4,  20, true);           // version made by
+      v.setUint16(6,  20, true);           // version needed
+      v.setUint16(8,  0, true);            // flags
+      v.setUint16(10, 0, true);            // method
+      v.setUint16(12, 0, true);            // time
+      v.setUint16(14, 0, true);            // date
+      v.setUint32(16, r.crc, true);        // CRC-32
+      v.setUint32(20, r.size, true);       // compressed size
+      v.setUint32(24, r.size, true);       // uncompressed size
+      v.setUint16(28, r.nameBytes.length, true);  // filename length
+      v.setUint16(30, 0, true);            // extra field length
+      v.setUint16(32, 0, true);            // comment length
+      v.setUint16(34, 0, true);            // disk number start
+      v.setUint16(36, 0, true);            // internal attrs
+      v.setUint32(38, 0, true);            // external attrs
+      v.setUint32(42, r.offset, true);     // local header offset
+
+      parts.push(new Uint8Array(cd));
+      parts.push(r.nameBytes);
+      offset += 46 + r.nameBytes.length;
+    }
+    const cdSize = offset - cdStart;
+
+    // End of Central Directory record
+    const eocd = new ArrayBuffer(22);
+    const v = new DataView(eocd);
+    v.setUint32(0,  0x06054b50, true);  // EOCD signature
+    v.setUint16(4,  0, true);            // disk number
+    v.setUint16(6,  0, true);            // disk where CD starts
+    v.setUint16(8,  cdRecords.length, true);  // CD entries on this disk
+    v.setUint16(10, cdRecords.length, true);  // total CD entries
+    v.setUint32(12, cdSize, true);       // size of central directory
+    v.setUint32(16, cdStart, true);      // CD offset
+    v.setUint16(20, 0, true);            // ZIP comment length
+    parts.push(new Uint8Array(eocd));
+
+    return new Blob(parts, { type: "application/zip" });
+  }
+
+  function renderAt(variant, size, safeZone) {
+    const c = document.createElement("canvas");
+    c.width = size;
+    c.height = size;
+    const ctx = c.getContext("2d");
+    variant.draw(ctx, size, { safeZone });
+    return c;
+  }
+  function canvasToBytes(canvas) {
+    return new Promise((resolve) => {
+      canvas.toBlob(async (blob) => {
+        const buf = await blob.arrayBuffer();
+        resolve(new Uint8Array(buf));
+      }, "image/png");
+    });
+  }
+  function triggerSingleDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // Delegate-style click handler on the grid so newly-built cards
+  // pick up the listener automatically.
+  document.getElementById("grid").addEventListener("click", async (e) => {
+    const btn = e.target.closest(".download");
+    if (!btn) return;
+    const id = btn.dataset.variant;
+    const variant = variants.find(v => v.id === id);
+    if (!variant) return;
+
+    // Disable while building so a player can't double-click and queue
+    // two ZIPs in flight (the second click would clobber the first).
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = "Building…";
+
+    try {
+      // Wait for VT323 to be loaded before rasterizing at full size.
+      // Without this, the first download can ship a fallback-font icon.
+      try { await document.fonts.load(`64px "VT323"`); } catch (_) { /* best-effort */ }
+
+      const targets = [
+        { size: 192, safeZone: false, name: "icon-192.png" },
+        { size: 512, safeZone: false, name: "icon-512.png" },
+        { size: 512, safeZone: true,  name: "icon-maskable.png" },
+        { size: 180, safeZone: false, name: "icon-180.png" },
+      ];
+
+      const entries = [];
+      for (const t of targets) {
+        const canvas = renderAt(variant, t.size, t.safeZone);
+        const bytes = await canvasToBytes(canvas);
+        entries.push({ name: t.name, bytes });
+      }
+
+      const zipBlob = buildZip(entries);
+      triggerSingleDownload(zipBlob, `d3cyph3r-icons-${variant.id}.zip`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  });
+
+  // ─── Boot ─────────────────────────────────────────────────────────
+  buildPaletteSwatches();
+  buildVariantCards();
+  refreshActiveLabel();
+
+  // Wait one frame so VT323 has a chance to finish loading before
+  // first render; without this the previews flash with a fallback
+  // font on cold load.
+  document.fonts.ready.then(renderAllPreviews);
+  // Belt-and-suspenders: if fonts.ready hasn't fired in 500ms (some
+  // browsers can be slow), draw anyway.
+  setTimeout(renderAllPreviews, 500);
+</script>
+
+</body>
+</html>

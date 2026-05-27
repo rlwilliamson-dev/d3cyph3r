@@ -183,6 +183,15 @@ export function initInput() {
     updateTabHint();
   });
 
+  // v1.21.0: mobile-mode adjustments. initSoftKeys / initTapToFocus
+  // both no-op on desktop (gated by state.isMobileMode), so the cost
+  // here is one dynamic import + a couple of function calls — zero
+  // runtime cost on the desktop path that doesn't touch them.
+  import("./softkeys.js").then(({ initSoftKeys, initTapToFocus }) => {
+    initSoftKeys();
+    initTapToFocus();
+  }).catch(() => { /* silent — soft-keys are non-critical */ });
+
   // Cursor position can change without input firing (click, arrow keys).
   cmdInput.addEventListener("click", updateCursor);
   cmdInput.addEventListener("keyup", updateCursor);

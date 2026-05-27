@@ -2348,6 +2348,67 @@ EXAMPLES
 SEE ALSO
     restore`,
 
+  sw: `NAME
+    sw — inspect / control the D3CYPH3R service worker (v1.21.0)
+
+SYNOPSIS
+    sw [status]
+    sw update
+    sw clear
+
+DESCRIPTION
+    D3CYPH3R ships as a Progressive Web App. The service worker
+    caches the engine + level data on first visit, enabling offline
+    play and instant cold starts on subsequent visits. It also
+    detects new deploys in the background; when a new version is
+    available, the engine prints a yellow banner inviting the
+    player to type 'reload'.
+
+    'sw' or 'sw status' prints the current registration state, the
+    active SW's version string, whether an update is waiting, and
+    the timestamp of the last forced update check.
+
+    'sw update' triggers an immediate update check (browsers do
+    this automatically every ~24 hours; this forces it now).
+    Useful right after a deploy to confirm propagation.
+
+    'sw clear' is the panic button. Unregisters the service worker
+    and wipes every D3CYPH3R cache. After running this, reload the
+    page to register a fresh SW and rebuild the cache from scratch.
+
+EXAMPLES
+    sw                  # current status
+    sw status           # same
+    sw update           # check for a new version now
+    sw clear            # nuke + start over
+
+SEE ALSO
+    reload`,
+
+  reload: `NAME
+    reload — refresh the page, applying any pending PWA update (v1.21.0)
+
+SYNOPSIS
+    reload
+
+DESCRIPTION
+    Reloads the page. If a new service worker is waiting to take
+    over (because a new D3CYPH3R deploy landed since you opened the
+    tab), 'reload' tells it to activate now and then reloads —
+    bringing the latest engine + level data into the running
+    session in one step.
+
+    With no pending update, 'reload' is a plain page refresh —
+    equivalent to F5 or Cmd-R.
+
+    Your progress survives reload: visited levels, achievements,
+    bonus finds, and theme are all in sessionStorage (and
+    localStorage if you've opted in to persistence). The reload
+    only swaps the running engine code, not your save state.
+
+SEE ALSO
+    sw, progress save-on`,
+
   restore: `NAME
     restore — apply a D3CYPH3R progress code
 

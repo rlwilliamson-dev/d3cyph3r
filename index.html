@@ -45,6 +45,36 @@
   <meta name="description" content="A browser-based terminal CTF for DevOps engineers, SREs, and SysAdmins learning cybersecurity. Play a new hire at Driftwood Systems and find what got left exposed.">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <!-- Raster icon fallback for browsers that don't handle SVG favicons
+       (older Safari, some Linux browsers). The PWA install icon lives
+       under /icon-512.png; we point the basic <link rel=icon> at the
+       same file so a returning visitor's tab favicon stays consistent
+       whether or not their browser groks SVG. -->
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+
+  <!-- ─── PWA / installable app metadata (v1.21.0) ───────────────────
+       The web app manifest declares D3CYPH3R as installable. Chrome /
+       Edge / Safari 16.4+ show an "Install" button in the URL bar
+       after a few visits. Once installed, the app gets its own dock
+       icon, opens in a borderless window, and works offline (the
+       service worker pre-caches the engine + level data on first
+       visit).
+
+       apple-touch-icon: iOS Safari uses this for "Add to Home Screen"
+                         tile renders. Distinct from the manifest icon
+                         set because iOS predates the PWA spec.
+       application-name: shown in Chrome's task manager and some OS
+                         alt-tab listings.
+       og:image: already declared above for share-preview cards on
+                 Discord/Twitter; intentionally kept separate from the
+                 install icons (different aspect ratio + content). -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="D3CYPH3R">
+  <meta name="application-name" content="D3CYPH3R">
+  <meta name="mobile-web-app-capable" content="yes">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
@@ -67,7 +97,7 @@
   <!-- ?v=<version> cache-busts the stylesheet on each release so
        returning visitors don't see up-to-4-hours of stale styling
        after a deploy. Bump this string when bumping version.js. -->
-  <link rel="stylesheet" href="style.css?v=1.19.0">
+  <link rel="stylesheet" href="style.css?v=1.21.0">
 </head>
 <body>
 

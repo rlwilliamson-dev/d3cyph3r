@@ -36,6 +36,7 @@ import { tutorialCommands }  from "./tutorial.js";
 import { themeCommands }     from "./themes.js";
 import { achievementCommands } from "./achievements.js";
 import { savecodeCommands }   from "./savecode.js";
+import { pwaCommands }         from "./pwa.js";
 
 export const COMMANDS = {
   ...linuxCommands,
@@ -62,6 +63,7 @@ export const COMMANDS = {
   ...themeCommands,
   ...achievementCommands,
   ...savecodeCommands,
+  ...pwaCommands,
 };
 
 // Names used by the Tab-autocomplete hint.

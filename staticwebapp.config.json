@@ -38,6 +38,28 @@
     {
       "route": "/walkthroughs/walkthrough.js",
       "headers": { "Cache-Control": "no-cache, must-revalidate" }
+    },
+    {
+      "route": "/sw.js",
+      "headers": {
+        "Cache-Control": "no-cache, must-revalidate",
+        "Service-Worker-Allowed": "/"
+      }
+    },
+    {
+      "route": "/manifest.webmanifest",
+      "headers": {
+        "Cache-Control": "no-cache, must-revalidate",
+        "Content-Type": "application/manifest+json"
+      }
+    },
+    {
+      "route": "/icon-*.png",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    },
+    {
+      "route": "/favicon.svg",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
     }
   ],
   "responseOverrides": {

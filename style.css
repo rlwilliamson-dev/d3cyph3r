@@ -754,3 +754,154 @@ body.error-404 {
   color: var(--fg-bright);
   text-decoration: underline;
 }
+
+/* ─── v1.21.0 mobile-gate "Continue anyway" button ─────────────────
+   Sits in the mobile-gate-final block above the GitHub link. Big tap
+   target (44px+ per Apple HIG) and a clear visual hierarchy: button
+   reads as primary action, the note underneath as the explanation. */
+.mobile-gate-actions {
+  margin: 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-gate-btn {
+  display: inline-block;
+  width: 100%;
+  max-width: 360px;
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--bg);
+  border: 0;
+  padding: 14px 20px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-align: left;
+}
+.mobile-gate-btn:hover,
+.mobile-gate-btn:focus-visible {
+  filter: brightness(1.15);
+  outline: 2px solid var(--fg-bright);
+  outline-offset: 2px;
+}
+.mobile-gate-action-note {
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 480px;
+}
+.mobile-gate-action-note code {
+  color: var(--fg-bright);
+  background: var(--bg-soft, var(--bg));
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+/* ─── v1.21.0 soft-key row (mobile-mode only) ──────────────────────
+   Horizontal scroll strip above the OS keyboard with the characters
+   that are painful to type on phone keyboards (Tab / Esc / pipe /
+   $ / && / etc.). Only visible when body.mobile-mode is set. Tap
+   targets meet the 44×44 minimum for touch-friendly UIs.
+
+   Hard-coded order matches the KEYS array in
+   js/terminal/softkeys.js — special keys first (Tab, Esc, arrows,
+   ^C), then commonly-needed symbols. The buttons inherit theme
+   variables so they look right across all 11 themes. */
+.softkey-row {
+  display: none;
+}
+body.mobile-mode .softkey-row {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 8px;
+  margin-top: 6px;
+  background: var(--bg-soft, var(--bg));
+  border-top: 1px solid var(--border);
+  scrollbar-width: none;  /* Firefox */
+}
+body.mobile-mode .softkey-row::-webkit-scrollbar { display: none; }
+
+.softkey-btn {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  /* Disable iOS tap-flash since the button is its own visual feedback */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.softkey-btn:active {
+  background: var(--accent);
+  color: var(--bg);
+  transform: scale(0.97);
+}
+.softkey-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ─── v1.21.0 responsive adjustments for narrow viewports ──────────
+   Triggers at ≤768px (covers iPhone-portrait + most Android phones
+   in portrait). The mobile-gate already handles its own layout; this
+   block kicks in only when the engine itself is rendering (i.e. the
+   gate was bypassed). */
+@media (max-width: 768px) {
+  /* Tighten the topbar so the brand + clock fit on a phone screen */
+  #topbar {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  #topbar-title { font-size: 13px; }
+  #clock        { font-size: 11px; }
+  #level-badge  { font-size: 11px; }
+
+  /* Terminal goes full-width with smaller font so 80-col output fits */
+  #terminal {
+    font-size: 11px;
+    line-height: 1.45;
+    padding: 8px 10px;
+  }
+  .line {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Input area: full-width prompt, tightened padding */
+  #input-area {
+    padding: 6px 10px;
+  }
+  #prompt-label {
+    font-size: 11px;
+  }
+  #cmd-input,
+  #input-wrapper,
+  #mirror-before,
+  #mirror-cursor,
+  #mirror-after {
+    font-size: 12px;
+  }
+
+  /* Lobby chip-badges: smaller so chip rows don't wrap too aggressively */
+  .chip { font-size: 10px; padding: 1px 5px; }
+
+  /* Tab-hint should not occupy half the viewport on a small screen */
+  #tab-hint { font-size: 10px; }
+}
