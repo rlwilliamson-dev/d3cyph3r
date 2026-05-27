@@ -59,9 +59,13 @@
 //     if has_time_solved:   varint first_solve_seconds
 //     if has_bonus_finds:   1 byte (bit N = BONUS_REGISTRY[level][N] found)
 //     if has_hint_counter:  varint hint_count
-//   (milestones_mask)  : uint8, present iff flag bit 2.
+//   (milestones_mask)  : uint16 BE, present iff flag bit 2.
+//                        16 slots; 6 used today. Headroom for
+//                        v2.0+ content additions.
 //   (themes_seen_mask) : uint16 BE, present iff flag bit 3.
-//   (lobby_mask)       : uint8, present iff flag bit 4.
+//                        16 slots; 11 used today.
+//   (lobby_mask)       : uint16 BE, present iff flag bit 4.
+//                        16 slots = 16 tracks; 7 used today.
 //
 // STABLE INDEXES — APPEND-ONLY REGISTRIES
 // ---------------------------------------
@@ -70,7 +74,7 @@
 // every existing entry is BURNED IN — renaming or reordering an
 // entry would silently corrupt every code that references it.
 //
-// HARD RULES for the five registries below:
+// HARD RULES for the six registries below:
 //   1. NEW entries go AT THE END. Never insert in the middle.
 //   2. DO NOT rename, reorder, or delete entries.
 //   3. Removed-from-game items should still occupy their slot
@@ -82,6 +86,46 @@
 // deploy), the decoder treats it as "unknown" and skips/ignores it
 // rather than throwing. Players never lose state, but the new
 // entries don't activate until they update.
+//
+// COOKBOOK — ADDING NEW CONTENT IN FUTURE RELEASES
+// ------------------------------------------------
+//   New level (e.g., level2@linux for v2.0):
+//     - Append "level2@linux" at the END of LEVEL_REGISTRY.
+//     - If the level has bonus finds: add a BONUS_REGISTRY entry
+//       (also append-only — never insert into a level's bonus list).
+//
+//   New achievement (e.g., a 21st):
+//     - Append the id at the END of ACHIEVEMENT_REGISTRY.
+//     - Stops working past index 31 (uint32 mask). Plan a wire-
+//       format extension via reserved flag bits 5-7 before then.
+//
+//   New theme:
+//     - Append at the END of THEME_REGISTRY.
+//     - Cap: 16 themes-seen slots (uint16 mask); 256 theme indexes.
+//
+//   New track:
+//     - Append at the END of TRACK_REGISTRY.
+//     - Cap: 16 (uint16 mask). 7 used today.
+//
+//   New milestone (a new "have you ever done X?" flag):
+//     - Append at the END of MILESTONE_REGISTRY.
+//     - Cap: 16 (uint16 mask). 6 used today.
+//
+//   New bonus find on an existing level:
+//     - Append the id to that level's BONUS_REGISTRY array.
+//     - Cap: 8 bonuses per level (uint8 mask). Levels haven't
+//       crossed 3 today.
+//
+// FORWARD/BACKWARD COMPAT BEHAVIOR
+//   Old code on new engine: every existing index still maps to the
+//     same item; new entries occupy new indexes the old code never
+//     set. Perfect compatibility.
+//   New code on old engine: the wire format still parses (length-
+//     prefixed sections, bitmasks iterated only up to the old
+//     registry's length, level entries with unknown indexes are
+//     silently dropped). The player loses the bits of state the old
+//     engine doesn't understand, but no crash and no corruption of
+//     state the old engine DOES understand.
 //
 // HARDWARE/PRIVACY POSTURE
 // ------------------------
@@ -181,8 +225,8 @@ const THEME_INDEX = new Map(THEME_REGISTRY.map((n, i) => [n, i]));
 
 /**
  * Track key registry — used for the lobbyExpanded bitmask. Bit N
- * set = TRACKS[N] is expanded. Max 8 today (uint8); if we ever
- * cross 8 tracks, widen to uint16 (will be a wire-format bump).
+ * set = TRACKS[N] is expanded. uint16 mask in the wire format =
+ * 16 slots; 7 used today.
  */
 export const TRACK_REGISTRY = Object.freeze([
   "linux",      // 0
@@ -197,8 +241,8 @@ const TRACK_INDEX = new Map(TRACK_REGISTRY.map((k, i) => [k, i]));
 
 /**
  * Milestone key registry — used for the milestones bitmask. Bit N
- * set = MILESTONE_REGISTRY[N] is true. Max 8 today (uint8); widen
- * to uint16 when we cross 8.
+ * set = MILESTONE_REGISTRY[N] is true. uint16 mask in the wire
+ * format = 16 slots; 6 used today.
  *
  * NOTE: "themesSeen" is NOT in this registry — it's an array, not
  * a boolean. It's encoded separately as themes_seen_bitmask.
@@ -570,9 +614,9 @@ function snapshotToBytes(snap) {
     if (data.hintCounter > 0)  w.varint(data.hintCounter);
   }
 
-  if (milestoneMask !== 0)  w.u8(milestoneMask);
+  if (milestoneMask !== 0)  w.u16(milestoneMask);
   if (themesSeenMask !== 0) w.u16(themesSeenMask);
-  if (lobbyMask !== 0)      w.u8(lobbyMask);
+  if (lobbyMask !== 0)      w.u16(lobbyMask);
 
   return w.finish();
 }
@@ -583,7 +627,7 @@ function computeMilestoneMask(ms) {
   for (let i = 0; i < MILESTONE_REGISTRY.length; i++) {
     if (ms[MILESTONE_REGISTRY[i]] === true) m |= (1 << i);
   }
-  return m & 0xFF;
+  return m & 0xFFFF;
 }
 function computeThemesSeenMask(themesSeen) {
   let m = 0;
@@ -601,7 +645,7 @@ function computeLobbyMask(expanded) {
     const i = TRACK_INDEX.get(k);
     if (i != null) m |= (1 << i);
   }
-  return m & 0xFF;
+  return m & 0xFFFF;
 }
 function computeBonusMask(levelKey, foundIds) {
   const ids = BONUS_REGISTRY[levelKey];
@@ -721,7 +765,7 @@ function bytesToSnapshot(bytes) {
 
   const milestones = {};
   if (hasMilestones) {
-    const m = r.u8();
+    const m = r.u16();
     for (let i = 0; i < MILESTONE_REGISTRY.length; i++) {
       if (m & (1 << i)) milestones[MILESTONE_REGISTRY[i]] = true;
     }
@@ -737,7 +781,7 @@ function bytesToSnapshot(bytes) {
 
   const lobbyExpanded = [];
   if (hasLobbyExpand) {
-    const m = r.u8();
+    const m = r.u16();
     for (let i = 0; i < TRACK_REGISTRY.length; i++) {
       if (m & (1 << i)) lobbyExpanded.push(TRACK_REGISTRY[i]);
     }
