@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-05-27
+
+**Per-level time tracking + solve detection.** Second of three small
+engine-polish MINORs after the v1.11–v1.14 QoL arc. Records how long
+the player has spent in each level (total across visits) and captures
+the elapsed time at the moment of first solve. Zero new schema on
+levels — solve detection rides on the existing per-track credential
+chain: visiting `level<N+1>@<track>` proves you solved
+`level<N>@<track>` and stamps its first-solve time.
+
+### Added
+
+- **`js/engine/leveltimer.js`** — New module owning the in-memory
+  levelTimes registry + sessionStorage mirror, the entry/exit
+  accumulator, solve detection via `isNextInChain()`, the
+  `formatTime()` helper (`< 1s` / `<S>s` / `<M>m <S>s` / `<H>h <M>m`),
+  and the beforeunload flush hook. Pure module; depends only on
+  persistence.js for `mirrorSession`.
+- **`progress --detail` per-level time tags** — Each visited level
+  row now shows `   <total>` (and `(solve: <elapsed>)` for solved
+  levels). Live-running clock for the currently-active level.
+- **Connection banner "Previous solve time"** — When revisiting a
+  solved level, the banner adds a dim `Previous solve time: 12m 34s`
+  line under the existing Tier / Est. time bits.
+- **beforeunload flush** — `js/main.js` registers a `beforeunload`
+  listener that flushes the running elapsed into storage so closing
+  the tab doesn't drop the time accumulated in the currently-open
+  level. Best-effort — some browsers skip beforeunload during hard
+  tab close, but the common refresh-and-navigate case is captured.
+
+### Changed
+
+- **`js/engine/ssh.js#connectTo`** — Calls `stopLevelTimer(key)`
+  before `setCurrentLevelKey` on top-level navigations (skipping
+  pivot entry and unwind paths so pivots ride on the parent's
+  timer). After the new key is set, calls `startLevelTimer(key)`
+  for non-pivot, non-lobby destinations. Banner section adds the
+  "Previous solve time" surface for solved levels.
+- **`js/engine/persistence.js`** — `d3cyph3r:levelTimes` added to
+  `TRACKED_KEYS.static` so opted-in players' per-level times
+  survive across sessions.
+- **`js/commands/learning.js#progress`** — `--detail` renderer
+  appends the time-tag per visited level. `progress reset` calls
+  `clearLevelTimes()` to wipe the in-memory map (the sessionStorage
+  + localStorage wipe is handled by the existing `clearAllProgress`
+  via TRACKED_KEYS).
+- **`js/main.js`** — `initLevelTimer()` runs after
+  `loadBonusesFromStorage()` to rehydrate the registry; the
+  beforeunload listener is wired here too.
+- **`tests/playtest.cjs`** — 10 new v1.16.0 assertions (T1–T7)
+  covering first-visit-no-banner, solve detection via
+  `level0→level1`, terminal-level no-solve-tag, sessionStorage
+  blob shape, and the revisit banner.
+
+### Forker notes
+
+- Terminal levels (last in their track, no level<N+1> shipped yet)
+  don't get a solve time by design — there's no next-in-chain
+  trigger. When you ship `level2`s in v2.0, the existing level1s
+  will retroactively become solveable via the same mechanism.
+- The format thresholds in `formatTime()` are tuned for sub-hour
+  sessions: seconds resolution under a minute, minute+seconds
+  under an hour, hours+minutes past that. Tweak the cutoffs if
+  your audience consistently spends multi-hour blocks per level.
+- `isNextInChain()` is strict: it only matches `level<N+1>@<same-
+  track>`. Forks with non-numbered level chains will need a
+  different signal — consider adding a `solveTrigger?` field to
+  the level schema and checking it in `stopLevelTimer`.
+
 ## [1.15.0] - 2026-05-27
 
 **Did-you-mean typo suggestions on unknown commands.** First of three
@@ -3034,7 +3103,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.15.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.16.0...HEAD
+[1.16.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.15.0...v1.16.0
 [1.15.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.12.0...v1.13.0

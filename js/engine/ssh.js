@@ -19,6 +19,9 @@ import { SCAFFOLDED_HOSTS } from "./tracks.js";
 import { tierForLevel, levelNumberFromKey } from "./tiers.js";
 import { maybePromptForPersistence } from "./persistence.js";
 import { recordMilestone, checkAchievements } from "./achievements.js";
+import {
+  startLevelTimer, stopLevelTimer, getLevelTime, formatTime,
+} from "./leveltimer.js";
 
 export function handleSSH(target) {
   const level = LEVELS[target];
@@ -182,6 +185,19 @@ export function connectTo(key, opts) {
     }
   }
 
+  // v1.16.0: per-level time tracking. We stop the previous level's
+  // timer here — BEFORE setCurrentLevelKey — so the timer sees the
+  // outgoing level as "current" and can record the solve trigger
+  // (the player navigated TO `key`). Pivot navigation (entering a
+  // pivot, OR unwinding back to the parent) doesn't touch the
+  // timer: time spent in pivots accumulates to the parent level's
+  // total. The timer is also a no-op when stopping a level that
+  // was never started (e.g., the very first connectTo from the
+  // lobby — the lobby is not timed).
+  if (!unwind && !incoming?.pivot) {
+    stopLevelTimer(key);
+  }
+
   // Every level change resets the shell-local state — env vars and the
   // job table belong to the current shell, not the world. (hostStack
   // is the explicit exception, managed above.)
@@ -195,6 +211,13 @@ export function connectTo(key, opts) {
   updatePrompt();
 
   if (level.isLobby) { showLobby(); return; }
+
+  // v1.16.0: start a fresh timer for the new top-level engagement.
+  // Skipped for pivot hosts — they ride on the parent's timer (the
+  // pivot exploration is part of solving the parent level).
+  if (!level.pivot) {
+    startLevelTimer(key);
+  }
 
   print("", "out");
   print(`── Connected: ${key}`, "dim");
@@ -212,6 +235,21 @@ export function connectTo(key, opts) {
     if (tier)                   bits.push(`Tier: ${tier}`);
     if (level.estimatedMinutes) bits.push(`Est. time: ~${level.estimatedMinutes} min`);
     print(bits.join("   ·   "), "dim");
+  }
+
+  // v1.16.0: if the player has previously solved this level (i.e.,
+  // navigated from here to the next level in the chain at least
+  // once), surface the first-solve elapsed in the connection
+  // banner. Pivot hosts don't participate in solve detection so
+  // this never fires for them. Skipped on the in-flight first
+  // solve (we update the record from the OUTGOING side via
+  // stopLevelTimer; on subsequent re-entries, isSolved is true
+  // and firstSolveMs is set).
+  if (!level.pivot) {
+    const t = getLevelTime(key);
+    if (t.isSolved && Number.isFinite(t.firstSolveMs)) {
+      print(`Previous solve time: ${formatTime(t.firstSolveMs)}`, "dim");
+    }
   }
 
   print("", "out");

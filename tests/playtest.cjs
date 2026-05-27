@@ -2690,6 +2690,104 @@ async function termText(page) {
     localStorage.removeItem("d3cyph3r-theme");
   });
 
+  // ──────────────────────────────────────────────────────────────────
+  // v1.16.0 — Per-level time tracking
+  // ──────────────────────────────────────────────────────────────────
+  //
+  // Tracks total time spent per level (across visits) + first-solve
+  // elapsed (captured when the player navigates from level<N>@<track>
+  // to level<N+1>@<track>). Surfaces in progress --detail per-row and
+  // in the connection banner on revisit. Pivot hosts ride on the
+  // parent's timer.
+  //
+  // Setup: wipe sessionStorage + reload to a fully clean baseline so
+  // the timer module starts fresh. The v1.11.0 progress reset above
+  // emptied sessionStorage's progress keys; the reload re-creates the
+  // session from scratch so we know no stale level-times bleed in.
+
+  await page.evaluate(() => { sessionStorage.clear(); });
+  await page.reload();
+  await page.waitForTimeout(1200);
+  // Suppress the once-per-session UX that would intercept our input
+  // after the sessionStorage wipe:
+  //   - persistence-consent prompt (fires on first non-lobby connect)
+  //   - first-visit welcome banner (cosmetic but adds scrollback noise)
+  // Both are tested in their own blocks above; here we're isolating
+  // the timer behavior.
+  await page.evaluate(() => {
+    sessionStorage.setItem("d3cyph3r-prompt-seen", "1");
+    sessionStorage.setItem("seenOnboarding", "true");
+  });
+
+  // --- T1: first connect to level0 has NO "Previous solve" line ---
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(400);
+  const t1 = await termText(page);
+  // The banner after the most-recent ssh command. Split on the echoed
+  // command line and check just the tail so we don't false-match an
+  // earlier "Previous solve time" in scrollback.
+  const banner1 = t1.split("ssh level0@linux").slice(-1)[0] || "";
+  check("v1.16.0 T1: first connect to level0 does NOT show 'Previous solve time'",
+        !banner1.includes("Previous solve time"));
+
+  // --- T2: spend > 1s in level0 so the time tag isn't "< 1s" ---
+  await page.waitForTimeout(1200);
+
+  // --- T3: ssh level0 → level1 triggers SOLVE for level0 ---
+  // Forward-navigate (no exit) so solve detection fires.
+  await typeAndEnter(page, "ssh level1@linux");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "please-rotate-me");
+  await page.waitForTimeout(600);
+  const tConnected = await termText(page);
+  check("v1.16.0 T3: navigated level0 → level1 (solve trigger)",
+        tConnected.includes("Connected: level1@linux"));
+
+  // --- T4: exit back to lobby (stops level1 timer with no solve target) ---
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+
+  // --- T5: progress --detail surfaces time tag for level0 ---
+  await typeAndEnter(page, "progress --detail");
+  await page.waitForTimeout(150);
+  const tDetail = await termText(page);
+  // level0 row should show "<N>s" (we waited > 1s, so seconds-form).
+  check("v1.16.0 T5a: progress --detail shows time tag for visited level0",
+        /level0@linux[^\n]*\b\d+s\b/.test(tDetail));
+  // ...AND a "solve: <time>" annotation since level0 → level1 fired.
+  check("v1.16.0 T5b: progress --detail shows '(solve: <time>)' for level0",
+        /level0@linux[^\n]*\(solve:\s*\d+s/.test(tDetail));
+  // level1 was visited too, but it's a terminal level (no level2
+  // yet) so it gets a time tag but NO solve annotation.
+  check("v1.16.0 T5c: progress --detail shows time tag for visited level1",
+        /level1@linux[^\n]*\b(<\s*1s|\d+s)\b/.test(tDetail));
+  check("v1.16.0 T5d: level1 row has NO '(solve:' (terminal level)",
+        !/level1@linux[^\n]*\(solve:/.test(tDetail));
+
+  // --- T6: re-enter level0 → banner shows "Previous solve time" ---
+  await typeAndEnter(page, "ssh level0@linux");
+  await page.waitForTimeout(400);
+  const t6 = await termText(page);
+  const banner6 = t6.split("ssh level0@linux").slice(-1)[0] || "";
+  check("v1.16.0 T6: revisit shows 'Previous solve time' banner",
+        banner6.includes("Previous solve time:"));
+
+  // --- T7: sessionStorage carries the levelTimes blob ---
+  const timesBlob = await page.evaluate(() => {
+    const raw = sessionStorage.getItem("d3cyph3r:levelTimes");
+    return raw ? JSON.parse(raw) : null;
+  });
+  check("v1.16.0 T7a: sessionStorage carries d3cyph3r:levelTimes",
+        timesBlob !== null);
+  check("v1.16.0 T7b: levelTimes blob records level0 as solved",
+        timesBlob && timesBlob["level0@linux"] && timesBlob["level0@linux"].isSolved === true);
+  check("v1.16.0 T7c: levelTimes blob has firstSolveMs for level0",
+        timesBlob && Number.isFinite(timesBlob["level0@linux"]?.firstSolveMs));
+
+  // Clean up: leave the player at the lobby for any post-block work.
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(300);
+
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
 
