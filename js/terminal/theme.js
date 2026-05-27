@@ -79,6 +79,19 @@ export function setTheme(name) {
   document.body.setAttribute("data-theme",      theme.name);
   document.body.setAttribute("data-theme-mode", theme.mode);
   try { localStorage.setItem(KEY, theme.name); } catch (_) { /* private mode */ }
+  // v1.14.0: record for Style Points (3+ themes) and 1985
+  // (crt-green or amber). Dynamic import to avoid the circular
+  // dependency that would result from a static import at top —
+  // achievements.js indirectly imports persistence.js, which
+  // imports from terminal/output.js, which is already in the
+  // dependency tree. A dynamic import sidesteps any top-level
+  // initialization-order concerns; the catch handles the case
+  // where the module hasn't loaded yet (e.g. during the very
+  // first initTheme() call before achievements.js's module init
+  // completes).
+  import("../engine/achievements.js")
+    .then(m => m.recordMilestone("themesSeen", theme.name))
+    .catch(() => { /* silent — non-critical, milestone will record on next setTheme */ });
   return theme;
 }
 

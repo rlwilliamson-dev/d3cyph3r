@@ -1732,6 +1732,41 @@ DESCRIPTION
 EXAMPLES
     walkthrough`,
 
+  achievements: `NAME
+    achievements — show every achievement and which you've earned (v1.14.0)
+
+SYNOPSIS
+    achievements
+    achievements --detail
+
+DESCRIPTION
+    Print every achievement available in this version of D3CYPH3R,
+    grouped by tier (Easy / Medium / Hard / Completionist). Earned
+    achievements show a ★ marker in success green; unearned ones
+    show · in dim grey. The description for each is always visible
+    — achievements are public motivation, not hidden objectives.
+
+    Run with '--detail' to also see a progress fraction for the
+    achievements where progress is measurable (e.g. Polymath "4/7
+    tracks with at least one bonus", Sleuth "3/5 bonus finds").
+    Boolean-only achievements (e.g. Persistent Player, 1985) show
+    no progress line — they're earned or they aren't.
+
+    When an achievement's criteria are first met, an unlock banner
+    fires inline:
+
+      ★ Achievement unlocked: <Name>
+        <Description>
+
+    Earned achievements persist via the existing v1.11.0
+    localStorage mirror — if you've opted in to persistence, the
+    earned set survives closing the tab. 'progress reset' clears
+    them along with the rest of the tracked state.
+
+EXAMPLES
+    achievements
+    achievements --detail`,
+
   theme: `NAME
     theme — switch the terminal palette (v1.13.0)
 

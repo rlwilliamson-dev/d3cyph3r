@@ -40,6 +40,7 @@ import {
   handleTourInput, reprintStepAfterAdvance, printTourCompleteBanner,
   TOUR_RESULT,
 } from "../commands/tutorial.js";
+import { recordMilestone, checkAchievements } from "./achievements.js";
 import { parseLine, unquote, expandBraces } from "./parse.js";
 import { expandTokenVars, getEnv } from "./expand.js";
 import { checkBonusFinds } from "./bonus.js";
@@ -131,11 +132,26 @@ export function execute(raw) {
 
   // Parse + run.
   const stmts = parseLine(input);
+  // v1.14.0: detect pipe + background usage for the Pipe Apprentice
+  // / Job Runner achievements. Idempotent — recordMilestone short-
+  // circuits when the flag is already set.
+  for (const s of stmts) {
+    if (s.segments && s.segments.length > 1) recordMilestone("pipeUsed");
+    if (s.bg)                                recordMilestone("jobRun");
+  }
   runStatements(stmts);
 
   // Post-dispatch tour hook — print the NEXT step's instructions so
   // they appear after the just-dispatched command's output.
   if (tourResult === TOUR_RESULT.ADVANCE) reprintStepAfterAdvance();
+
+  // v1.14.0: run achievement checks once per top-level dispatch.
+  // This catches state changes from the command itself (e.g. a
+  // bonus find newly-discovered by checkBonusFinds() above would
+  // unlock Polymath / Thorough / Completionist in the same pass)
+  // AND state changes from sibling milestone-record calls above
+  // (e.g. the Pipe Apprentice check just above).
+  checkAchievements();
 
   // Refresh the prompt label — cd may have changed PWD, export may
   // have changed PS1, FOO=bar assignments may have shadowed built-ins,
