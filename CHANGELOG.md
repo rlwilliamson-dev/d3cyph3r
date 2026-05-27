@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-05-27
+
+**Standardized `cmd --help` across every command.** Third and final
+of the small engine-polish MINORs queued between the v1.11–v1.14 QoL
+arc and the v2.0 "Apprentice" level2 push. Every command in COMMANDS
+now responds to `--help` with a 3-5 line usage block: one-line
+description, usage signature, and a pointer to `man <cmd>` for full
+details. Closes the Group B engine-polish set — v1.18+ moves on to
+v2.0 level2 work.
+
+### Added
+
+- **`js/commands/help-strings.js`** — New module owning the
+  HELP_STRINGS curated-override map and `getCommandHelp(cmd)`
+  resolver. Curated entries win; the resolver auto-synthesizes a
+  block from the corresponding MAN_PAGES entry (NAME + SYNOPSIS
+  sections) when no override exists. Every shipped command has a
+  MAN_PAGES entry, so coverage is automatically complete.
+- **~15 curated HELP_STRINGS overrides** for high-traffic +
+  multi-subcommand commands where the auto-extracted version
+  wouldn't surface the useful surface area:
+  - `progress`, `git`, `openssl`, `theme`, `achievements`,
+    `tutorial`, `hint` (subcommand-heavy)
+  - All 13 read-only sandbox stubs (`chmod`, `chown`, `mv`, `cp`,
+    `rm`, `mkdir`, `rmdir`, `touch`, `ln`, `sudo`, `su`,
+    `useradd`, `passwd`) — short stub-friendly message rather than
+    the manpage extraction.
+
+### Changed
+
+- **`js/engine/execute.js#runSegment`** — Intercepts `--help`
+  before calling the handler when:
+  - The command exists (typos still get "command not found" +
+    v1.15.0 did-you-mean).
+  - The segment is a STANDALONE invocation, not mid-pipeline.
+    `echo --help | wc -c` still echoes the literal "--help" through
+    the pipe; only `echo --help` (standalone) shows the help block.
+    Command substitution `$(cmd --help)` skips the hook entirely
+    because runForOutput inlines its own dispatch.
+  - argv post-command actually contains `--help`.
+- **`js/engine/execute.js#runPipeline`** — Passes `isStandalone`
+  (true when `segments.length === 1`) into runSegment so the
+  --help check knows whether to intercept.
+- **`tests/playtest.cjs`** — 12 new v1.17.0 assertions covering
+  auto-extracted blocks (ls, grep), curated overrides (progress,
+  git, chmod, theme, achievements, openssl), typo + --help guard,
+  and the pipeline pass-through (`echo --help | wc -c`).
+
+### Forker notes
+
+- Adding a new command: write its MAN_PAGES entry as you would
+  today and it picks up `--help` automatically via the
+  auto-extraction path. For high-value commands (multi-subcommand,
+  unusual flag set), add a curated HELP_STRINGS override for a
+  tighter block.
+- The interception is a single check in `runSegment` — easy to
+  rip out, replace, or augment (e.g., add `-h` as an alias would
+  be a 4-character edit).
+- `extractSection()` in `help-strings.js` parses the existing
+  manpage format (column-0 section headers, indented content,
+  blank lines between sections). If you change MAN_PAGES'
+  structure, update the extractor accordingly.
+
 ## [1.16.0] - 2026-05-27
 
 **Per-level time tracking + solve detection.** Second of three small
@@ -3103,7 +3166,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.16.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.17.0...HEAD
+[1.17.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.15.0...v1.16.0
 [1.15.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.13.0...v1.14.0

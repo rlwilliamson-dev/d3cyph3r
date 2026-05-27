@@ -214,6 +214,7 @@ The terminal supports a real bash-shaped composition layer (v1.8.0 + v1.9.0):
 - Bonus finds: optional discoverable nuggets surfaced in `progress`
 - Typo suggestions: closest-match "Did you mean: `<cmd>`?" on unknown commands (v1.15.0)
 - Per-level time tracking: total time + first-solve elapsed, surfaced in `progress --detail` and the connection banner on revisit (v1.16.0)
+- Standardized `cmd --help` across every command — short usage block + pointer to `man <cmd>` (v1.17.0)
 
 The terminal also supports the shell features players carry in from bash:
 

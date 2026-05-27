@@ -45,6 +45,7 @@ import { parseLine, unquote, expandBraces } from "./parse.js";
 import { expandTokenVars, getEnv } from "./expand.js";
 import { checkBonusFinds } from "./bonus.js";
 import { suggestCommand } from "./suggest.js";
+import { getCommandHelp } from "../commands/help-strings.js";
 import { renderPrompt } from "../terminal/prompt.js";
 import { dequoteAssignmentValue } from "../commands/env.js";
 
@@ -216,10 +217,16 @@ function runPipeline(segments, capture = false) {
   let lastSegCode = 0;
   let captured = "";
 
+  // v1.17.0: standalone-vs-pipeline flag for the --help interception
+  // in runSegment. Only intercept when the player typed a single,
+  // top-level command — `echo --help | cat` should still echo the
+  // literal "--help" through the pipe.
+  const isStandalone = segments.length === 1;
+
   for (let i = 0; i < segments.length; i++) {
     const tokens = segments[i];
     const isLast = i === segments.length - 1;
-    const { result, exitCode } = runSegment(level, tokens, stdin);
+    const { result, exitCode } = runSegment(level, tokens, stdin, isStandalone);
 
     if (isLast) {
       if (capture) {
@@ -259,7 +266,7 @@ function runPipeline(segments, capture = false) {
  * Returns { result, exitCode } where result is the handler's return
  * value (or null) and exitCode is 0 on success, 1 on err / not-found.
  */
-function runSegment(level, rawTokens, stdin) {
+function runSegment(level, rawTokens, stdin, isStandalone = true) {
   if (rawTokens.length === 0) return { result: null, exitCode: 0 };
 
   // Expand each token: brace, vars, $(...) substitution, quote-strip.
@@ -284,6 +291,31 @@ function runSegment(level, rawTokens, stdin) {
   const arg = argv.slice(cursor + 1).join(" ");
 
   const handler = COMMANDS[cmd];
+
+  // v1.17.0: standardized `cmd --help`. Intercepts before the
+  // handler runs and prints a short usage block. Conditions for
+  // intercept:
+  //   - command is real (handler exists) — typos still fall through
+  //     to the "command not found" branch + did-you-mean suggestion.
+  //   - segment is a STANDALONE invocation, not mid-pipeline. We
+  //     don't shadow `echo --help | cat` (which should pipe the
+  //     literal "--help" through). Command substitution ($()) skips
+  //     this path entirely because runForOutput inlines its own
+  //     dispatch without going through runSegment.
+  //   - argv post-command actually contains "--help".
+  // Help text resolution: curated HELP_STRINGS overrides first,
+  // otherwise auto-synthesize NAME + SYNOPSIS from MAN_PAGES.
+  if (handler && isStandalone && argv.slice(cursor + 1).includes("--help")) {
+    const helpText = getCommandHelp(cmd);
+    if (helpText) {
+      print(helpText, "out");
+      return { result: null, exitCode: 0 };
+    }
+    // No help text registered (shouldn't happen for shipped commands —
+    // every COMMANDS entry has a MAN_PAGES entry as of v1.10.0) — fall
+    // through to the handler so we don't silently swallow input.
+  }
+
   if (!handler) {
     print(`${cmd}: command not found. Type 'help' for available commands.`, "err");
     // v1.15.0: did-you-mean. Conservative thresholds (≤1 for short
