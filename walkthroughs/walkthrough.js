@@ -19,24 +19,75 @@
 import { marked } from "./vendor/marked.esm.min.js";
 import { initTheme, cycleTheme, getTheme } from "../js/terminal/theme.js";
 
-// Defense-in-depth XSS hardening (v1.24.3).
+// Defense-in-depth XSS hardening (v1.24.3, extended v1.24.4).
 //
 // marked v12 ships with no built-in sanitizer (the deprecated `sanitize`
 // option was removed in v5+). Walkthrough markdown is author-controlled
 // via PR review, and production CSP (`script-src 'self'`, no
 // `unsafe-inline`) already neuters <script>/onerror/onclick payloads,
-// but raw HTML in markdown can still inject `javascript:` URLs in
-// <a href> (navigation, not subject to script-src) and `style=` attrs.
-// Local dev (no CSP) is also unprotected.
+// but markdown still has two routes for code execution that CSP doesn't
+// block:
+//
+//   1. RAW HTML tokens (`<a onclick=...>`, `<style>...</style>`) — the
+//      v1.24.3 `html: () => ""` renderer override drops these before
+//      they reach article.innerHTML.
+//
+//   2. `javascript:` / `data:` / `vbscript:` URLs in markdown link
+//      syntax `[text](javascript:alert(1))` — these are NOT raw HTML,
+//      so the html-token override doesn't catch them. They become
+//      `<a href="javascript:...">` which clicking executes. CSP doesn't
+//      gate navigation. v1.24.4 adds renderer.link + renderer.image
+//      overrides that reject any href whose scheme isn't one of:
+//      https:, http:, mailto:, tel:, # (fragment), / (root-relative),
+//      ./ or ../ (relative). Disallowed-scheme links render as plain
+//      text (the link's visible text, without the href).
+//
+// CodeQL (default query suite) flags the `article.innerHTML = ...` line
+// even with these mitigations in place because it can't statically
+// trace marked's renderer config across module boundaries. The marked-
+// configured-with-html-stripped-and-link-sanitized + author-controlled
+// source + CSP combination is what actually makes this safe at runtime.
+// The CodeQL alert is dismissed with that explanation.
 //
 // Walkthroughs are pure markdown — headings, lists, links, code fences,
 // tables. There is no legitimate use of raw HTML in any current
 // walkthrough (fenced code blocks remain unaffected because marked
-// tokenizes them as `code`, not `html`). The override below tells
-// marked to drop raw-HTML tokens entirely before they reach
-// article.innerHTML. If a future walkthrough needs styled content,
-// extend the markdown grammar / CSS instead of opening the HTML hole.
-marked.use({ renderer: { html: () => "" } });
+// tokenizes them as `code`, not `html`). No current walkthrough uses
+// links with non-http(s) schemes. If a future walkthrough needs
+// styled content or non-http schemes, extend the grammar/CSS instead
+// of widening these renderer overrides.
+
+// Allowed URL schemes for both link href and image src. Anything else
+// (javascript:, data:, vbscript:, file:, ftp:, etc.) gets dropped.
+const SAFE_URL = /^(?:https?:|mailto:|tel:|#|\/|\.\.?\/)/i;
+
+marked.use({
+  renderer: {
+    // Drop raw HTML tokens entirely (v1.24.3).
+    html: () => "",
+    // Sanitize link hrefs (v1.24.4). Returning the inline text without
+    // wrapping it in <a> strips the dangerous href; returning false
+    // tells marked to fall through to its default renderer for normal
+    // (http/relative) links.
+    link(token) {
+      if (!SAFE_URL.test(token.href || "")) {
+        return this.parser.parseInline(token.tokens);
+      }
+      return false;
+    },
+    // Same treatment for images (v1.24.4). Disallowed src renders as
+    // the alt text (or empty if no alt). Walkthroughs don't currently
+    // embed images, but enforcing this now means a future walkthrough
+    // PR can't accidentally introduce a data:image/svg+xml payload
+    // (which CAN contain scripts that fire on render in some browsers).
+    image(token) {
+      if (!SAFE_URL.test(token.href || "")) {
+        return token.text || "";
+      }
+      return false;
+    },
+  },
+});
 
 // ─── Manifest ────────────────────────────────────────────────
 //

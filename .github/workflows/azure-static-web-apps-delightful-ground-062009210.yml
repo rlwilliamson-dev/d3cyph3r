@@ -74,6 +74,12 @@ jobs:
         shard: [1, 2, 3, 4]
     runs-on: ubuntu-latest
     name: Playtest (shard ${{ matrix.shard }}/4)
+    # v1.24.4 — explicit minimal permissions. CodeQL flagged the
+    # implicit GITHUB_TOKEN scope (default for 2023+ repos is already
+    # `contents: read`, but explicit declaration is best practice and
+    # silences the alert).
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -182,6 +188,9 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     name: Close Pull Request Job
+    # v1.24.4 — explicit minimal permissions (see playtest_job above).
+    permissions:
+      contents: read
     steps:
       - name: Close Pull Request
         id: closepullrequest
