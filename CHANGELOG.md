@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.3] - 2026-05-28
+
+**Security hygiene pass.** Defense-in-depth fixes across the walkthrough renderer, deploy payload, response headers, and engine input validation. No new gameplay, no schema changes, no commands added.
+
+### Security
+
+- **Walkthrough markdown renderer strips raw HTML.** `walkthroughs/walkthrough.js` now configures marked with `{ renderer: { html: () => "" } }` so any raw-HTML tokens in walkthrough markdown are dropped before reaching `innerHTML`. Production CSP (`script-src 'self'`) already neutered `<script>` payloads, but `javascript:` URLs in `<a href>` (which CSP doesn't gate — they're navigation, not script) and `style=` attributes are now also blocked. Fenced code blocks render exactly as before since marked tokenizes them as `code`, not `html`.
+- **`X-Frame-Options: DENY`** added to `staticwebapp.config.json` globalHeaders. The existing CSP `frame-ancestors 'none'` already blocks framing in modern browsers; the header covers legacy browsers (IE11, old Android WebView).
+- **`restore` rejects oversize input** before parsing. Codes larger than 10,000 characters (50× the largest legitimate completionist code) get a clean error message instead of feeding the varint decoder a megabyte of garbage.
+
+### Changed
+
+- **`tools/` and `.mailmap` pruned from deploy payload.** Both now removed in the workflow's "Prune dev/docs files" step so they no longer ship to the CDN.
+
+### Fixed
+
+- **`markVisited` is now defensive against malformed sessionStorage.** A corrupted `visited` value (DevTools tampering, extension interference, partial restore-code apply) no longer throws on `JSON.parse` and brick subsequent `ssh` connects — the failed parse falls back to an empty array and the next write recovers the file.
+
 ## [1.24.2] - 2026-05-28
 
 **CI workflow scaling.** Long-term tuning that keeps PR feedback fast as the test suite grows with future level content. No engine, schema, command, or player-facing changes.

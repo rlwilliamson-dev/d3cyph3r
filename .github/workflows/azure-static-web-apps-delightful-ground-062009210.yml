@@ -140,11 +140,15 @@ jobs:
         # That accidentally publishes ~300 KB of contributor docs and
         # CI artifacts that have no business being on the edge:
         #   - tests/                 — CI-only (Playwright suite + deps)
+        #   - tools/                 — local dev scratch (icon mockups,
+        #                              etc.); v1.24.3 added — was leaking
+        #                              an unused HTML file to prod
         #   - CHANGELOG.md           — public on GitHub already
         #   - README.md              — same; GitHub renders it natively
         #   - CONTRIBUTING.md        — same
         #   - walkthroughs/README.md — author guide for new walkthroughs,
         #                              not the player-facing /walkthroughs/
+        #   - .mailmap               — git-tooling metadata, dev-only
         #   - .gitignore             — exposes repo layout, no consumer
         #
         # KEPT on purpose:
@@ -158,8 +162,8 @@ jobs:
         # If you fork: trim or expand this list to taste. Anything not
         # rm'd here ends up on the CDN.
         run: |
-          rm -rf tests/
-          rm -f CHANGELOG.md README.md CONTRIBUTING.md walkthroughs/README.md .gitignore
+          rm -rf tests/ tools/
+          rm -f CHANGELOG.md README.md CONTRIBUTING.md walkthroughs/README.md .gitignore .mailmap
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
