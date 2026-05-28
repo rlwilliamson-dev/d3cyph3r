@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.1] - 2026-05-28
+
+**CI tuning.** GitHub Actions `ubuntu-latest` runners ship with 4 vCPUs; the v1.24.0 `playwright.config.cjs` set `workers: 2` in CI out of caution. Bumped to 4 so CI parallelism matches the runner's actual capacity. No engine, schema, command, or player-facing changes. 293/293 tests still pass.
+
 ## [1.24.0] - 2026-05-28
 
 **Playtest refactor — `@playwright/test` per-spec parallelism.** The CI playtest is rebuilt as 15 per-spec files running in parallel browser contexts. Player-facing behavior is unchanged; this is a developer / CI release.
