@@ -278,4 +278,160 @@ test.describe("linux track", () => {
       });
     });
   });
+
+  // ── Level 2 — "Daniel's Forgotten Cron" ─────────────────────────
+  // Gated by `Halton-2024-Q3!` (the DB_PROD_PASS leaked in level1's
+  // staging-worker.env.bak; Halton policy reuses the string for the
+  // bastion login). Puzzle is cron 101 against a tombstoned account:
+  // /etc/cron.d/halton-weekly-snapshot runs as daniel (offboarded
+  // 2025-01-31, account never disabled) and redirects bash `set -x`
+  // trace to /var/log/cron-daniel.log (mode 644), which echoes the
+  // exported SSH_KEY_PASSPHRASE = `H@lton-Snapshot-2024-Q4` — the
+  // level3@linux entry credential.
+  test.describe("level2@linux — Daniel's forgotten cron", () => {
+    test("wrong password is rejected at the gate", async ({ page }) => {
+      await dispatchCmd(page, "ssh level2@linux");
+      await dispatchCmd(page, "wrong-password");
+      const t = await terminalText(page);
+      expect(t).toContain("Permission denied, please try again.");
+    });
+
+    test.describe("inside level2", () => {
+      test.beforeEach(async ({ page }) => {
+        await dispatchCmd(page, "ssh level2@linux");
+        await dispatchCmd(page, "Halton-2024-Q3!");
+        await waitForOutput(page, "Connected: level2@linux");
+        // v1.11.0 persistence opt-in prompt fires on first non-lobby
+        // connect of a fresh session.
+        await waitForOutput(page, "Save your progress across browser sessions?");
+        await dispatchCmd(page, "n");
+        await waitForOutput(page, "Progress stays in this tab only");
+      });
+
+      test("connection banner + prompt identity (audit@halton-prod-bastion)", async ({ page }) => {
+        const t = await terminalText(page);
+        expect(t).toContain("Connected: level2@linux");
+        expect(t, "objective references the cron job").toContain("cron");
+
+        // env_vars.HOSTNAME on this level is `halton-prod-bastion…`,
+        // so the PS1 \h substitution surfaces the short hostname
+        // instead of the engine track key. That's the level1@linux
+        // pattern with a different hostname.
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@halton-prod-bastion:");
+        expect(prompt.startsWith("audit@")).toBeTruthy();
+      });
+
+      test("whoami prints in-world identity 'audit'", async ({ page }) => {
+        await dispatchCmd(page, "whoami");
+        const t = await terminalText(page);
+        expect(t).toMatch(/\baudit\b/);
+      });
+
+      test("ls /etc/cron.d/ surfaces the halton-weekly-snapshot job", async ({ page }) => {
+        await dispatchCmd(page, "ls /etc/cron.d/");
+        const t = await terminalText(page);
+        expect(t).toContain("halton-weekly-snapshot");
+      });
+
+      test("cat /etc/cron.d/halton-weekly-snapshot reveals daniel + script + log redirect", async ({ page }) => {
+        await dispatchCmd(page, "cat /etc/cron.d/halton-weekly-snapshot");
+        const t = await terminalText(page);
+        expect(t, "cron entry runs as daniel").toMatch(/\bdaniel\b/);
+        expect(t, "cron entry invokes the snapshot script").toContain(
+          "/opt/halton/snapshot-config.sh",
+        );
+        expect(t, "cron entry redirects stdout/stderr to the log").toContain(
+          "/var/log/cron-daniel.log",
+        );
+      });
+
+      test("cat /var/log/cron-daniel.log leaks the SSH_KEY_PASSPHRASE via set -x trace", async ({ page }) => {
+        await dispatchCmd(page, "cat /var/log/cron-daniel.log");
+        const t = await terminalText(page);
+        expect(t, "set -x trace echoes the export line").toContain(
+          "+ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'",
+        );
+      });
+
+      test("cat /opt/halton/snapshot-config.sh shows the leaking script", async ({ page }) => {
+        await dispatchCmd(page, "cat /opt/halton/snapshot-config.sh");
+        const t = await terminalText(page);
+        expect(t, "script uses set -x for audit trace").toMatch(/set -euxo pipefail/);
+        expect(t, "script exports SSH_KEY_PASSPHRASE in the env").toContain(
+          "export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'",
+        );
+      });
+
+      test("crontab -l on audit prints 'no scheduled jobs' header", async ({ page }) => {
+        await dispatchCmd(page, "crontab -l");
+        const t = await terminalText(page);
+        expect(t).toContain("no scheduled jobs");
+      });
+
+      test("crontab -l -u daniel reports no user-level crontab (Daniel's job lives in /etc/cron.d/)", async ({ page }) => {
+        await dispatchCmd(page, "crontab -l -u daniel");
+        const t = await terminalText(page);
+        expect(t).toContain("no crontab for daniel");
+      });
+
+      test("crontab -l -u root reveals the baseline maintenance lines", async ({ page }) => {
+        await dispatchCmd(page, "crontab -l -u root");
+        const t = await terminalText(page);
+        expect(t).toContain("cron-health.sh");
+        expect(t).toContain("logrotate");
+      });
+
+      test("journalctl -u cron.service shows the weekly daniel fires", async ({ page }) => {
+        await dispatchCmd(page, "journalctl -u cron.service");
+        const t = await terminalText(page);
+        expect(t, "journalctl logs the daniel cron invocation").toContain(
+          "(daniel) CMD (/opt/halton/snapshot-config.sh",
+        );
+      });
+
+      test("last shows Daniel's stale Jan-31 login alongside current audit session", async ({ page }) => {
+        await dispatchCmd(page, "last");
+        const t = await terminalText(page);
+        expect(t, "current audit session shown as 'still logged in'").toContain(
+          "still logged in",
+        );
+        expect(t, "last shows daniel's Jan-31 stale login").toMatch(/daniel.*Jan 31/);
+      });
+
+      test("cat /etc/passwd fires the tombstoned-daniel bonus find", async ({ page }) => {
+        await dispatchCmd(page, "cat /etc/passwd");
+        const t = await terminalText(page);
+        expect(t, "/etc/passwd carries daniel with /bin/bash shell").toContain(
+          "daniel:x:1042:1042:Daniel Vance (rolled off Halton 2025-01-31):/home/daniel:/bin/bash",
+        );
+        expect(t, "bonus-find banner fires").toContain(
+          "Bonus find unlocked: Daniel's account is still active",
+        );
+      });
+
+      test("cat /opt/halton/PASSWORD-POLICY.md fires the password-cargo-cult bonus find", async ({ page }) => {
+        await dispatchCmd(page, "cat /opt/halton/PASSWORD-POLICY.md");
+        const t = await terminalText(page);
+        expect(t, "policy doc documents the quarterly pattern").toContain("Halton-YYYY-Q#");
+        expect(t, "bonus-find banner fires").toContain(
+          "Bonus find unlocked: Halton's quarterly-password policy",
+        );
+      });
+
+      test("exit from level2 returns to the lobby", async ({ page }) => {
+        await dispatchCmd(page, "exit");
+        await page.waitForFunction(
+          () =>
+            document
+              .getElementById("prompt-label")
+              ?.innerText.includes("@d3cyph3r:"),
+          null,
+          { timeout: 5000 },
+        );
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@d3cyph3r:");
+      });
+    });
+  });
 });

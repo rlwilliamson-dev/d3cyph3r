@@ -8,11 +8,11 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end; Forensics ships through level2 (v1.23.0). 15 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end; Linux and Forensics ship through level2 (v1.23.0 + v1.25.0). 16 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
-| Linux | `level0@linux` ("Daniel's Last Day"), `level1@linux` ("The Backup Daniel Forgot") | Halton Bank | GLBA |
+| Linux | `level0@linux` ("Daniel's Last Day"), `level1@linux` ("The Backup Daniel Forgot"), `level2@linux` ("Daniel's Forgotten Cron") | Halton Bank | GLBA |
 | Network | `level0@network` ("Atlas Health Perimeter Check"), `level1@network` ("The Map Marcus Didn't Mean to Share") | Atlas Health | HIPAA |
 | Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall") | Meridian State University | FERPA |
@@ -157,11 +157,11 @@ d3cyph3r/
 │       └── rot13.js         ROT13 cipher
 ├── levels/
 │   ├── index.js             Registers tracks → LEVELS map; flatten init
-│   ├── linux.js             Linux track (level0 + level1) — Halton Bank / GLBA
+│   ├── linux.js             Linux track (level0 + level1 + level2) — Halton Bank / GLBA
 │   ├── network.js           Network track (level0 + level1) — Atlas Health / HIPAA
 │   ├── crypto.js            Crypto track (level0 + level1) — Vesta Retail / PCI-DSS
 │   ├── web.js               Web track (level0 + level1) — Meridian State U / FERPA
-│   ├── forensics.js         Forensics track (level0 + level1) — Polaris DS / CMMC
+│   ├── forensics.js         Forensics track (level0 + level1 + level2) — Polaris DS / CMMC
 │   ├── osint.js             OSINT track (level0 + level1) — Veridian / HIPAA + HITRUST
 │   └── cloud.js             Cloud track (level0 + level1) — Coverline / SOC 2 + NAIC
 ├── walkthroughs/            Long-form solve guides (separate subsite)
@@ -188,7 +188,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 ## Roadmap
 
-All seven tracks ship level0 + level1 today. The next phase adds level2 across the tracks. Every level1 already leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
+All seven tracks ship level0 + level1; Linux and Forensics now ship through level2 (v1.25.0 + v1.23.0). The next phase continues filling level2 across the remaining tracks. Every shipped level1 already leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 

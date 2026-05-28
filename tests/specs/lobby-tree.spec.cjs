@@ -263,14 +263,14 @@ test.describe("lobby tree (v1.10.0)", () => {
   test.describe("future-level tip", () => {
     test("ssh level<N>@<known-host> past shipped ceiling: red DNS error + yellow check-back tip", async ({ page }) => {
       // level5@linux is past the linux track's current ceiling
-      // (level1). The branch should fire: red DNS-style error PLUS
-      // a yellow follow-up explicitly naming the linux track and the
-      // currently-shipped max.
+      // (level2, as of v1.25.0). The branch should fire: red DNS-style
+      // error PLUS a yellow follow-up explicitly naming the linux track
+      // and the currently-shipped max.
       await dispatchCmd(page, "ssh level5@linux");
       const t = await terminalText(page);
       expect(t).toContain("Could not resolve hostname 'level5@linux'");
       expect(t).toContain("this level isn't built yet");
-      expect(t).toContain("The linux track currently ships level0 through level1");
+      expect(t).toContain("The linux track currently ships level0 through level2");
     });
 
     test("typo `leve4@linux` (missing l) still prints DNS error but NOT the future-level tip", async ({ page }) => {

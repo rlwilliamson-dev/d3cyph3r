@@ -1228,4 +1228,903 @@ Return to the lobby:    ssh guest@d3cyph3r
     },
   },
 
+  // ── level 2 — "Daniel's Forgotten Cron" ─────────────────────────
+  // Player ssh's into halton-prod-bastion with `Halton-2024-Q3!` —
+  // the same string Halton uses for both the prod DB and the
+  // bastion's SSH login, by policy. That cross-use (CWE-521) is
+  // the only reason the level1 finding traverses into a shell here.
+  // Welcome.md calls it out so the player understands the hop.
+  //
+  // The puzzle is cron 101 with a tombstoned-account twist:
+  //   1. `ls /etc/cron.d/` reveals `halton-weekly-snapshot`
+  //   2. `cat /etc/cron.d/halton-weekly-snapshot` shows it runs
+  //      `/opt/halton/snapshot-config.sh` as user `daniel` (the
+  //      offboarded consultant whose account was never disabled),
+  //      every Sunday at 03:00 UTC, with stdout/stderr redirected
+  //      to `/var/log/cron-daniel.log`
+  //   3. `cat /var/log/cron-daniel.log` (mode 644) shows bash's
+  //      `set -x` trace echoing `+ export SSH_KEY_PASSPHRASE='H@l…'`
+  //      every Sunday for the last six months. That passphrase is
+  //      the level3@linux entry credential.
+  //
+  // Lessons:
+  //   - CWE-250 Execution with Unnecessary Privileges (daniel's
+  //     account runs cron after his offboarding)
+  //   - CWE-532 Sensitive Info in Log File (set -x emits the
+  //     exported value to a 644-mode log)
+  //   - CWE-521 Weak Password Requirements (Halton's quarterly-
+  //     pattern policy has near-zero entropy; the same string
+  //     gates two unrelated systems)
+  //   - NIST SP 800-53 Rev. 5 PS-4 (Personnel Termination) + AC-2(3)
+  //     (Disable Accounts)
+  //   - MITRE ATT&CK T1078.003 (Valid Accounts: Local Accounts) and
+  //     T1552.001 (Unsecured Credentials: Credentials In Files)
+  //
+  // Engine note: the level uses the engine's "fs root === player's
+  // home dir" mapping to place system paths (etc/, var/, opt/) at
+  // the fs root. `ls ~` and `ls /` show the same children;
+  // `cat /etc/cron.d/halton-weekly-snapshot` and
+  // `cat ~/etc/cron.d/halton-weekly-snapshot` are the same lookup.
+  // Welcome.md acknowledges the audit-chroot framing so the
+  // unusual layout reads as intentional rather than buggy.
+  //
+  // Two bonus finds (don't gate the chain):
+  //   - "Daniel's account is still active" — triggered by reading
+  //     /etc/passwd and seeing his line with /bin/bash shell
+  //   - "Halton's quarterly-password policy" — triggered by
+  //     reading /opt/halton/PASSWORD-POLICY.md (the systemic root
+  //     cause behind both the level1 and level2 leaks)
+  //
+  // Breadcrumb out: `H@lton-Snapshot-2024-Q4` gates level3@linux
+  // at the (future) `halton-build-runner` host. Q4 dating is the
+  // tell: Daniel set this up six months before he rolled off and
+  // never rotated it.
+  "level2@linux": {
+    password: "Halton-2024-Q3!",
+    track: "linux",
+    title: "Halton prod-bastion audit",
+    estimatedMinutes: 12,
+    playerUser: "audit",
+    objective: "Find the cron job leaking an SSH key passphrase via its own log — and document how an offboarded consultant's account was permitted to keep running production jobs six months after he rolled off.",
+    lesson: "Day three. Halton reuses the same string for the prod DB password AND the bastion login password, so 'Halton-2024-Q3!' from yesterday's staging-worker.env.bak got you root-ish access here. Welcome.md explains the password-reuse hop and the audit-chroot layout. Then walk /etc/cron.d/ — one of the jobs runs under an account that should have been disabled six months ago, and it writes its own credentials to a world-readable log every Sunday.",
+    hints: [
+      "Halton manages production cron via system-wide jobs, not user crontabs. `ls /etc/cron.d/` is where to look.",
+      "The `halton-weekly-snapshot` job redirects its output to /var/log/cron-daniel.log. Read it.",
+      "The log captures bash's `set -x` trace. Look for the line that exports SSH_KEY_PASSPHRASE — that's your level3 credential.",
+    ],
+    permissions: {
+      "welcome.md":         { mode: "-rw-r--r--", owner: "audit",  group: "audit", size: 2348 },
+      "lessons-learned.md": { mode: "-rw-r--r--", owner: "audit",  group: "audit", size: 5912 },
+      ".bash_history":      { mode: "-rw-------", owner: "audit",  group: "audit", size:  412 },
+      // Top-level system dirs are shown as ordinary directories in
+      // ls -la output. Their CONTENTS carry the realistic modes.
+      "etc":                { mode: "drwxr-xr-x", owner: "root",   group: "root",  size: 4096 },
+      "var":                { mode: "drwxr-xr-x", owner: "root",   group: "root",  size: 4096 },
+      "opt":                { mode: "drwxr-xr-x", owner: "root",   group: "root",  size: 4096 },
+    },
+
+    // ENV — per-level vars. AWS_PROFILE shifts from halton-staging
+    // to halton-prod (you're on a different segment now). HOSTNAME
+    // surfaces the bastion's full FQDN so prompt + `hostname` agree.
+    env_vars: {
+      EDITOR:      "nano",
+      AWS_PROFILE: "halton-prod",
+      HOSTNAME:    "halton-prod-bastion.driftwood.internal",
+    },
+
+    // SYSTEM INSPECTION schema. `crontab` covers user crontabs (this
+    // box has none worth showing); the system-wide /etc/cron.d/
+    // entries live in the fs tree because they're real readable files
+    // on disk. journalctl surfaces cron.service events showing the
+    // weekly fires landing.
+    crontab: {
+      "audit": "# crontab for audit (no scheduled jobs — production interactive use only)\n",
+      "root":
+`# Halton prod-bastion baseline maintenance (root)
+*/5 *  *  *  * /usr/local/sbin/cron-health.sh
+0    0  *  *  * /usr/sbin/logrotate /etc/logrotate.conf
+0    4  *  *  * /usr/local/sbin/prune-snapshots.sh > /var/log/prune-snapshots.log 2>&1
+`,
+      // daniel has no USER-LEVEL crontab. His job lives under
+      // /etc/cron.d/halton-weekly-snapshot (system-wide) and runs
+      // AS daniel via the optional username column in cron.d entries.
+      // The empty-but-present user crontab data tells the engine to
+      // print "no crontab for daniel" when the player runs
+      // `crontab -l -u daniel` — which is itself a teaching moment.
+    },
+
+    lastLogins: [
+      { user: "audit",  tty: "pts/0", from: "10.0.7.42",  start: "Thu May 28 09:10", end: "still logged in",   duration: null     },
+      { user: "audit",  tty: "pts/0", from: "10.0.7.42",  start: "Wed May 27 14:32", end: "Wed May 27 16:05",  duration: "01:33"  },
+      { user: "root",   tty: "pts/0", from: "10.0.1.5",   start: "Tue May 26 11:15", end: "Tue May 26 11:42",  duration: "00:27"  },
+      { user: "daniel", tty: "pts/0", from: "10.0.7.18",  start: "Fri Jan 31 16:45", end: "Fri Jan 31 17:20",  duration: "00:35"  },
+      { user: "reboot", tty: "system boot", from: "6.1.0-d3cyph3r", start: "Wed Jan 15 02:00", end: "still running", duration: null },
+    ],
+
+    activeSessions: [
+      { user: "audit", tty: "pts/0", from: "10.0.7.42", login: "09:10", idle: "0.00s", jcpu: "0.34s", pcpu: "0.08s", what: "w" },
+    ],
+
+    openFiles: [
+      { command: "sshd",      pid: "812",   user: "root",     fd: "3u",  type: "IPv4", device: "12345", sizeOrOff: "0t0",   node: "TCP", name: "*:22 (LISTEN)" },
+      { command: "sshd",      pid: "21044", user: "root",     fd: "4u",  type: "IPv4", device: "23456", sizeOrOff: "0t0",   node: "TCP", name: "10.0.4.5:22->10.0.7.42:56118 (ESTABLISHED)" },
+      { command: "cron",      pid: "974",   user: "root",     fd: "cwd", type: "DIR",  device: "253,1", sizeOrOff: "4096",  node: "2",   name: "/" },
+      { command: "cron",      pid: "974",   user: "root",     fd: "3r",  type: "REG",  device: "253,1", sizeOrOff: "186",   node: "131082", name: "/etc/cron.d/halton-weekly-snapshot" },
+      { command: "postgres",  pid: "1142",  user: "postgres", fd: "5u",  type: "IPv4", device: "34567", sizeOrOff: "0t0",   node: "TCP", name: "*:5432 (LISTEN)" },
+    ],
+
+    sockets: [
+      { netid: "tcp", state: "LISTEN", recvq: 0, sendq: 128, localAddr: "0.0.0.0",  localPort: 22,   peerAddr: "0.0.0.0",  peerPort: "*",     process: `users:(("sshd",pid=812,fd=3))` },
+      { netid: "tcp", state: "LISTEN", recvq: 0, sendq: 128, localAddr: "0.0.0.0",  localPort: 5432, peerAddr: "0.0.0.0",  peerPort: "*",     process: `users:(("postgres",pid=1142,fd=5))` },
+      { netid: "tcp", state: "ESTAB",  recvq: 0, sendq: 0,   localAddr: "10.0.4.5", localPort: 22,   peerAddr: "10.0.7.42", peerPort: 56118,   process: `users:(("sshd",pid=21044,fd=4))` },
+    ],
+
+    // Journal carries the most recent Sunday run of the snapshot
+    // cron, plus the audit session that just started. The cron.service
+    // log entries are what a defender SHOULD have caught.
+    journal: [
+      { timestamp: "May 24 03:00:01", host: "halton-prod-bastion", unit: "cron.service",     pid: "974",   message: "(daniel) CMD (/opt/halton/snapshot-config.sh >> /var/log/cron-daniel.log 2>&1)" },
+      { timestamp: "May 24 03:00:01", host: "halton-prod-bastion", unit: "cron.service",     pid: "974",   message: "pam_unix(cron:session): session opened for user daniel(uid=1042) by (uid=0)" },
+      { timestamp: "May 24 03:00:14", host: "halton-prod-bastion", unit: "cron.service",     pid: "974",   message: "pam_unix(cron:session): session closed for user daniel" },
+      { timestamp: "May 17 03:00:01", host: "halton-prod-bastion", unit: "cron.service",     pid: "974",   message: "(daniel) CMD (/opt/halton/snapshot-config.sh >> /var/log/cron-daniel.log 2>&1)" },
+      { timestamp: "May 17 03:00:13", host: "halton-prod-bastion", unit: "cron.service",     pid: "974",   message: "pam_unix(cron:session): session closed for user daniel" },
+      { timestamp: "May 27 14:32:10", host: "halton-prod-bastion", unit: "sshd",             pid: "812",   message: "Accepted password for audit from 10.0.7.42 port 56091 ssh2" },
+      { timestamp: "May 28 09:10:02", host: "halton-prod-bastion", unit: "sshd",             pid: "812",   message: "Accepted password for audit from 10.0.7.42 port 56118 ssh2" },
+      { timestamp: "May 28 09:10:02", host: "halton-prod-bastion", unit: "sshd",             pid: "812",   message: "pam_unix(sshd:session): session opened for user audit(uid=1099) by (uid=0)" },
+    ],
+
+    systemdUnits: {
+      "cron.service": {
+        loadState: "loaded",
+        activeState: "active",
+        subState: "running",
+        description: "Regular background program processing daemon",
+        since: "Wed 2026-01-15 02:00:14 UTC; 4 months 13 days ago",
+        enabled: true,
+        preset: "enabled",
+        mainPid: "974",
+        command: "/usr/sbin/cron -f -P",
+        tasks: "1 (limit: 4915)",
+        memory: "2.1M",
+        cpu: "37.412s",
+        cgroup: "/system.slice/cron.service",
+        logs: [
+          "May 24 03:00:01 halton-prod-bastion CRON[974]: (daniel) CMD (/opt/halton/snapshot-config.sh >> /var/log/cron-daniel.log 2>&1)",
+          "May 24 03:00:01 halton-prod-bastion CRON[974]: pam_unix(cron:session): session opened for user daniel(uid=1042) by (uid=0)",
+          "May 24 03:00:14 halton-prod-bastion CRON[974]: pam_unix(cron:session): session closed for user daniel",
+        ],
+      },
+      "sshd.service": {
+        loadState: "loaded",
+        activeState: "active",
+        subState: "running",
+        description: "OpenSSH server daemon",
+        since: "Wed 2026-01-15 02:00:10 UTC; 4 months 13 days ago",
+        enabled: true,
+        preset: "enabled",
+        mainPid: "812",
+        command: "sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups",
+        tasks: "1 (limit: 4915)",
+        memory: "4.8M",
+        cpu: "2.918s",
+        cgroup: "/system.slice/sshd.service",
+        logs: [
+          "May 28 09:10:02 halton-prod-bastion sshd[812]: Accepted password for audit from 10.0.7.42 port 56118 ssh2",
+          "May 28 09:10:02 halton-prod-bastion sshd[812]: pam_unix(sshd:session): session opened for user audit(uid=1099) by (uid=0)",
+        ],
+      },
+    },
+
+    dmesg: [
+      { timestamp: "    0.000000", message: "Linux version 6.1.0-d3cyph3r (build@d3cyph3r) (gcc 12.2.0) #1 SMP Wed Jan 15 01:59:30 UTC 2026" },
+      { timestamp: "    0.001234", message: "Command line: BOOT_IMAGE=/vmlinuz-6.1.0 root=/dev/sda1 ro" },
+      { timestamp: "    1.234567", message: "systemd[1]: Started Journal Service" },
+      { timestamp: "    3.456789", message: "systemd[1]: Reached target Multi-User System" },
+      { timestamp: "11234567.890", message: "audit: type=1106 audit(1748427001.234:42): pid=974 cron user=daniel session opened" },
+    ],
+
+    // BONUS FINDS. Both reinforce systemic-root-cause analysis
+    // rather than the immediate puzzle. Discovered = +1 in `progress`.
+    bonusFinds: [
+      {
+        id:   "tombstoned-daniel",
+        name: "Daniel's account is still active",
+        hint: "Halton never disabled daniel's local account when he rolled off — the snapshot cron only fires because his account still exists with /bin/bash. NIST 800-53 PS-4 / AC-2(3) failure.",
+        // Triggers on `cat /etc/passwd` OR `grep daniel /etc/passwd`.
+        // outputContains lands when daniel's entry is in the printed
+        // bytes.
+        trigger: { argMatches: /passwd/, outputContains: "daniel:x:1042" },
+      },
+      {
+        id:   "password-cargo-cult",
+        name: "Halton's quarterly-password policy",
+        hint: "The mandated `<Brand>-YYYY-Q#` shape has near-zero entropy and is the systemic root cause behind both this leak and the staging one — rotation theater without actually being unpredictable.",
+        trigger: { command: "cat", argMatches: /PASSWORD-POLICY/, outputContains: "Halton-YYYY-Q" },
+      },
+    ],
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Driftwood Systems / Halton Bank — Prod-Bastion Audit ──────
+  Host:    halton-prod-bastion.driftwood.internal
+  Acct:    audit (Driftwood internal-audit role; uid 1099)
+  Date:    Thursday 2026-05-28 (engagement day three)
+────────────────────────────────────────────────────────────
+
+Priya: "Halton's CISO loved yesterday's staging-worker finding —
+they pulled three more service accounts under our audit scope.
+This box is one of them. Halton's prod-bastion. The credential
+you found in staging-worker.env.bak got you in because Halton
+reuses the same string for both the prod DB password AND the
+bastion SSH login, by policy. Yes, that's another finding. Write
+it up. Then look at what runs on this box — there's a cron job
+that's been here for months and we already think we know what
+it leaks, but we want you to find it the same way an attacker
+would so the report holds up in front of their board."
+
+Your in-world identity is \`audit\` (uid 1099, primary group
+\`audit\`). Run \`id\` and \`whoami\` to confirm.
+
+─── A NOTE ABOUT THE LAYOUT ───────────────────────────────────
+
+Halton's prod-bastion runs the audit user inside a sandboxed
+shell where the home dir and the read-only system root point at
+the same node. That means \`ls ~\` shows the briefing docs
+(welcome.md, lessons-learned.md) alongside the system paths
+you'd usually find under \`/\` — \`etc/\`, \`var/\`, \`opt/\`.
+That's intentional, not a bug. Halton's audit team scoped the
+shell this way so we can only see the slice that matters for
+this engagement.
+
+The system paths work like you'd expect on any Linux box:
+
+  cat /etc/cron.d/halton-weekly-snapshot     reads the actual file
+  ls  /var/log/                              lists the actual dir
+  cat /opt/halton/snapshot-config.sh         reads the actual script
+
+─── NEW COMMANDS YOU'LL USE TODAY ─────────────────────────────
+
+  ls /etc/cron.d/        System-wide cron entries managed by
+                         packages or ops engineers. One line per
+                         job. Different from user crontabs.
+
+  crontab -l             Your own crontab.
+  crontab -l -u <user>   Another user's crontab. (You'll see
+                         this returns "no crontab" for daniel —
+                         his job isn't in his user table.)
+
+  journalctl -u <unit>   Read the systemd journal for a service.
+                         Try \`journalctl -u cron.service\` to
+                         see every cron fire systemd logged.
+
+─── WHAT CRON IS, BRIEFLY ─────────────────────────────────────
+
+Cron is the Unix scheduler. Two kinds of cron entries coexist
+on a typical Linux box:
+
+  USER CRONTABS         Managed via \`crontab -e\` (or
+                        \`crontab -l\` to read). One per user,
+                        stored under /var/spool/cron/. Lines are
+                        five time fields + a command, executed
+                        AS that user.
+
+  SYSTEM-WIDE CRONTABS  Files under /etc/cron.d/ (and
+                        /etc/cron.{hourly,daily,weekly,monthly}/).
+                        Files are owned by root and dropped in
+                        by packages or ops engineers. The
+                        /etc/cron.d/ format adds a SIXTH column
+                        between the schedule and the command:
+                        the username to run the job as.
+
+The system-wide form is more powerful because the username is
+explicit — a single file can schedule jobs as different users.
+It's also more dangerous because a job running as user X
+doesn't require user X to be logged in, or even to know the
+job exists. If user X's account survives offboarding, X's
+cron jobs survive too.
+
+Stdout and stderr from a cron job go to whoever the line says.
+By default cron emails the user; with explicit redirection
+(\`> /var/log/somefile.log 2>&1\`) the job's output lands in
+that file with whatever permissions cron creates it as. If the
+script uses bash \`set -x\` for debugging, every executed line
+gets emitted to the trace — including \`export FOO=bar\` lines.
+That's how credentials end up in logs.
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat welcome.md                 You're already here.
+  2.  ls /etc/cron.d/                See what's scheduled.
+  3.  cat /etc/cron.d/halton-weekly-snapshot
+                                     Read the entry. Who owns the
+                                     job? Where does its output go?
+  4.  cat /var/log/cron-daniel.log   Read the log. Look for the
+                                     \`+ export SSH_KEY_PASSPHRASE=\`
+                                     line — that's your breadcrumb.
+  5.  cat lessons-learned.md         Post-mortem (after step 4).
+  6.  exit                            Return to the lobby.
+
+Bonus exploration when you're done:
+
+  - \`cat /etc/passwd\` (or \`grep daniel /etc/passwd\`)
+  - \`cat /opt/halton/PASSWORD-POLICY.md\`
+  - \`journalctl -u cron.service\`
+  - \`crontab -l\` and \`crontab -l -u daniel\`
+`
+        },
+
+        ".bash_history": {
+          type: "file",
+          content:
+`whoami
+id
+ls
+cat welcome.md
+ls /etc/cron.d/
+cat /etc/cron.d/halton-weekly-snapshot
+ls -l /var/log/
+cat /var/log/cron-daniel.log
+grep SSH_KEY_PASSPHRASE /var/log/cron-daniel.log
+exit
+`
+        },
+
+        // The system tree. Engine treats fs root as the home dir,
+        // so these entries also appear as ~ siblings of welcome.md.
+        // Welcome.md acknowledges this with the audit-chroot framing.
+        "etc": {
+          type: "dir",
+          children: {
+
+            "cron.d": {
+              type: "dir",
+              children: {
+
+                "halton-weekly-snapshot": {
+                  type: "file",
+                  content:
+`# Halton Bank — weekly prod-config snapshot
+# Owner: daniel (originally; he set this up Q4 2024 before
+#                rolling off and nobody's touched it since)
+# Installed: 2024-10-13 (per package manifest)
+# Purpose: ship a copy of /etc/halton + /etc/systemd to the
+#          off-bastion build runner for quarterly audit
+#          comparison
+#
+# Output is captured for retention per Halton's audit-trail
+# policy. The script uses bash \`set -x\` so the run is fully
+# inspectable in /var/log/cron-daniel.log.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+# m h dom mon dow user    command
+0 3 * * 0     daniel  /opt/halton/snapshot-config.sh >> /var/log/cron-daniel.log 2>&1
+`
+                },
+
+              },
+            },
+
+            // /etc/passwd — bonus-find trigger. daniel still has a
+            // login shell five months after rolling off. Audit user
+            // is the player. The GECOS comment on daniel's row
+            // documents the rollover date in human-readable form,
+            // which is itself the finding.
+            "passwd": {
+              type: "file",
+              content:
+`root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+systemd-network:x:998:998:systemd Network Management:/:/usr/sbin/nologin
+sshd:x:113:65534::/run/sshd:/usr/sbin/nologin
+postgres:x:114:120:PostgreSQL administrator,,,:/var/lib/postgresql:/bin/bash
+daniel:x:1042:1042:Daniel Vance (rolled off Halton 2025-01-31):/home/daniel:/bin/bash
+audit:x:1099:1099:Driftwood Internal Audit:/home/audit:/bin/bash
+`
+            },
+
+          },
+        },
+
+        "var": {
+          type: "dir",
+          children: {
+
+            "log": {
+              type: "dir",
+              children: {
+
+                // The smoking gun. Bash's set -x echoes every
+                // executed line, including the SSH_KEY_PASSPHRASE
+                // export. Six weekly runs preserved so the player
+                // can see the leak is recurring, not a one-shot.
+                "cron-daniel.log": {
+                  type: "file",
+                  content:
+`=== Sun Apr 19 03:00:01 UTC 2026 ===
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ echo H@lton-Snapshot-2024-Q4
++ ssh-add -p /etc/halton/keys/snapshot-rsync.key
+Identity added: /etc/halton/keys/snapshot-rsync.key (snapshot-2024@halton)
++ SNAPSHOT_DIR=/tmp/halton-snapshot-2026-04-19
++ mkdir -p /tmp/halton-snapshot-2026-04-19
++ cp -a /etc/halton /tmp/halton-snapshot-2026-04-19/etc-halton
++ cp -a /etc/systemd /tmp/halton-snapshot-2026-04-19/etc-systemd
++ rsync -a /tmp/halton-snapshot-2026-04-19/ daniel@halton-build-runner:/var/backups/halton-prod/
+sent 4,182,914 bytes  received 1,204 bytes  836,823.60 bytes/sec
+total size is 4,180,222  speedup is 1.00
++ rm -rf /tmp/halton-snapshot-2026-04-19
+
+=== Sun Apr 26 03:00:01 UTC 2026 ===
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ echo H@lton-Snapshot-2024-Q4
++ ssh-add -p /etc/halton/keys/snapshot-rsync.key
+Identity added: /etc/halton/keys/snapshot-rsync.key (snapshot-2024@halton)
++ SNAPSHOT_DIR=/tmp/halton-snapshot-2026-04-26
++ mkdir -p /tmp/halton-snapshot-2026-04-26
++ cp -a /etc/halton /tmp/halton-snapshot-2026-04-26/etc-halton
++ cp -a /etc/systemd /tmp/halton-snapshot-2026-04-26/etc-systemd
++ rsync -a /tmp/halton-snapshot-2026-04-26/ daniel@halton-build-runner:/var/backups/halton-prod/
+sent 4,183,012 bytes  received 1,204 bytes  836,843.20 bytes/sec
+total size is 4,180,320  speedup is 1.00
++ rm -rf /tmp/halton-snapshot-2026-04-26
+
+=== Sun May  3 03:00:01 UTC 2026 ===
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ echo H@lton-Snapshot-2024-Q4
++ ssh-add -p /etc/halton/keys/snapshot-rsync.key
+Identity added: /etc/halton/keys/snapshot-rsync.key (snapshot-2024@halton)
++ SNAPSHOT_DIR=/tmp/halton-snapshot-2026-05-03
++ mkdir -p /tmp/halton-snapshot-2026-05-03
++ cp -a /etc/halton /tmp/halton-snapshot-2026-05-03/etc-halton
++ cp -a /etc/systemd /tmp/halton-snapshot-2026-05-03/etc-systemd
++ rsync -a /tmp/halton-snapshot-2026-05-03/ daniel@halton-build-runner:/var/backups/halton-prod/
+sent 4,183,228 bytes  received 1,204 bytes  836,886.40 bytes/sec
+total size is 4,180,536  speedup is 1.00
++ rm -rf /tmp/halton-snapshot-2026-05-03
+
+=== Sun May 10 03:00:01 UTC 2026 ===
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ echo H@lton-Snapshot-2024-Q4
++ ssh-add -p /etc/halton/keys/snapshot-rsync.key
+Identity added: /etc/halton/keys/snapshot-rsync.key (snapshot-2024@halton)
++ SNAPSHOT_DIR=/tmp/halton-snapshot-2026-05-10
++ mkdir -p /tmp/halton-snapshot-2026-05-10
++ cp -a /etc/halton /tmp/halton-snapshot-2026-05-10/etc-halton
++ cp -a /etc/systemd /tmp/halton-snapshot-2026-05-10/etc-systemd
++ rsync -a /tmp/halton-snapshot-2026-05-10/ daniel@halton-build-runner:/var/backups/halton-prod/
+sent 4,183,418 bytes  received 1,204 bytes  836,924.40 bytes/sec
+total size is 4,180,726  speedup is 1.00
++ rm -rf /tmp/halton-snapshot-2026-05-10
+
+=== Sun May 17 03:00:01 UTC 2026 ===
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ echo H@lton-Snapshot-2024-Q4
++ ssh-add -p /etc/halton/keys/snapshot-rsync.key
+Identity added: /etc/halton/keys/snapshot-rsync.key (snapshot-2024@halton)
++ SNAPSHOT_DIR=/tmp/halton-snapshot-2026-05-17
++ mkdir -p /tmp/halton-snapshot-2026-05-17
++ cp -a /etc/halton /tmp/halton-snapshot-2026-05-17/etc-halton
++ cp -a /etc/systemd /tmp/halton-snapshot-2026-05-17/etc-systemd
++ rsync -a /tmp/halton-snapshot-2026-05-17/ daniel@halton-build-runner:/var/backups/halton-prod/
+sent 4,183,612 bytes  received 1,204 bytes  836,963.20 bytes/sec
+total size is 4,180,920  speedup is 1.00
++ rm -rf /tmp/halton-snapshot-2026-05-17
+
+=== Sun May 24 03:00:01 UTC 2026 ===
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ echo H@lton-Snapshot-2024-Q4
++ ssh-add -p /etc/halton/keys/snapshot-rsync.key
+Identity added: /etc/halton/keys/snapshot-rsync.key (snapshot-2024@halton)
++ SNAPSHOT_DIR=/tmp/halton-snapshot-2026-05-24
++ mkdir -p /tmp/halton-snapshot-2026-05-24
++ cp -a /etc/halton /tmp/halton-snapshot-2026-05-24/etc-halton
++ cp -a /etc/systemd /tmp/halton-snapshot-2026-05-24/etc-systemd
++ rsync -a /tmp/halton-snapshot-2026-05-24/ daniel@halton-build-runner:/var/backups/halton-prod/
+sent 4,183,818 bytes  received 1,204 bytes  837,004.40 bytes/sec
+total size is 4,181,126  speedup is 1.00
++ rm -rf /tmp/halton-snapshot-2026-05-24
+`
+                },
+
+                // Atmospheric — gives the dir a realistic shape.
+                "syslog": {
+                  type: "file",
+                  content:
+`May 28 09:10:02 halton-prod-bastion sshd[812]: Accepted password for audit from 10.0.7.42 port 56118 ssh2
+May 28 09:10:02 halton-prod-bastion systemd-logind[623]: New session 47 of user audit.
+May 28 09:00:01 halton-prod-bastion CRON[20910]: (root) CMD (/usr/local/sbin/cron-health.sh)
+May 28 08:55:01 halton-prod-bastion CRON[20891]: (root) CMD (/usr/local/sbin/cron-health.sh)
+May 24 03:00:14 halton-prod-bastion CRON[974]: pam_unix(cron:session): session closed for user daniel
+May 24 03:00:01 halton-prod-bastion CRON[974]: (daniel) CMD (/opt/halton/snapshot-config.sh >> /var/log/cron-daniel.log 2>&1)
+May 24 03:00:01 halton-prod-bastion CRON[974]: pam_unix(cron:session): session opened for user daniel(uid=1042) by (uid=0)
+`
+                },
+
+              },
+            },
+
+          },
+        },
+
+        "opt": {
+          type: "dir",
+          children: {
+
+            "halton": {
+              type: "dir",
+              children: {
+
+                // The script the cron entry runs. Source of the leak:
+                // bash \`set -x\` causes every executed line to echo,
+                // and `export FOO=bar` is one of those lines. Reading
+                // this file shows the player the technical mechanism
+                // even without opening the log.
+                "snapshot-config.sh": {
+                  type: "file",
+                  content:
+`#!/bin/bash
+# Halton weekly prod-config snapshot.
+# Daniel set this up Q4 2024. Never rotated.
+#
+# The set -x line is intentional: Halton's audit policy
+# requires a complete trace of every prod-touching job so
+# the run can be reconstructed for SOX-ish review. Nobody
+# has audited the TRACE FILES themselves for what they
+# leak. (That's our finding today.)
+
+set -euxo pipefail
+
+# Passphrase for the snapshot-rsync key, which authenticates
+# the rsync to halton-build-runner. ssh-add slurps it from
+# the env at call time.
+export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
+
+echo "$SSH_KEY_PASSPHRASE" | ssh-add -p /etc/halton/keys/snapshot-rsync.key
+
+SNAPSHOT_DIR="/tmp/halton-snapshot-$(date +%F)"
+mkdir -p "$SNAPSHOT_DIR"
+
+cp -a /etc/halton   "$SNAPSHOT_DIR/etc-halton"
+cp -a /etc/systemd  "$SNAPSHOT_DIR/etc-systemd"
+
+rsync -a "$SNAPSHOT_DIR/" daniel@halton-build-runner:/var/backups/halton-prod/
+
+rm -rf "$SNAPSHOT_DIR"
+`
+                },
+
+                // BONUS-FIND TRIGGER. Halton's password-policy doc
+                // mandates the `<Brand>-YYYY-Q#` shape. The bonus
+                // text inside critiques the entropy. Reading it is
+                // the win condition for the second bonus find.
+                "PASSWORD-POLICY.md": {
+                  type: "file",
+                  content:
+`# Halton Bank — Production Credential Naming Standard
+# Document HBPC-2022-014 rev 3 (last review: 2024-09-12)
+# Owner: Halton Bank Information Security Office (HBISO)
+# Distribution: ops, devops, contracted consulting firms
+
+## Purpose
+
+Define a consistent naming pattern for production credentials
+so rotation cadence is easy to track during quarterly audits.
+
+## Pattern (mandatory)
+
+All production-tier credentials MUST follow:
+
+    Halton-YYYY-Q#!
+
+where YYYY is the current calendar year and Q# is the current
+quarter (Q1, Q2, Q3, Q4). The trailing exclamation point is
+required by the policy engine that validates these strings on
+intake.
+
+Examples (illustrative; never store actual passwords in this
+document):
+
+    Halton-2024-Q3!         (live)
+    Halton-2024-Q4!         (live during Q4 2024 only)
+    Halton-2025-Q1!         (live during Q1 2025 only)
+
+## Rationale
+
+Predictable naming makes rotation audit-friendly: every
+credential's CURRENT value implies its issue date and last
+rotation. Auditors can verify rotation cadence in a single
+column of a spreadsheet.
+
+The HBISO acknowledges the entropy implication of this
+pattern. The trade-off is intentional. The actual control
+against guessing is RATE LIMITING + ACCOUNT LOCKOUT, not
+password complexity. Rotation cadence is the secondary
+control. Password content is the tertiary control.
+
+## Exceptions
+
+Service-account keys, SSH key passphrases, and machine-to-
+machine credentials that are NOT rotated quarterly MAY use
+a variant pattern:
+
+    Halton-<purpose>-YYYY-Q#
+
+Examples:
+
+    Halton-Snapshot-2024-Q4         (set Q4 2024; rotation
+                                     deferred per HBISO-EX-0042;
+                                     re-evaluate at next audit)
+
+## Review
+
+This standard is reviewed annually. Next scheduled review:
+2025-09-12. (Overdue as of this writing.)
+
+## Notes for consulting partners
+
+When auditing a Halton-issued credential, the pattern above
+narrows the credential's possible-value space to roughly 12
+strings per year (one per quarter for the live tier, plus
+the longer-form purpose-specific variants). This is FYI for
+your incident-response runbooks; it is not a finding in
+itself.
+`
+                },
+
+              },
+            },
+
+          },
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+You just chained three failures into a third-hop credential:
+
+  1. An offboarded consultant's account (daniel) was never
+     disabled. It still has a login shell and still owns a
+     cron entry in /etc/cron.d/.
+
+  2. That cron entry runs a script under bash \`set -x\` and
+     redirects the trace to a world-readable log. The trace
+     echoes \`export SSH_KEY_PASSPHRASE='...'\` — leaking
+     the passphrase to anyone who can read /var/log/.
+
+  3. The passphrase itself follows Halton's institutional
+     pattern (Halton-<purpose>-YYYY-Q#) and hasn't been
+     rotated since Q4 2024. Anyone who has READ the password
+     policy knows the entropy budget — and the rotation
+     cadence the policy promised was never executed.
+
+Each failure is mundane. The combination is a credential
+hand-off from an audit shell to the next system in the chain.
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+CWE-532 (Insertion of Sensitive Information into Log File)
+exists because this exact pattern is older than the CWE
+catalog itself. Debugging output that helps engineers in the
+moment becomes attacker-readable evidence the moment the
+session is over. Bash's \`set -x\` is the canonical mechanism
+on Unix; the Python equivalent is \`logging.DEBUG\` with
+credentials in the args; the Node equivalent is a stray
+\`console.log(req.headers)\` left in.
+
+The log file's mode (644 — world-readable) is the second
+half of the failure. Even if \`set -x\` were intentional,
+the mitigation is "lock down where the trace lands." A 640
+log readable only by the \`adm\` group would have made this
+finding require a sudo prompt; 600 readable only by root
+would have hidden it from this audit account entirely.
+
+The cron-as-daniel piece is CWE-250 (Execution with
+Unnecessary Privileges). Daniel left Halton five months ago.
+His account on this box should have been disabled the day
+his Driftwood badge was deactivated. NIST SP 800-53 PS-4
+(Personnel Termination) is the control that should have
+fired; AC-2(3) (Disable Accounts) is the related identity-
+lifecycle control. Both were missed.
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+This finding spans the Halton/Driftwood boundary in a way
+that yesterday's finding did not. Yesterday Daniel left
+credentials on his Driftwood laptop — that's Driftwood's
+side of the MSA to control. Today Daniel's account on
+HALTON'S production bastion was never disabled — that's
+Halton's side. Both responsibilities are usually in the
+offboarding checklist. Both got missed.
+
+In a real engagement this becomes a remediation conversation
+across two CISO offices and an external auditor. The clean
+way to write it up:
+
+  Finding 1 (Driftwood):   Offboarded consultant's laptop
+                           retained client credentials.
+                           Owner: Driftwood IT + Engagement
+                           Manager (Priya).
+
+  Finding 2 (Halton):      Offboarded consultant's local
+                           account on prod-bastion was never
+                           disabled and still owns a cron
+                           job exfiltrating credentials.
+                           Owner: Halton Ops + Halton HRBP.
+
+  Finding 3 (Joint):       Cross-organization offboarding
+                           checklist is incomplete on both
+                           sides. A consultant's identities
+                           need explicit teardown across
+                           BOTH organizations' systems.
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  CWE-250 — Execution with Unnecessary Privileges
+    Daniel's account no longer should have ANY privileges.
+    A cron job running under that account inherits whatever
+    permissions the system grants to that uid.
+
+  CWE-521 — Weakly Protected Credentials (related)
+    Halton's password pattern is predictable enough to
+    constitute a weak-credential finding on its own.
+
+  CWE-532 — Insertion of Sensitive Information into Log File
+    The trace of the snapshot script committed the passphrase
+    to a 644-mode log. This CWE is one of the most-cited
+    weakness classes in published threat reports.
+
+  NIST SP 800-53 Rev. 5
+    AC-2(3): Disable Accounts. Required within an
+      organization-defined time period of account no longer
+      being required. Daniel's account is the textbook miss.
+    AC-6: Least Privilege. daniel's continued group
+      memberships gave him read access he should not have
+      retained.
+    AU-9: Protection of Audit Information. The cron trace
+      IS audit information by Halton's own policy. It must
+      be protected commensurate with its sensitivity.
+    PS-4: Personnel Termination. Within an org-defined time
+      period of termination, disable system access AND
+      revoke authenticators (passwords, SSH keys, smart
+      cards) associated with the individual.
+
+  CIS Critical Security Controls v8.1
+    5.3: Disable dormant accounts (e.g., 45 days no activity).
+    5.5: Enforce automatic disabling of dormant accounts.
+    6.7: Centralize access control where feasible — a
+         centralized identity store would have made the
+         offboarding teardown a single revoke instead of
+         per-system housekeeping that gets missed.
+
+  OWASP Top 10 (2025) — A04: Insecure Design
+    Logging untrusted data into world-readable files at
+    design time is the named example. (Pre-2025 editions
+    placed this finding under A09: Security Logging /
+    Monitoring Failures.)
+
+  GLBA Safeguards Rule (16 CFR Part 314)
+    314.4(c)(3): "Limit and monitor who can access systems
+    containing customer information." daniel's account is
+    a monitored-access failure for Halton specifically.
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  CompTIA Security+ (SY0-701)
+    Domain 4.1: Account-management practices, including
+    deprovisioning. The exam tests this directly.
+
+  ISC2 Certified in Cybersecurity (CC)
+    Identity & Access lifecycle — the offboarding step.
+
+  CompTIA CySA+ (CS0-003)
+    Domain 1.4: Threat intelligence and threat-hunting,
+    including hunts for dormant-account misuse.
+
+  CISSP
+    Domain 5 (IAM): provisioning + deprovisioning lifecycle.
+    Domain 6 (Security Assessment + Testing): how to audit
+    the lifecycle a real organization claims to be running.
+
+  OSCP / PEN-200
+    Privilege escalation via cron — a classic category.
+    Today's variant is the credentials-leaking-into-the-
+    log subspecies.
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+  T1078.003 — Valid Accounts: Local Accounts
+    daniel's account on this box is a valid local account
+    surviving past its intended lifecycle. Adversaries
+    routinely target dormant-but-active accounts because
+    they tend not to alert on misuse the way active
+    accounts do.
+
+  T1053.003 — Scheduled Task/Job: Cron
+    Cron is named ATT&CK technique for both adversary use
+    (persistence) and defender hunt (detection). The
+    snapshot job IS the cron technique, repurposed.
+
+  T1552.001 — Unsecured Credentials: Credentials In Files
+    The trace log is the file. The credential is the
+    passphrase. T1552.001 is one of the most-frequently-
+    observed sub-techniques in published incident reports.
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. Disable daniel's account on this box TODAY. Set
+     /sbin/nologin as his shell or delete the account
+     outright. Audit every other Halton-managed host for
+     the same residue.
+
+  2. Sweep /etc/cron.d/ AND every user crontab for jobs
+     owned by accounts not in the current employee/
+     contractor directory. Automate this with osquery,
+     auditd, or a quarterly cron-vs-IDP cross-reference
+     report.
+
+  3. Lock down /var/log/cron-*.log. Default mode for
+     cron-written logs should be 640 owned by root:adm at
+     minimum. Halton's logrotate config should enforce
+     this on rotation.
+
+  4. Remove \`set -x\` from production scripts that touch
+     secrets. If verbose tracing is required for audit,
+     pipe the trace through a redaction filter that
+     suppresses lines matching credential patterns
+     (regex on \`export *[A-Z_]*(PASS|KEY|TOKEN|SECRET)\`).
+
+  5. Move the snapshot job to a secrets-backend pattern:
+     the script calls Vault / Secrets Manager / Doppler
+     to fetch the passphrase, ssh-add reads it from a
+     pipe, the value never lives in the env at all.
+
+  6. Fix the institutional pattern: a Halton-YYYY-Q#
+     credential is not a real credential. It's a
+     compliance-checkbox artifact. The next contractor
+     who reads PASSWORD-POLICY.md should be able to
+     guess production credentials within a 12-string
+     window. That's a finding in its own right and
+     belongs in the executive summary.
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+Most credential exfiltrations from production systems are
+not exotic. They look like this: an account that should
+have been disabled six months ago is running a job nobody
+is paying attention to, and the job is writing its own
+credentials into a log on the way past. The defender's
+job is to be the person who checks anyway.
+
+Priya: "Great catch. Three findings from one bastion is
+above average. Write it up for the joint Halton + Driftwood
+retro — we owe the next track its own set of eyes."
+
+(Speaking of which: Marcus at Atlas Health flagged a cert
+he can't explain on a host we didn't sweep last quarter.
+Network track when you're ready.)
+
+Return to the lobby:    ssh guest@d3cyph3r
+`
+        },
+
+      },
+    },
+  },
+
 };
