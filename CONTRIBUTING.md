@@ -17,8 +17,11 @@ python3 -m http.server 8000
 ```
 
 Any other static server works too — `npx serve`, `live-server`, Caddy.
-The app is desktop-only by design; mobile devices get a "device not
-supported" gate.
+The app is **designed for desktop**; mobile devices see a warning gate
+by default but can tap "Continue anyway" to boot into a mobile-mode
+build (responsive CSS + soft-key row above the on-screen keyboard).
+The site is also installable as a Progressive Web App on Chrome /
+Edge / Safari 16.4+ — both surfaces shipped in v1.21.0.
 
 To run the headless playtest:
 
@@ -216,12 +219,56 @@ Commands run synchronously in the sandbox, so backgrounded jobs
 complete immediately — the UX matches bash without true
 concurrency.
 
-**Boot order matters.** `js/main.js` short-circuits on mobile
-*before* importing engine modules (dynamic `await import()`), so the
-engine never executes on mobile. On desktop the order is: command
-set → input handlers → clock → boot. `boot()` prints the fake
-kernel sequence and then `connectTo("guest@d3cyph3r")` drops the
-user into the lobby.
+**Boot order matters.** `js/main.js` checks `isMobile()` first; if
+the device is mobile AND `isMobileBypassed()` is false (no
+"Continue anyway" tap recorded in sessionStorage AND not running in
+PWA standalone mode), the warning gate renders and engine modules
+never load. Otherwise — desktop, or mobile-bypassed — engine modules
+load via dynamic `await import()` in this order: state hydration →
+theme init → command set → input handlers → clock → bonus rehydrate
+→ level-timer rehydrate → beforeunload flush hook → `boot()` →
+`registerServiceWorker()`. `boot()` prints the fake kernel sequence
+and then `connectTo("guest@d3cyph3r")` drops the user into the
+lobby. SW registration is fire-and-forget after boot so PWA install
+doesn't compete with first-paint.
+
+**Mobile mode (v1.21.0).** When the player bypasses the gate (or
+launches the installed PWA in standalone mode), `state.isMobileMode`
+is set to `true` and `body.mobile-mode` is added. Responsive CSS
+under `@media (max-width: 768px)` plus the `body.mobile-mode` class
+adjust font sizes, padding, and visibility of the soft-key row.
+`js/terminal/softkeys.js` injects a horizontal-scrolling row of 18
+keys (Tab, Esc, arrows, Ctrl-C, shell symbols) above the input as a
+sibling of `#input-area`. Special keys synthesize real
+`KeyboardEvent`s so existing readline handlers process them;
+character keys splice the literal value at the cursor. A tap-to-
+focus handler on `#screen` focuses the hidden `<input>` so the on-
+screen keyboard opens.
+
+**Service worker (v1.21.0).** `sw.js` uses runtime caching — only
+the bootstrap shell (HTML + manifest + icons) is pre-cached on
+install; everything else (engine modules, level data, walkthroughs)
+caches on-demand via routing-based strategies (network-first for
+HTML, stale-while-revalidate for `/js/`, `/levels/`,
+`/walkthroughs/`, and `style.css`, cache-first for vendored libs +
+icons). The `CACHE_VERSION` constant at the top of `sw.js` is
+bumped in lockstep with `js/engine/version.js` per release; the
+`activate` event nukes every cache whose name doesn't match the
+current version. Player-callable `sw status` / `sw update` / `sw
+clear` commands live in `js/commands/pwa.js`; `reload` triggers
+`skipWaiting` if a new SW is waiting.
+
+**Stateless progress codes (v1.20.0).** `js/engine/savecode.js`
+encodes the player's progress (visited levels, achievements, bonus
+finds, per-level times, hint counters, theme, onboarding flag,
+lobby-expand state) into a packed-binary base64url string framed
+as `D3C2-XXXX-...-CCCCCCCC`. Six **stable append-only registries**
+(LEVEL / ACHIEVEMENT / THEME / TRACK / MILESTONE / BONUS) map
+string ids to small integer indexes — the indexes are burned into
+every code that references them, so **never reorder or delete
+entries**; append only. Decoding iterates only up to the current
+registry length, so codes from older versions decode cleanly and
+new entries are silently ignored by old decoders.
 
 **Per-track credential chain.** Every level leaks a credential that
 the next level in its track consumes as its entry gate (`password`

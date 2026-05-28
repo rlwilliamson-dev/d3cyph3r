@@ -31,7 +31,7 @@ python3 -m http.server 8000
 
 Or use any other static server (`npx serve`, `live-server`, etc.).
 
-D3CYPH3R is **desktop-only**. Mobile devices get an intentionally rude "device not supported" gate — the terminal-input model needs a real keyboard.
+D3CYPH3R is **designed for desktop**. The puzzles assume a real keyboard — Tab autocomplete, Ctrl-shortcuts, long pipelines. Mobile devices see a warning gate by default; tapping **Continue anyway** boots the engine in mobile mode with a soft-key row above the on-screen keyboard for Tab / Esc / Ctrl-C / `|` / `&&` / `$` / `_` / etc. (v1.21.0). The site is also installable as a **Progressive Web App** — Chrome / Edge / Safari 16.4+ show an Install button after a few visits, after which the app gets its own dock icon, opens in a borderless window, and works offline.
 
 ## What you can do today
 
@@ -49,7 +49,7 @@ guest@d3cyph3r:~$ ssh level0@cloud        # S3 misconfiguration / SOC 2 audit
 
 Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. The level1 in each track is gated by a credential the player recovers during level0 (Daniel's `creds.txt`, Marcus's unrotated default, the decoded base64 API key, Meridian's leaked DB password, Sgt. Chen's handoff archive password, Aaron's reused breach-corpus password, and Coverline's hardcoded RDS master). Every level1 in turn leaks a credential staged for the eventual level2 — the per-track credential chain is the through-line.
 
-The lobby (`guest@d3cyph3r`) renders the engagement list as a collapsible tree (v1.10.0): each track is one line by default; `tracks <name>` expands a track to show its level lineup with titles, computed difficulty tier (Routine / Live / Escalated / Critical / Crisis — type `tiers` for definitions), and estimated time. Tracks with any visited level auto-expand on the next lobby render. Run `progress --detail` to see your discovered bonus finds across the session. Type `help` inside any level for the full command reference.
+The lobby (`guest@d3cyph3r`) renders the engagement list as a collapsible tree (v1.10.0): each track is one line by default; `tracks <name>` expands a track to show its level lineup with titles, computed difficulty tier (Routine / Live / Escalated / Critical / Crisis — type `tiers` for definitions), and estimated time. Tracks with any visited level auto-expand on the next lobby render. First-time visitors see a guided FIRST STEPS block and can run `tutorial start` for a hand-held walk-through (v1.12.0); returning visitors see a welcome-back summary with a "Continue: ssh level<N+1>@<track>" recommendation (v1.18.0). Other player surfaces: `progress --detail` lists discovered bonus finds + per-level times, `achievements` lists the 20-achievement layer (v1.14.0), `themes` switches between 11 palettes (v1.13.0), `save` emits a portable progress code (v1.20.0). Type `help` inside any level for the full command reference.
 
 ## Walkthroughs
 
@@ -61,7 +61,7 @@ https://www.d3cyph3r.com/walkthroughs/
 
 The walkthroughs (~7,000 words each, 9 sections) cover the solve path, the vulnerability class in depth, real-world parallels (Uber 2014 / Optus 2022 / Toyota 2022 / SolarWinds / MOVEit / Snowflake, etc.), framework + cert tie-ins (SOC 2 / NIST / NAIC / NYDFS / GLBA / OWASP / CIS / CWE), MITRE ATT&CK mapping, defender-action recommendations, and curated further reading. They're spoiler-bearing — only read a walkthrough after solving the level.
 
-The subsite is excluded from search-engine indexing (`robots.txt`) and uses hash-based routing so direct walkthrough URLs are bookmarkable.
+The subsite is publicly indexable as of v1.0.0 — search-engine traffic finding the walkthroughs is desired behavior, and the spoiler-warning callout at the top of each walkthrough guards against accidental spoilers. Hash-based routing means direct walkthrough URLs are bookmarkable.
 
 ## How it's organized
 
@@ -69,9 +69,15 @@ The subsite is excluded from search-engine indexing (`robots.txt`) and uses hash
 d3cyph3r/
 ├── index.html               Entry point — boots the engine
 ├── 404.html                 Themed 404 page (Azure SWA fallback)
-├── style.css                Dark terminal theme
+├── style.css                Dark terminal theme (+ 10 alt themes, v1.13.0)
 ├── favicon.svg              D3CYPH3R favicon
 ├── og-image.png             Open Graph preview image (1200×630)
+├── manifest.webmanifest     PWA manifest — name / icons / display (v1.21.0)
+├── sw.js                    Service worker — runtime caching (v1.21.0)
+├── icon-192.png             PWA icon (Android home screen, v1.21.0)
+├── icon-512.png             PWA icon (high-res, splash, v1.21.0)
+├── icon-maskable.png        PWA icon (Android adaptive shape, v1.21.0)
+├── icon-180.png             PWA icon (iOS apple-touch-icon, v1.21.0)
 ├── robots.txt               Crawl policy + sitemap pointer
 ├── sitemap.xml              Search-engine site index
 ├── staticwebapp.config.json Azure SWA routing + headers + 404 override
@@ -83,20 +89,31 @@ d3cyph3r/
 ├── assets/
 │   └── og-template.html     HTML source used to render og-image.png
 ├── js/
-│   ├── main.js              Boots the app, runs mobile gate
-│   ├── mobile-gate.js       Desktop-only "device not supported" screen
+│   ├── main.js              Boots the app, runs mobile gate, registers SW
+│   ├── mobile-gate.js       Mobile warning + "Continue anyway" bypass (v1.21.0)
 │   ├── terminal/            Output, input, cursor, clock, DOM refs
 │   │   ├── clock.js         Top-bar clock tick
 │   │   ├── dom.js           Cached DOM-element references
 │   │   ├── input.js         Keystroke handling + Tab autocomplete + history
-│   │   └── output.js        Print-to-terminal helpers + CSS classes
+│   │   ├── output.js        Print-to-terminal helpers + CSS classes (+ printRich, v1.19.0)
+│   │   ├── prompt.js        PS1 escape-code rendering (v1.9.0)
+│   │   ├── softkeys.js      Mobile soft-key row above on-screen keyboard (v1.21.0)
+│   │   └── theme.js         11-theme registry + setTheme/cycleTheme (v1.13.0)
 │   ├── engine/              Game state, SSH, lobby, dispatch
-│   │   ├── state.js         Live bindings (currentLevelKey, currentPath, ...)
+│   │   ├── state.js         Live bindings (currentLevelKey, processEnv, isMobileMode, ...)
 │   │   ├── execute.js       Per-Enter dispatch (echo → ssh → commands)
-│   │   ├── ssh.js           Connect / disconnect / password-prompt flow
-│   │   ├── lobby.js         Lobby render + first-visit onboarding
+│   │   ├── ssh.js           Connect / disconnect / password-prompt / pivot flow
+│   │   ├── lobby.js         Lobby render + first-visit onboarding + welcome-back summary
 │   │   ├── tracks.js        Track metadata (track key → display name, etc.)
+│   │   ├── tiers.js         Computed difficulty tiers (Routine → Crisis) (v1.10.0)
 │   │   ├── progress.js      sessionStorage persistence (visited levels)
+│   │   ├── persistence.js   Opt-in localStorage mirror layer (v1.11.0)
+│   │   ├── leveltimer.js    Per-level time tracking + solve detection (v1.16.0)
+│   │   ├── achievements.js  20-achievement registry + checker (v1.14.0)
+│   │   ├── bonus.js         Bonus-find trigger matcher (v1.9.0)
+│   │   ├── suggest.js       Levenshtein "did you mean" suggestion (v1.15.0)
+│   │   ├── savecode.js      Packed-binary save/restore encode + decode (v1.20.0)
+│   │   ├── pwa.js           Service-worker registration + update detection (v1.21.0)
 │   │   ├── expand.js        Per-token expansion ($VAR / ${VAR} / $? / $(...))
 │   │   ├── parse.js         Tokenizer + statement chain (&&/||/;), quote-aware
 │   │   ├── validate.js      Schema validator (warns on level data bugs at init)
@@ -118,7 +135,16 @@ d3cyph3r/
 │   │   ├── structured.js    jq / gpg / openssl (multi-subcommand)
 │   │   ├── git.js           git log / show / diff / status / blame / config
 │   │   ├── readonly-stubs.js  chmod / mv / rm / sudo / su (read-only errors)
-│   │   ├── learning.js      hint / man / what-is (player self-help layer)
+│   │   ├── learning.js      hint / man / what-is / walkthrough / progress / search
+│   │   ├── env.js           export / env / unset / set (v1.9.0)
+│   │   ├── jobs.js          jobs / fg / bg / kill / wait / disown (v1.9.0)
+│   │   ├── lobby.js         tracks / tiers (lobby-tree controls, v1.10.0)
+│   │   ├── tutorial.js      tutorial + first-visit guided tour (v1.12.0)
+│   │   ├── themes.js        theme / themes commands (v1.13.0)
+│   │   ├── achievements.js  achievements + --detail (v1.14.0)
+│   │   ├── savecode.js      save / restore commands (v1.20.0)
+│   │   ├── pwa.js           sw / reload commands (v1.21.0)
+│   │   ├── help-strings.js  --help block registry + auto-extractor (v1.17.0)
 │   │   ├── man-pages.js     NAME/SYNOPSIS/DESCRIPTION/EXAMPLES for every command
 │   │   ├── glossary.js      what-is term definitions (frameworks / regs / CWEs)
 │   │   └── shell.js         help / clear / report / exit / logout
@@ -142,11 +168,11 @@ d3cyph3r/
 │   ├── index.html           Walkthrough reader shell
 │   ├── walkthrough.css      Docs-reader theme (distinct from main terminal)
 │   ├── walkthrough.js       Hash router + markdown renderer (vendored marked.js)
-│   ├── vendor/marked.js     Markdown → HTML library (CC-BY-3.0 attribution in vendor/)
-│   ├── linux/level0.md      One walkthrough per shipped level — 14 total as of v1.0
+│   ├── vendor/marked.esm.min.js  Markdown → HTML library (CC-BY-3.0 attribution in vendor/)
+│   ├── linux/level0.md      One walkthrough per shipped level — 14 total as of v1.0.0
 │   └── (etc., one per level)
 ├── tests/                   Playwright playtest + OG-image generator
-│   ├── playtest.cjs         Headless playthrough of every shipped level (412 assertions)
+│   ├── playtest.cjs         Headless playthrough of every shipped level (~720 assertions)
 │   ├── generate-og-image.cjs Renders assets/og-template.html → og-image.png
 │   ├── package.json         playwright + chromium dependencies
 │   └── package-lock.json
@@ -166,7 +192,7 @@ All seven tracks ship level0 + level1 today. The next phase adds level2 across t
 
 D3CYPH3R is a cybersecurity learning tool. The puzzles teach defensive auditing skills in a safe sandbox — the techniques cited (MITRE ATT&CK, CWE, NIST 800-53, CIS Controls) are the same ones professional security teams use every day to *find* this kind of exposure on their own infrastructure. **Don't apply these techniques against systems you don't own or aren't authorized to test.** Unauthorized access is illegal in most jurisdictions (CFAA in the US, Computer Misuse Act in the UK, similar elsewhere).
 
-**Privacy.** D3CYPH3R uses `sessionStorage` for progress tracking and `localStorage` for one item only — your theme preference (dark or light). No cookies, no analytics, no telemetry, no third-party scripts. Closing the tab clears progress; theme preference survives across sessions because that's what people expect from a theme toggle.
+**Privacy.** D3CYPH3R uses `sessionStorage` for progress tracking by default — close the tab and progress resets. `localStorage` is used for three items: your theme preference (v1.13.0), your command history (~50 entries for ↑/↓ recall), and — only if you explicitly opt in via the `progress save-on` command (v1.11.0) — a mirrored copy of session progress so it survives across browser sessions on the same device. A short-lived sessionStorage flag (v1.21.0) remembers if you've tapped "Continue anyway" on the mobile gate for the current tab. As of v1.20.0, the `save` command emits a portable progress code you can paste into any other browser via `restore <code>` — no account, no server, no telemetry. As of v1.21.0, a service worker caches static assets for offline play; the cache is namespaced per version and cleared by `sw clear`. No cookies, no analytics, no telemetry, no third-party scripts.
 
 If you open DevTools on the live site you may see CSP errors blocking scripts from `static.cloudflareinsights.com` (a Cloudflare Web Analytics beacon) or `/cdn-cgi/challenge-platform/...` (Cloudflare's bot-detection script). Those are Cloudflare auto-injecting things onto the proxied domain — outside our direct control without changing CDN providers. Our `Content-Security-Policy: script-src 'self'` intentionally blocks them. **The errors are visible proof that the "no third-party scripts" claim is enforced by the browser, not just stated in this README.** A `console.info` line on page load points readers at this paragraph so they don't mistake the blocks for actual breakage.
 
@@ -190,9 +216,12 @@ See `help` inside the terminal for the full reference. Track-by-track:
 - **Crypto inspection:** `gpg --list-keys` / `gpg --verify` / `gpg --decrypt`
 - **Read-only stubs** (sandbox-friendly errors): `chmod` / `chown` / `mv` / `cp` / `rm` / `mkdir` / `rmdir` / `touch` / `ln` / `sudo` / `su` / `useradd` / `passwd`
 - **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>` / `walkthrough` / `progress` (+ `--detail` for bonus-find listing, v1.10.0; + `save-on` / `save-off` / `reset` for opt-in localStorage persistence, v1.11.0) / `tutorial` (+ `start` for the interactive walk-through, v1.12.0) / `achievements` (+ `--detail` for progress fractions, 20-achievement layer over bonus finds, v1.14.0) / `search <term>`
+- **Stateless save/restore (v1.20.0):** `save` (emits a portable progress code) / `restore <code>` (validates + diffs + prompts) / `restore --preview <code>` (decodes without mutating)
+- **PWA controls (v1.21.0):** `sw` (+ `status` / `update` / `clear`) inspects and controls the service worker / `reload` refreshes the page, applying any waiting SW update
 - **Shell environment (v1.9.0):** `export` / `env` / `unset` / `set` / `FOO=bar` / `FOO=bar cmd` / `PS1` substitution (`\u`, `\h`, `\H`, `\w`, `\W`, `\$`)
 - **Job control (v1.9.0):** `cmd &` / `jobs` / `fg` / `bg` / `kill` / `wait` / `disown`
-- **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout` / `tracks` (lobby tree expand/collapse, v1.10.0) / `tiers` (difficulty-tier legend, v1.10.0) / `themes` + `theme <name>` (11-theme picker, v1.13.0)
+- **Universal `--help` (v1.17.0):** every command responds to `--help` with a 3-5 line usage block + pointer to `man <cmd>` for full details
+- **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout` / `tracks` (lobby tree expand/collapse, v1.10.0) / `tiers` (difficulty-tier legend, v1.10.0) / `themes` + `theme <name>` + `theme next`/`prev` (11-theme picker, v1.13.0)
 
 The terminal supports a real bash-shaped composition layer (v1.8.0 + v1.9.0):
 
