@@ -94,6 +94,60 @@
 //        cross-track sweep in the same PR rather than tracking
 //        per-track follow-ups.
 //
+//   3b. PRE-MERGE DOCS SWEEP (added v1.22.0 after a doc-drift catch-
+//       up exposed that CLAUDE.md, README.md's mobile-only claim,
+//       and CONTRIBUTING.md's boot-order paragraph had quietly gone
+//       stale across v1.11–v1.21). Before merging ANY release PR,
+//       grep the five contributor-facing docs for anything the
+//       current release changes:
+//
+//         - README.md         — file-tree listings, feature list,
+//                                privacy section, mobile/desktop
+//                                statements
+//         - CONTRIBUTING.md   — architecture-in-one-screen section,
+//                                boot order, "how to add a command"
+//                                if the new release added engine
+//                                surface
+//         - CLAUDE.md         — architecture sections (one per
+//                                feature area); add a new
+//                                **(vX.Y.Z)** section per release
+//                                that introduces a new module or
+//                                player-visible mechanic
+//         - SECURITY.md       — attack-surface bullets if the
+//                                release adds a new data store
+//                                (localStorage, service worker, an
+//                                IndexedDB, etc.) or a new code
+//                                path that parses untrusted input
+//         - walkthroughs/README.md — only if the walkthrough author
+//                                template / section structure
+//                                changed
+//
+//       Checklist per file: (1) does any sentence describe behavior
+//       that this release CHANGED? (2) does the new release ADD a
+//       module / command / data store / surface that isn't mentioned
+//       yet? Apply both edits in the release PR — not a follow-up.
+//
+//       Common scenarios to look for:
+//         - New module under js/engine/ or js/commands/ → mention
+//           in README's file tree AND CONTRIBUTING's
+//           architecture-in-one-screen AND CLAUDE.md.
+//         - New player-callable command → mention in README's
+//           "Commands implemented" inventory AND in the command-
+//           list bullet for the relevant section.
+//         - Mobile / desktop / browser-support behavior change →
+//           re-read README's intro paragraphs + CONTRIBUTING's
+//           "Run it locally" section for stale claims.
+//         - New storage key or storage layer → SECURITY.md attack-
+//           surface bullets + README's "Privacy" paragraph.
+//
+//       The reason this step exists at all: v1.11-v1.21 each
+//       updated CHANGELOG and the README feature-list line, but
+//       NONE updated CLAUDE.md's architecture sections or the
+//       README's mobile-only privacy claim. The drift accumulated
+//       silently across ten releases before being caught in a
+//       single cleanup pass. Doing it per-release is cheap; doing
+//       it as a back-fill sweep is not.
+//
 //   4. Merge the release commit.
 //   5. Tag v<VERSION> on the merge commit (annotated tag).
 //   6. gh release create v<VERSION> with notes pulled from CHANGELOG.

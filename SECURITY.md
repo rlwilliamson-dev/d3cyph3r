@@ -4,7 +4,8 @@ D3CYPH3R is a browser-based static site hosted on Azure Static Web Apps. The mos
 
 - Cross-site scripting in the walkthrough markdown renderer (`walkthroughs/walkthrough.js` + the vendored `marked.js`)
 - Content-Security-Policy bypasses (the CSP is defined in `staticwebapp.config.json`)
-- Stored-state issues in `sessionStorage` handling
+- Stored-state issues in `sessionStorage`, the opt-in `localStorage` persistence mirror (v1.11.0), or the stateless save/restore code path (v1.20.0)
+- Service worker cache poisoning or stale-asset attacks against the PWA layer (v1.21.0 — `sw.js`)
 - Supply-chain risk in vendored dependencies (`walkthroughs/vendor/marked.esm.min.js`)
 
 The "infrastructure" the player audits inside the game is **entirely simulated** — no real systems are reachable from the engine, and there is nothing to "compromise" inside a level. Findings against fictional Driftwood Systems / Halton / Atlas / Vesta / Meridian / Polaris / Veridian / Coverline are out of scope.
