@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.4] - 2026-05-28
+
+**CodeQL followup pass.** Closes the two real findings from the inaugural CodeQL scan (workflow permissions + walkthrough link sanitization). The seven other alerts from that scan were false positives and have been dismissed with reasons in the Security UI. No engine, schema, command, or player-facing changes.
+
+### Security
+
+- **Walkthrough renderer rejects dangerous URL schemes in markdown links.** `walkthroughs/walkthrough.js` adds `renderer.link` and `renderer.image` overrides that drop any href whose scheme isn't `https:`, `http:`, `mailto:`, `tel:`, `#fragment`, root-relative `/`, or relative `./`/`../`. A markdown link like `[click](javascript:alert(1))` now renders as plain text rather than as a clickable `javascript:` URL. Pairs with the v1.24.3 raw-HTML strip — together they close the two markdown→XSS routes that CSP `script-src 'self'` doesn't gate.
+
+### Changed
+
+- **`playtest_job` and `close_pull_request_job` declare explicit `permissions: contents: read`.** Closes a CodeQL workflow-hygiene alert. The default `GITHUB_TOKEN` scope for 2023+ repos was already `contents: read`, but explicit declaration is best practice and removes the runtime-implicit dependency.
+
 ## [1.24.3] - 2026-05-28
 
 **Security hygiene pass.** Defense-in-depth fixes across the walkthrough renderer, deploy payload, response headers, and engine input validation. No new gameplay, no schema changes, no commands added.
