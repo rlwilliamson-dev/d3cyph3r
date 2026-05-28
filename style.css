@@ -945,15 +945,27 @@ body.mobile-mode #input-wrapper {
   #clock        { font-size: 11px; }
   #level-badge  { font-size: 11px; }
 
-  /* Terminal goes full-width with smaller font so 80-col output fits */
+  /* Terminal goes full-width with smaller font so 80-col output fits.
+     v1.21.0-r6: bumped 11→12px for readability. Still narrow enough
+     that most ~70-char engine output lines fit without aggressive
+     wrapping on iPhone-portrait (375px wide). */
   #terminal {
-    font-size: 11px;
-    line-height: 1.45;
+    font-size: 12px;
+    line-height: 1.5;
     padding: 8px 10px;
   }
+  /* v1.21.0-r6: word-break/overflow-wrap rules retuned for readability.
+     The previous `word-break: break-word` was deprecated AND too
+     aggressive — it would chop mid-word even when there was a space
+     to break at, so a phrase like "Driftwood Systems" would break as
+     "Driftwo|od Systems" if it didn't fit. The new combo prefers
+     normal word-boundary wrapping (`word-break: normal`) and only
+     falls back to mid-word breaking when a single token genuinely
+     overflows (URL, long command, base64 blob). */
   .line {
-    word-break: break-word;
-    overflow-wrap: break-word;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;  /* preserve indentation/spacing in output */
   }
 
   /* Input area: full-width prompt, tightened padding */
@@ -963,12 +975,22 @@ body.mobile-mode #input-wrapper {
   #prompt-label {
     font-size: 11px;
   }
-  #cmd-input,
+  /* Mirror spans (the visible "cursor + typed text" overlay) sit at
+     the same size as the terminal body. */
   #input-wrapper,
   #mirror-before,
   #mirror-cursor,
   #mirror-after {
     font-size: 12px;
+  }
+  /* iOS Safari auto-zooms into any focused <input> with font-size
+     < 16px. The actual input is invisible (opacity 0) so its size
+     doesn't affect what the player sees — but Safari still zooms
+     based on its rendered font-size. Bumping to 16px on mobile
+     stops the zoom-on-focus while keeping the visible mirror spans
+     at their 12px terminal-style size. */
+  #cmd-input {
+    font-size: 16px;
   }
 
   /* Lobby chip-badges: smaller so chip rows don't wrap too aggressively */
