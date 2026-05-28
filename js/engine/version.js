@@ -80,32 +80,51 @@
 //      spoilers belong there. Authors should still avoid copy-pasting
 //      passwords into anything outside walkthroughs/.
 //
-//      LINK-AUDIT REQUIREMENT (pre-merge, every walkthrough PR —
-//      including small content edits to an existing walkthrough):
-//        a. Audit BOTH:
-//             - The walkthrough's §8 Further Reading URLs and the
-//               version-specific claims in §5 and §6 (cert versions,
-//               framework revisions, regulation citation IDs, breach
-//               incident figures, historical-case dates).
-//             - The CORRESPONDING in-game lessons-learned content in
-//               levels/<track>.js. The post-mortem players read at
-//               the end of each level cites the same frameworks and
-//               certs the walkthrough does; both files drift the
-//               same way and both must stay current.
+//      CONTENT-AUDIT REQUIREMENT — TIMING IS DURING WRITING, NOT
+//      POST-PUSH (tightened 2026-05-28 after v1.23.1 shipped a
+//      walkthrough with URL-only audit and no factual-content audit;
+//      the user pushed back that the rule had always meant
+//      content-rigor, not just URL reachability).
+//
+//      The audit MUST be performed AS the walkthrough is being
+//      written, BEFORE the branch is pushed to GitHub the first
+//      time. It is NOT a pre-merge gate, NOT a post-preview
+//      checklist, NOT a follow-up cleanup. If facts haven't been
+//      verified, the walkthrough isn't ready to push.
+//
+//      Audit BOTH on every walkthrough PR (including small content
+//      edits to an existing walkthrough):
+//        a. The walkthrough itself:
+//             - §8 Further Reading URLs (every link resolves; if a
+//               canonical source blocks curl, note browser-only).
+//             - §5 and §6 version-specific claims: cert versions
+//               (SY0-701, CS0-003, etc.), framework revisions (NIST
+//               SP numbers + revisions, ISO/IEC publication years,
+//               CMMC level definitions), regulation CFR / U.S.C.
+//               cites, breach-incident affected-population figures,
+//               historical-case dates, named-vendor product line
+//               versions.
+//             - §4 real-world parallels: case timelines, indictment
+//               dates, settlement dates, court-decision dates.
+//        b. The CORRESPONDING in-game lessons-learned content in
+//           levels/<track>.js. The post-mortem players read at
+//           the end of each level cites the same frameworks and
+//           certs the walkthrough does; both files drift the
+//           same way and both must stay current.
 //           Standards drift — OWASP, NIST 800-63, CIS Controls,
 //           PCI-DSS, certs all have multi-year refresh cycles.
 //           Breach disclosures grow (Change Healthcare's affected-
 //           individuals count tripled between Oct 2024 and Jul
 //           2025). Historical-case attributions accumulate
 //           corrections over time (McAfee 2012, BTK 2005).
-//        b. Apply the corrections to both files. The audience
+//        c. Apply the corrections to both files. The audience
 //           differs — walkthroughs can carry MITRE meta-taxonomy
 //           caveats (e.g., "CWE-200 is Discouraged for mapping")
 //           that would be noise in the player-facing post-mortem,
 //           so use judgment on which annotations belong where.
-//        c. Bump the "Last reviewed: <Month Year>" line at the top
+//        d. Bump the "Last reviewed: <Month Year>" line at the top
 //           of §8 to the current month.
-//        d. The audit report goes in the PR description so the
+//        e. The audit report goes in the PR description so the
 //           review trail is preserved.
 //        Soft cross-track sweep: if the audit surfaces a finding
 //        that propagates beyond the track in scope (e.g., an
@@ -176,6 +195,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "1.23.1";
+export const VERSION = "1.23.2";
 
 export const VERSION_DISPLAY = "v" + VERSION;
