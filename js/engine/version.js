@@ -191,10 +191,49 @@
 //   6. gh release create v<VERSION> with notes pulled from CHANGELOG.
 //      The release notes inherit the anti-spoiler rule from step 1.
 //
+//   7. POST-RELEASE CodeQL ALERT SWEEP (added v1.25.0 after the
+//      inaugural CodeQL triage of 9 accumulated alerts following
+//      v1.24.3; user articulated the standing rule as "lets make
+//      sure we take a look at all those alerts after every release
+//      so we can adress anything that pops up"). After step 6,
+//      AFTER prod is verified (`curl https://www.d3cyph3r.com/js/
+//      engine/version.js` returns the new VERSION) AND after
+//      CodeQL's per-push scan on `main` completes (typically 3-5
+//      minutes after the SWA deploy finishes), check the open-
+//      alert count:
+//
+//        gh api repos/<owner>/<repo>/code-scanning/alerts \
+//          --jq '[.[] | select(.state == "open")] | length'
+//
+//      Expected output: `0`. If non-zero, list with rule.id +
+//      severity + file + line and triage per finding:
+//
+//        - Real → open a follow-up PATCH PR same day (treat like
+//          any other CodeQL-driven release — see v1.24.4 as the
+//          canonical shape).
+//        - False positive → dismiss via
+//          `gh api -X PATCH .../code-scanning/alerts/{N}
+//            -f state=dismissed -f dismissed_reason='false positive'
+//            -f dismissed_comment='...'`
+//          NOTE: `dismissed_comment` has a 280-character limit.
+//        - Won't fix → use `dismissed_reason="won't fix"`.
+//        - Used in tests → use `dismissed_reason='used in tests'`.
+//
+//      Accepted reasons (GitHub API): `false positive`, `won't fix`,
+//      `used in tests`. No others. Each requires a comment under
+//      280 chars explaining the call. Real findings without a
+//      ready fix STAY OPEN and get flagged in the next release's
+//      notes — don't dismiss to clear the dashboard.
+//
+//      The point: catch new alerts the same release they're
+//      introduced while the diff is fresh. Letting alerts
+//      accumulate across releases is what made the inaugural
+//      9-alert sweep painful; doing 1-2 per release is cheap.
+//
 // VERSION is the full semver string (used by tooling and the tag).
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "1.24.4";
+export const VERSION = "1.25.0";
 
 export const VERSION_DISPLAY = "v" + VERSION;

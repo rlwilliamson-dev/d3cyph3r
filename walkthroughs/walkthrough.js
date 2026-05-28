@@ -115,6 +115,14 @@ const MANIFEST = {
           "jumphost. A debug copy of a properly-locked-down systemd " +
           "override leaks the production DB password. CWE-732.",
       },
+      level2: {
+        title: "Daniel's Forgotten Cron",
+        blurb:
+          "Day three. Halton reuses the prod DB password as the bastion " +
+          "SSH login. Inside, an offboarded consultant's cron job runs " +
+          "weekly under bash `set -x` and writes its SSH-key passphrase " +
+          "to a world-readable log. CWE-250 + CWE-532 + CWE-521.",
+      },
     },
   },
   network: {

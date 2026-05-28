@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-05-28
+
+**level2@linux ships.** Day three of the Halton Bank engagement. Audit-team identity (`audit`) ssh's into `halton-prod-bastion` using the production DB credential leaked in level1 — same string per Halton's password-reuse policy. Inside, an offboarded consultant's weekly cron job runs under bash `set -x` and writes its own SSH-key passphrase to a world-readable log every Sunday. Cron 101 + tombstoned-account discipline + a deeper look at why Halton's institutional password pattern was the systemic root cause behind both the staging leak (v1.0.0) and this one.
+
+### Added
+
+- **`level2@linux` — "Daniel's Forgotten Cron".** Host `halton-prod-bastion.driftwood.internal`, tier Routine, est. 12 min. Player walks `/etc/cron.d/halton-weekly-snapshot` → `/opt/halton/snapshot-config.sh` → `/var/log/cron-daniel.log` and extracts the level3 breadcrumb from the `set -x` trace. CWE-250 (Execution with Unnecessary Privileges) + CWE-532 (Sensitive Info in Log File) + CWE-521 (Weak Password Requirements). Two bonus finds: Daniel's account still active (NIST 800-53 PS-4 / AC-2(3) failure), and Halton's `Halton-YYYY-Q#!` policy doc (cargo-cult policy as the systemic root cause).
+- **`walkthroughs/linux/level2.md`** ships in the same release. 9-section format including the 4-CWE-stack analysis, NIST SP 800-63B-4 guidance against mandatory periodic password rotation, OWASP Top 10:2025 A02 + A06 + A09 mapping, and remediation playbook from "disable daniel" through "fix the institutional pattern." Code Spaces 2014, Twitter 2023 source-code leak, and the Mandiant UNC5537 Snowflake advisory cited as real-world parallels.
+
 ## [1.24.4] - 2026-05-28
 
 **CodeQL followup pass.** Closes the two real findings from the inaugural CodeQL scan (workflow permissions + walkthrough link sanitization). The seven other alerts from that scan were false positives and have been dismissed with reasons in the Security UI. No engine, schema, command, or player-facing changes.
@@ -3696,7 +3705,14 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.2...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.0...HEAD
+[1.25.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.4...v1.25.0
+[1.24.4]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.3...v1.24.4
+[1.24.3]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.2...v1.24.3
+[1.24.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.1...v1.24.2
+[1.24.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.0...v1.24.1
+[1.24.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.3...v1.24.0
+[1.23.3]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.2...v1.23.3
 [1.23.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.1...v1.23.2
 [1.23.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.0...v1.23.1
 [1.23.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.22.0...v1.23.0
