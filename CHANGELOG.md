@@ -7,56 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.2] - 2026-05-28
+
+**Release-notes hygiene pass.** Curative cleanup of historical
+CHANGELOG entries and GitHub Releases to remove internal-process
+content that didn't belong in user-facing release docs. No engine,
+schema, command, or CSS changes. Same playtest checks pass (866/866).
+
 ## [1.23.1] - 2026-05-28
 
-**Walkthrough for `level2@forensics` ships — closes out v1.23.0.**
-PATCH release; pure documentation. No engine, schema, command, or CSS
-changes. The walkthrough at `walkthroughs/forensics/level2.md` carries
-the full solve path, vulnerability deep-dive, real-world parallels, the
-NIST SP 800-86 / 800-171 Rev 3 / CMMC L2 / NISPOM / CUI Program
-framework stack, certification map (GCFE / GCFA / CHFI / Sec+ / CySA+),
-defender's playbook, bonus-find context, and ~50 curated external
-references (last reviewed: May 2026).
-
-This is the closing PATCH for the v1.23.0 → v1.23.1 split that shipped
-`level2@forensics` without its walkthrough. The pattern is one-time:
-going forward, walkthroughs gate new level work (see `js/engine/
-version.js` step 3 for the tightened rule).
+**Long-form walkthrough for `level2@forensics` published.** ~6,900
+words across 9 sections covering the solve path, browser-database
+forensic theory, real-world parallels (Scott Peterson MapQuest /
+Casey Anthony / Capital One-Paige Thompson / Strava 2018 / Cambridge
+Analytica), framework + cert tie-ins (NIST SP 800-86, 800-171 Rev 3,
+CMMC L2 AU, NISPOM, CUI Program, DoD 5205.16, DoDM 5200.48, ISO/IEC
+27037/27042, MITRE T1119/T1567/T1083, GCFE/GCFA/CHFI/Sec+/CySA+/MCE),
+defender's playbook, bonus-find context, and ~50 curated references.
+Last reviewed: May 2026.
 
 ### Added
 
-- **`walkthroughs/forensics/level2.md`** — 6,874 words across the
-  standard 9-section template (§1 setup, §2 step-by-step solve, §3
-  vulnerability framing, §4 real-world parallels, §5 frameworks,
-  §6 certifications, §7 defender's playbook, §7.5 bonus-find context,
-  §8 further reading, §9 takeaways).
+- **`walkthroughs/forensics/level2.md`** — 9-section walkthrough.
 - **MANIFEST entry** under the forensics track in
   `walkthroughs/walkthrough.js` so the subsite index lists the new page.
 
-### Changed
-
-- **Release checklist tightened** (`js/engine/version.js` step 3):
-  walkthroughs may ship in a follow-up PATCH PR ONLY when it's the
-  immediate next PR with zero level work between. The "skeleton-then-
-  fast-follow" pattern used in v1.23.0 is now explicitly a one-time
-  exception. Future level work — same track or different — is gated
-  on the previous level's walkthrough being merged.
-
 ## [1.23.0] - 2026-05-28
 
-**level2@forensics ships — Phase 1 of the Routine-tier sweep begins.**
-First level2 across all 7 tracks (per LEVEL_ROADMAP.md's shipping
-order), introducing the `sqlite3` command alongside it. Day three
-of the Reed Connolly case: the player uses the IR-lead credential
+**level2@forensics ships.** First level2 across all 7 tracks,
+introducing the `sqlite3` command alongside it. Day three of the
+Reed Connolly case: the player uses the IR-lead credential
 recovered from level1's evtx 4625 finding to ssh into Polaris IR's
 forensic analysis bench, then queries Reed's seized browser-artifact
 databases (Chromium History + Cookies) to reconstruct his online
 activity in the hours before the Bay 4 badge-in. The smoking-gun
 session token gates level3 (when level3 ships).
-
-Walkthrough fast-follows as v1.23.1 (per the soft-gate rule in
-version.js step 3). The level itself is fully playable end-to-end
-in v1.23.0; the long-form solve guide ships next.
 
 ### Added
 
@@ -134,18 +119,6 @@ isolated bubbles. Pure prep — the next release brings new puzzles.
   fixed-width columns, short paragraphs, narrow indents, when to
   set `mobileReady: true`. Pre-v1.22 levels remain unflagged on
   purpose — the flag is forward-looking.
-
-### Changed
-
-- **Level5→6 tier-shift mechanisms in `LEVEL_ROADMAP.md` are now
-  distinct per track** (gitignored planning doc). Previously all
-  seven hand-offs were "client returns engagement token"; now each
-  triggers via a different mechanism (contract escalation,
-  detected intrusion, regulator escalation, legal-counsel
-  determination, statutory clock, threat-actor attribution,
-  auditor question as disclosure trigger). Level2-4 narrative
-  threads in the upcoming sweep should lead to the relevant
-  trigger.
 
 ## [1.21.0] - 2026-05-27
 
@@ -1674,9 +1647,7 @@ expansion era.
   modules (`text.js`, `system.js`, `sysinspect.js`, `netinspect.js`,
   `format.js`, `learning.js`) explicitly enumerated so the
   "all commands live in per-track files" implication doesn't
-  mislead. Removed dead references to two local-only files
-  (`feedback-level-credential-chain.md`, `PASSWORDS.md`) that
-  the v1.0.0 cleanup missed.
+  mislead.
 - **`CONTRIBUTING.md`** — same handler-signature + filesystem-tri
   updates as CLAUDE.md. The "How to add a new command" section
   rewritten to cover both track-specific files and the
@@ -2129,16 +2100,6 @@ load so DevTools openers see the explanation immediately.
   the privacy promise being enforced by the browser. Frames visible
   CSP errors as proof-of-posture rather than a defect.
 
-### Changed
-
-- **`js/engine/version.js` release checklist** refined: the
-  cache-bust query-string bump in step 2b is now conditional on
-  whether `style.css` or `walkthrough.css` actually changed in the
-  release. Bumping unnecessarily forces returning visitors to
-  re-fetch identical bytes; leaving the prior version preserves
-  cache validity. The smarter rule is "bump when CSS changes," not
-  "bump every release."
-
 ## [1.1.0] - 2026-05-24
 
 First feature drop after the v1.0 Foundation milestone. Three
@@ -2309,16 +2270,6 @@ Foundation milestone moment.
   dedicated Walkthroughs section now that the subsite is public.
 - **`robots.txt`** updated — removed the `/walkthroughs/`
   Disallow line, added a Sitemap reference.
-- **CHANGELOG / `shell.js` / `version.js`** — removed references
-  to local-only files (maintainer cheat sheets and AI memory
-  files) that forkers wouldn't have, so the public-facing
-  surface doesn't point at files that don't exist in a clean
-  checkout.
-- **`version.js` release checklist** simplified and rewritten so
-  it reads cleanly without requiring local-only context. The
-  anti-spoiler rule and the link-audit requirement are
-  preserved.
-
 ### Fixed
 
 - Two stale "CRT terminal theme" references in README updated to
@@ -2573,11 +2524,7 @@ The third level1 in three releases. Four of the seven tracks (Linux,
 Network, Crypto, **Web**) now have level0 + level1 chains; three
 remain (Forensics, OSINT, Cloud) on the v1.0 "Foundation" path. No
 engine changes — `level1@web` uses the existing `curl` + `cookies`
-command surface. The walkthrough audit on this one caught CWE
-mapping-status drift, an Optus figure that had moved between
-disclosure and the OAIC's August 2025 civil-penalty filing, a wrong
-SEC filing URL, Casbin's move to the Apache Software Foundation,
-and Oso's strategic pivot toward AI-agent authorization.
+command surface.
 
 ### Added
 
@@ -2614,7 +2561,7 @@ and Oso's strategic pivot toward AI-agent authorization.
   M-0000001, the 404 case for an unknown ID, and the breadcrumb
   credential assertion.
 
-### Fixed (pre-merge link audit — both walkthrough and in-game)
+### Fixed
 
 - **Optus 2022 figures updated to the OAIC August 2025 filing**:
   ~9.5 million Australians (per the OAIC civil-penalty proceeding,
@@ -2667,9 +2614,6 @@ seven tracks have a level1 (Linux, Network, **Crypto**); four
 remain (Web, Forensics, OSINT, Cloud) on the path to v1.0
 "Foundation." No engine changes — `level1@crypto` uses the existing
 `jwt` command surface (already implemented but unused until now).
-The walkthrough audit on this one caught a rejected CVE I had
-treated as real, several CVE-to-attack mis-mappings, PCI-DSS
-legacy v3.2.1 numbering, and an Auth0/Okta attribution swap.
 
 ### Added
 
@@ -2700,7 +2644,7 @@ legacy v3.2.1 numbering, and an Auth0/Okta attribution swap.
   empty-signature warning, the role=admin claim, and the level2
   breadcrumb credential appearing in the decoded payload.
 
-### Fixed (pre-merge link audit — both walkthrough and in-game)
+### Fixed
 
 - **CVE-2022-23529 cited as a real CVE — it was REJECTED by Mitre
   in January 2023.** Replaced with CVE-2022-23539 (the correct
@@ -2806,7 +2750,7 @@ in March of this year, while the walkthrough was being written.
   prod-db and phi-warehouse hostnames appear, and that the
   standard zone-transfer footer is emitted).
 
-### Fixed (pre-merge link audit — both walkthrough and in-game)
+### Fixed
 
 - **NIST SP 800-81-2 → NIST SP 800-81 Rev 3.** SP 800-81-2 was
   withdrawn on 2026-03-19, the same day SP 800-81 Rev 3 was
@@ -3144,12 +3088,6 @@ behave identically to v0.6.
 
 ### Changed
 
-- Version-bump checklist (in `js/engine/version.js` header) extended
-  with a soft-gate step for the new content surface as part of the
-  per-level shipping process. The anti-spoiler rule from the existing
-  checklist explicitly does NOT apply to content under the new
-  subpath (which is designed to be the intended destination for full
-  solve detail).
 - `robots.txt` added at the repo root: main site stays indexable; the
   new subpath is disallowed for all user-agents.
 
@@ -3635,7 +3573,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.2...HEAD
+[1.23.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.1...v1.23.2
 [1.23.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.0...v1.23.1
 [1.23.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.21.0...v1.22.0
