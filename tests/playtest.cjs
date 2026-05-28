@@ -3246,7 +3246,7 @@ async function termText(page) {
   //
   // Pre-clear the bypass flag so we see the gate even if a prior
   // test run set it.
-  await page.evaluate(() => { try { localStorage.removeItem("d3cyph3r-mobile-bypass"); } catch (_) {} });
+  await page.evaluate(() => { try { sessionStorage.removeItem("d3cyph3r-mobile-bypass"); localStorage.removeItem("d3cyph3r-mobile-bypass"); } catch (_) {} });
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
   await page.waitForTimeout(5800);  // > FINAL_DELAY + small buffer
@@ -3273,10 +3273,10 @@ async function termText(page) {
   await page.waitForTimeout(2000);  // reload + engine boot
 
   const bypassPersisted = await page.evaluate(() => {
-    try { return localStorage.getItem("d3cyph3r-mobile-bypass"); }
+    try { return sessionStorage.getItem("d3cyph3r-mobile-bypass"); }
     catch (_) { return null; }
   });
-  check("v1.21.0 Continue-anyway sets localStorage bypass flag",
+  check("v1.21.0 Continue-anyway sets sessionStorage bypass flag (session-scoped per v1.21.0-r7)",
         bypassPersisted === "1");
 
   const mobileModeWired = await page.evaluate(() => {
@@ -3340,7 +3340,7 @@ async function termText(page) {
 
   // Restore desktop viewport + clean bypass flag so subsequent
   // assertions (if any) see the desktop layout.
-  await page.evaluate(() => { try { localStorage.removeItem("d3cyph3r-mobile-bypass"); } catch (_) {} });
+  await page.evaluate(() => { try { sessionStorage.removeItem("d3cyph3r-mobile-bypass"); localStorage.removeItem("d3cyph3r-mobile-bypass"); } catch (_) {} });
   await page.setViewportSize({ width: 1280, height: 800 });
 
   check("No page errors raised", errors.length === 0);

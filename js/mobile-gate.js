@@ -15,18 +15,28 @@
 //
 // BYPASS PERSISTENCE
 // ------------------
-// Once a player taps "Continue anyway," we set
-// localStorage["d3cyph3r-mobile-bypass"] = "1" so they aren't
-// shown the gate on every visit. The choice persists across
-// sessions because it's a per-device preference (the player has
-// made an informed decision about THIS device's experience).
+// As of v1.21.0-r7, "Continue anyway" sets a SESSION-SCOPED flag
+// (sessionStorage, not localStorage). The flag survives reloads
+// within the same tab so a refresh-mid-play doesn't re-trigger the
+// 5-second boot animation. But closing the tab + reopening (or
+// closing the browser entirely on mobile) shows the gate again —
+// the warning is THE FIRST THING every fresh visit, reinforcing
+// that desktop is the better experience.
+//
+// Earlier drafts used localStorage (persistent), but that meant a
+// player who tapped Continue once on their phone NEVER saw the
+// warning again. Switching to sessionStorage trades a small amount
+// of repeat-tap friction for a consistently-surfaced "we
+// recommend desktop" message.
 //
 // PWA INSTALL INTERACTION
 // -----------------------
 // If the page is launched in standalone mode (PWA installed and
-// opened via its dock icon), we also auto-bypass — installing the
-// PWA is itself a stronger statement of "I want to use this on
-// this device" than tapping the Continue button.
+// opened via its dock icon), we still auto-bypass — installing the
+// PWA is a strong "I want to use this on this device" signal and
+// the player heard the warning the FIRST time they tapped Continue
+// before installing. Re-showing the gate on every PWA launch would
+// be hostile to someone who explicitly chose mobile.
 
 const BYPASS_KEY = "d3cyph3r-mobile-bypass";
 
@@ -37,10 +47,12 @@ export function isMobile() {
 
 /**
  * Has the player already chosen to bypass the mobile gate on this
- * device? Returns true if either:
- *   - localStorage flag set by a previous Continue-anyway tap, OR
- *   - the page is running as a PWA in standalone mode (so installing
- *     it is itself implicit consent).
+ * session? Returns true if either:
+ *   - sessionStorage flag set by a previous Continue-anyway tap in
+ *     this same tab session, OR
+ *   - the page is running as a PWA in standalone mode (so
+ *     installing it is implicit consent that doesn't need to be
+ *     re-confirmed each launch).
  *
  * Defaults to false on any storage error — safer to show the gate
  * than to silently allow access.
@@ -55,7 +67,7 @@ export function isMobileBypassed() {
   } catch (_) { /* matchMedia may throw in unusual contexts */ }
 
   try {
-    return localStorage.getItem(BYPASS_KEY) === "1";
+    return sessionStorage.getItem(BYPASS_KEY) === "1";
   } catch (_) {
     return false;
   }
@@ -64,13 +76,13 @@ export function isMobileBypassed() {
 /** Set the bypass flag and return whether the write succeeded. */
 function setBypassFlag() {
   try {
-    localStorage.setItem(BYPASS_KEY, "1");
+    sessionStorage.setItem(BYPASS_KEY, "1");
     return true;
   } catch (_) {
-    // localStorage unavailable (private mode, full quota). The bypass
-    // still works for this session because main.js re-checks bypass
-    // immediately after reload — but the player will see the gate
-    // again next visit. Acceptable failure.
+    // sessionStorage unavailable (private mode, full quota). The bypass
+    // still works for this page load because main.js doesn't re-check
+    // after the reload immediately — but the player will see the gate
+    // again on next reload. Acceptable failure.
     return false;
   }
 }
@@ -142,6 +154,9 @@ export function renderMobileGate() {
               a soft-key row at the bottom adds Tab, Esc, Ctrl-C, and
               shell symbols (<code>|</code>, <code>$</code>, <code>&amp;&amp;</code>)
               that are awkward on phone keyboards.
+              <br><br>
+              <em>This warning will re-appear next time you open
+              D3CYPH3R — close the tab and come back to see it again.</em>
             </p>
           </div>
 
