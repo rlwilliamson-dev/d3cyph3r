@@ -354,7 +354,7 @@ The post-mortem at the bottom of the level (`lessons-learned.md`) walks through 
 
 **CWE-639: Authorization Bypass Through User-Controlled Key.** The most precise weakness ID. The catalog entry describes the weakness as "the system's authorization functionality does not prevent one user from gaining access to another user's data or record by modifying the key value identifying the data." MITRE mapping status: **ALLOWED**.
 
-**CWE-862: Missing Authorization.** The variant where the authorization check is entirely absent. Carlos's handler is CWE-862 — the check on `student_id` ownership is missing entirely, not present-but-wrong. MITRE mapping status: **ALLOWED-WITH-REVIEW** (CWE-862 is a Class-level weakness; the catalog recommends reviewing Base-level children before mapping). CWE-862 has been a recurring CWE Top 25 entry — #11 in 2023, #9 in 2024, and #4 in 2025.
+**CWE-862: Missing Authorization.** The variant where the authorization check is entirely absent. Carlos's handler is CWE-862 — the check on `student_id` ownership is missing entirely, not present-but-wrong. MITRE mapping status: **ALLOWED-WITH-REVIEW** (CWE-862 is a Class-level weakness; the catalog recommends reviewing Base-level children before mapping). CWE-862 has been a recurring CWE Top 25 entry, climbing to #9 on the 2024 edition and #4 on the 2025 edition.
 
 **CWE-863: Incorrect Authorization.** The sibling weakness where the check exists but produces the wrong answer. Not Carlos's case directly; cited here as the differentiator.
 

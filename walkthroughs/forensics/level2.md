@@ -10,7 +10,7 @@
 
 When the lobby spun you out of `level1@forensics` on Friday afternoon, two findings went into the day-two deliverable: Reed Connolly's Saturday-morning CUI-exfil chain (the 4688 process-creation events showing PowerShell `Compress-Archive` staging `D:\CUI\Subsystem-A\*` into `%TEMP%\sa-export.zip`, then certutil-encoding it, then a Chrome upload to mega.nz), and the awkward second finding nobody had been looking for — a 4625 failed-logon record where Polaris's IR-team lead, Maya Voss, had typed her own account password into the `TargetUserName` field of a network-auth prompt during the Tuesday-night acquisition. The first finding was the case. The second was a procedural breach the IR team needed to know about same-day.
 
-Both got reported. Sgt. Marcus Chen (Polaris's FSO and the formal case lead) received the package by close-of-business Friday. Larry Hutchins (Polaris's IR Team Lead and Maya's manager) was looped in within three hours. Maya rotated her primary account credential before she left the office, escalated the procedural finding to Hutchins on her own initiative — "I want this on the record from me before it shows up on a report" — and stayed late to walk her team through the operational discipline that should have caught it (no password-into-username typos during high-pressure acquisition work; the IR-team buddy-check protocol is supposed to catch exactly this and didn't). The procedural finding closes there. The forensic finding does not.
+Both got reported. Sgt. Marcus Chen (Polaris's FSO and the formal case lead) received the package by close-of-business Friday. Larry Hutchins (Polaris's CISO and Maya's manager) was looped in within three hours. Maya rotated her primary account credential before she left the office, escalated the procedural finding to Hutchins on her own initiative — "I want this on the record from me before it shows up on a report" — and stayed late to walk her team through the operational discipline that should have caught it (no password-into-username typos during high-pressure acquisition work; the IR-team buddy-check protocol is supposed to catch exactly this and didn't). The procedural finding closes there. The forensic finding does not.
 
 Over the weekend, Dana Reyes (Polaris's in-house counsel) walked the day-two deliverable through outside counsel for the next phase. The DFARS 252.204-7012 (c) 72-hour clock had started Friday when Polaris formally discovered the CUI compromise; by Monday morning the DC3 report had been filed via DIBNET and the case was officially a DoD-coordinated insider-threat matter. Outside counsel also opened a separate, parallel track: a subpoena to Google Workspace seeking Reed's `rconnolly.personal@gmail.com` account history for the relevant time window. That subpoena is in flight. While it processes, Dana wants Driftwood to take the next forensic pass — the one the Friday deliverable hinted at but didn't yet do.
 
@@ -275,17 +275,17 @@ The shift from Rev. 2 to Rev. 3 tightened several of the AU controls (Rev. 3 add
 
 ### NISPOM 32 CFR Part 117 + 32 CFR Part 2002 (CUI Program)
 
-[NISPOM (32 CFR Part 117)](https://www.ecfr.gov/current/title-32/subtitle-B/chapter-XX/part-117) is the National Industrial Security Program Operating Manual — the regulation that governs cleared facilities like Polaris. Part 117.8(c) requires reporting of insider-threat indicators and adverse information about cleared personnel. The browser-history finding on Reed (specifically the searches around CUI handling rules) is reportable adverse information under that section.
+[NISPOM (32 CFR Part 117)](https://www.ecfr.gov/current/title-32/subtitle-A/chapter-I/subchapter-D/part-117) is the National Industrial Security Program Operating Manual — the regulation that governs cleared facilities like Polaris. Part 117.8(c) requires reporting of insider-threat indicators and adverse information about cleared personnel. The browser-history finding on Reed (specifically the searches around CUI handling rules) is reportable adverse information under that section.
 
 [32 CFR Part 2002](https://www.ecfr.gov/current/title-32/subtitle-B/chapter-XX/part-2002) is the CUI Program regulation under the National Archives, which makes Polaris responsible under §2002.48 for documenting the scope of any suspected CUI disclosure. The browser-artifact timeline you just produced is part of that documentation: if the personal-webmail visit was the staging channel, the disclosure scope is bounded by what was actually exfiltrated through that channel, and the timeline narrows the window the disclosure analysis has to cover.
 
-### DoD 5205.16 — DoD Insider Threat Program
+### DoDI 5205.16 — DoD Insider Threat Program
 
-[DoDDS Directive 5205.16](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodd/520516p.pdf) establishes the DoD-wide Insider Threat Program and is the parent authority NISPOM 32 CFR §117.8 implements at the cleared-contractor level. Polaris's investigation runs under the program; the forensic deliverable you just produced becomes part of the program's case record.
+[DoDI 5205.16](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520516p.pdf) (reissued December 20, 2024 as a DoD Instruction, previously DoD Directive 5205.16) establishes the DoD-wide Insider Threat Program and is the parent authority NISPOM 32 CFR §117.8 implements at the cleared-contractor level. Polaris's investigation runs under the program; the forensic deliverable you just produced becomes part of the program's case record.
 
-### DoDM 5200.48 — Controlled Unclassified Information
+### DoDI 5200.48 — Controlled Unclassified Information
 
-[DoDM 5200.48](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodm/520048p.PDF) (published 2020, current as of May 2026; PDF is at the DoD Washington Headquarters Services issuances site, which is browser-only) is the DoD implementation of the broader CUI program, alongside the [National Archives CUI Program landing](https://www.archives.gov/cui) which is the authoritative cross-government reference. It defines what CUI is, how it must be marked, how it must be handled, and what to do when it's compromised. The "CUI how to identify if a document is marked" search Reed ran at 03:14 is — read against this document — the search of someone trying to figure out whether what he was about to handle was the legally-protected kind.
+[DoDI 5200.48](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520048p.PDF) (issued March 2020 as a DoD Instruction; the trade press often refers to it as "DoDM 5200.48" but the canonical issuance type is Instruction; PDF is at the DoD Washington Headquarters Services issuances site, which is browser-only) is the DoD implementation of the broader CUI program, alongside the [National Archives CUI Program landing](https://www.archives.gov/cui) which is the authoritative cross-government reference. It defines what CUI is, how it must be marked, how it must be handled, and what to do when it's compromised. The "CUI how to identify if a document is marked" search Reed ran at 03:14 is — read against this document — the search of someone trying to figure out whether what he was about to handle was the legally-protected kind.
 
 ### ISO/IEC 27037 + 27042
 
@@ -425,12 +425,12 @@ Last reviewed: May 2026.
 
 ### Regulations + DoD documents
 
-- [NISPOM (32 CFR Part 117)](https://www.ecfr.gov/current/title-32/subtitle-B/chapter-XX/part-117). National Industrial Security Program Operating Manual.
+- [NISPOM (32 CFR Part 117)](https://www.ecfr.gov/current/title-32/subtitle-A/chapter-I/subchapter-D/part-117). National Industrial Security Program Operating Manual.
 - [32 CFR Part 2002 — Controlled Unclassified Information](https://www.ecfr.gov/current/title-32/subtitle-B/chapter-XX/part-2002). The CUI Program regulation under the National Archives.
-- [DoDD 5205.16 — DoD Insider Threat Program](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodd/520516p.pdf). Parent directive for cleared-contractor insider-threat programs.
-- [DoDM 5200.48 — Controlled Unclassified Information](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodm/520048p.PDF). DoD implementation of the CUI program (browser-only PDF at WHS).
+- [DoDI 5205.16 — DoD Insider Threat Program](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520516p.pdf). Parent directive (reissued as an Instruction Dec 20, 2024; previously DoDD) for cleared-contractor insider-threat programs.
+- [DoDI 5200.48 — Controlled Unclassified Information](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520048p.PDF). DoD implementation of the CUI program (browser-only PDF at WHS).
 - [National Archives CUI Program](https://www.archives.gov/cui). Cross-government program landing; canonical reference for the CUI Marking Handbook and category index.
-- [DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting](https://www.acquisition.gov/dfars/252.204-7012-safeguarding-covered-defense-information-and-cyber-incident-reporting). 72-hour reporting clock authority.
+- [DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting](https://www.acquisition.gov/dfars/252.204-7012-safeguarding-covered-defense-information-and-cyber-incident-reporting.). 72-hour reporting clock authority.
 - [DoD CMMC Final Rule (2024)](https://dodcio.defense.gov/CMMC/). CMMC Level 2 assessment objectives.
 
 ### Technical references

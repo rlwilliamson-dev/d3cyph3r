@@ -243,7 +243,7 @@ Three named, well-documented S3-misconfiguration breaches. Each was a major indu
 
 In March 2019, an attacker — Paige Thompson, a former AWS engineer operating under the handle "erratic" — exploited a misconfigured Web Application Firewall on a Capital One server-side application to perform a Server-Side Request Forgery (SSRF) attack. The SSRF allowed the attacker to query the AWS Instance Metadata Service from the WAF's perspective, retrieve the EC2 instance's temporary IAM credentials, and use those credentials to enumerate and download data from Capital One's S3 buckets. The exfiltrated data covered approximately **106 million credit-card applications** across the US and Canada, including names, addresses, dates of birth, self-reported income, credit scores, payment histories, and approximately 140,000 US Social Security numbers + 80,000 linked bank-account numbers.
 
-Capital One disclosed the breach publicly on July 29, 2019. Thompson was arrested the same week. She was convicted in 2022 on multiple counts including wire fraud and computer fraud. The regulatory cascade for Capital One was unprecedented: the Office of the Comptroller of the Currency assessed an **$80 million civil money penalty** in August 2020 — the first major federal-banking-regulator fine for a cloud-misconfiguration incident. The Federal Reserve's separate 2020 enforcement action against Capital One — concerning the same cloud-migration risk-assessment deficiencies — was terminated in 2023 without additional penalty after Capital One demonstrated remediation. Consumer class-action litigation added approximately **$190 million** in settlement payments in late 2022.
+Capital One disclosed the breach publicly on July 29, 2019. Thompson was arrested the same week. She was convicted in 2022 on multiple counts including wire fraud and computer fraud. (The Ninth Circuit vacated her original sentence in March 2025 as substantively unreasonable; resentencing in November 2025 imposed time-served plus five years of supervised release including three years home confinement, 250 hours of community service, with the $40.7M restitution preserved.) The regulatory cascade for Capital One was unprecedented: the Office of the Comptroller of the Currency assessed an **$80 million civil money penalty** in August 2020 — the first major federal-banking-regulator fine for a cloud-misconfiguration incident. The Federal Reserve's separate 2020 enforcement action against Capital One — concerning the same cloud-migration risk-assessment deficiencies — was terminated in 2023 without additional penalty after Capital One demonstrated remediation. Consumer class-action litigation added approximately **$190 million** in settlement payments in late 2022.
 
 The Capital One breach is the canonical AWS cloud-security case study in every modern curriculum. The specific technical chain — WAF SSRF → IMDS credential retrieval → S3 enumeration — drove industry-wide changes: AWS shipped **Instance Metadata Service Version 2 (IMDSv2)** with mandatory token-based authentication, multiple cloud-security configuration frameworks added explicit checks for IMDSv1 usage, and IMDS-credential-as-attack-vector training became standard in every cloud-security cert. The lesson Coverline's situation directly inherits from Capital One: **a single misconfiguration in the cloud-infrastructure layer can produce regulator action measured in tens of millions of dollars.** Coverline's exposure is smaller in scale but qualitatively identical in shape.
 
@@ -311,7 +311,7 @@ Three CSF 2.0 sub-categories apply to Coverline:
 
 ### CIS AWS Foundations Benchmark v5.0.0 — §2.1.1 through §2.1.5
 
-The Center for Internet Security publishes the **CIS AWS Foundations Benchmark**, currently at **version 5.0.0** (the version supported by AWS Security Hub as of late 2025; CIS has also published v7.0.0 but tooling support is lagging). The Benchmark is a prescriptive configuration baseline for AWS accounts — specific, opinionated recommendations that map to the broader CIS Controls. Section 2 covers **Storage**; subsection 2.1 covers **S3 specifically**. Note: v5.0.0 consolidated the legacy v3.0.0 §2.1.6 (KMS-based encryption) into §2.1.3 (encryption-at-rest), so the S3 sub-control list is now five items rather than six.
+The Center for Internet Security publishes the **CIS AWS Foundations Benchmark**, currently at **version 5.0.0** as the AWS Security Hub-supported version (CIS has since published v6.0.0 and v7.0.0; Security Hub tooling support for the newer versions had not caught up as of the audit date). The Benchmark is a prescriptive configuration baseline for AWS accounts — specific, opinionated recommendations that map to the broader CIS Controls. Section 2 covers **Storage**; subsection 2.1 covers **S3 specifically**. Note: v5.0.0 consolidated the legacy v3.0.0 §2.1.6 (KMS-based encryption) into §2.1.3 (encryption-at-rest), so the S3 sub-control list is now five items rather than six.
 
 Five sub-controls in §2.1 apply to Coverline's situation:
 
@@ -335,7 +335,7 @@ Three controls apply to Coverline's case:
 
 ### OWASP Cloud-Native Top 10 — CNAS-1, CNAS-2, CNAS-5
 
-The **OWASP Cloud-Native Application Security Top 10** is a separate document from the better-known OWASP Top 10 (which we covered in level0@crypto and level0@web). The Cloud-Native Top 10 was first published in 2022 and addresses the security weaknesses specific to cloud-native application architectures. The GitHub project was archived in April 2025; the 2022 edition remains the canonical reference, with no updated edition published as of audit date.
+The **OWASP Cloud-Native Application Security Top 10** is a separate document from the better-known OWASP Top 10 (which we covered in level0@crypto and level0@web). The Cloud-Native Top 10 was first published in 2022 and addresses the security weaknesses specific to cloud-native application architectures. The project site repo was archived in April 2025 and the main project repo was archived on November 24, 2025; the 2022 edition remains the canonical reference, with no updated edition published as of audit date.
 
 Three categories apply to Coverline:
 
@@ -407,7 +407,7 @@ Equal-depth coverage for the twelve cert families cited in the in-game post-mort
 
 ### AWS Certified Security – Specialty — current exam code SCS-C03
 
-The AWS Security Specialty cert is the AWS ecosystem's flagship security certification. AWS released **SCS-C03** in late 2025 / early 2026 as the successor to SCS-C02 (which had been in market since July 2023, itself superseding SCS-C01). The Coverline finding maps directly to two domains.
+The AWS Security Specialty cert is the AWS ecosystem's flagship security certification. AWS released **SCS-C03** on December 2, 2025 as the successor to SCS-C02 (registration opened November 18, 2025; SCS-C02 was decommissioned December 1, 2025; SCS-C02 had been in market since July 2023, itself superseding SCS-C01). The Coverline finding maps directly to two domains.
 
 - **Domain 1 — Threat Detection and Incident Response.** Includes the AWS Config / Macie / GuardDuty / Security Hub detection layer that would have caught the bucket misconfiguration before the audit walk.
 - **Domain 4 — Identity and Access Management.** Bucket policies, the Public Access Block, IAM-based access control to S3.
@@ -575,9 +575,9 @@ The CIS AWS Foundations Benchmark addresses this from the *audited* side: separa
 - [AICPA SOC 2 Trust Services Criteria — 2017 framework with 2022 revisions](https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services)
 - [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final)
 - [NIST Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework)
-- [CIS AWS Foundations Benchmark (current v5.0.0, Security Hub-supported; v7.0.0 also published)](https://www.cisecurity.org/benchmark/amazon_web_services)
+- [CIS AWS Foundations Benchmark (Security Hub-supported v5.0.0; v6.0.0 and v7.0.0 also published)](https://www.cisecurity.org/benchmark/amazon_web_services)
 - [ISO/IEC 27017:2015 — Code of practice for cloud services](https://www.iso.org/standard/43757.html)
-- [OWASP Cloud-Native Application Security Top 10 (2023)](https://owasp.org/www-project-cloud-native-application-security-top-10/)
+- [OWASP Cloud-Native Application Security Top 10 (GitHub canonical — 2022 edition)](https://github.com/OWASP/Cloud-Native-Application-Security-Top-10)
 - [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (MITRE flags as "Discouraged" for direct vulnerability mapping; CWE-732 is the preferred citation for this scenario)](https://cwe.mitre.org/data/definitions/200.html)
 - [CWE-732 — Incorrect Permission Assignment for Critical Resource](https://cwe.mitre.org/data/definitions/732.html)
 - [CWE-285 — Improper Authorization](https://cwe.mitre.org/data/definitions/285.html)

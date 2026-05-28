@@ -240,7 +240,7 @@ Source-control credential leakage is one of the most documented categories of cy
 
 **Uber (2014, disclosed 2015).** Uber filed an early-2015 lawsuit that ultimately attributed a 2014 data breach to AWS credentials that an Uber engineer had committed to a public GitHub Gist. The credentials gated an S3 bucket containing personal data on ~50,000 Uber drivers. The 2014 breach was disclosed to drivers February 2015; the lawsuit was settled in 2016. Uber's *second* breach in 2016 (the much larger one, ~57M users + drivers, with the $148M FTC settlement and Joe Sullivan's prosecution) had different mechanics but is often conflated with the 2014 incident; the credential-in-GitHub vector is from the *first* incident.
 
-**GitGuardian's annual "State of Secrets Sprawl" report** has tracked source-control secret exposure year over year since 2021. The 2024 report counted 12.8 million new secrets exposed in public commits during 2023; the **2026 report (5th edition, published March 17, 2026) tallied 29 million new secrets exposed in public commits during 2025** — a 34% year-over-year increase — with AWS, GitHub, and database credentials consistently in the top three categories. Snyk's annual State of Open Source Security report tracks dependency vulnerabilities rather than committed secrets, but their related practitioner-survey data shows secret-in-source-code findings as a top-five category in real-world code review.
+**GitGuardian's annual "State of Secrets Sprawl" report** has tracked source-control secret exposure year over year since 2021. The 2024 report counted 12.8 million new secrets exposed in public commits during 2023; the **2026 report (5th edition, published March 17, 2026) tallied approximately 28.65 million new secrets exposed in public commits during 2025** — a 34% year-over-year increase — with AWS, GitHub, and database credentials consistently in the top three categories. Snyk's annual State of Open Source Security report tracks dependency vulnerabilities rather than committed secrets, but their related practitioner-survey data shows secret-in-source-code findings as a top-five category in real-world code review.
 
 **Toyota (October 2022 disclosure, exposure 2017-2022).** Toyota disclosed that source code for its T-Connect telematics service had been publicly accessible on GitHub for nearly five years (December 2017 to September 15, 2022). The source included database credentials granting access to T-Connect customer email addresses and management numbers — affecting ~296,019 customers. The disclosure followed an internal review; the public GitHub upload was attributed to a development subcontractor. (A separate Toyota incident disclosed in May 2023 — the ~2.15M-customer vehicle-location leak — is sometimes conflated with this one and has different mechanics.)
 
@@ -337,7 +337,7 @@ Source-control OSINT is core curriculum. GitHub repository enumeration, organiza
 
 ### SANS SEC497 (Practical Open-Source Intelligence)
 
-The flagship SANS OSINT practitioner course, which replaced the retired SEC487. Covers source-control OSINT, TruffleHog, the broader credential-leak ecosystem, and consent / scope discipline for engagement work. SEC497 feeds into GOSI.
+The flagship SANS OSINT practitioner course, which effectively replaced SEC487 in the SANS catalog. Covers source-control OSINT, TruffleHog, the broader credential-leak ecosystem, and consent / scope discipline for engagement work. SEC497 feeds into GOSI.
 
 ### CompTIA PenTest+ (PT0-003)
 

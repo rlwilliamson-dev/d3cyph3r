@@ -588,7 +588,6 @@ For JWT specifically, **always pass the `algorithms` parameter on every `verify(
 ### Background / depth
 
 - **Auth0 — "JWT Handbook"** (free e-book): historically published as a free download; check Auth0's resources page for the current location. ~100 pages of JWT operational depth.
-- **OWASP — "JWT Attack Walk-through"** (community wiki): <https://owasp.org/www-community/attacks/JSON_Web_Token_Attack_Walk_Through>.
 
 ## §9 — Key takeaways
 

@@ -118,7 +118,7 @@ Three named, well-documented incidents where credential reuse — recovered from
 
 In early October 2023, attackers used credential stuffing against the genetic-testing service 23andMe, accessing approximately 14,000 user accounts directly. The compromise itself was unremarkable in scale — credential-stuffing attacks of that magnitude happen daily across the consumer internet. What made the 23andMe case notable was the *secondary blast radius*: 23andMe's relative-sharing features, which let users opt into sharing limited genetic data with relatives in the service's database, meant that the ~14,000 directly-compromised accounts gave the attackers access to data fragments for approximately **6.9 million additional users** — roughly **5.5 million** via DNA Relatives profiles plus another **1.4 million** via Family Tree profiles — who had shared with the compromised accounts.
 
-23andMe confirmed the breach publicly on October 6, 2023. Investigation took until December for the company to begin notifying affected users. The exposed data included names, profile photos, ancestry-percentage breakdowns, locations, and (in some cases) DNA segment information — the kind of personal data that is uniquely sensitive because it does not change and cannot be rotated. Class-action litigation followed; 23andMe settled the consolidated cases for **$30 million in September 2024**. The company also filed for Chapter 11 bankruptcy in March 2025, citing the breach's financial and reputational impact as a contributing factor.
+23andMe confirmed the breach publicly on October 6, 2023. Investigation took until December for the company to begin notifying affected users. The exposed data included names, profile photos, ancestry-percentage breakdowns, locations, and (in some cases) DNA segment information — the kind of personal data that is uniquely sensitive because it does not change and cannot be rotated. Class-action litigation followed; 23andMe initially settled the consolidated cases for **$30 million in September 2024**, a figure subsequently revised upward to **$50 million** with final court approval on **January 30, 2026**, post-bankruptcy. The company filed for Chapter 11 bankruptcy in March 2025, citing the breach's financial and reputational impact as a contributing factor.
 
 The relevance to Aaron is the underlying technique. 23andMe wasn't breached through any vulnerability in their own infrastructure. The attackers used credentials *that had been reused* from prior breaches — names like LinkedIn, MyFitnessPal, Yahoo, Adobe (the same breaches Aaron appears in) — and tested them against 23andMe's login system. Accounts where the user's 23andMe password was the same as their LinkedIn-2012 password got compromised. The remediation 23andMe imposed post-incident was mandatory 2FA on all accounts, which would have prevented the attack regardless of the password-reuse failure.
 
@@ -249,7 +249,7 @@ The Department of Health and Human Services published the **Healthcare and Publi
 
 Two Essential Goals apply to Aaron's case:
 
-- **2.H — Phishing-Resistant Multi-Factor Authentication.** MFA on email, remote access, and privileged accounts. Phishing-resistant (FIDO2/passkeys) is the named target. For Veridian's privileged-account population — including Aaron — this is the Essential-tier expectation.
+- **The Essential CPG on Phishing-Resistant Multi-Factor Authentication.** MFA on email, remote access, and privileged accounts. Phishing-resistant (FIDO2/passkeys) is the named target. For Veridian's privileged-account population — including Aaron — this is the Essential-tier expectation. (HHS has renumbered CPG identifiers across document revisions; refer to the current HPH-CPG document at hphcyber.hhs.gov for the live identifier.)
 - **Strong and Unique Passwords.** Across the organization. Personal-account hygiene for organizational leaders sits in the Enhanced tier, which Veridian targets given its mid-sized scale and Business-Associate status.
 
 The HPH-CPGs are not regulatory mandates in themselves — they are HHS recommendations. But they are increasingly cited in cyber-insurance underwriting questionnaires and in BAA contract terms; the gap between "recommendation" and "expected baseline" closes as the document matures.
@@ -298,7 +298,7 @@ The Veridian engagement is the textbook GOSI exam scenario: defined scope (singl
 
 ### SANS SEC497 — Practical Open-Source Intelligence (OSINT)
 
-**SEC497** (which replaced the retired SEC487 in the SANS catalog) is SANS's flagship practitioner OSINT course. It is not a certification by itself (the matching cert is GOSI) but the course curriculum is the closest thing the industry has to a standardized OSINT-engagement training program. The course covers HIBP and the paid-corpus-enrichment ecosystem, the legal and ethical considerations for OSINT engagements (including the minors exclusion, the active-testing boundary, the right-to-be-forgotten interactions in GDPR-covered jurisdictions), and the reporting discipline.
+**SEC497** (which effectively replaced SEC487 in the SANS catalog) is SANS's flagship practitioner OSINT course. It is not a certification by itself (the matching cert is GOSI) but the course curriculum is the closest thing the industry has to a standardized OSINT-engagement training program. The course covers HIBP and the paid-corpus-enrichment ecosystem, the legal and ethical considerations for OSINT engagements (including the minors exclusion, the active-testing boundary, the right-to-be-forgotten interactions in GDPR-covered jurisdictions), and the reporting discipline.
 
 For Driftwood internally, SEC497 is the recommended baseline for any consultant doing OSINT engagement work. The Veridian scope discipline — exactly what we just did in §2 — is the kind of procedural reflex SEC497 trains.
 
@@ -432,7 +432,7 @@ The historical lesson is for product designers: **never store password hints in 
 - [Have I Been Pwned (HIBP)](https://haveibeenpwned.com/)
 - [HIBP Pwned Passwords API (k-anonymity, free)](https://haveibeenpwned.com/Passwords)
 - [Massachusetts 201 CMR 17.00 — Standards for the Protection of Personal Information](https://www.mass.gov/regulations/201-CMR-1700-standards-for-the-protection-of-personal-information-of-residents-of-the-commonwealth)
-- [HHS Healthcare and Public Health Cybersecurity Performance Goals (HPH-CPGs)](https://hphcyber.hhs.gov/performance-goals.html)
+- [HHS Healthcare and Public Health Cybersecurity Performance Goals (HPH-CPGs)](https://hphcyber.hhs.gov/)
 - [23andMe credential-stuffing breach — 23andMe customer notice (October 2023)](https://blog.23andme.com/articles/addressing-data-security-concerns)
 - [23andMe settlement filing — In re 23andMe Inc. Customer Data Security Breach Litigation (Sept 2024)](https://www.courtlistener.com/docket/68160775/in-re-23andme-inc-customer-data-security-breach-litigation/)
 - [Norton LifeLock January 2023 credential-stuffing notice — Vermont AG filing](https://ago.vermont.gov/sites/ago/files/documents/2023-01-13%20Gen%20Digital%20Notice%20of%20Data%20Breach%20to%20Consumers.pdf)
@@ -442,7 +442,7 @@ The historical lesson is for product designers: **never store password hints in 
 - [Constella Intelligence — executive-protection threat intelligence](https://constella.ai/)
 - [SpyCloud — credential-monitoring platform](https://spycloud.com/)
 - [SANS GIAC GOSI — Open Source Intelligence certification](https://www.giac.org/certifications/open-source-intelligence-gosi/)
-- [SANS SEC497 — Practical Open-Source Intelligence (OSINT) — replaced retired SEC487](https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/)
+- [SANS SEC497 — Practical Open-Source Intelligence (OSINT) — effectively replaced SEC487](https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/)
 - [1Password — password manager (consumer + business)](https://1password.com/)
 - [Bitwarden — open-source password manager](https://bitwarden.com/)
 - [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)

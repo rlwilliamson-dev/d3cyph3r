@@ -210,7 +210,7 @@ The third, indirectly: the **dormant-account lifecycle gap** in Coverline's appl
 
 Database row-value credential leakage is less publicized than source-control credential leakage but happens at comparable rates. A non-exhaustive tour:
 
-**Capital One (March 2019, disclosed July 2019).** The Capital One breach (~106 million records, $80M OCC consent order — the Office of the Comptroller of the Currency was the enforcement agency; FFIEC is the parent interagency council and doesn't issue orders directly) is most famous for the SSRF-into-IMDSv1 entry vector, but the post-compromise lateral movement leveraged credentials stored in S3 bucket configurations and in CloudFormation templates left in source. The Capital One Senate testimony cited multiple credential-storage anti-patterns surfacing post-acquisition; the case is a recurring case study in cloud-security curricula precisely because the technical fault chain involves multiple credential-handling layers, each of which should have been caught independently.
+**Capital One (March 2019, disclosed July 2019).** The Capital One breach (~106 million records, $80M OCC consent order — the Office of the Comptroller of the Currency was the enforcement agency; FFIEC is the parent interagency council and doesn't issue orders directly) is most famous for the SSRF-into-IMDSv1 entry vector, but the post-compromise lateral movement leveraged credentials stored in S3 bucket configurations and in CloudFormation templates left in source. Paige Thompson was convicted in 2022; the Ninth Circuit vacated her original sentence in March 2025, and November 2025 resentencing imposed time-served plus five years supervised release (three years home confinement) and 250 hours of community service, with the $40.7M restitution preserved. The Capital One Senate testimony cited multiple credential-storage anti-patterns surfacing post-acquisition; the case is a recurring case study in cloud-security curricula precisely because the technical fault chain involves multiple credential-handling layers, each of which should have been caught independently.
 
 **Microsoft (October 2019).** Microsoft's BlueKeep / DejaBlue patching cycle exposed a different version of the same anti-pattern: SCCM (System Center Configuration Manager) databases at multiple enterprise customers contained service-account credentials in cleartext rows. The credentials were used by the configuration-management agents to enroll endpoints; SCCM's schema stored them in plain text by default. Mandiant's IR engagements through 2019-2020 found dozens of customers with exposed SCCM databases — the database itself didn't need to be misconfigured to be exposed; an SCCM admin compromise produced full-fleet credential exfiltration.
 
@@ -218,11 +218,11 @@ Database row-value credential leakage is less publicized than source-control cre
 
 **Microsoft Power Apps (August 2021).** UpGuard disclosed that Microsoft Power Apps portals shipped with a default configuration that exposed table data publicly via OData APIs. Multiple enterprise customers, including American Airlines, Ford, and the Indiana Department of Health, had Power Apps tables containing credentials, PII, and operational data publicly accessible. Microsoft changed the default to private in late 2021. The relevant lesson here is that "the database is private because the application is private" is a brittle assumption.
 
-**MOVEit Transfer (May 2023).** The CL0P ransomware group exploited an SQL injection vulnerability in Progress Software's MOVEit Transfer product to access MOVEit's internal database. The database stored credentials for the various transfer integrations MOVEit mediates — SFTP, S3, Azure Blob — in cleartext rows. Once CL0P had the database, they had every integration credential. The downstream exfiltration affected ~2,800+ organizations and ~93 million records. The mitigation pattern: applications that mediate credentials for downstream systems should store those credentials in dedicated secret stores, not in their own operational databases.
+**MOVEit Transfer (May 2023).** The CL0P ransomware group exploited an SQL injection vulnerability in Progress Software's MOVEit Transfer product to access MOVEit's internal database. The database stored credentials for the various transfer integrations MOVEit mediates — SFTP, S3, Azure Blob — in cleartext rows. Once CL0P had the database, they had every integration credential. The downstream exfiltration affected approximately 2,700+ organizations and ~93 million records (CISA's broader estimate puts the population at 3,000+ US, 8,000+ globally). The mitigation pattern: applications that mediate credentials for downstream systems should store those credentials in dedicated secret stores, not in their own operational databases.
 
-**Snowflake customer compromises (May-June 2024).** The Snowflake customer breaches (Ticketmaster ~560M, AT&T ~109M, Santander ~30M, others) showed a related pattern in the opposite direction. The Snowflake instances themselves weren't breached; individual Snowflake customer accounts were accessed using credentials harvested from infostealer malware on customer-side workstations. The credentials were valid Snowflake user passwords; many of the affected accounts lacked MFA. The lesson: a database's security is bounded by the security of the credentials that access it, and credentials accumulate in places (browser password stores, developer machines, CI configurations) outside the database's own control.
+**Snowflake customer compromises (May-June 2024).** The Snowflake customer breaches (Ticketmaster ~560M, AT&T ~110M, Santander ~30M, others) showed a related pattern in the opposite direction. The Snowflake instances themselves weren't breached; individual Snowflake customer accounts were accessed using credentials harvested from infostealer malware on customer-side workstations. The credentials were valid Snowflake user passwords; many of the affected accounts lacked MFA. The lesson: a database's security is bounded by the security of the credentials that access it, and credentials accumulate in places (browser password stores, developer machines, CI configurations) outside the database's own control.
 
-**The recurring "Verizon DBIR credential" finding.** Every annual DBIR since approximately 2016 has identified credentials as a top breach-vector category. The 2024 DBIR put stolen credentials as the #1 initial access vector in 24% of in-scope breaches that report year (31% over the prior 10-year window); the 2026 edition (May 2026) tracked vulnerability exploitation taking #1 at 31% for the first time, with credential abuse at #3 (~13%, behind phishing). The compounding effect of "credentials leaked in one place are usable in many places" is one of the DBIR's most-cited findings year over year.
+**The recurring "Verizon DBIR credential" finding.** Every annual DBIR since approximately 2016 has identified credentials as a top breach-vector category. The 2025 DBIR (covering Nov 2023-Oct 2024 data) reported stolen credentials as the #1 initial-access vector at 22% of breaches in its report period; the 2026 edition (May 2026) tracked vulnerability exploitation taking #1 at 31% for the first time, with credential abuse falling to ~13% behind phishing. The compounding effect of "credentials leaked in one place are usable in many places" is one of the DBIR's most-cited findings year over year.
 
 What unites these cases is the structural similarity to today's finding: databases accumulate credentials over time because operational tasks require credentials and the path of least resistance is "put it in a row." The defensive posture is to redirect that path of least resistance through a dedicated secret store (Secrets Manager, Parameter Store, Vault) so the database never sees a cleartext credential in the first place. Application code reads from the secret store at runtime; the secret never persists in the operational data.
 
@@ -264,7 +264,7 @@ Released March 31, 2025; the version AWS Security Hub natively supports (Securit
 
 ### CIS PostgreSQL Benchmark (v15 through v18)
 
-The PostgreSQL-specific hardening guide is maintained per PostgreSQL major version; v15, v16, v17, and v18 benchmarks all exist as of mid-2026 (with v9.5+ historical versions still available for legacy estates). Relevant sections (numbering consistent across the modern versions):
+The PostgreSQL-specific hardening guide is maintained per PostgreSQL major version; v15, v16, and v17 benchmarks all exist as of mid-2026 (with v9.5+ historical versions still available for legacy estates). Relevant sections (numbering consistent across the modern versions):
 
 - **§3.x (Logging and Monitoring)** — including pgaudit configuration. Coverline's missing source-IP capture is a §3.1.x miss.
 - **§5.x (Authentication)** — including IAM database authentication for RDS. The recommended posture is "no static passwords"; Coverline's RDS master is the opposite.
@@ -278,7 +278,7 @@ The PostgreSQL-specific hardening guide is maintained per PostgreSQL major versi
 
 ### NAIC Insurance Data Security Model Law (2017)
 
-Adopted in ~25 of the states Coverline operates in. Sections in play:
+Adopted in approximately 28 of the states Coverline operates in. Sections in play:
 
 - **§4 (Information Security Program)** — including **§4.D (Risk Assessment)** which requires ongoing reassessment of risks. Credentials past their stated TTL in a database row are a documented risk factor.
 - **§5 (Investigation of a Cybersecurity Event)** — including the determination of whether NPI was acquired.
@@ -314,7 +314,7 @@ Relevant techniques:
 
 ### AWS Certified Security – Specialty (SCS-C03)
 
-AWS released SCS-C03 in late 2025 / early 2026 as the successor to SCS-C02. Domain 1 (Threat Detection and Incident Response) and Domain 4 (Identity and Access Management) cover the relevant AWS-native controls — Secrets Manager, GuardDuty RDS Protection, Database Activity Streams, IAM database authentication, AWS Config managed rules for RDS.
+AWS released SCS-C03 on December 2, 2025 as the successor to SCS-C02 (which was decommissioned December 1, 2025). Domain 1 (Threat Detection and Incident Response) and Domain 4 (Identity and Access Management) cover the relevant AWS-native controls — Secrets Manager, GuardDuty RDS Protection, Database Activity Streams, IAM database authentication, AWS Config managed rules for RDS.
 
 ### AWS Certified Database – Specialty (DBS-C01)
 
@@ -441,8 +441,8 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 - **NAIC Insurance Data Security Model Law**: <https://content.naic.org/sites/default/files/model-law-668.pdf>. The 2017 model with state-by-state adoption status.
 - **NYDFS 23 NYCRR 500 (current text)**: <https://www.dfs.ny.gov/industry_guidance/cybersecurity>. November 2023 amendment is the current version.
 - **GLBA Safeguards Rule (16 CFR Part 314)**: <https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-314>. FTC amendments (December 2021, with notification provision §314.5 effective May 2024).
-- **CIS AWS Foundations Benchmark**: <https://www.cisecurity.org/benchmark/amazon_web_services>. v5.0.0 is the Security Hub-supported version as of late 2025.
-- **CIS PostgreSQL Benchmark**: <https://www.cisecurity.org/benchmark/postgresql>. Per-version hardening guides for v15, v16, v17, and v18 (plus historical versions for legacy estates).
+- **CIS AWS Foundations Benchmark**: <https://www.cisecurity.org/benchmark/amazon_web_services>. v5.0.0 is the Security Hub-supported version; v6.0.0 and v7.0.0 have shipped on cisecurity.org but Security Hub tooling support is lagging.
+- **CIS PostgreSQL Benchmark**: <https://www.cisecurity.org/benchmark/postgresql>. Per-version hardening guides for v15, v16, and v17 (plus historical versions for legacy estates).
 
 ### CWE / MITRE ATT&CK
 
