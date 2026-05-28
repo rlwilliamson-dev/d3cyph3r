@@ -24,6 +24,17 @@
 //                   the player sees. If a file is queried with
 //                   `evtx` but has no entry here, the command
 //                   returns "not a recognized event log."
+//   sqlite_dbs    — map of "filename" → { tables: { <name>:
+//                   { schema, columns, rows }}}. Used by the
+//                   `sqlite3` command (v1.23.0+). `schema` is the
+//                   raw CREATE TABLE text the player sees via
+//                   `.schema`. `columns` is the ordered column-name
+//                   array used by SELECT *. `rows` is an array of
+//                   plain row objects keyed by column name. The
+//                   executor handles WHERE = / LIKE, ORDER BY,
+//                   LIMIT, COUNT(*) in-memory — no real SQLite
+//                   engine. See js/commands/forensics.js#sqlite3
+//                   for the supported grammar.
 //
 // Continuity: all levels are set at Driftwood Systems, a mid-sized
 // tech consulting firm. Each track introduces a new client engagement
@@ -1757,6 +1768,619 @@ same infrastructure that catches an exhausted IR analyst's
 typo. The system doesn't know the difference. You're the one
 who reads what the system recorded and decides what each
 finding requires. Both go in.
+
+Return to the lobby:    ssh guest@d3cyph3r`
+        },
+
+      },
+    },
+  },
+
+  // ── level 2 — "What Reed's Browser Saw" ─────────────────────────
+  // Day three of the Reed Connolly case. The level1 evtx finding has
+  // closed: the IR-team responder credential leak was surfaced same-
+  // day to Sgt. Chen and Larry Hutchins. Maya Voss (Polaris IR-lead,
+  // whose credential leaked in level1's 4625) rotated her account
+  // and authorized a deeper forensic pass on Reed's seized workstation
+  // image. Today's task: query the browser-artifact SQLite databases
+  // recovered from Reed's user profile and reconstruct what he did
+  // online in the hours before the 09:42 Bay 4 badge-in. The lesson
+  // is browser-database forensics — places.sqlite / Chromium History
+  // / Cookies as the de-facto user-activity ledger every modern
+  // device maintains — under NIST SP 800-86 (Guide to Integrating
+  // Forensic Techniques into Incident Response). Mapped to CMMC
+  // AU.L2-3.3.x audit-record controls + NIST 800-171 3.3.1 (System
+  // Audit Records). Introduces `sqlite3`.
+  //
+  // Player credential gating: P0l4r1s-IR-L3ad-2026! is the level1
+  // breadcrumb (Maya's leaked password). Maya rotated her primary
+  // account, but the `ir-audit` service account on the IR forensic
+  // bench retained the same password pattern — an IR-team password-
+  // hygiene anti-pattern that the level surfaces obliquely
+  // (lessons-learned calls it out). The player ssh's in as that
+  // service account.
+  //
+  // Breadcrumb out: Reed's Google session cookie value
+  // (RC-Gmail-PreDawn-2026-03-14-T0247Z), extracted from the
+  // Cookies.sqlite database via SELECT. The string is a session
+  // token that gates level3@forensics (where the player will
+  // examine Reed's outbound webmail headers).
+  "level2@forensics": {
+    password: "P0l4r1s-IR-L3ad-2026!",
+    track: "forensics",
+    title: "What Reed's browser saw (sqlite3)",
+    estimatedMinutes: 20,
+    playerUser: "ir-audit",
+    objective: "Query Reed Connolly's recovered browser-artifact databases (History + Cookies) to reconstruct his online activity in the hours before the 09:42 Bay 4 badge-in. Surface any session token, login state, or download record that could be useful evidence and that the Polaris IR team can follow up on.",
+    lesson: "Day three of the Reed case. Friday closed clean: the evtx finding was packaged for Sgt. Chen, the IR-credential leak surfaced to Larry Hutchins inside three hours, and Maya Voss (Polaris's IR-lead) rotated her primary account. Maya then authorized a deeper pass on Reed's seized workstation image — specifically the user-profile artifacts the EnCase E01 set carried over but level1 didn't touch. Sgt. Chen pushed those artifacts (Reed's Chromium browser-profile databases) to Polaris's IR forensic bench, where you're now logged in as the `ir-audit` service account. (Awkward note: Maya's `ir-audit` service account still carries the same password pattern that just gated this shell. That's a finding too — separate from today's task, but the lessons-learned file flags it.) Your job: query History.sqlite and Cookies.sqlite to reconstruct what Reed did online in the hours before the 09:42 Bay 4 badge-in. Read welcome.md first; it introduces the new `sqlite3` command. Then case-notes.md for the scope, then chain-of-custody.txt for the hash baseline. When you've surfaced the smoking-gun session token, read lessons-learned.md.",
+
+    crossTrackHooks: ["linux"],
+
+    hints: [
+      "Browse the working directory with `ls`. The Reed/ subdirectory holds two .sqlite files. Run `sqlite3 Reed/History.sqlite \".tables\"` to see what tables the Chromium History DB carries (urls, visits, downloads, keyword_search_terms — the same names Chrome has used since ~2010).",
+      "The `urls` table has a `last_visit_time` column. Sort it descending and look at the most-recent 20 entries: `sqlite3 -header Reed/History.sqlite \"SELECT url, last_visit_time FROM urls ORDER BY last_visit_time DESC LIMIT 20\"`. One row from 02:47 Saturday morning will stand out — Reed accessed personal webmail seven hours before the Bay 4 badge-in. That's the lead. Follow it into Cookies.sqlite.",
+      "Cookies.sqlite has a `cookies` table keyed by `host_key`. Filter for the webmail host you found in History: `sqlite3 -header Reed/Cookies.sqlite \"SELECT host_key, name, value FROM cookies WHERE host_key LIKE '%mail.google%'\"`. One cookie row's `value` column carries an explicit session-token string. That string is your breadcrumb out — it's the credential level3 needs to verify Reed's outbound mail.",
+    ],
+
+    // BONUS FIND — a Compress-Archive-via-PowerShell downloader
+    // record sitting in History.sqlite's `downloads` table. Confirms
+    // the level1 evtx finding (the 4688 PowerShell exfil chain) from
+    // an orthogonal artifact source. Doesn't gate the credential
+    // chain; surfaces only when the player explicitly queries
+    // `downloads`.
+    bonusFinds: [
+      {
+        id:   "exfil-downloader-in-history",
+        name: "PowerShell exfil downloader in downloads table",
+        hint: "Reed's downloads table carries an entry for a PowerShell archive script pulled from a personal Dropbox link 9 days before the Bay 4 incident. Same `Compress-Archive -Path D:\\CUI\\Subsystem-A\\*` pattern level1's 4688 chain captured — but now sourced from a DIFFERENT artifact (browser-history-stored download record, not Security event log). When two independent artifact sources show the same behavior, the chain-of-custody narrative writes itself: this wasn't a one-off, this was rehearsed.",
+        trigger: { command: "sqlite3", argMatches: /downloads/i, outputContains: "rc-archive-helper" },
+      },
+    ],
+
+    filetypes: {
+      "Reed/History.sqlite": "SQLite 3.x database",
+      "Reed/Cookies.sqlite": "SQLite 3.x database",
+    },
+
+    // Pre-computed hashes for chain-of-custody verification. Player
+    // can run `sha256sum Reed/History.sqlite` and confirm against
+    // chain-of-custody.txt to demonstrate the artifact hasn't been
+    // tampered with during analysis.
+    fileHashes: {
+      "Reed/History.sqlite": {
+        sha256: "8c4f1d2e93b56a087c1f4a72d9e83c61a5f2b40e7c93a18d6f25b91e7d34a8c2",
+      },
+      "Reed/Cookies.sqlite": {
+        sha256: "3a7d92f5b8e14c620d9f471a8e63b95c2d1e84f0a76b3e5c9d28f147b62a503e",
+      },
+    },
+
+    sqlite_dbs: {
+      "Reed/History.sqlite": {
+        tables: {
+          urls: {
+            schema:
+`CREATE TABLE urls(
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  url             LONGVARCHAR,
+  title           LONGVARCHAR,
+  visit_count     INTEGER DEFAULT 0 NOT NULL,
+  typed_count     INTEGER DEFAULT 0 NOT NULL,
+  last_visit_time INTEGER NOT NULL,
+  hidden          INTEGER DEFAULT 0 NOT NULL
+);`,
+            columns: ["id", "url", "title", "visit_count", "typed_count", "last_visit_time", "hidden"],
+            rows: [
+              // Normal workplace browsing — context
+              { id: 1, url: "https://intranet.polaris-ds.local/wiki/onboarding", title: "Onboarding | Polaris Intranet", visit_count: 12, typed_count: 0, last_visit_time: "2026-03-13 09:14:22", hidden: 0 },
+              { id: 2, url: "https://intranet.polaris-ds.local/calendar", title: "Calendar | Polaris Intranet", visit_count: 87, typed_count: 0, last_visit_time: "2026-03-13 17:32:08", hidden: 0 },
+              { id: 3, url: "https://teams.microsoft.com/", title: "Microsoft Teams", visit_count: 412, typed_count: 0, last_visit_time: "2026-03-13 17:58:41", hidden: 0 },
+              { id: 4, url: "https://outlook.office.com/mail/", title: "Mail - Reed Connolly - Outlook", visit_count: 1832, typed_count: 1, last_visit_time: "2026-03-13 17:59:12", hidden: 0 },
+              // Friday night browsing — non-work but unremarkable
+              { id: 5, url: "https://www.espn.com/nba/", title: "NBA Scores - ESPN", visit_count: 23, typed_count: 0, last_visit_time: "2026-03-13 22:48:51", hidden: 0 },
+              { id: 6, url: "https://www.reddit.com/r/PolarisFC/", title: "Polaris FC : Soccer Tournament Forum", visit_count: 8, typed_count: 0, last_visit_time: "2026-03-13 23:11:04", hidden: 0 },
+              // SMOKING GUN — Saturday 02:47 personal webmail visit
+              { id: 7, url: "https://mail.google.com/mail/u/0/", title: "Inbox (4) - rconnolly.personal@gmail.com", visit_count: 6, typed_count: 1, last_visit_time: "2026-03-14 02:47:21", hidden: 0 },
+              { id: 8, url: "https://mail.google.com/mail/u/0/#sent", title: "Sent Mail - rconnolly.personal@gmail.com", visit_count: 3, typed_count: 0, last_visit_time: "2026-03-14 02:51:08", hidden: 0 },
+              // Saturday morning escalation — searches showing intent
+              { id: 9, url: "https://www.google.com/search?q=encryption+export+controls+EAR+penalties", title: "encryption export controls EAR penalties - Google Search", visit_count: 1, typed_count: 0, last_visit_time: "2026-03-14 03:12:55", hidden: 0 },
+              { id: 10, url: "https://www.google.com/search?q=CUI+how+to+identify+if+a+document+is+marked", title: "CUI how to identify if a document is marked - Google Search", visit_count: 1, typed_count: 0, last_visit_time: "2026-03-14 03:14:38", hidden: 0 },
+              // Dropbox download (parallel evidence to level1's 4688 chain)
+              { id: 11, url: "https://www.dropbox.com/scl/fi/rc-archive-helper.ps1", title: "Dropbox - rc-archive-helper.ps1", visit_count: 2, typed_count: 0, last_visit_time: "2026-03-05 19:42:11", hidden: 0 },
+              // Saturday post-badge-in — return to webmail
+              { id: 12, url: "https://mail.google.com/mail/u/0/#drafts", title: "Drafts (1) - rconnolly.personal@gmail.com", visit_count: 4, typed_count: 0, last_visit_time: "2026-03-14 11:33:47", hidden: 0 },
+              // Sunday — normal browsing resumed
+              { id: 13, url: "https://www.weather.com/weather/today/", title: "Weather Today - The Weather Channel", visit_count: 41, typed_count: 0, last_visit_time: "2026-03-15 07:18:02", hidden: 0 },
+              { id: 14, url: "https://www.amazon.com/orders", title: "Your Orders - Amazon.com", visit_count: 19, typed_count: 0, last_visit_time: "2026-03-15 14:22:33", hidden: 0 },
+              { id: 15, url: "https://news.ycombinator.com/", title: "Hacker News", visit_count: 67, typed_count: 0, last_visit_time: "2026-03-15 20:45:18", hidden: 0 },
+            ],
+          },
+          visits: {
+            schema:
+`CREATE TABLE visits(
+  id          INTEGER PRIMARY KEY,
+  url         INTEGER NOT NULL,    -- FK -> urls.id
+  visit_time  INTEGER NOT NULL,
+  from_visit  INTEGER,
+  transition  INTEGER DEFAULT 0 NOT NULL,
+  visit_duration INTEGER DEFAULT 0 NOT NULL
+);`,
+            columns: ["id", "url", "visit_time", "from_visit", "transition", "visit_duration"],
+            rows: [
+              { id: 101, url: 7,  visit_time: "2026-03-14 02:47:21", from_visit: null, transition: 1, visit_duration: 217 },
+              { id: 102, url: 8,  visit_time: "2026-03-14 02:51:08", from_visit: 101,  transition: 0, visit_duration: 142 },
+              { id: 103, url: 9,  visit_time: "2026-03-14 03:12:55", from_visit: null, transition: 1, visit_duration: 89  },
+              { id: 104, url: 10, visit_time: "2026-03-14 03:14:38", from_visit: 103,  transition: 0, visit_duration: 124 },
+              { id: 105, url: 12, visit_time: "2026-03-14 11:33:47", from_visit: null, transition: 1, visit_duration: 412 },
+            ],
+          },
+          downloads: {
+            schema:
+`CREATE TABLE downloads(
+  id              INTEGER PRIMARY KEY,
+  target_path     LONGVARCHAR,
+  url             LONGVARCHAR,
+  start_time      INTEGER NOT NULL,
+  end_time        INTEGER NOT NULL,
+  received_bytes  INTEGER NOT NULL,
+  total_bytes     INTEGER NOT NULL,
+  state           INTEGER NOT NULL,
+  danger_type     INTEGER NOT NULL DEFAULT 0,
+  mime_type       VARCHAR(255) DEFAULT ""
+);`,
+            columns: ["id", "target_path", "url", "start_time", "end_time", "received_bytes", "total_bytes", "state", "danger_type", "mime_type"],
+            rows: [
+              { id: 201, target_path: "C:\\Users\\rconnolly\\Downloads\\rc-archive-helper.ps1", url: "https://www.dropbox.com/scl/fi/rc-archive-helper.ps1", start_time: "2026-03-05 19:42:11", end_time: "2026-03-05 19:42:14", received_bytes: 4218, total_bytes: 4218, state: 1, danger_type: 0, mime_type: "text/plain" },
+              { id: 202, target_path: "C:\\Users\\rconnolly\\Downloads\\2026-Q1-team-budget.xlsx", url: "https://intranet.polaris-ds.local/finance/exports/2026-Q1-team-budget.xlsx", start_time: "2026-03-10 11:08:47", end_time: "2026-03-10 11:08:48", received_bytes: 89432, total_bytes: 89432, state: 1, danger_type: 0, mime_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+              { id: 203, target_path: "C:\\Users\\rconnolly\\Downloads\\daughter-soccer-schedule.pdf", url: "https://www.centrevillesportscomplex.com/schedules/U10-spring-2026.pdf", start_time: "2026-03-11 18:32:09", end_time: "2026-03-11 18:32:11", received_bytes: 234101, total_bytes: 234101, state: 1, danger_type: 0, mime_type: "application/pdf" },
+            ],
+          },
+          keyword_search_terms: {
+            schema:
+`CREATE TABLE keyword_search_terms(
+  keyword_id     INTEGER NOT NULL,
+  url_id         INTEGER NOT NULL,
+  term           LONGVARCHAR NOT NULL,
+  normalized_term LONGVARCHAR NOT NULL
+);`,
+            columns: ["keyword_id", "url_id", "term", "normalized_term"],
+            rows: [
+              { keyword_id: 1, url_id: 9,  term: "encryption export controls EAR penalties", normalized_term: "encryption export controls ear penalties" },
+              { keyword_id: 1, url_id: 10, term: "CUI how to identify if a document is marked", normalized_term: "cui how to identify if a document is marked" },
+            ],
+          },
+        },
+      },
+      "Reed/Cookies.sqlite": {
+        tables: {
+          cookies: {
+            schema:
+`CREATE TABLE cookies(
+  creation_utc     INTEGER NOT NULL,
+  host_key         TEXT NOT NULL,
+  name             TEXT NOT NULL,
+  value            TEXT NOT NULL,
+  path             TEXT NOT NULL,
+  expires_utc      INTEGER NOT NULL,
+  is_secure        INTEGER NOT NULL,
+  is_httponly      INTEGER NOT NULL,
+  last_access_utc  INTEGER NOT NULL,
+  has_expires      INTEGER NOT NULL DEFAULT 1,
+  is_persistent    INTEGER NOT NULL DEFAULT 1,
+  priority         INTEGER NOT NULL DEFAULT 1,
+  samesite         INTEGER NOT NULL DEFAULT -1
+);`,
+            columns: ["creation_utc", "host_key", "name", "value", "path", "expires_utc", "is_secure", "is_httponly", "last_access_utc"],
+            rows: [
+              // Workplace cookies — context
+              { creation_utc: "2025-09-04 08:14:22", host_key: ".microsoft.com",      name: "MSAL_session",  value: "eyJhbGciOiJIUzI1NiJ9.workplace_redacted",                           path: "/", expires_utc: "2026-09-04 08:14:22", is_secure: 1, is_httponly: 1, last_access_utc: "2026-03-13 17:58:41" },
+              { creation_utc: "2025-09-04 08:14:23", host_key: ".outlook.office.com", name: "OutlookSession", value: "AQA1234567890workplace",                                            path: "/", expires_utc: "2026-09-04 08:14:23", is_secure: 1, is_httponly: 1, last_access_utc: "2026-03-13 17:59:12" },
+              { creation_utc: "2025-11-22 19:42:11", host_key: ".espn.com",           name: "ESPN_USER_ID",  value: "anon-7c4b-9f12-d843",                                              path: "/", expires_utc: "2027-11-22 19:42:11", is_secure: 0, is_httponly: 0, last_access_utc: "2026-03-13 22:48:51" },
+              { creation_utc: "2025-12-08 10:33:55", host_key: ".reddit.com",         name: "reddit_session", value: "U2FsdGVkX19personalbrowser",                                       path: "/", expires_utc: "2026-12-08 10:33:55", is_secure: 1, is_httponly: 1, last_access_utc: "2026-03-13 23:11:04" },
+              // SMOKING GUN — Reed's personal Gmail session
+              { creation_utc: "2026-03-14 02:47:21", host_key: "mail.google.com",     name: "SID",           value: "RC-Gmail-PreDawn-2026-03-14-T0247Z",                                path: "/", expires_utc: "2026-09-14 02:47:21", is_secure: 1, is_httponly: 1, last_access_utc: "2026-03-14 11:33:47" },
+              { creation_utc: "2026-03-14 02:47:21", host_key: ".google.com",         name: "HSID",          value: "AeQ8mP4_personalGmailHelperToken",                                   path: "/", expires_utc: "2026-09-14 02:47:21", is_secure: 1, is_httponly: 1, last_access_utc: "2026-03-14 11:33:47" },
+              { creation_utc: "2025-08-30 12:05:43", host_key: ".amazon.com",         name: "session-token", value: "amazon_personal_session_truncated",                                 path: "/", expires_utc: "2026-08-30 12:05:43", is_secure: 1, is_httponly: 1, last_access_utc: "2026-03-15 14:22:33" },
+              { creation_utc: "2025-06-12 09:14:22", host_key: ".weather.com",        name: "wxlocation",    value: "us:VA:Centreville:20121",                                          path: "/", expires_utc: "2027-06-12 09:14:22", is_secure: 0, is_httponly: 0, last_access_utc: "2026-03-15 07:18:02" },
+            ],
+          },
+        },
+      },
+    },
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Driftwood Systems / Polaris IR Forensic Bench ─────────────
+  Host:    polaris-ir-bench.evidence.polaris.local
+  Acct:    ir-audit (Polaris IR service account)
+  Image:   Reed Connolly workstation E01 set, mounted read-only
+  Date:    Monday 2026-03-23 (case day three)
+────────────────────────────────────────────────────────────
+
+─── NEW COMMANDS ──────────────────────────────────────────────
+
+  sqlite3 — read-only SQLite query interface
+
+      sqlite3 <file> ".tables"
+      sqlite3 <file> ".schema [<table>]"
+      sqlite3 <file> "SELECT ... FROM <table> ..."
+      sqlite3 -header <file> "..."   # include column names
+      sqlite3 -column <file> "..."   # render as aligned table
+
+  Try \`sqlite3 --help\` for the full grammar, or \`man sqlite3\`
+  for a deeper reference including supported WHERE expressions
+  and the COUNT(*) / DISTINCT / LIKE forms.
+
+─── WHAT SQLITE IS ────────────────────────────────────────────
+
+SQLite is the most-deployed database in the world. It ships
+inside every browser, every iOS / Android app, every mail
+client, every desktop tool that needs to store local state.
+Each .sqlite file is a complete database — no daemon, no
+network listener, no auth layer. Just a file that holds tables
+of rows.
+
+For forensics, that means: whenever an investigation asks
+"what did this user do on this machine," there is almost
+always a SQLite database holding the answer. Browser history,
+cookies, autofill, downloads, mail-client offline caches,
+chat-app message histories — all SQLite.
+
+Chromium-family browsers (Chrome, Edge, Brave, Opera) keep
+their per-profile state in files like \`History\`, \`Cookies\`,
+\`Login Data\`, \`Web Data\`, \`Bookmarks\`. The \`History\`
+file (called History.sqlite in this engine for clarity) holds
+four tables that matter for incident reconstruction:
+
+  urls                  Every URL ever visited
+                        (id, url, title, visit_count, last_visit_time)
+  visits                One row per navigation event
+                        (id, url FK, visit_time, from_visit, transition)
+  downloads             One row per file downloaded
+                        (id, target_path, url, start_time, mime_type)
+  keyword_search_terms  Search box queries
+                        (keyword_id, url_id, term)
+
+The \`Cookies\` file (Cookies.sqlite here) holds a single
+table — \`cookies\` — keyed by host_key. Each row is one
+cookie: its host, name, value, expiration, secure/httponly
+flags, last-access timestamp. A live cookie row with a
+non-expired session value is the same as having the user's
+session on that site (subject, of course, to legal
+authorization, which Sgt. Chen and Dana have explicitly
+granted for this case).
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1. ls                              See the working directory
+  2. cat welcome.md                  Re-read this if needed
+  3. cat case-notes.md               Sgt. Chen's brief for today
+  4. cat chain-of-custody.txt        Hash baseline before you query
+  5. sha256sum Reed/History.sqlite   Confirm the artifact's hash
+  6. sqlite3 Reed/History.sqlite ".tables"
+  7. sqlite3 -header Reed/History.sqlite "SELECT ... FROM urls ..."
+  8. Follow Reed's Saturday-morning activity through urls + visits
+  9. Pivot to Cookies.sqlite when you find the webmail host
+ 10. cat lessons-learned.md          Once you've found the session token
+ 11. ssh guest@d3cyph3r              Return to the lobby
+
+If you get stuck, type \`hint\` for a graduated nudge or
+\`man sqlite3\` for the full command reference. The walkthrough
+subsite (when shipped) carries the spoiler-rich solve path.`
+        },
+
+        "case-notes.md": {
+          type: "file",
+          content:
+`POLARIS DEFENSE SYSTEMS — INTERNAL INVESTIGATION CASE NOTES
+Case ID:           POL-IIS-2026-0007
+Status:            ACTIVE — formal investigation (day three)
+Opened by:         Dana Reyes (in-house counsel)
+Case lead:         Sgt. Chen (FSO)
+IR-team lead:      Maya Voss
+Driftwood ref:     DW-FORENSICS-POL-2026-014
+
+DAY THREE TASKING
+─────────────────────────────────────────────────────────────
+  Friday closed clean. The day-two evtx pass surfaced two
+  findings:
+
+    (a) Reed Connolly's 09:42-11:18 Bay 4 activity captured
+        in Security event log: a Compress-Archive PowerShell
+        chain producing C:\\Users\\rconnolly\\AppData\\Local\\
+        Temp\\sa-export.zip from D:\\CUI\\Subsystem-A\\*.
+
+    (b) A 4625 failed-logon record from the Tuesday-night IR
+        acquisition where Maya Voss typed her account password
+        into the username field of a network-auth prompt. Her
+        primary account was rotated Friday afternoon; same-day
+        notification went to Larry Hutchins (Polaris CISO).
+
+  Today's narrower task: examine the browser-artifact databases
+  recovered from Reed's user profile. The E01 image mount-point
+  copied them to this bench at \`Reed/\` (paths preserved for
+  audit). Sgt. Chen has not articulated a hypothesis; the
+  reasonable read is that the 02:47 personal-webmail visit
+  Maya noticed during her own initial pass deserves a closer
+  look, but interpret the data as it shows.
+
+SCOPE — what we're being asked to do
+─────────────────────────────────────────────────────────────
+  • Query History.sqlite for Reed's online activity in the
+    24-hour window before the 09:42 Bay 4 badge-in.
+  • Query Cookies.sqlite for any live session tokens on
+    personal (i.e. non-Polaris-domain) sites that overlap
+    with that window.
+  • If you find a Gmail session token, extract its value.
+    Outside counsel will use it for level3's analysis of
+    Reed's Sent folder (subject to subpoena to Google, which
+    Dana has already filed — the session token expedites the
+    review).
+
+SCOPE — what we're NOT being asked to do
+─────────────────────────────────────────────────────────────
+  • Don't read the message content. The session token is the
+    deliverable; reading Reed's mail inside this analysis
+    bench would violate scope and contaminate the evidence
+    chain. That's level3's job under a different authorization.
+  • Don't write to the .sqlite files. They're mounted read-
+    only on the analysis volume, but the sqlite3 command shells
+    used today are read-only by design as well (no
+    INSERT/UPDATE/DELETE support).
+
+CONSTRAINTS
+─────────────────────────────────────────────────────────────
+  • Hash before and after. Run \`sha256sum\` against each
+    .sqlite file before your first query and after your last.
+    The hash on chain-of-custody.txt is the day-three baseline.
+  • Log queries. Maya wants the exact SELECT statements you
+    ran in the deliverable (so the procedure can be re-run
+    under outside-counsel oversight if challenged).
+  • Don't pivot to any other artifact source today. If the
+    queries surface something interesting beyond webmail —
+    say, a download record showing pre-meditation — flag it
+    in the lessons-learned but don't open it. Day four is
+    when scope expands.
+
+— Maya Voss
+  Polaris IR Lead`
+        },
+
+        "chain-of-custody.txt": {
+          type: "file",
+          content:
+`POL-IIS-2026-0007 — CHAIN OF CUSTODY (DAY THREE BASELINE)
+─────────────────────────────────────────────────────────────
+
+Artifacts extracted from Reed Connolly workstation E01 image
+(POL-WS-0418, acquired Tuesday 2026-03-17 19:42 EDT, hash
+preserved per case-summary.txt). The following user-profile
+files were copied to this analysis bench, read-only:
+
+  Reed/History.sqlite
+    sha256: 8c4f1d2e93b56a087c1f4a72d9e83c61a5f2b40e7c93a18d6f25b91e7d34a8c2
+    size:   ~720KB
+    source: \\Users\\rconnolly\\AppData\\Local\\Google\\Chrome\\
+            User Data\\Default\\History
+
+  Reed/Cookies.sqlite
+    sha256: 3a7d92f5b8e14c620d9f471a8e63b95c2d1e84f0a76b3e5c9d28f147b62a503e
+    size:   ~340KB
+    source: \\Users\\rconnolly\\AppData\\Local\\Google\\Chrome\\
+            User Data\\Default\\Network\\Cookies
+
+Procedure for today's analyst (you):
+
+  1. Confirm the hash above matches \`sha256sum Reed/History.sqlite\`.
+  2. Run queries via \`sqlite3\`.
+  3. Confirm the hash hasn't changed after your last query.
+  4. Document the queries in lessons-learned.md or in the
+     deliverable.
+
+If the hash diverges at step 3, STOP and notify Sgt. Chen.
+The analysis bench is configured read-only, so divergence
+would indicate a tooling fault that needs investigation
+before the case can rely on the queries you ran.
+
+— Maya Voss, 2026-03-23`
+        },
+
+        "Reed": {
+          type: "dir",
+          children: {
+            "History.sqlite": {
+              type: "file",
+              // Binary-looking placeholder — players inspect this
+              // file via the `sqlite3` command, not via `cat` /
+              // `strings`. The actual queryable data lives in
+              // level.sqlite_dbs above.
+              content: "SQLite format 3\x00\x10\x00\x01\x01\x00@  \x00\x00\x00\x03[binary]"
+            },
+            "Cookies.sqlite": {
+              type: "file",
+              content: "SQLite format 3\x00\x10\x00\x01\x01\x00@  \x00\x00\x00\x02[binary]"
+            },
+          },
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`═══ POST-MORTEM: SQLITE IS THE USER-ACTIVITY LEDGER ═══
+
+─── BLUNT VERSION ────────────────────────────────────────────
+
+Reed Connolly accessed personal Gmail at 02:47 Saturday
+morning, seven hours before the 09:42 Bay 4 badge-in. He
+searched for "encryption export controls EAR penalties" and
+"CUI how to identify if a document is marked" between
+03:12 and 03:14. He downloaded a PowerShell archive
+script from his personal Dropbox account nine days earlier
+(2026-03-05 19:42), which the Cookies/History pair confirms
+he physically downloaded to his workstation — not just
+visited. The 4688 Compress-Archive chain level1's evtx
+finding captured on Saturday morning is rehearsed behavior.
+
+The smoking-gun artifact is the Gmail SID cookie row in
+Cookies.sqlite (RC-Gmail-PreDawn-2026-03-14-T0247Z). Outside
+counsel will use that session token to subpoena Google for
+Reed's Sent-folder content under day-four authorization.
+
+─── CONSULTING-FIRM ANGLE ────────────────────────────────────
+
+Browser-database forensics is a quietly massive lever for
+internal-investigation work. The discipline at consulting
+shops looks like this:
+
+  1. ALWAYS hash before you query. The sqlite3 command is
+     read-only in this engine but a real \`sqlite3 file.db\`
+     CLI can write — the analyst's chain-of-custody rigor
+     comes from never assuming the tool is safe. Compute
+     the SHA-256, write it to the case file, query, compute
+     again, confirm equality.
+
+  2. Run queries you can reproduce. Outside counsel may
+     re-run them under subpoena pressure six months later.
+     The deliverable lists the exact SELECT statements.
+
+  3. Don't read content unless authorized. Reed's webmail
+     INBOX content is out of scope today; the session token
+     IS in scope because counsel has a Google subpoena in
+     flight. Saying "out of scope" and meaning it
+     distinguishes the firm.
+
+  4. When two artifacts agree, the case writes itself. The
+     level1 4688 Compress-Archive chain and the level2
+     downloads-table rc-archive-helper.ps1 row are
+     independent artifacts pointing at the same behavior.
+     One could be coincidence; both is rehearsal.
+
+─── FRAMEWORKS ────────────────────────────────────────────────
+
+  NIST SP 800-86 — Guide to Integrating Forensic Techniques
+    into Incident Response. Browser artifacts are listed as
+    one of the canonical endpoint-forensics data sources
+    (alongside file-system metadata, memory, network
+    artifacts, and event logs). §3.3 on Examining Data lays
+    out the "preserve original, work on a copy, document
+    each step" workflow this case follows.
+
+  NIST SP 800-171 Rev. 3 — 3.3.1 (System Audit Records).
+    The browser History database meets the spirit of "create
+    and retain system audit records sufficient to monitor,
+    analyze, investigate, and report unlawful or unauthorized
+    system activity." Chrome's per-profile retention is
+    indefinite by default; clearing browsing data doesn't
+    fully wipe (WAL journal pages persist until vacuum).
+
+  CMMC Level 2 — AU.L2-3.3.x audit-record family. Polaris is
+    expected to retain audit records that include user-level
+    activity sufficient to support a forensic investigation
+    like this one. Browser artifacts qualify.
+
+  Insider Threat Program — DoD 5205.16. CUI handling
+    obligations (DoDM 5200.48) interact with NISPOM (32 CFR
+    Part 117) for cleared facilities like Polaris. The
+    investigation is authorized; the artifact-handling
+    discipline above is what makes the authorization stand
+    up to challenge.
+
+─── CERTIFICATIONS ───────────────────────────────────────────
+
+  GCFE (GIAC Certified Forensic Examiner) — browser-artifact
+    forensics is a major domain. The exam's Chrome / Firefox
+    history-database modules cover exactly the queries you
+    just ran.
+
+  GCFA (GIAC Certified Forensic Analyst) — broader endpoint
+    forensics; browser artifacts as one of ~12 data sources.
+
+  CHFI (Computer Hacking Forensic Investigator) — vendor-
+    neutral forensic-process cert; lists browser DBs in its
+    artifact-collection domain.
+
+─── MITRE ATT&CK ─────────────────────────────────────────────
+
+  T1119 — Automated Collection. Reed's rc-archive-helper.ps1
+    is a textbook example of a custom collector pre-staged
+    on a workstation. The 2026-03-05 Dropbox download is
+    when the tooling landed; the 2026-03-14 Bay 4 invocation
+    is when it ran.
+
+  T1567 — Exfiltration Over Web Service. Personal webmail
+    (Gmail in this case) is the most common single web
+    service used for low-volume CUI exfiltration. The 02:47
+    session opening pre-positions the channel; the 11:33
+    drafts-folder visit is plausibly the staging or send
+    moment.
+
+  T1083 — File and Directory Discovery (defender side). The
+    "CUI how to identify if a document is marked" Google
+    search is the defender's window into Reed's level of
+    awareness about what he was about to handle.
+
+─── DEFENDER ACTION ──────────────────────────────────────────
+
+  Browser-policy enforcement. Polaris's Chrome Enterprise
+    policy could block personal-Gmail sign-in on managed
+    devices (\`RestrictSigninToPattern\`), or block consumer
+    cloud-storage hosts (\`URLBlocklist\` entries for
+    dropbox.com, drive.google.com personal accounts).
+    Today's case is investigated; tomorrow's case is
+    prevented.
+
+  DLP on file-staging. The Temp\\sa-export.zip path Reed used
+    is a known staging spot for archive-then-exfil. Endpoint
+    DLP rules on \`%TEMP%\\*.zip\` near \`D:\\CUI\\*\` reads
+    fire on this pattern within minutes of the Compress-
+    Archive call.
+
+  Periodic Chrome-profile retention review. Many enterprises
+    don't realize their endpoint policy doesn't reset Chrome
+    histories on logoff, so every workstation accumulates a
+    multi-year activity ledger. For cleared facilities this
+    is a feature (forensics); for non-cleared environments
+    it's a privacy posture decision.
+
+  IR-team password discipline. The awkward note about the
+    \`ir-audit\` service account password pattern matching
+    Maya's primary account credential — that's a finding.
+    Service-account passwords should not pattern-match
+    individual user credentials. Maya's already on this; the
+    finding goes in the day-three deliverable explicitly
+    rather than getting filed quietly.
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+The investigative lever browser forensics gives you is
+asymmetric. A motivated suspect can scrub the obvious — clear
+browsing data, log out of personal accounts, close suspicious
+tabs. But the SQLite databases that back those features keep
+artifacts in WAL journal pages, in cookie last_access
+timestamps, in download target_path strings that survive
+even when the source URL is forgotten. The Chromium project
+docs the underlying schema publicly; the forensic community
+documents the artifacts that persist past "Clear data" clicks.
+
+Reed knew he was being investigated; the 03:14 search for
+"CUI how to identify if a document is marked" tells you he
+was aware enough to be concerned. He didn't clear his
+history. He didn't sign out of Gmail. The asymmetry favored
+the defender on this case.
+
+Driftwood's banking client Halton had a different version of
+the same pattern last year: a departing consultant's
+laptop got reimaged before its Chrome profile was preserved.
+A subsequent contract-breach allegation would have been
+much easier to defend if those artifacts had survived to
+investigation time. Different lesson, same root cause —
+artifact-preservation discipline is what makes
+investigation discipline possible.
 
 Return to the lobby:    ssh guest@d3cyph3r`
         },
