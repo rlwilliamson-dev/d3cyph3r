@@ -32,10 +32,21 @@ module.exports = defineConfig({
   // step on each other's persistence layer.
   fullyParallel: true,
 
-  // Workers: auto-detect locally (one per core), capped at 4 in CI
-  // because the GitHub Actions runners we use have ~2 vCPUs and over-
-  // subscribing produces flaky waits.
-  workers: process.env.CI ? 2 : undefined,
+  // Workers: auto-detect locally (one per core).
+  //
+  // In CI, GitHub-hosted `ubuntu-latest` runners now provide 4 vCPUs
+  // (Standard_D4_v3 class as of October 2024 — see
+  // https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
+  // for the current spec). The original v1.24.0 setting of 2 was
+  // overcautious — measurement on v1.24.0 showed the test step
+  // running 194s with workers=2, vs the v1.23.x monolith's 123s on
+  // the same runner class. Bumping to 4 puts CI on par with local
+  // multi-core performance.
+  //
+  // If a future runner image change re-introduces flake (saturated
+  // CPU → race-condition assertions), drop back to 3 before lowering
+  // to 2.
+  workers: process.env.CI ? 4 : undefined,
 
   // Retry: in CI, give a single retry to absorb transient flake from
   // the static-server cold start or network blips. Locally, 0 retries
