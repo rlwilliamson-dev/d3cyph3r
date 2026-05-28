@@ -64,7 +64,7 @@
 // Bumped per-commit during active iteration to force a fresh cache.
 // Format: vMAJOR.MINOR.PATCH[-rN] where -rN is an in-flight revision
 // counter for hotfixes WITHIN the same release version.
-const CACHE_VERSION = "v1.23.2";
+const CACHE_VERSION = "v1.23.3";
 const CACHE_NAME    = `d3cyph3r-${CACHE_VERSION}`;
 
 // Minimum bootstrap set — just enough to render index.html and load

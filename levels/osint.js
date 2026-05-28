@@ -618,9 +618,10 @@ threat model. The lookup we just ran is the first step.
     reporting-to-counsel scope discipline are exam topics.
 
   SANS SEC497 (Practical Open-Source Intelligence (OSINT))
-    The flagship OSINT practitioner course (replaced the
-    retired SEC487). Covers HIBP, IntelX, Dehashed, Constella,
-    and the broader breach-corpus ecosystem.
+    The flagship OSINT practitioner course (effectively
+    replaced SEC487 in the SANS catalog). Covers HIBP,
+    IntelX, Dehashed, Constella, and the broader breach-corpus
+    ecosystem.
 
   OSCP / OSWE
     OSINT comes up in reporting and in the pre-engagement
@@ -1594,9 +1595,10 @@ finding is real and the fix is short.
     discovery are exam topics.
 
   SANS SEC497 (Practical Open-Source Intelligence)
-    The flagship OSINT practitioner course (replaced the
-    retired SEC487). Covers source-control OSINT, TruffleHog,
-    and the broader credential-leak ecosystem.
+    The flagship OSINT practitioner course (effectively
+    replaced SEC487 in the SANS catalog). Covers source-control
+    OSINT, TruffleHog, and the broader credential-leak
+    ecosystem.
 
   CompTIA PenTest+ (PT0-003)
     Domain 2 (Information Gathering and Vulnerability

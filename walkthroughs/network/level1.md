@@ -190,7 +190,7 @@ There are two enforcement modes in current use. **IP-based ACL** (`allow-transfe
 
 This is CWE-306, *Missing Authentication for Critical Function*. The function — full zone replication — is critical: the response contains every record in the zone, including subdomain mappings, mail-server pointers, and any free-form text records anyone has ever attached. The authentication requirement on this function is well-documented in standards literature going back to the late 1990s. The failure to enforce it is straightforward: the operator either didn't know about the requirement, didn't configure it, or configured something that didn't take effect.
 
-CWE-306 has been on the CWE Top 25 list multiple times — it ranked #25 on the 2024 edition's "Most Dangerous Software Weaknesses" list and moved up to #21 on the 2025 edition. It is a high-frequency finding because the broader pattern (a critical function exposed without authentication) shows up across protocols and systems, not just DNS. The DNS-specific manifestation is one of the cheapest to fix and one of the most consistently overlooked.
+CWE-306 has been on the CWE Top 25 list multiple times — most recently the 2024 edition, where it placed #21 on the "Most Dangerous Software Weaknesses" list (see the live CWE Top 25 archive for the current year's exact placement, which shifts as the CVE-data normalization rolls forward). It is a high-frequency finding because the broader pattern (a critical function exposed without authentication) shows up across protocols and systems, not just DNS. The DNS-specific manifestation is one of the cheapest to fix and one of the most consistently overlooked.
 
 ### Failure 4: A live credential was stored in a public-readable record (CWE-200, with caveat)
 

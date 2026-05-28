@@ -476,8 +476,9 @@ Compliance regime: SOC 2 Type II — every carrier customer
                    audit is the cornerstone deliverable of their
                    security program. Layered regs:
                      - NAIC Insurance Data Security Model Law
-                       (adopted in ~25 of the states Coverline
-                       operates in; codifies risk assessment,
+                       (adopted in approximately 28 jurisdictions
+                       Coverline operates in; codifies risk
+                       assessment,
                        written infosec program, third-party
                        service-provider oversight, incident
                        notification within 72 hours to the state
@@ -898,8 +899,9 @@ travels far past the bucket itself.
       Coverline was missing.
 
   CIS AWS Foundations Benchmark v5.0.0
-  (the Security Hub-supported version as of late 2025; CIS
-   has also published v7.0.0 but tooling support is lagging)
+  (the Security Hub-supported version; CIS has since
+   published v6.0.0 and v7.0.0, but Security Hub tooling
+   support for the newer versions has not caught up)
     §2.1.1  Ensure S3 Bucket Policy is set to deny HTTP
       requests (TLS-only). Tangential here but relevant
       hygiene.
@@ -975,11 +977,12 @@ travels far past the bucket itself.
 ─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   AWS Certified Security – Specialty (SCS-C03)
-    AWS released SCS-C03 in late 2025 / early 2026 as the
-    successor to SCS-C02. Whole-cert relevant. Domain 1
-    (Threat Detection and Incident Response) and Domain 4
-    (Identity and Access Management) directly cover bucket
-    policies, Public Access Block, Macie, Config, GuardDuty.
+    AWS released SCS-C03 on December 2, 2025 as the
+    successor to SCS-C02 (decommissioned Dec 1, 2025).
+    Whole-cert relevant. Domain 1 (Threat Detection and
+    Incident Response) and Domain 4 (Identity and Access
+    Management) directly cover bucket policies, Public
+    Access Block, Macie, Config, GuardDuty.
 
   AWS Certified Solutions Architect (Associate / Professional)
     Storage and security sub-domains include S3 permission
@@ -1967,11 +1970,12 @@ position that the breach response was procedurally sound.
 ─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   AWS Certified Security – Specialty (SCS-C03)
-    AWS released SCS-C03 in late 2025 / early 2026 as the
-    successor to SCS-C02. Domain 1 (Threat Detection and
-    Incident Response) and Domain 4 (Identity and Access
-    Management) cover Secrets Manager, GuardDuty RDS
-    Protection, Database Activity Streams, and IAM database
+    AWS released SCS-C03 on December 2, 2025 as the
+    successor to SCS-C02 (decommissioned Dec 1, 2025).
+    Domain 1 (Threat Detection and Incident Response) and
+    Domain 4 (Identity and Access Management) cover Secrets
+    Manager, GuardDuty RDS Protection, Database Activity
+    Streams, and IAM database
     authentication.
 
   AWS Certified Database – Specialty (DBS-C01)

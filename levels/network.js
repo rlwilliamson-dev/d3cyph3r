@@ -286,10 +286,14 @@ Marcus — the conversation goes better when there's no surprise.
       a staging DB is not essential.
 
   CIS Critical Security Controls v8.1
-    4.5  Implement and Manage a Firewall on Servers — the
-      mitigation. Atlas should have host- or network-level
-      firewalls enforcing "VPN-only" rather than relying on
-      undocumented intent.
+    4.5  Implement and Manage a Firewall on End-User Devices —
+      the IG1 host-firewall pattern. v8.1's literal scope is
+      end-user devices; the equivalent server-tier controls live
+      under Control 12 (Network Infrastructure Management) and
+      Control 13 (Network Monitoring and Defense). The intent
+      Atlas should have honored at the server tier: host- or
+      network-level firewalls enforcing "VPN-only" rather than
+      relying on undocumented intent.
     13.10 Perform Application Layer Filtering — the right
       enforcement layer for "this DB is reachable only via
       VPN-issued source IPs."

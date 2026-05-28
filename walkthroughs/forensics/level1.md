@@ -10,7 +10,7 @@
 
 When the lobby spun you out of `level0@forensics` last Friday morning, the alibi photo had cracked Reed Connolly's story open and Dana Reyes had a forensic finding she could take to HR. By Friday afternoon she'd done more than that. Dana brought the EXIF report to Polaris's General Counsel, the General Counsel called Sgt. Marcus Chen (Polaris's Facility Security Officer), and Chen — in his FSO capacity rather than his line-IT capacity — invoked NISPOM 32 CFR §117.8(c) and escalated the case to the formal Insider Threat Program. Reed's DoD Secret clearance was administratively suspended same day. His badge access was revoked. He was placed on paid administrative leave pending investigation outcome. The escalation was procedurally textbook; the alibi-photo finding was the threshold and the rest of the program kicked in the way the program is supposed to.
 
-Tuesday night, Polaris's IR team pulled a live forensic image of Reed's primary workstation. Live, not power-off, because powering Reed's machine down would have given him a visible signal that something was happening — the lit monitor and spinning fans on his desk are part of the social-engineering surface area of an insider-threat case, and tipping him off before HR has the conversation lined up is the kind of mistake that ends investigations. The acquisition ran from `IR-JUMPBOX-01` (10.42.7.18) via the workstation's out-of-band management channel. Sgt. Chen ran FTK Imager; Larry Hutchins, Polaris's IR Team Lead, supervised from the same jumpbox. Power-on acquisition through the management interface preserves the workstation's running state, leaves its console untouched, and — critically for chain of custody — produces an audit trail of its own that proves nobody touched the keyboard during the acquisition window.
+Tuesday night, Polaris's IR team pulled a live forensic image of Reed's primary workstation. Live, not power-off, because powering Reed's machine down would have given him a visible signal that something was happening — the lit monitor and spinning fans on his desk are part of the social-engineering surface area of an insider-threat case, and tipping him off before HR has the conversation lined up is the kind of mistake that ends investigations. The acquisition ran from `IR-JUMPBOX-01` (10.42.7.18) via the workstation's out-of-band management channel. Sgt. Chen ran FTK Imager; Maya Voss, Polaris's IR Team Lead, supervised from the same jumpbox. Power-on acquisition through the management interface preserves the workstation's running state, leaves its console untouched, and — critically for chain of custody — produces an audit trail of its own that proves nobody touched the keyboard during the acquisition window.
 
 The image came across as an EnCase E01 split set, eight segments, ~480 GB total, wrapped in a single-use password-protected archive. Chen set the handoff password to a string he generated specifically for this case — `POL-IIS-2026-0007-handoff` — and that string is what gated entry to this shell. The archive password and the triage-workspace password are the same value by design: single-use means it gets rotated and destroyed when the engagement closes, and re-using a sysadmin's daily-driver password to gate evidence custody would be the kind of cross-contamination forensic procedure exists to prevent. (Side note: this is the breadcrumb pattern from the very end of `level0@forensics`'s `case-summary.txt`, exactly where you found it.)
 
@@ -81,9 +81,9 @@ Three successful logons:
 
 1. **Reed Saturday 13:42 UTC, LogonType 2 (Interactive)** — workstation console, `TargetUserName: rconnolly`, `WorkstationName: POL-WS-0418`, source IP 127.0.0.1. He sat down at his own keyboard.
 2. **`lchen` Tuesday 02:47 UTC, LogonType 10 (RemoteInteractive)** — RDP session from `IR-JUMPBOX-01`, source IP 10.42.7.18. Chen logging in to run the imaging.
-3. **`lhutchins` Tuesday 03:02 UTC, LogonType 3 (Network)** — network resource access from the same `IR-JUMPBOX-01` / 10.42.7.18.
+3. **`mvoss` Tuesday 03:02 UTC, LogonType 3 (Network)** — network resource access from the same `IR-JUMPBOX-01` / 10.42.7.18.
 
-Reed's interactive logon is what you'd expect. The two Tuesday-night logons are Chen and Hutchins doing the acquisition. Nothing here is anomalous yet — but the third one, `lhutchins` at 03:02 UTC, will become more interesting in a moment.
+Reed's interactive logon is what you'd expect. The two Tuesday-night logons are Chen and Voss doing the acquisition. Nothing here is anomalous yet — but the third one, `mvoss` at 03:02 UTC, will become more interesting in a moment.
 
 ### Step 5: Filter to failed logons — the smoking gun
 
@@ -120,13 +120,13 @@ Read this event slowly. Four facts matter:
 
 1. **`SubStatus: 0xC0000064` — STATUS_NO_SUCH_USER.** Windows logged this code because the typed "username" was not a real account in the directory. (The companion code `0xC000006A`, STATUS_WRONG_PASSWORD, is what gets logged when the username DOES exist but the password is wrong. The distinction matters: `0xC0000064` means Windows literally couldn't find an account by that name.)
 
-2. **`TargetUserName: P0l4r1s-IR-L3ad-2026!`** — that string is not a username. It's mixed case, contains digits, contains a special character (`!`), is 22 characters long. Real Polaris usernames are short, lowercase, surname-and-initial format — `lchen`, `lhutchins`, `rconnolly`. This string is a password.
+2. **`TargetUserName: P0l4r1s-IR-L3ad-2026!`** — that string is not a username. It's mixed case, contains digits, contains a special character (`!`), is 22 characters long. Real Polaris usernames are short, lowercase, surname-and-initial format — `lchen`, `mvoss`, `rconnolly`. This string is a password.
 
-3. **`WorkstationName: IR-JUMPBOX-01`, `IpAddress: 10.42.7.18`** — same jumpbox, same source IP as the Tuesday-night `lchen` and `lhutchins` logons. The typo came from the IR triage activity.
+3. **`WorkstationName: IR-JUMPBOX-01`, `IpAddress: 10.42.7.18`** — same jumpbox, same source IP as the Tuesday-night `lchen` and `mvoss` logons. The typo came from the IR triage activity.
 
-4. **Timestamp 03:02:14, followed 37 seconds later by `lhutchins`'s successful 4624 at 03:02:51 from the same source.** Whoever was at the keyboard fumbled the credential, immediately retried, got it right.
+4. **Timestamp 03:02:14, followed 37 seconds later by `mvoss`'s successful 4624 at 03:02:51 from the same source.** Whoever was at the keyboard fumbled the credential, immediately retried, got it right.
 
-The conclusion is uncomfortable but unambiguous: Larry Hutchins, Polaris's IR Team Lead, supervising Chen's acquisition at ~11pm EDT on a Tuesday, typed his own password into the username field of a network-auth prompt. Windows logged the typed string verbatim into the 4625 record's `TargetUserName` field. The string `P0l4r1s-IR-L3ad-2026!` is Hutchins's credential — and it's now sitting in plaintext in an audit log, and that audit log is in your working directory, ready to be handed off as evidence.
+The conclusion is uncomfortable but unambiguous: Maya Voss, Polaris's IR Team Lead, supervising Chen's acquisition at ~11pm EDT on a Tuesday, typed her own password into the username field of a network-auth prompt. Windows logged the typed string verbatim into the 4625 record's `TargetUserName` field. The string `P0l4r1s-IR-L3ad-2026!` is Voss's credential — and it's now sitting in plaintext in an audit log, and that audit log is in your working directory, ready to be handed off as evidence.
 
 That's your second finding. It's also the breadcrumb credential for `level2@forensics`: a string the IR team needs to know about IMMEDIATELY (same-day rotation), and a string that — for the in-game continuity — represents an IR-team service account password whose rotation/recovery becomes the entry gate for the next engagement.
 
@@ -172,7 +172,7 @@ Your report has three sections:
 
 1. **Reed's activity timeline.** Quote the event IDs and UTC timestamps verbatim. The exfil chain, in five lines: 13:42 logon → 13:48-13:54 CUI reads → 14:04 PowerShell Compress-Archive → 14:06 certutil -encode → 14:42 chrome upload to mega.nz → 15:18 logoff.
 2. **CUI exposure determination.** Yes. Cite the three filenames. Note that Reed's exit timestamp on chrome means his upload window ran for ~36 minutes; without server-side mega.nz cooperation, you cannot confirm successful transfer, but the upload tab was opened and the encoded payload was sitting in `AppData\Local\Temp\` ready to send. Dana's DFARS 7012 clock should start at her receipt of this report.
-3. **Other observations.** One paragraph. The 4625 event at 03:02:14 UTC on 2026-03-18 contains a credential in the `TargetUserName` field consistent with a password typed into the wrong field by an IR responder during the live acquisition. Hutchins (the IR Team Lead) was on the jumpbox at the time per the surrounding 4624 records. Recommend immediate credential rotation for `lhutchins` and any service account that string is keyed to, AND a SIEM detection rule for the 4625 + `0xC0000064` + password-shape `TargetUserName` pattern going forward. Same-week remediation.
+3. **Other observations.** One paragraph. The 4625 event at 03:02:14 UTC on 2026-03-18 contains a credential in the `TargetUserName` field consistent with a password typed into the wrong field by an IR responder during the live acquisition. Voss (the IR Team Lead) was on the jumpbox at the time per the surrounding 4624 records. Recommend immediate credential rotation for `mvoss` and any service account that string is keyed to, AND a SIEM detection rule for the 4625 + `0xC0000064` + password-shape `TargetUserName` pattern going forward. Same-week remediation.
 
 Hand it to Dana. Sign and hash `Security.evtx` for chain-of-custody.
 
@@ -305,9 +305,9 @@ The deeper IR/forensics cert. Event-log analysis at timeline-reconstruction scal
 
 The enterprise-IR cert. Less forensics-deep, more incident-process-broad. Detection-engineering coverage of event-log monitoring lives here — the rule that would catch the 4625 typed-password pattern is the kind of content GCIH covers. Feeds from SANS SEC504 (Hacker Tools, Techniques, and Incident Handling).
 
-### GIAC GCDA — Continuous Monitoring & Security Operations Analyst
+### GIAC GCDA — Certified Detection Analyst
 
-SOC/SIEM-side cert. Detection engineering, log pipeline design, threat hunting in event-log data, Sigma rules. Feeds from SANS SEC555 (recently renamed to "Detection Engineering and SIEM Analytics" — previously "SIEM with Tactical Analytics"). GCDA is the natural pursuit for someone who wants to build the detection content rather than respond to its alerts.
+SOC/SIEM-side cert (formerly branded as "Continuous Monitoring & Security Operations Analyst"). Detection engineering, log pipeline design, threat hunting in event-log data, Sigma rules. Feeds from SANS SEC555 (recently renamed to "Detection Engineering and SIEM Analytics" — previously "SIEM with Tactical Analytics"). GCDA is the natural pursuit for someone who wants to build the detection content rather than respond to its alerts.
 
 ### CompTIA CySA+ (CS0-003 / CS0-004)
 
@@ -337,7 +337,7 @@ Polaris IT's parallel containment work: rotate Reed's account credentials (alrea
 
 ### For the IR-team credential leak
 
-Same-day rotation of `lhutchins`'s password and any service account that credential string is keyed to. Same-day means before the audit-log file leaves Polaris's direct control on its way to any downstream handler. The credential preserved in the 4625 record is what it is — chain of custody prevents retroactive redaction — but the *live* credential it represents can and must be rotated immediately.
+Same-day rotation of `mvoss`'s password and any service account that credential string is keyed to. Same-day means before the audit-log file leaves Polaris's direct control on its way to any downstream handler. The credential preserved in the 4625 record is what it is — chain of custody prevents retroactive redaction — but the *live* credential it represents can and must be rotated immediately.
 
 Add a SIEM detection rule for the pattern going forward. The Sigma rule is straightforward:
 

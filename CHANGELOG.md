@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.3] - 2026-05-28
+
+**Cross-track walkthrough content audit.** Fact-checked all 15 shipped walkthroughs and their in-game lessons-learned mirrors against current canonical sources (NIST, CIS, MITRE CWE/ATT&CK, OWASP, CompTIA/GIAC/SANS cert pages, regulator filings). Corrections applied:
+
+### Changed
+
+- **CWE-200 status (web/level0)** — corrected the claim that CWE-200 dropped off the 2025 CWE Top 25; it sits at #20 on the 2025 list, down from #17 in 2024. Mapping status remains Discouraged.
+- **CWE-306 ranking precision (network/level1)** — the prior "#25 on 2024 → #21 on 2025" framing was off; CWE-306 placed #21 on the 2024 edition. Softened to a single verified anchor plus a pointer to the live CWE archive.
+- **CWE-862 ranking precision (web/level1)** — dropped the unverified 2023 placement; kept the verified #9 (2024) and #4 (2025).
+- **CIS Safeguard 4.5 wording (network/level0 + in-game)** — corrected from "Firewall on Servers" to the v8.1-accurate "Firewall on End-User Devices," with a note that the server-tier equivalent lives under Controls 12 and 13.
+- **CIS AWS Foundations Benchmark version framing (cloud/level0 + cloud/level1 + in-game)** — added acknowledgement of v6.0.0 and v7.0.0 alongside the AWS Security Hub-supported v5.0.0.
+- **CIS PostgreSQL Benchmark versions (cloud/level1 + in-game)** — corrected from "v15-v18" to verified "v15, v16, v17."
+- **AWS SCS-C03 release date (cloud/level0 + level1 + in-game, 4 locations)** — tightened from "late 2025 / early 2026" to the precise December 2, 2025 launch with SCS-C02 decommissioned December 1, 2025.
+- **GIAC GCDA cert name (forensics/level1)** — updated from the legacy "Continuous Monitoring & Security Operations Analyst" to the current "Certified Detection Analyst."
+- **NISPOM eCFR URL (forensics/level2 §5 + §9)** — corrected the subtitle/chapter path from `subtitle-B/chapter-XX` to the canonical `subtitle-A/chapter-I/subchapter-D`.
+- **DoDD 5205.16 → DoDI 5205.16 (forensics/level2)** — reflects the December 20, 2024 reissue as a DoD Instruction.
+- **DoDM 5200.48 → DoDI 5200.48 URL path (forensics/level2)** — corrected to the canonical `dodi/` issuance path.
+- **DFARS 252.204-7012 §9 URL (forensics/level2)** — added the trailing period required by acquisition.gov to keep the link from 404'ing.
+- **Capital One / Paige Thompson resentencing (cloud/level0 + level1 §4)** — added the Ninth Circuit's March 2025 vacatur and November 2025 resentencing (time-served + 5 yr supervised release + 3 yr home confinement + 250 hr community service; $40.7M restitution preserved).
+- **23andMe settlement refresh (osint/level0 §4)** — added the $50M revised settlement finalized January 30, 2026, alongside the original $30M (September 2024) figure.
+- **MOVEit affected-population figure (web/level0 + cloud/level1)** — softened "more than 95M" / "~2,800+ orgs" to the verified "more than 93M" / "approximately 2,700+ orgs" with a note on continued downstream disclosures.
+- **AT&T 2024 Snowflake-related figure (cloud/level1)** — refined from "~109M" to "~110M" cellular metadata customers.
+- **GitGuardian "State of Secrets Sprawl" 2025 figure (osint/level1 + in-game)** — refined from "29M" to the precise ~28.65M new secrets.
+- **Verizon DBIR year attribution (cloud/level1 §4)** — corrected the 22% credential-stuffing figure from "2024 DBIR" to the 2025 DBIR (covering 2024 data).
+- **NAIC Insurance Data Security Model Law adoption count (cloud/level1 + in-game)** — standardized to "approximately 28 jurisdictions" (was "~25").
+- **First American SEC framing (web/level0)** — tightened to "the SEC's first enforcement action specifically targeting a registrant's disclosure controls relating to a cybersecurity vulnerability."
+- **OWASP Cloud-Native Top 10 archive timeline (cloud/level0 §5)** — corrected to reflect both the April 12, 2025 site-repo archival and the November 24, 2025 main-repo archival.
+- **HHS HPH-CPGs identifier softening (osint/level0)** — dropped the unverified "2.H" tag in favor of "the Essential CPG on phishing-resistant MFA."
+- **SANS SEC487 retirement framing (osint/level0 + level1 + in-game, 5 locations)** — softened "retired" to "effectively replaced by SEC497 in the SANS catalog."
+- **OSINT CISA / linux CISA cybersecurity-advisories link** — replaced an unspecific landing-page citation with industry-post-incident-analysis framing for the Uber lateral-movement T1552.001 mapping.
+- **forensics/level1 + level2 cast continuity** — reconciled the credential-leak attribution across both forensics levels: Maya Voss is the IR Team Lead who typed her credential into the 4625 TargetUserName field; Larry Hutchins is the Polaris CISO and Voss's manager (escalation path). The level1 evtx event data (`mvoss` 4624 success after the 4625 typo) and the level2 narrative now agree.
+
+### Fixed
+
+- **OWASP Cloud-Native Top 10 §9 URL (cloud/level0)** — replaced the 404'd `owasp.org/www-project-...` URL with the GitHub canonical, which remains reachable.
+- **OWASP JWT Walk-through §8 URL (crypto/level1)** — removed the 404'd community-wiki URL; the WSTG-SESS-10 citation already covered the same ground.
+- **NIST SP 800-86 §9 / §3 mapping (forensics/level0)** — corrected a §7.5 reference that mislabeled MITRE ATT&CK T1497.003 (which is "Time Based Checks," a sandbox-evasion technique) as "Time Based Evasion / Geographic Detection." Replaced with T1070 (Indicator Removal), the appropriate mapping for EXIF stripping.
+
+All walkthroughs and corresponding `levels/<track>.js` lessons-learned content stay synchronized. Last reviewed: May 2026.
+
 ## [1.23.2] - 2026-05-28
 
 **Release-notes hygiene pass.** Curative cleanup of historical

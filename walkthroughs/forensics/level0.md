@@ -438,7 +438,7 @@ Modern phones embed *more* than when and where. Recent iPhones and Android flags
 
 Beyond the *time-and-place* falsification the level scores on, a defender mapping the photo to a *specific vantage point at a known location* can confirm or refute claims about WHO took the photo, not just whether the location is right. If Reed's alibi photo's GPSImgDirection were 218.4° but the soccer field stands are NOT at bearing 218.4° from the on-field position the photo's lat/long claims, that's *additional* evidence the photo couldn't have been taken from the claimed angle.
 
-The longer-arc lesson is that **EXIF is a richer forensic artifact than most investigators use**. The MITRE ATT&CK technique [T1497.003 — Time Based Evasion / Geographic Detection](https://attack.mitre.org/techniques/T1497/003/) addresses the offensive side (attackers stripping EXIF before exfil); defensively, the same metadata fields are what let you *prove* a claim about where, when, and how a photo was actually taken.
+The longer-arc lesson is that **EXIF is a richer forensic artifact than most investigators use**. On the offensive side, the closest MITRE ATT&CK mapping for EXIF stripping is [T1070 — Indicator Removal](https://attack.mitre.org/techniques/T1070/) (attackers sanitizing metadata before exfil); defensively, the same metadata fields are what let you *prove* a claim about where, when, and how a photo was actually taken.
 
 For the project: when you train forensic examiners, train them on every EXIF field, not just the obvious time/place. The photo Reed submitted is rich with metadata he didn't think to consider. So is every photo every suspect ever submits to in-house counsel.
 

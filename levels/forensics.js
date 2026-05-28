@@ -703,7 +703,7 @@ Return to the lobby:    ssh guest@d3cyph3r`
   //      cred, mistyped into the username field on a network
   //      auth prompt at ~11pm), with SubStatus 0xC0000064
   //      (STATUS_NO_SUCH_USER). The 4624 success 37 seconds
-  //      later for `lhutchins` from the same source IP /
+  //      later for `mvoss` from the same source IP /
   //      workstation confirms it's a typo, not an attack. The
   //      typed string IS the breadcrumb credential for
   //      level2@forensics. CWE-532 (Insertion of Sensitive
@@ -990,7 +990,7 @@ Level:           Information
 
   SubjectUserName:        -
   SubjectDomainName:      -
-  TargetUserName:         lhutchins
+  TargetUserName:         mvoss
   TargetDomainName:       POLARIS
   LogonType:              3 (Network)
   LogonProcessName:       NtLmSsp
@@ -1168,7 +1168,7 @@ Tuesday night 2026-03-17 → Wednesday morning 2026-03-18 UTC:
 Polaris IR team pulled a live forensic image of POL-WS-0418
 (Reed's primary workstation) using FTK Imager. The acquisition
 ran from IR-JUMPBOX-01 (10.42.7.18) via out-of-band management;
-Sgt. Chen was the operator, Larry Hutchins (Polaris IR Lead)
+Sgt. Chen was the operator, Maya Voss (Polaris IR Lead)
 was supervising. Live acquisition was chosen over power-off
 because powering Reed's workstation down would have alerted him
 in the morning; the IR-jumpbox channel keeps the activity quiet
@@ -1266,7 +1266,7 @@ ACQUISITION CHAIN OF CUSTODY
                    → 2026-03-18 02:14 EDT (logoff)
                    = 2026-03-18 02:47-06:14 UTC
   Imaged by:       L. Chen (Polaris FSO), supervised by
-                   L. Hutchins (Polaris IR Lead), remote
+                   M. Voss (Polaris IR Lead), remote
                    acquisition from IR-JUMPBOX-01 (10.42.7.18)
   Acquisition:     Live, OOB-management-mediated, read-only
                    target volume. Source machine remained
@@ -1372,19 +1372,19 @@ one record has this TargetUserName field:
 
 With SubStatus 0xC0000064 (STATUS_NO_SUCH_USER), meaning the
 typed string did not exist in the directory as a username.
-Followed 37 seconds later by a 4624 success for \`lhutchins\`
+Followed 37 seconds later by a 4624 success for \`mvoss\`
 from the same workstation (IR-JUMPBOX-01), same source IP
 (10.42.7.18), same network logon type.
 
-That string isn't a username. It's a password — Larry Hutchins
+That string isn't a username. It's a password — Maya Voss
 (Polaris's IR Team Lead, supervising Sgt. Chen's triage at
-~11pm EDT) typed his password into the username field on a
+~11pm EDT) typed her password into the username field on a
 network-auth prompt and Windows logged it verbatim. The 4624
 success 37 seconds later is him retrying with the fields in the
 right boxes. This is the classic "credential leaked in 4625
 TargetUserName" pattern — documented in SANS DFIR coursework
 and Microsoft's own SIEM guidance. Polaris needs to rotate
-lhutchins's credentials AND any IR-team service account that
+mvoss's credentials AND any IR-team service account that
 password is connected to, NOW, before the log gets handed off
 to anyone outside the chain-of-custody loop.
 
@@ -1469,7 +1469,7 @@ The IR-team credential-leak finding has its own consulting
 angle. It's a process miss, not a malicious act — an exhausted
 responder at 11pm EDT. The remediation has three parts:
 
-  1. Immediate credential rotation for lhutchins and any
+  1. Immediate credential rotation for mvoss and any
      IR-team service account that password was attached to.
      Same-day, before any audit-log handoff to external
      parties (including Driftwood) that might preserve the log
@@ -1678,7 +1678,7 @@ in §X."
        to make with HR / legal / DCSA in the loop.
 
   2. For the IR-team credential leak:
-     - Same-day rotation of lhutchins's password and any
+     - Same-day rotation of mvoss's password and any
        service-account credential keyed to it.
      - Write a SIEM detection rule. Sigma format (portable
        across SIEM platforms):
@@ -1698,7 +1698,7 @@ in §X."
 
      - Short retraining for the IR team on credential
        hygiene under fatigue. Frame it as "the audit caught
-       us this time" rather than "lhutchins is careless."
+       us this time" rather than "mvoss is careless."
        Hygiene under fatigue, not character.
 
   3. For Polaris's longer-arc audit-log program:
