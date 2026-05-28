@@ -15,7 +15,22 @@ const TOTAL_LEVELS = Object.values(LEVELS).filter(l => !l.isLobby && l.track !==
 
 export function markVisited(key) {
   if (LEVELS[key]?.isLobby) return;
-  const visited = JSON.parse(sessionStorage.getItem("visited") || "[]");
+  // Defensive read (v1.24.3). sessionStorage["visited"] is normally
+  // written by THIS function, so it should always parse cleanly — but
+  // DevTools tampering, extensions that touch storage, or a corrupted
+  // restore-code apply could leave malformed JSON behind. Without the
+  // try/catch a single bad value bricks every subsequent connectTo()
+  // call because markVisited throws before the progress bar updates.
+  // Falling back to [] loses one tab's worth of visited-set state but
+  // keeps the engine usable; the next markVisited write overwrites
+  // the corrupted value with valid JSON.
+  let visited;
+  try {
+    visited = JSON.parse(sessionStorage.getItem("visited") || "[]");
+    if (!Array.isArray(visited)) visited = [];
+  } catch (_) {
+    visited = [];
+  }
   if (!visited.includes(key)) {
     visited.push(key);
     mirrorSession("visited", JSON.stringify(visited));

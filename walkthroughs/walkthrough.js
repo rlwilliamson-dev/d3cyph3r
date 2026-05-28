@@ -19,6 +19,25 @@
 import { marked } from "./vendor/marked.esm.min.js";
 import { initTheme, cycleTheme, getTheme } from "../js/terminal/theme.js";
 
+// Defense-in-depth XSS hardening (v1.24.3).
+//
+// marked v12 ships with no built-in sanitizer (the deprecated `sanitize`
+// option was removed in v5+). Walkthrough markdown is author-controlled
+// via PR review, and production CSP (`script-src 'self'`, no
+// `unsafe-inline`) already neuters <script>/onerror/onclick payloads,
+// but raw HTML in markdown can still inject `javascript:` URLs in
+// <a href> (navigation, not subject to script-src) and `style=` attrs.
+// Local dev (no CSP) is also unprotected.
+//
+// Walkthroughs are pure markdown — headings, lists, links, code fences,
+// tables. There is no legitimate use of raw HTML in any current
+// walkthrough (fenced code blocks remain unaffected because marked
+// tokenizes them as `code`, not `html`). The override below tells
+// marked to drop raw-HTML tokens entirely before they reach
+// article.innerHTML. If a future walkthrough needs styled content,
+// extend the markdown grammar / CSS instead of opening the HTML hole.
+marked.use({ renderer: { html: () => "" } });
+
 // ─── Manifest ────────────────────────────────────────────────
 //
 // The lookup table the index/track pages render from. Hand-edited

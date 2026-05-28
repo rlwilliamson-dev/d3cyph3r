@@ -674,6 +674,16 @@ export function decodeProgress(code) {
   if (!code || typeof code !== "string") return { ok: false, error: "Empty progress code." };
 
   const cleaned = stripDecoration(code);
+  // Hard upper bound on input size (v1.24.3). Real codes max out around
+  // 200 characters (completionist with every level/achievement/bonus
+  // earned), so 10k is ~50× the largest legitimate input. The cap
+  // exists so a player pasting a multi-megabyte string (mis-pasted
+  // file contents, browser-history dump, malicious DoS attempt) gets
+  // a clean error instead of the decoder churning through varint
+  // parsing on garbage data and freezing the tab.
+  if (cleaned.length > 10_000) {
+    return { ok: false, error: "Progress code is too long — must be under 10,000 characters. Did you paste the right text?" };
+  }
   if (cleaned.length < MAGIC.length + 8 + 4) {
     return { ok: false, error: "Progress code looks truncated. Make sure you copied the whole thing." };
   }
