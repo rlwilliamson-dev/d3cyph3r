@@ -1,0 +1,31 @@
+# .mailmap — canonical author/committer identity remapping.
+#
+# Format (one mapping per line):
+#   Canonical Name <canonical-email> <commit-email-to-remap>
+#
+# Git tools that honor mailmap (git log --use-mailmap, git shortlog -e,
+# git blame, GitHub's contributor graph) display the canonical identity
+# in place of the commit-time identity. The on-disk commit objects are
+# NOT rewritten — this is purely a display affordance.
+#
+# Why this file exists
+# --------------------
+# Early v0.1 / v0.2 commits carried a Co-Authored-By: Claude trailer
+# from the iteration sessions that bootstrapped the engine. The
+# project's no-coauthor-trailer rule was established later, so every
+# commit since v0.2.0 is already clean. This mapping consolidates the
+# historical Anthropic co-author identity into the canonical maintainer
+# identity so GitHub's contributors graph displays 1 contributor
+# instead of 2 without requiring a destructive history rewrite.
+#
+# Secondary mapping: canonicalize the alternate author display name
+# ("rlwilliamson-dev") that appears on PR-merge commits authored via
+# the GitHub web UI, into the personal-account display name
+# ("Ryan Williamson") used on local commits. Both have the same
+# privacy email, so GitHub already counts them as one contributor,
+# but the mailmap consolidation makes `git log --use-mailmap` and
+# `git shortlog -e` show a single consistent name.
+
+# Canonical maintainer identity
+Ryan Williamson <123014229+rlwilliamson-dev@users.noreply.github.com> <noreply@anthropic.com>
+Ryan Williamson <123014229+rlwilliamson-dev@users.noreply.github.com> rlwilliamson-dev <123014229+rlwilliamson-dev@users.noreply.github.com>
