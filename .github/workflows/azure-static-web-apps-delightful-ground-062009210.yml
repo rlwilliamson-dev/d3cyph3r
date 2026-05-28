@@ -2,28 +2,78 @@
 #
 # IMPORTANT — manual edits to watch for if Azure regenerates this file:
 #   1. The `playtest_job` below was added by hand.
-#   2. `build_and_deploy_job` has a `needs: playtest_job` line so a failed
-#      playtest blocks the deploy.
+#   2. `build_and_deploy_job` has a `needs: playtest_job` line and an
+#      `if:` that allows deploys when playtest is SKIPPED (PR pushes)
+#      as well as when it succeeds — a failed playtest still blocks.
 #   3. `actions/checkout` is pinned to v6 (Azure's generator uses v3).
-# If Azure rewrites this file (e.g. after reconfiguring the SWA in the portal),
-# restore those three things from git history.
+#   4. The workflow trigger uses `paths-ignore` (v1.24.2+) to skip the
+#      whole workflow on docs-only changes.
+#   5. The playtest_job uses a 4-shard matrix (v1.24.2+) and is gated
+#      to push-to-main + manual dispatch only (v1.24.2+).
+# If Azure rewrites this file (e.g. after reconfiguring the SWA in the
+# portal), restore those things from git history.
 
 name: Azure Static Web Apps CI/CD
 
+# v1.24.2 — Triggering rules:
+#   - push to main: ALWAYS runs the workflow (playtest gates deploy).
+#   - pull_request: workflow runs to deploy a preview, but playtest_job
+#     skips (see its `if:` below). Local playtest is the iteration loop.
+#   - workflow_dispatch: manual escape hatch — forces playtest on any
+#     branch via the Actions UI.
+#   - paths-ignore: docs files that aren't deployed (or aren't engine
+#     code) skip the workflow entirely. Walkthrough markdown files are
+#     NOT in the ignore list because they ARE deployed and need preview.
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - '.github/**.md'
+      - '.gitignore'
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - '.github/**.md'
+      - '.gitignore'
+  workflow_dispatch:
 
 jobs:
   playtest_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    # v1.24.2 — Playtest runs only when:
+    #   (a) The merge commit lands on main (the canonical deploy gate), OR
+    #   (b) The maintainer manually dispatches the workflow.
+    # PR pushes do NOT trigger playtest. Local playtest
+    # (`cd tests && npx playwright test`) is the developer-iteration
+    # safety net; the merge-to-main run catches anything local missed.
+    # If a PR-stage CI run is needed (e.g., infra changes affect CI
+    # behavior), use "Actions → Run workflow" against the PR branch.
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch'
+    # v1.24.2 — 4-shard matrix. Each shard runs `--shard N/4`, picking
+    # up roughly a quarter of the test() blocks. fail-fast: false so a
+    # single shard's failure doesn't cancel the others mid-flight (gives
+    # us full diagnostic coverage on failed runs). All shards must
+    # succeed for build_and_deploy_job's `needs:` gate to pass.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     runs-on: ubuntu-latest
-    name: Playtest
+    name: Playtest (shard ${{ matrix.shard }}/4)
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -43,22 +93,33 @@ jobs:
           echo $! > /tmp/d3_server.pid
       - name: Wait for server
         run: timeout 30 bash -c 'until curl -sf http://localhost:8000/ >/dev/null; do sleep 1; done'
-      - name: Run playtest
+      - name: Run playtest shard
         working-directory: tests
         env:
           D3CYPH3R_URL: http://localhost:8000/
-        # As of v1.24.0, the playtest uses @playwright/test with
-        # per-spec parallelism. playwright.config.cjs caps workers
-        # to 2 in CI for GitHub-Actions-runner stability (the default
-        # 2-vCPU runners flake under heavier oversubscription).
-        run: npx playwright test --reporter=list
+        # As of v1.24.0, the playtest uses @playwright/test with per-spec
+        # parallelism. v1.24.1 bumped CI workers from 2 to 4 to match
+        # ubuntu-latest's 4 vCPUs. v1.24.2 added shard splitting so the
+        # 4 workers in each of 4 parallel runners process ~73 tests
+        # apiece instead of 293. Wall time bounded by slowest shard.
+        run: npx playwright test --shard ${{ matrix.shard }}/4 --reporter=list
       - name: Stop static server
         if: always()
         run: kill "$(cat /tmp/d3_server.pid)" 2>/dev/null || true
 
   build_and_deploy_job:
     needs: playtest_job
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    # v1.24.2 — Allow deploys when playtest_job is SKIPPED (PR pushes,
+    # where playtest doesn't run by design) OR when ALL shards SUCCEED.
+    # Block only on playtest failure or cancellation.
+    #
+    # The default `needs:` semantics would skip build_and_deploy_job
+    # when its dependency is skipped — we override that with
+    # `if: !cancelled() && needs.playtest_job.result != 'failure'`.
+    if: |
+      !cancelled() &&
+      needs.playtest_job.result != 'failure' &&
+      (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed') || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     # GITHUB_TOKEN's default permissions since 2023 are `contents: read`

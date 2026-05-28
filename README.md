@@ -179,7 +179,7 @@ d3cyph3r/
 │   ├── package.json         @playwright/test + chromium dependencies
 │   └── package-lock.json
 └── .github/
-    └── workflows/           Azure SWA CI/CD — runs playtest_job on every PR
+    └── workflows/           Azure SWA CI/CD — sharded playtest_job on push to main (v1.24.2+)
 ```
 
 Adding a new level is a single object literal under `levels/<track>.js`. The base schema is documented at the top of `levels/linux.js`; per-track extensions (forensics' `evtxLogs`, osint's `github`, cloud's `postgres`, etc.) are documented at the top of each track's level file.
