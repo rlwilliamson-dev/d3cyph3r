@@ -140,6 +140,17 @@ const MANIFEST = {
           "TargetUserName field of a 4625 failed-logon record. " +
           "CWE-532 + the LOLBin / Valid-Accounts insider-threat pattern.",
       },
+      level2: {
+        title: "What Reed's Browser Saw",
+        blurb:
+          "Day three. The IR-lead credential from level1 unlocks " +
+          "Polaris IR's forensic bench, where Reed's seized Chromium " +
+          "History + Cookies databases sit ready to query. SQL formation " +
+          "via the new sqlite3 command surfaces a 02:47 pre-dawn webmail " +
+          "visit, pre-meditation searches around CUI handling rules, and " +
+          "a live Google SID cookie value that gates level3. NIST SP " +
+          "800-86 + CMMC Level 2 AU.L2-3.3.x audit-record discipline.",
+      },
     },
   },
   osint: {
