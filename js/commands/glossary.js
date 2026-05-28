@@ -1060,4 +1060,94 @@ back. The stack lets a level model multi-hop scenarios (level
 landing host → internal database → log aggregator) without
 breaking the credential-chain mental model players use to track
 their progress.`,
+
+  SQLITE: `SQLite — embedded SQL database engine
+
+SQLite is the most-deployed database in the world. It ships
+inside every iOS / Android app, every macOS / Windows / Linux
+install, every browser (Chrome's History, Firefox's
+places.sqlite, Safari's Browser History.db), and almost every
+desktop application that stores structured local data. Unlike
+PostgreSQL or MySQL — which run as separate server processes —
+SQLite is a library that reads and writes a single file. No
+service, no port, no auth.
+
+For forensics, that means: whenever an investigation involves
+"what did this user do on this machine," there is almost
+always a SQLite database holding the answer. Browser history,
+downloads, autofill, saved passwords (decryption keys aside),
+chat-app message histories, mail-client offline caches,
+photo-app metadata, dev-tool databases (npm, yarn, Docker),
+voice-assistant transcripts — all SQLite.
+
+This engine's \`sqlite3\` command implements a teaching subset:
+SELECT (with WHERE, ORDER BY, LIMIT, COUNT(*), DISTINCT, LIKE),
+.tables / .schema dot-commands, pipe-separated and aligned-table
+output modes. JOINs, aggregates beyond COUNT, and subqueries
+are not supported — real forensic tooling (SQLite Browser,
+SQLECmd, Autopsy plugins) handles the full grammar. The goal
+here is teaching query formation, not SQL breadth.`,
+
+  "PLACES.SQLITE": `places.sqlite — Firefox browser history database
+
+The single SQLite file Firefox uses to store every URL visited,
+every bookmark, every favicon, and every visit timestamp.
+Lives under the user's profile directory:
+  macOS:   ~/Library/Application Support/Firefox/Profiles/<id>/places.sqlite
+  Windows: %APPDATA%\\Mozilla\\Firefox\\Profiles\\<id>\\places.sqlite
+  Linux:   ~/.mozilla/firefox/<id>/places.sqlite
+
+Key tables for forensics:
+  moz_places       URL + title + visit_count + last_visit_date
+  moz_historyvisits  per-visit timestamp + visit_type + referrer
+  moz_bookmarks    user bookmark tree
+  moz_anno_attributes / moz_annos    annotations (favicons, etc.)
+
+Chromium-family browsers (Chrome, Edge, Brave, Opera) use a
+similar schema in a file called \`History\` (no extension),
+with tables named \`urls\`, \`visits\`, \`downloads\`,
+\`keyword_search_terms\`. The schema differs in details but
+the forensic principle is identical: every navigation event
+is timestamped and retained until the user explicitly clears
+history (and often after, in WAL journal pages — see
+SQLITE-WAL-FORENSICS for that rabbit hole).
+
+The default investigator query is "what URLs were visited in
+the time window matching the incident?" Add WHERE filters on
+visit_time for the window and ORDER BY visit_time for a
+chronological narrative.`,
+
+  "BROWSER-FORENSICS": `Browser forensics — analysis of browser artifacts
+
+The investigative discipline of recovering user activity from
+browser-resident state. Three artifact families dominate:
+
+1. HISTORY databases — URLs, downloads, autofill values, search
+   terms, form data. All SQLite. Survives normal "Clear browsing
+   data" partially (WAL pages, vacuum deferrals). See
+   PLACES.SQLITE for the Firefox shape; Chromium's \`History\`
+   file has a similar role.
+
+2. COOKIES — session tokens, tracking IDs, login state. Also
+   SQLite (Firefox's cookies.sqlite, Chromium's Cookies). A
+   live cookie row with a non-expired session value lets an
+   investigator impersonate the user on that site (subject to
+   legal authorization).
+
+3. CACHE — recently-fetched page resources. File-system
+   structured, not SQLite. Useful for recovering content the
+   user viewed even if the site has since changed or been
+   taken down.
+
+Why forensics cares: a browser is the most accurate
+behavioral surveillance device a user installs voluntarily.
+Every search query, every URL visited, every form field
+auto-filled, every time the user lingered on a tab vs. closed
+it immediately — all logged with timestamps. Combined with
+mobile-device location data, this often is the timeline of
+what someone did on a given day.
+
+NIST SP 800-86 (Guide to Integrating Forensic Techniques into
+Incident Response) treats browser artifacts as one of the
+canonical data sources for endpoint forensics.`,
 };

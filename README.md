@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end — 14 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end; Forensics ships through level2 (v1.23.0). 15 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -16,7 +16,7 @@ All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship lev
 | Network | `level0@network` ("Atlas Health Perimeter Check"), `level1@network` ("The Map Marcus Didn't Mean to Share") | Atlas Health | HIPAA |
 | Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall") | Meridian State University | FERPA |
-| Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
+| Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw"), `level2@forensics` ("What Reed's Browser Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
 | OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project") | Veridian Analytics | HIPAA / HITRUST CSF |
 | Cloud | `level0@cloud` ("Coverline's Twelfth Bucket"), `level1@cloud` ("The Migration Table Nobody Dropped") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
 
@@ -124,7 +124,7 @@ d3cyph3r/
 │   │   ├── network.js       nmap / netstat / whois / dig
 │   │   ├── crypto.js        base64 / rot13 / xxd / john / xor / jwt / …
 │   │   ├── web.js           curl / gobuster / cookies
-│   │   ├── forensics.js     file / strings / exif / evtx / sha256sum / …
+│   │   ├── forensics.js     file / strings / exif / evtx / sqlite3 / sha256sum / …
 │   │   ├── osint.js         sherlock / hibp / wayback / crtsh / github / …
 │   │   ├── cloud.js         aws (s3/iam/ec2/sts) + psql
 │   │   ├── text.js          wc / sort / uniq / cut / tr / awk (pipe-friendly)
@@ -204,7 +204,7 @@ See `help` inside the terminal for the full reference. Track-by-track:
 - **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `@server` / `-t TYPE` / `-x IP` / `+short` / `+trace` / `AXFR`)
 - **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
 - **Web:** `curl` (+ `-X` / `-d` / `-H` / `-I` / `-L` / `-o` / `-kvs`) / `gobuster` (+ `-u` / `-w` / `-x` / `-t`) / `cookies`
-- **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sha256sum` / `md5sum`
+- **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sqlite3` (read-only SQLite queries — `.tables`, `.schema`, SELECT with WHERE/LIKE/ORDER BY/LIMIT/COUNT) / `sha256sum` / `md5sum`
 - **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo` / `github` (+ `/repo` + `file <path>`)
 - **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity` / `psql` (+ `-d` / `\l` / `\dt` / `SELECT … FROM … [LIMIT N]`)
 - **Text processing (pipe-friendly):** `wc` / `sort` / `uniq` / `cut` / `tr` / `awk` / `sed` (`s/pat/repl/[g]`, `-n 'Np'`) / `printf` / `jq` (`.path` queries, `-r` / `-c`)

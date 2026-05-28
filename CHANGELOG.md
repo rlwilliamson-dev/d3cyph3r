@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-05-28
+
+**level2@forensics ships — Phase 1 of the Routine-tier sweep begins.**
+First level2 across all 7 tracks (per LEVEL_ROADMAP.md's shipping
+order), introducing the `sqlite3` command alongside it. Day three
+of the Reed Connolly case: the player uses the IR-lead credential
+recovered from level1's evtx 4625 finding to ssh into Polaris IR's
+forensic analysis bench, then queries Reed's seized browser-artifact
+databases (Chromium History + Cookies) to reconstruct his online
+activity in the hours before the Bay 4 badge-in. The smoking-gun
+session token gates level3 (when level3 ships).
+
+Walkthrough fast-follows as v1.23.1 (per the soft-gate rule in
+version.js step 3). The level itself is fully playable end-to-end
+in v1.23.0; the long-form solve guide ships next.
+
+### Added
+
+- **`level2@forensics` — "What Reed's browser saw (sqlite3)"** (~20
+  min, Routine tier). Player logs in as `ir-audit` on the Polaris IR
+  forensic bench, queries Reed's recovered `History.sqlite` and
+  `Cookies.sqlite` databases via the new `sqlite3` command. Surfaces
+  a 02:47 Saturday-morning Gmail visit (seven hours before the Bay 4
+  badge-in), pre-meditation evidence in the searches Reed ran, and
+  a Gmail SID cookie row whose value is the level3 breadcrumb.
+  Bonus find: a `downloads` row showing a PowerShell archive script
+  pulled from Reed's personal Dropbox nine days earlier — confirms
+  the level1 4688 PowerShell chain from a second artifact source.
+- **`sqlite3` command (new engine surface).** Read-only SQLite
+  query interface for browser-artifact and application-database
+  forensics. Subset SQL grammar: SELECT [DISTINCT] cols FROM table
+  with WHERE (= , LIKE), ORDER BY, LIMIT, and COUNT(*). Dot-commands
+  `.tables`, `.schema [TABLE]`, `.help`. Output flags `-header`
+  (column names) and `-column` (aligned table). `level.sqlite_dbs`
+  schema field carries the per-file table definitions + row data.
+  Intentionally minimal grammar (no JOIN, no aggregates beyond
+  COUNT, no INSERT/UPDATE/DELETE) — real forensic tooling handles
+  the breadth; this teaches query formation.
+- **Manpage entry** for `sqlite3` covering the supported grammar
+  with examples. Glossary entries for SQLITE, PLACES.SQLITE, and
+  BROWSER-FORENSICS surface via `what-is`.
+- **Chain-of-custody hashing demo** in level2's `chain-of-custody.txt`
+  + `level.fileHashes`. Player runs `sha256sum Reed/History.sqlite`
+  before querying and confirms against the baseline — modelled on
+  real NIST SP 800-86 §3.3 forensic-process discipline.
+
+### Changed
+
+- Forensics track is now level0 + level1 + level2 (was level0 +
+  level1). 15 levels shipped across 7 tracks.
+- v1.18.0 welcome-back summary regex updated for the new level count.
+
 ## [1.22.0] - 2026-05-28
 
 **Foundation cleanup before the Routine-tier level2/3/4/5 sweep.**
@@ -3548,7 +3600,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.22.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.0...HEAD
+[1.23.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.19.0...v1.20.0

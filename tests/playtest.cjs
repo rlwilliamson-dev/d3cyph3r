@@ -1091,6 +1091,126 @@ async function termText(page) {
   await page.waitForTimeout(500);
   check("exit from level1@forensics returns to lobby",                (await promptText(page)).includes("@d3cyph3r:"));
 
+  // ── Level 2 — What Reed's Browser Saw (forensics track, sqlite3) ──
+  // v1.23.0 — browser-DB forensics via the new sqlite3 command.
+  await typeAndEnter(page, "ssh level2@forensics");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "wrong-password");
+  await page.waitForTimeout(200);
+  t = await termText(page);
+  check("v1.23.0 wrong password on level2@forensics rejects",         t.includes("Permission denied, please try again."));
+
+  await typeAndEnter(page, "ssh level2@forensics");
+  await page.waitForTimeout(300);
+  await typeAndEnter(page, "P0l4r1s-IR-L3ad-2026!");
+  await page.waitForTimeout(600);
+  t = await termText(page);
+  check("v1.23.0 Correct password connects to level2@forensics",       t.includes("Connected: level2@forensics"));
+  check("v1.23.0 Prompt user is 'ir-audit' on level2",                  (await promptText(page)).startsWith("ir-audit@"));
+
+  await typeAndEnter(page, "ls");
+  t = await termText(page);
+  for (const f of ["welcome.md", "case-notes.md", "chain-of-custody.txt", "Reed", "lessons-learned.md"]) {
+    check(`v1.23.0 ls shows ${f}`, t.includes(f));
+  }
+
+  // chain-of-custody hash baseline verification.
+  await typeAndEnter(page, "sha256sum Reed/History.sqlite");
+  t = await termText(page);
+  check("v1.23.0 sha256sum matches chain-of-custody baseline (8c4f1d2e)",
+        t.includes("8c4f1d2e93b56a087c1f4a72d9e83c61a5f2b40e7c93a18d6f25b91e7d34a8c2"));
+
+  // sqlite3 --help auto-extracted from MAN_PAGES via v1.17.0 path.
+  await typeAndEnter(page, "sqlite3 --help");
+  t = await termText(page);
+  check("v1.23.0 sqlite3 --help shows synopsis with FILE arg",        t.includes("sqlite3") && t.includes("FILE"));
+
+  // .tables enumerates the History DB schema.
+  await typeAndEnter(page, 'sqlite3 Reed/History.sqlite ".tables"');
+  t = await termText(page);
+  for (const tab of ["urls", "visits", "downloads", "keyword_search_terms"]) {
+    check(`v1.23.0 .tables lists ${tab}`, t.includes(tab));
+  }
+
+  // .schema urls returns the CREATE TABLE statement.
+  await typeAndEnter(page, 'sqlite3 Reed/History.sqlite ".schema urls"');
+  t = await termText(page);
+  check("v1.23.0 .schema urls returns CREATE TABLE",                  t.includes("CREATE TABLE urls"));
+  check("v1.23.0 .schema urls names last_visit_time column",          t.includes("last_visit_time"));
+
+  // Basic SELECT * with LIMIT.
+  await typeAndEnter(page, 'sqlite3 Reed/History.sqlite "SELECT * FROM urls LIMIT 3"');
+  t = await termText(page);
+  check("v1.23.0 SELECT * LIMIT 3 returns 3 pipe-separated rows",
+        (t.match(/intranet\.polaris-ds\.local/g) || []).length >= 1);
+
+  // SELECT with -header flag.
+  await typeAndEnter(page, 'sqlite3 -header Reed/History.sqlite "SELECT url FROM urls LIMIT 1"');
+  t = await termText(page);
+  check("v1.23.0 -header flag includes column name in output",        t.includes("url"));
+
+  // ORDER BY DESC LIMIT — Reed's most-recent browsing.
+  await typeAndEnter(page, 'sqlite3 Reed/History.sqlite "SELECT url FROM urls ORDER BY last_visit_time DESC LIMIT 5"');
+  t = await termText(page);
+  check("v1.23.0 ORDER BY DESC surfaces recent activity",             t.includes("amazon.com") || t.includes("hackernews") || t.includes("weather.com"));
+
+  // WHERE LIKE — the smoking-gun query (selecting url + title surfaces
+  // the personal Gmail account context as well as the URL itself).
+  await typeAndEnter(page, `sqlite3 Reed/History.sqlite "SELECT url, title FROM urls WHERE url LIKE '%mail.google%'"`);
+  t = await termText(page);
+  check("v1.23.0 WHERE LIKE surfaces Gmail visits",                   t.includes("mail.google.com"));
+  check("v1.23.0 Saturday 02:47 Gmail visit shows personal account",  t.includes("rconnolly.personal"));
+
+  // COUNT(*).
+  await typeAndEnter(page, 'sqlite3 Reed/History.sqlite "SELECT COUNT(*) FROM urls"');
+  t = await termText(page);
+  check("v1.23.0 COUNT(*) returns a single integer row",              /\b15\b/.test(t));
+
+  // Pivot to Cookies.sqlite — the breadcrumb extraction.
+  await typeAndEnter(page, `sqlite3 Reed/Cookies.sqlite "SELECT value FROM cookies WHERE host_key = 'mail.google.com'"`);
+  t = await termText(page);
+  check("v1.23.0 Cookies.sqlite SELECT extracts the level3 breadcrumb",
+        t.includes("RC-Gmail-PreDawn-2026-03-14-T0247Z"));
+
+  // Bonus find trigger: downloads-table query showing exfil downloader.
+  await typeAndEnter(page, 'sqlite3 Reed/History.sqlite "SELECT target_path FROM downloads"');
+  t = await termText(page);
+  check("v1.23.0 downloads-table query shows rc-archive-helper.ps1",  t.includes("rc-archive-helper.ps1"));
+
+  // Bonus-find awarded check (via progress)
+  await typeAndEnter(page, "progress --detail");
+  t = await termText(page);
+  check("v1.23.0 bonus find 'exfil-downloader-in-history' surfaces in progress",
+        t.includes("PowerShell exfil downloader") || t.includes("exfil-downloader"));
+
+  // Lessons-learned cites the canonical references.
+  await typeAndEnter(page, "cat lessons-learned.md");
+  t = await termText(page);
+  check("v1.23.0 lessons-learned cites NIST SP 800-86",               t.includes("NIST SP 800-86"));
+  check("v1.23.0 lessons-learned cites GCFE certification",           t.includes("GCFE"));
+  check("v1.23.0 lessons-learned cites MITRE T1567 (Exfil via Web)",  t.includes("T1567"));
+  check("v1.23.0 lessons-learned cites CMMC AU.L2-3.3 audit family",  t.includes("AU.L2-3.3"));
+
+  // Error path: unsupported SQL grammar.
+  await typeAndEnter(page, 'sqlite3 Reed/History.sqlite "SELECT * FROM urls JOIN visits ON urls.id=visits.url"');
+  t = await termText(page);
+  check("v1.23.0 unsupported JOIN surfaces syntax-error message",     t.includes("syntax error"));
+
+  // Error path: missing table.
+  await typeAndEnter(page, 'sqlite3 Reed/History.sqlite "SELECT * FROM nonexistent"');
+  t = await termText(page);
+  check("v1.23.0 unknown table surfaces 'no such table'",             t.includes("no such table"));
+
+  // Error path: non-DB file.
+  await typeAndEnter(page, "sqlite3 welcome.md \".tables\"");
+  t = await termText(page);
+  check("v1.23.0 non-SQLite file surfaces 'not a recognized SQLite database'",
+        t.includes("not a recognized SQLite database"));
+
+  await typeAndEnter(page, "exit");
+  await page.waitForTimeout(500);
+  check("v1.23.0 exit from level2@forensics returns to lobby",        (await promptText(page)).includes("@d3cyph3r:"));
+
   // ── Level 0 — Veridian's Open Letter (OSINT track) ──────────────
   // No password (level0 of each track is the entry point).
   await typeAndEnter(page, "ssh level0@osint");
@@ -2811,8 +2931,8 @@ async function termText(page) {
 
   check("v1.18.0 returning-visit lobby prints 'WELCOME BACK'",
         lobbyBeforeEngagements.includes("WELCOME BACK"));
-  check("v1.18.0 welcome-back summary shows X/14 levels visited",
-        /\d+\/14 levels visited/.test(lobbyBeforeEngagements));
+  check("v1.18.0 welcome-back summary shows X/15 levels visited",
+        /\d+\/15 levels visited/.test(lobbyBeforeEngagements));
   check("v1.18.0 welcome-back summary shows bonus-finds count",
         /\d+\/\d+ bonus finds/.test(lobbyBeforeEngagements));
   check("v1.18.0 welcome-back summary shows achievements count",

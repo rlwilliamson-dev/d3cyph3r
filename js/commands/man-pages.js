@@ -622,6 +622,46 @@ DESCRIPTION
 EXAMPLES
     md5sum old-backup.tar`,
 
+  sqlite3: `NAME
+    sqlite3 — read-only SQLite query interface (v1.23.0)
+
+SYNOPSIS
+    sqlite3 [-header | -column] FILE COMMAND-OR-QUERY
+
+DESCRIPTION
+    Inspects a SQLite database file. Forensic workhorse for browser
+    artifacts (places.sqlite, History, Cookies, Login Data), most
+    mobile app storage, and a long tail of application backends.
+
+    COMMAND-OR-QUERY is either a sqlite3 dot-command or a SELECT
+    statement. Dot-commands:
+      .tables                List tables in the database
+      .schema [TABLE]        Show CREATE TABLE statement(s)
+      .help                  Print supported commands
+
+    SQL grammar (intentionally minimal):
+      SELECT [DISTINCT] (* | cols | COUNT(*)) FROM TABLE
+        [WHERE col = 'val' | col LIKE '%pat%' | col = NUMBER]
+        [ORDER BY col [ASC|DESC]]
+        [LIMIT n]
+
+    Not supported: JOIN, GROUP BY, HAVING, subqueries, UNION, INSERT/
+    UPDATE/DELETE, transactions, interactive mode. Real forensic tools
+    (SQLite Browser, EZ Tools' SQLECmd, Autopsy plugins) handle the
+    full grammar; this command teaches query formation.
+
+    Output flags:
+      -header    Prepend a column-name row
+      -column    Render as an aligned table (default: pipe-separated)
+
+EXAMPLES
+    sqlite3 History.sqlite ".tables"
+    sqlite3 History.sqlite ".schema urls"
+    sqlite3 History.sqlite "SELECT url FROM urls LIMIT 5"
+    sqlite3 -header History.sqlite "SELECT url, visit_count FROM urls ORDER BY visit_count DESC LIMIT 10"
+    sqlite3 Cookies.sqlite "SELECT name, value FROM cookies WHERE host_key LIKE '%gmail%'"
+    sqlite3 History.sqlite "SELECT COUNT(*) FROM visits"`,
+
   // ─── OSINT track ──────────────────────────────────────────────────
   sherlock: `NAME
     sherlock — username enumeration across social platforms
