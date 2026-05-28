@@ -137,6 +137,10 @@ export const cloudLevels = {
     track: "cloud",
     title: "Coverline's S3 audit",
     estimatedMinutes: 12,
+    // v1.22.0 cross-track narrative seed — Vesta's parallel
+    // base64-encoding-treated-as-encryption pattern in CLOSING
+    // THOUGHT.
+    crossTrackHooks: ["crypto"],
     playerUser: "cloudsec",
     objective: "Walk Coverline's 6-bucket SOC 2 audit worksheet from outside the Coverline account. For each bucket, run an unauthenticated `aws s3 ls --no-sign-request` probe and record the response. Flag any bucket that isn't behaving the way the worksheet says it should.",
     lesson: "Coverline Insurance is one of Driftwood's insurtech clients — a mid-sized property & casualty carrier specializing in small-business policies (~150 engineers, founded 2019, HQ in Hartford, Connecticut). They sell direct AND white-label their product to ~40 regional insurance carriers, which is why the SOC 2 Type II report is non-negotiable — every carrier customer requires it before they'll resell. State-insurance regs add layers: NAIC Insurance Data Security Model Law has been adopted in ~25 states Coverline operates in, and NYDFS 23 NYCRR 500 applies because they're licensed in New York. Coverline is mid-SOC-2-cycle right now and the audit firm flagged a gap last week: there's no documented evidence trail for the 'S3 bucket public-access review' control (CC6.1). The auditors produced a 6-bucket worksheet with the expected access state for each, and Coverline needs each one walked and the response recorded as evidence. Coverline's DevOps team is fully committed on an us-east-1-to-us-east-2 cutover; Jordan Nguyen (Coverline's Sr. Director of Cloud Infrastructure) asked Driftwood to fill in. You're on Driftwood's cloud-audit workstation (the shell calls you `cloudsec`, the shared service account the cloud-security team uses for client recon). Read welcome.md first — it explains how the unauthenticated S3 probe works. Then read engagement-notes.md, then audit-worksheet.txt, then walk the buckets. Read lessons-learned.md once you've found the bucket that doesn't match the worksheet.",
@@ -1199,6 +1203,13 @@ migration script that nobody got back to.
 
 The forensic finding is small. The system around it is what
 makes it consequential.
+
+Driftwood's e-commerce client Vesta hit the same anti-pattern in
+their payments deploy: a junior engineer base64-encoded an API
+key thinking it counted as encryption. Different domain, same
+shape — security treated as a post-hoc cleanup task. The fix is
+structural (secrets manager + code review), not a clever choice
+of encoding or cryptosystem.
 
 Return to the lobby:    ssh guest@d3cyph3r`
         },

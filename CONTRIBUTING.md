@@ -464,6 +464,96 @@ When adding a new level, preserve the worldbuilding rather than
 introducing a generic scenario. The continuity is part of what makes
 the post-mortems land — the compliance regime is bound to the client.
 
+## Localization (i18n)
+
+**D3CYPH3R is English-only by design.** All player-facing strings —
+level content, command output, error messages, walkthroughs, UI chrome —
+ship in English. There is no localization layer, no string extraction
+infrastructure, and no plan to add one.
+
+This is a deliberate decision (committed v1.22.0), not an oversight:
+
+- The audience is professional cybersecurity learners — English is the
+  working language for every certification body, framework spec, MITRE
+  taxonomy, and CWE reference the levels cite. Translating those would
+  defeat the post-mortems' point.
+- A hobby project can't sustain the maintenance burden of N translated
+  copies of 14+ levels' worth of welcome.md / lessons-learned.md, plus
+  the walkthroughs (currently ~110k words), plus drift management as
+  citations get updated.
+- The engine has no string-extraction conventions. Player-facing
+  strings live inline in command handlers, level data, and UI modules
+  with no `t("key")` wrapper or `messages.<lang>.json` files.
+
+**Implication for contributors:** keep strings inline; don't half-
+implement i18n discipline (extraction-friendly conventions without the
+actual extraction) because that's the worst of both worlds — engineering
+discipline cost without payoff. If you'd want to fork D3CYPH3R as the
+base for a localized cybersecurity-training product, the engine
+architecture supports it cleanly, but it's downstream-fork work, not
+upstream-contribution work.
+
+## Mobile-readable content style guide
+
+The mobile-mode build shipped in v1.21.0 lets players boot D3CYPH3R on
+a touch device after tapping "Continue anyway." Existing content was
+authored desktop-first and works mobile-acceptably; new content authored
+*against* this style guide will work mobile-well. Set `mobileReady: true`
+on a level only after confirming the level was authored against these
+guidelines.
+
+### Line width
+
+- **ASCII art and box-drawing dividers: max 64 characters wide.** The
+  default mobile viewport renders ~60-65 chars per line; wider art wraps
+  and breaks. Use shorter `─── HEADER ───` runs and lean on
+  pipe-separated columns instead of wide fixed-width tables.
+- **Paragraphs: prefer 70-90 char hard wrap** rather than long lines. The
+  engine's `.line` CSS uses `overflow-wrap: anywhere` so long lines
+  *will* wrap, but the wrap points are then arbitrary; pre-wrapped
+  paragraphs read better.
+- **`ls -l` listings and similar fixed-column output: fine as-is.**
+  Mobile players are used to scrolling horizontally for terminal output
+  that genuinely needs it. The art is "narrative content should fit
+  without horizontal scrolling; data output can require it."
+
+### Output shape
+
+- **Prefer short paragraphs over walls of text.** Mobile screen real
+  estate rewards punchy three-to-five-line blocks separated by blank
+  lines.
+- **Avoid wide-by-tall tables.** A 6-column 30-row table that fits a
+  desktop terminal is a fingerprint-zoom problem on mobile. Split into
+  multiple narrower tables or use a flat key-value listing.
+- **`welcome.md` HOW TO PLAY sections: bullet lists, not prose
+  paragraphs.** Each bullet ≤ 80 chars where possible.
+
+### File and directory names
+
+- **Short names play better.** A directory called
+  `coverline-claims-uploads-prod-legacy-deploy-2024-q2-migration/`
+  works on desktop but wraps awkwardly in narrow `ls` output. If the
+  name carries narrative weight, fine; if it's incidental, prefer
+  something shorter (`legacy-deploy/`, `q2-migration/`).
+- Same goes for filenames inside levels — `migration-artifacts.txt`
+  beats `coverline-2024-q2-migration-artifacts-and-broker-portal-creds.txt`.
+
+### When to set `mobileReady: true`
+
+A level qualifies as `mobileReady: true` when:
+
+1. All welcome.md / lessons-learned.md / engagement-notes.md content
+   fits the line-width and paragraph-shape guidance above.
+2. The command outputs the puzzle requires (`ls`, `cat <file>`, etc.)
+   fit narrow viewports without rendering as a jumbled wall.
+3. The level's bonus find can be discovered with mobile-feasible
+   typing (no 80-character pipelines required).
+
+Pre-v1.22 levels are NOT retro-flagged. That's intentional — the flag is
+a forward-looking signal, not a claim about existing content. A future
+lobby filter can prefer mobileReady levels on touch devices when there
+are enough of them to filter meaningfully (probably v2.0+).
+
 ## Submitting changes
 
 This is a hobby project; there's no formal review process. If you're

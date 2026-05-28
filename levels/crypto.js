@@ -37,6 +37,10 @@ export const cryptoLevels = {
     track: "crypto",
     title: "Vesta's base64'd API key",
     estimatedMinutes: 8,
+    // v1.22.0 cross-track narrative seed — Coverline's parallel
+    // "I'll clean that up later" hardcoded-password pattern in
+    // CLOSING THOUGHT.
+    crossTrackHooks: ["cloud"],
     playerUser: "secops",
     objective: "Decide whether Theo's 'I base64-encoded the API key for safety' commit at Vesta Retail counts as PCI-DSS Requirement 3 protection — and document what the actual key looks like to anyone with read access on the box.",
     lesson: "Vesta Retail's annual PCI-DSS re-attestation is in six weeks. Their CTO, Saanvi, wants Driftwood to walk the payment-deploy code before the QSA does. Priya pulled deploy.sh from Vesta's repo on Friday and flagged the API key handling: their backend engineer Theo committed a change last sprint that 'cleaned up' the script by base64-encoding the production payment-processor API key into a separate file. Theo believes the key is now safer because it's not in plaintext. You're on Driftwood's crypto-analysis workstation (the shell calls you `secops`, the shared service account for code and binary reviews). Read welcome.md first — it explains base64. Then read engagement-notes.md, look at deploy.sh, and decode the key. Read lessons-learned.md once you've seen it.",
@@ -412,6 +416,13 @@ includes some version of this finding somewhere. The fix is
 not a clever cryptosystem. The fix is a secrets manager and
 a colleague who can explain the distinction without making
 the colleague who needed the distinction feel small.
+
+Driftwood's insurance client Coverline shipped a similar pattern
+in their AWS migration: hardcoded passwords in deploy scripts,
+labeled "I'll clean that up later," still live two years on.
+Different verbiage, same root cause — security treated as a
+post-hoc cleanup task rather than a property of how the code
+was written.
 
 Return to the lobby:    ssh guest@d3cyph3r
 `
