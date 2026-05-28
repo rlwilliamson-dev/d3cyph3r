@@ -171,10 +171,12 @@ d3cyph3r/
 │   ├── vendor/marked.esm.min.js  Markdown → HTML library (CC-BY-3.0 attribution in vendor/)
 │   ├── linux/level0.md      One walkthrough per shipped level — 14 total as of v1.0.0
 │   └── (etc., one per level)
-├── tests/                   Playwright playtest + OG-image generator
-│   ├── playtest.cjs         Headless playthrough of every shipped level (~720 assertions)
+├── tests/                   @playwright/test suite + OG-image generator
+│   ├── playwright.config.cjs Per-spec parallelism config (v1.24.0+)
+│   ├── lib/helpers.cjs      Shared dispatchCmd / bootAndWait / waitForOutput
+│   ├── specs/*.spec.cjs     One spec file per track + cross-cutting suites
 │   ├── generate-og-image.cjs Renders assets/og-template.html → og-image.png
-│   ├── package.json         playwright + chromium dependencies
+│   ├── package.json         @playwright/test + chromium dependencies
 │   └── package-lock.json
 └── .github/
     └── workflows/           Azure SWA CI/CD — runs playtest_job on every PR
