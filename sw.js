@@ -64,7 +64,7 @@
 // Bumped per-commit during active iteration to force a fresh cache.
 // Format: vMAJOR.MINOR.PATCH[-rN] where -rN is an in-flight revision
 // counter for hotfixes WITHIN the same release version.
-const CACHE_VERSION = "v1.21.0-r3";
+const CACHE_VERSION = "v1.21.0-r4";
 const CACHE_NAME    = `d3cyph3r-${CACHE_VERSION}`;
 
 // Minimum bootstrap set — just enough to render index.html and load
@@ -83,18 +83,29 @@ const BOOTSTRAP = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(CACHE_NAME);
+      // BOOTSTRAP pre-cache is best-effort. Any failure here MUST NOT
+      // reject the install — runtime caching will fill the cache on
+      // first request anyway, so an offline or flaky-network install
+      // just means BOOTSTRAP gets populated lazily instead of eagerly.
+      // Previously this was a single try/catch around addAll(), but
+      // a failure in `caches.open()` (e.g. private-mode Firefox where
+      // CacheStorage is partially blocked) could still reject. Wrap
+      // everything so the install promise always resolves.
       try {
-        await cache.addAll(BOOTSTRAP);
+        const cache = await caches.open(CACHE_NAME);
+        // Use Promise.allSettled so individual asset failures
+        // (e.g. a single 404 during a deploy mid-flight) don't
+        // poison the whole pre-cache.
+        await Promise.allSettled(
+          BOOTSTRAP.map((url) => cache.add(url))
+        );
       } catch (_) {
-        // First-visit offline or partial-pre-cache failure shouldn't
-        // block installation — runtime caching will fill the gaps as
-        // soon as the page comes back online.
+        // CacheStorage unavailable or quota exceeded — skip pre-cache.
       }
       // Activate the new SW immediately rather than waiting for all
       // tabs of the site to close. Paired with clients.claim() in
       // activate so the active page hands control over right away.
-      self.skipWaiting();
+      try { self.skipWaiting(); } catch (_) { /* silent */ }
     })()
   );
 });
@@ -120,9 +131,15 @@ self.addEventListener("message", (event) => {
   if (data.type === "SKIP_WAITING") {
     self.skipWaiting();
   } else if (data.type === "GET_VERSION") {
-    // Respond synchronously via the MessagePort. The page uses this
-    // for the `sw status` command's "active SW version" line.
-    if (event.source) {
+    // The page asks via a MessageChannel and waits for the reply on
+    // channel.port1. We need to post BACK on event.ports[0] (which
+    // is channel.port2 from the page's perspective). Falling back
+    // to event.source covers the case where the page sent without
+    // a MessageChannel — but `sw status` always uses one, so this
+    // branch is what matters.
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({ type: "VERSION", version: CACHE_VERSION });
+    } else if (event.source) {
       event.source.postMessage({ type: "VERSION", version: CACHE_VERSION });
     }
   }
