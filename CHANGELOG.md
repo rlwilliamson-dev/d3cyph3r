@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-05-28
+
+**Foundation cleanup before the Routine-tier level2/3/4/5 sweep.**
+No new gameplay; this release reserves forward-compatibility schema
+slots, commits to the project's English-only localization stance,
+adds a mobile-readable content style guide for contributors, and
+plants the first cross-track narrative seeds so the seven tracks
+start to feel like a shared Driftwood universe rather than seven
+isolated bubbles. Pure prep — the next release brings new puzzles.
+
+### Added
+
+- **Four new optional level-schema fields** (`certificationDomains`,
+  `learnerJourneyOrder`, `mobileReady`, `crossTrackHooks`).
+  Documented in the schema header of `levels/linux.js`. All four are
+  forward-looking — they exist so future content sweeps can populate
+  them without a schema migration once 28+ levels ship. Reading an
+  unset field returns `undefined`, which every current consumer
+  tolerates.
+- **`crossTrackHooks` populated on 4 shipped levels** (`level0@linux`,
+  `level0@network`, `level0@crypto`, `level0@cloud`). Each one
+  carries a one-line cross-track reference in the level's CLOSING
+  THOUGHT block — Priya mentions next week's Atlas Health
+  perimeter check at Halton; Atlas's drift pattern echoes Halton's
+  rotation snapshot; Vesta's "I'll clean that up later" pattern
+  parallels Coverline's hardcoded-password problem; Coverline's
+  bucket misconfigs parallel Vesta's encoding-as-encryption
+  mistake. Establishes the pattern; remaining tracks get seeded
+  in future content touches.
+- **Localization stance in CONTRIBUTING.md.** Committed to
+  English-only — no localization layer, no extraction conventions,
+  no half-implementation. Keeps strings inline. Documented why
+  (audience is professional cybersecurity learners reading English
+  cert / framework / MITRE references; hobby project can't sustain
+  N-language drift management).
+- **Mobile-readable content style guide in CONTRIBUTING.md.** Line
+  width (~64 chars for ASCII art), pipe-separated tables over
+  fixed-width columns, short paragraphs, narrow indents, when to
+  set `mobileReady: true`. Pre-v1.22 levels remain unflagged on
+  purpose — the flag is forward-looking.
+
+### Changed
+
+- **Level5→6 tier-shift mechanisms in `LEVEL_ROADMAP.md` are now
+  distinct per track** (gitignored planning doc). Previously all
+  seven hand-offs were "client returns engagement token"; now each
+  triggers via a different mechanism (contract escalation,
+  detected intrusion, regulator escalation, legal-counsel
+  determination, statutory clock, threat-actor attribution,
+  auditor question as disclosure trigger). Level2-4 narrative
+  threads in the upcoming sweep should lead to the relevant
+  trigger.
+
 ## [1.21.0] - 2026-05-27
 
 **Progressive Web App + mobile support.** D3CYPH3R is now
@@ -3495,7 +3548,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.21.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.22.0...HEAD
+[1.22.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.18.0...v1.19.0

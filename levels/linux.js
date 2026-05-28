@@ -45,6 +45,41 @@
 // shows only the ssh command + tier + estimated time on each level
 // row.
 //
+// Optional forward-looking metadata fields (v1.22.0).
+// All four are optional today — they exist so future content sweeps
+// can populate them without a schema migration once 28+ levels ship.
+// Reading them before they're populated returns undefined, which
+// every current consumer tolerates.
+//
+//   level.certificationDomains : string[] — entries shaped as
+//     "<cert-short-name>:<domain-id>", e.g. ["Sec+:2.5", "CySA+:1.2",
+//     "CCSP:Domain-3"]. Surfaced in a future `certs <level>` command
+//     and an out-of-game CERTIFICATIONS.md crosswalk doc. Populate
+//     when the cert-crosswalk doc is authored; until then, leave
+//     unset on shipped levels.
+//
+//   level.learnerJourneyOrder : positive integer — global ordering
+//     index used by a future `journey` command that prints a
+//     hand-holdy recommended path across tracks for new players.
+//     Populate when the journey doc is authored; lower numbers come
+//     first. Sparse numbers (10, 20, 30...) are fine — leaves room
+//     for inserting levels later without renumbering.
+//
+//   level.mobileReady : boolean — true ONLY when the level was
+//     designed against the mobile-readable content style guide
+//     (CONTRIBUTING.md). Set conservatively. Pre-v1.22 levels were
+//     authored desktop-first and don't set this flag — that's
+//     expected; leave them unset rather than retro-claiming
+//     mobile-readiness. A future lobby filter can prefer
+//     mobileReady levels on touch devices.
+//
+//   level.crossTrackHooks : string[] — track keys (lowercase: "linux",
+//     "network", "crypto", "web", "forensics", "osint", "cloud")
+//     referenced in flavor content on THIS level. Used to feed
+//     v2.0+ cross-track narrative threading and a future
+//     `references` command. Populate as cross-track narrative seeds
+//     are planted; empty/unset means this level is self-contained.
+//
 // Optional: SHELL ENVIRONMENT (v1.9.0).
 //
 //   level.env_vars : { NAME: "value", ... } — static per-level env
@@ -190,6 +225,10 @@ export const linuxLevels = {
     track: "linux",
     title: "Daniel's laptop handoff",
     estimatedMinutes: 10,
+    // v1.22.0 cross-track narrative seed — Priya's mention of next
+    // week's Atlas Health perimeter check in CLOSING THOUGHT. See
+    // CONTRIBUTING.md "Worldbuilding continuity" for the pattern.
+    crossTrackHooks: ["network"],
     playerUser: "daniel",
     objective: "Audit Daniel's laptop and find the client credential he left behind before IT reimages the box on Wednesday.",
     lesson: "Day one at Driftwood. A senior consultant whose engagement at Halton Bank ended Friday left his work laptop with IT for reimaging. His client access was revoked over the weekend, but the laptop hasn't been wiped yet, and his home directory hasn't been audited. Sweep it before Wednesday. Anything that looks like a client credential, you flag. Read every file. Then read lessons-learned.md.",
@@ -551,6 +590,10 @@ reputationally a breach. The firm's standing rides on every
 consultant's home directory.
 
 The disappointment, when you find one, is the lesson.
+
+Priya heads to Atlas Health next week for a quarterly perimeter
+check. Different client, different stack, same job — make sure
+no one left a credential where the next person can find it.
 
 Return to the lobby:    ssh guest@d3cyph3r
 `

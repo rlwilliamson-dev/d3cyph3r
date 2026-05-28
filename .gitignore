@@ -13,3 +13,8 @@ CLAUDE.md
 # Local testing cheat sheet (level passwords by track) — kept out of
 # the public repo since shipping these defeats the puzzle
 PASSWORDS.md
+
+# Level design roadmap — carries unshipped breadcrumb mechanisms,
+# lore-arc spoilers, and credential-chain plans for upcoming levels.
+# Same reasoning as PASSWORDS.md: shipping defeats the puzzle.
+LEVEL_ROADMAP.md

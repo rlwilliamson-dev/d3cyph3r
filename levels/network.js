@@ -30,6 +30,9 @@ export const networkLevels = {
     track: "network",
     title: "Atlas Health VPN audit",
     estimatedMinutes: 12,
+    // v1.22.0 cross-track narrative seed — Halton's parallel
+    // credential-rotation snapshot in CLOSING THOUGHT.
+    crossTrackHooks: ["linux"],
     playerUser: "secops",
     objective: "Verify Atlas Health's claim that their staging environment is VPN-only — and document what's exposed if it isn't.",
     lesson: "Atlas Health is one of Driftwood's largest healthcare clients — they handle PHI for ~400,000 patients across the Pacific Northwest. Their DevOps lead, Marcus, told Priya last quarter that staging.atlas.health is now VPN-only. We do a routine perimeter verification on every client engagement every quarter; today is Atlas's turn. You're on Driftwood's audit workstation (the shell calls you `secops`, the shared service account the security team uses for these checks). Read welcome.md first — it explains nmap. Then read the engagement notes, then start scanning. When you've found what's wrong, read lessons-learned.md.",
@@ -382,6 +385,11 @@ quarterly check is the verification. Atlas's perimeter drift is
 the gap between the two — and three months of drift was enough
 to leave a healthcare production database open to anyone with
 nmap and a default credential to try.
+
+Driftwood's banking client Halton ran into a near-identical
+pattern: "we rotated those credentials" turned out to mean Q4 of
+the previous year, not Q1 of the audit year. Snapshot-as-truth is
+a category error, not a one-off.
 
 Return to the lobby:    ssh guest@d3cyph3r
 `
