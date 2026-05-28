@@ -842,17 +842,21 @@ body.mobile-mode .softkey-row {
   gap: 4px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 6px 8px;
+  padding: 10px 8px;
   /* Pull tight against the bottom of the screen. Negative left/right
      margin counteracts #screen's 24px side padding so the soft-key
      row spans edge-to-edge, giving the OS keyboard a clean horizon
-     to butt up against. */
-  margin: 6px -24px 0;
+     to butt up against.
+     v1.21.0-r5: margin-top bumped from 6px to 20px — players were
+     mistaking the soft-key row for part of the input area when
+     they were visually adjacent. The 20px gap makes the input box
+     read as clearly separate. */
+  margin: 20px -24px 0;
   /* Add home-indicator safe-area padding on iPhone X+ — without this
      the bottom row of keys sits behind the indicator on landscape. */
-  padding-bottom: max(6px, env(safe-area-inset-bottom));
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
   background: var(--bg-soft, var(--bg));
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--accent);
   scrollbar-width: none;  /* Firefox */
   flex-shrink: 0;
 }
@@ -876,20 +880,26 @@ body.mobile-mode #input-area {
   flex-shrink: 0;
   /* On mobile, beef up the input row's tap target — desktop's
      compact 8px padding gives a thin 14px-tall input which is hard
-     to hit with a fingertip. 12px padding + min-height 36px gets
-     us close to Apple's 44px guideline without disrupting the
-     prompt label's vertical centering. */
-  padding: 12px 0;
-  min-height: 36px;
+     to hit with a fingertip. The padding ALSO acts as breathing
+     room: with extra vertical padding the input box reads as
+     clearly separate from the soft-key strip below it, instead
+     of the two visually colliding.
+     v1.21.0-r5: padding bumped from 12px → 16px to widen the
+     visible gap between the input row and the soft-key strip. */
+  padding: 16px 0;
+  min-height: 44px;
 }
-/* Show a subtle accent-color underline beneath the input wrapper
-   on mobile, so the player can SEE where typing happens (the
-   cursor-mirror ▋ glyph alone is easy to miss on a small screen,
-   especially when the input is empty). */
+/* Highlight the input region with a slight background tint on
+   mobile so the player can SEE where typing happens. The dashed
+   underline alone wasn't enough when the input was empty — players
+   couldn't tell where the input field actually was. A subtle
+   filled box reads as "this is where you type." */
 body.mobile-mode #input-wrapper {
-  border-bottom: 1px dashed var(--accent);
-  padding-bottom: 4px;
-  min-height: 20px;
+  background: rgba(88, 166, 255, 0.06);  /* accent at 6% opacity */
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  border-radius: 4px;
+  padding: 8px 10px;
+  min-height: 24px;
 }
 
 .softkey-btn {
