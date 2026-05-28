@@ -47,7 +47,11 @@ jobs:
         working-directory: tests
         env:
           D3CYPH3R_URL: http://localhost:8000/
-        run: node playtest.cjs
+        # As of v1.24.0, the playtest uses @playwright/test with
+        # per-spec parallelism. playwright.config.cjs caps workers
+        # to 2 in CI for GitHub-Actions-runner stability (the default
+        # 2-vCPU runners flake under heavier oversubscription).
+        run: npx playwright test --reporter=list
       - name: Stop static server
         if: always()
         run: kill "$(cat /tmp/d3_server.pid)" 2>/dev/null || true

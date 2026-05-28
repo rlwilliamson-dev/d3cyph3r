@@ -29,11 +29,34 @@ To run the headless playtest:
 cd tests
 npm install
 npx playwright install chromium    # first time only
-node playtest.cjs                   # against http://localhost:8000
+npx playwright test                # full suite, parallel
+npx playwright test linux          # one spec by filename match
+npx playwright test --grep "lobby" # one test by name
+npx playwright test --headed       # see the browser
 ```
 
 CI runs this on every PR (`.github/workflows/azure-static-web-apps-*.yml`,
 the `playtest_job`). A red playtest blocks the Azure SWA deploy.
+
+The suite (v1.24.0+) uses `@playwright/test` with `fullyParallel: true`:
+- **`tests/specs/`** — one spec file per track (`linux.spec.cjs`,
+  `network.spec.cjs`, ..., `cloud.spec.cjs`) plus cross-cutting suites
+  (`engine-surface.spec.cjs`, `shell-features.spec.cjs`,
+  `shell-realism.spec.cjs`, `lobby-tree.spec.cjs`,
+  `achievements.spec.cjs`, `themes-and-tutorial.spec.cjs`,
+  `persistence-savecode.spec.cjs`, `mobile-pwa.spec.cjs`).
+- **`tests/lib/helpers.cjs`** — shared `dispatchCmd(page, cmd)` (value-set
+  + Enter dispatch, replaces per-character `keyboard.type`),
+  `bootAndWait(page, "/")`, `terminalText(page)`, `resetState(page)`,
+  `waitForOutput(page, text)`, plus `typeKeystrokes` / `pressKey` for
+  the readline tests that need real keyboard events.
+- **`tests/playwright.config.cjs`** — `fullyParallel: true` locally,
+  `workers: 2` in CI for runner stability, traces + screenshots on
+  failure, 30s per-test timeout.
+
+Each `test()` block gets its own browser context, so per-spec state
+(sessionStorage, localStorage, viewport, mobile-bypass flag) is
+isolated by default.
 
 ## Read these first
 
@@ -328,11 +351,16 @@ The full schema is at the top of `levels/linux.js`. Key invariants:
   headers (`#` / `##` render as literal text in the terminal). Use
   `level0@web` as the canonical reference.
 
-After adding the level, append a playtest block in
-`tests/playtest.cjs` covering the wrong-password gate, correct-password
-entry, expected files listed by `ls`, the puzzle steps, and the
-breadcrumb-extraction assertion. Pattern-match an existing
-level1 block.
+After adding the level, add tests to the matching
+`tests/specs/<track>.spec.cjs` covering the wrong-password gate,
+correct-password entry, expected files listed by `ls`, the puzzle
+steps, and the breadcrumb-extraction assertion. Pattern-match an
+existing level block in the same file (e.g.
+`tests/specs/crypto.spec.cjs` is the canonical reference for a
+password-gated level with nested `describe.serial` blocks for state
+that accumulates within a level). New levels rarely need any cross-
+spec changes — the per-spec parallel layout keeps each level
+hermetic.
 
 ## How to add a new command
 
@@ -368,11 +396,15 @@ Three places to touch in either case:
    NAME / SYNOPSIS / DESCRIPTION / EXAMPLES format used by the
    ~70 existing entries.
 
-4. **Playtest coverage** (`tests/playtest.cjs`) — add a lobby smoke
-   test that the command degrades gracefully when its level data is
-   absent (a usage line, an empty-state message, or both). For
-   commands that read per-level data, also seed a level (or use an
-   existing one) and assert on the rendered output.
+4. **Playtest coverage** — add tests in the appropriate spec file
+   under `tests/specs/`. Cross-cutting commands (text processing,
+   system info, etc.) belong in `tests/specs/engine-surface.spec.cjs`
+   (graceful-at-lobby smoke) and `tests/specs/shell-realism.spec.cjs`
+   (in-level behavior). Track-specific commands belong in the
+   matching `<track>.spec.cjs`. The shared helpers in
+   `tests/lib/helpers.cjs` (`dispatchCmd`, `bootAndWait`,
+   `terminalText`, `waitForOutput`) handle the per-input transport;
+   tests should focus on assertions, not plumbing.
 
 If the command reads per-level data, document the schema at the top
 of the relevant track file so future authors know what to populate.

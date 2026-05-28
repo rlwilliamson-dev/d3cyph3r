@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-05-28
+
+**Playtest refactor — `@playwright/test` per-spec parallelism.** The CI playtest is rebuilt as 15 per-spec files running in parallel browser contexts. Player-facing behavior is unchanged; this is a developer / CI release.
+
+### Changed
+
+- **Test runner** — replaced the 3,473-line `tests/playtest.cjs` monolith with `@playwright/test` (config in `tests/playwright.config.cjs`, shared helpers in `tests/lib/helpers.cjs`, 15 spec files under `tests/specs/`). Local runs go from ~2 min to ~1 min on 5 parallel workers; CI (capped at 2 workers for runner stability) gets a similar proportional speedup. Adding a new level now means adding tests to one `<track>.spec.cjs` file rather than appending to a single growing monolith.
+- **Transport layer (`dispatchCmd` helper)** — replaces the old `typeAndEnter` per-character `keyboard.type()` + blind `waitForTimeout(80)` pattern with a direct `input.value = ...` + synthetic Enter keydown + `waitForFunction(input.value === "")`. Eliminates per-command timing overhead and removes the source of the occasional flake under load. The original `keyboard.type` / `keyboard.press` paths remain available as `typeKeystrokes` / `pressKey` for the readline tests that need real keystroke events (history, Ctrl-R, Ctrl-Y, Alt-., tab autocomplete).
+- **CI workflow** — `playtest_job` now runs `npx playwright test --reporter=list` instead of `node playtest.cjs`. Traces + screenshots on failure are retained for diagnostics.
+
+### Added
+
+- **`tests/playwright.config.cjs`** — single Chromium project, `fullyParallel: true` locally, `workers: 2` in CI for stability, `trace: "retain-on-failure"`, 30s per-test timeout.
+- **`tests/lib/helpers.cjs`** — shared `dispatchCmd`, `bootAndWait`, `terminalText`, `promptText`, `resetState`, `waitForOutput`, `typeKeystrokes`, `pressKey`. Each helper carries a docblock explaining when to reach for it and why.
+- **15 spec files under `tests/specs/`** — one per track (`linux`, `network`, `crypto`, `web`, `forensics`, `osint`, `cloud`) plus cross-cutting suites (`engine-surface`, `shell-features`, `shell-realism`, `lobby-tree`, `achievements`, `themes-and-tutorial`, `persistence-savecode`, `mobile-pwa`). Each spec is hermetic — its own browser context means sessionStorage / localStorage / viewport state can't bleed across tests.
+- **293 test cases / 737 expectations** covering everything the v1.23.x monolith covered. No semantic drift — every original assertion has an equivalent in the new layout.
+
+### Removed
+
+- `tests/playtest.cjs` — deleted; superseded by the per-spec layout above.
+
+### Fixed
+
+- **Mobile-bypass test race** — the post-Continue assertion now waits for both `#cmd-input` AND `body.mobile-mode`, since `cmd-input` exists in the static HTML before `main.js`'s `setMobileMode()` runs. Pre-refactor this was hidden by a blind `waitForTimeout(2000)`; the tighter wait catches the actual readiness signal.
+
+### Docs
+
+- `README.md` — tree-structure section reflects the new `tests/specs/` + `tests/lib/` + `tests/playwright.config.cjs` layout.
+- `CONTRIBUTING.md` — new "Run the playtest" recipe (`npx playwright test [name|--grep|--headed]`) + a "Playtest coverage" guide for new commands and levels.
+- `CLAUDE.md` — playtest section updated to describe the per-spec parallel layout and helper module.
+
 ## [1.23.3] - 2026-05-28
 
 **Cross-track walkthrough content audit.** Fact-checked all 15 shipped walkthroughs and their in-game lessons-learned mirrors against current canonical sources (NIST, CIS, MITRE CWE/ATT&CK, OWASP, CompTIA/GIAC/SANS cert pages, regulator filings). Corrections applied:
