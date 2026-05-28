@@ -7,6 +7,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-05-27
+
+**Progressive Web App + mobile support.** D3CYPH3R is now
+installable as a desktop / phone app via the browser's "Install"
+button — gets its own dock icon, runs in a borderless window, and
+works offline after first visit (subway, airplane, network outage,
+all fine). The mobile gate became a warning rather than a hard
+block: phone players can tap "Continue anyway" to enter the
+engine, where a soft-key row above the on-screen keyboard adds
+Tab / Esc / Ctrl-C / `|` / `&&` / `$` / `_` / etc. — the
+characters that are painful to type on phone keyboards.
+
+### Added
+
+- **PWA install path.** New `manifest.webmanifest` declares the app
+  name, icons, theme color, and display mode. Chrome / Edge /
+  Safari 16.4+ show an "Install" button after a few visits. Once
+  installed, the app gets its own dock icon, opens in a borderless
+  window, and is alt-tab-focusable like a native app. Icons in 4
+  sizes (192/512/maskable-512/iOS-180) with the `> $_` chevron
+  prompt design on a high-contrast black background.
+- **Service worker (`sw.js`).** Pre-caches the bootstrap shell on
+  first visit; everything else (engine modules, level data,
+  walkthroughs) caches on-demand via runtime caching. Strategy is
+  routing-based: network-first for HTML, stale-while-revalidate
+  for JS/CSS, cache-first for vendored libs + icons. Cross-origin
+  requests bypass the SW. **Cache name is versioned**
+  (`d3cyph3r-v1.21.0`) so each release cleanly retires the
+  previous version's cache during the activate event. Future
+  content additions (new levels, new commands) require zero
+  changes to the SW — runtime caching discovers them automatically
+  on first fetch.
+- **`sw` command** — inspect / control the service worker from the
+  terminal. `sw` / `sw status` shows registration state + active
+  version + scope + waiting-update state. `sw update` forces an
+  immediate check for a new version. `sw clear` is the panic
+  button: unregisters + wipes every D3CYPH3R cache, after which
+  a page reload registers a fresh SW.
+- **`reload` command** — refresh the page. If a new SW is waiting,
+  triggers skipWaiting so the new version activates immediately
+  instead of being deferred. Equivalent to F5 / Cmd-R otherwise.
+- **Update detection.** When a new SW finishes installing while
+  the old one is still controlling the page, the engine prints
+  a yellow terminal banner inviting the player to type `reload`.
+  Polite — never auto-applies mid-level.
+- **Mobile-gate "Continue anyway" button.** After the boot
+  sequence completes, mobile players see a primary action
+  button below the warning copy. Tapping it sets
+  `localStorage["d3cyph3r-mobile-bypass"] = "1"` and reloads
+  into the normal engine with `body.mobile-mode` set + the
+  `state.isMobileMode` flag exported. PWAs launched in
+  `display-mode: standalone` auto-bypass (installing is
+  consent).
+- **Soft-key row (`js/terminal/softkeys.js`).** Horizontal
+  scrolling strip above the on-screen keyboard, visible only when
+  `body.mobile-mode` is set. 18 keys: Tab, Esc, ↑, ↓, ^C, `|`,
+  `&&`, `||`, `;`, `>`, `$`, `_`, `/`, `~`, `*`, `.`, `-`, `=`.
+  Special keys (Tab, Esc, arrows, Ctrl-C) synthesize real
+  `KeyboardEvent`s so existing readline handlers process them
+  correctly; character keys splice the literal value at the
+  cursor. Data-driven KEYS array makes adding new keys a one-line
+  append. Tap targets meet the 44×44 minimum from Apple HIG.
+- **Tap-to-focus handler.** Tapping anywhere on the terminal
+  background focuses the hidden `<input>` element, which triggers
+  the on-screen keyboard on iOS / Android. Skipped if the tap
+  landed on selected text (selection-then-focus would collapse
+  the selection).
+- **Responsive CSS (`@media (max-width: 768px)`).** Triggers below
+  768px viewport: tighter topbar padding, smaller terminal font
+  (11px so 80-col output fits iPhone-portrait), smaller chip
+  badges, smaller tab-hint, full-width input. Desktop UI
+  unaffected.
+
+### Changed
+
+- **`mobile-gate.js`** — gate is now a WARNING, not a hard block.
+  Boot sequence still fires (sets expectations); the final block
+  now includes the Continue-anyway button + an explanatory note
+  about the soft-key row.
+- **`main.js` boot order** — adds `setMobileMode()` early so
+  modules that need it see it before they render, and
+  `registerServiceWorker()` AFTER `boot()` so SW registration
+  doesn't compete with first-paint.
+- **`staticwebapp.config.json`** — adds cache-header routes for
+  `/sw.js` (no-cache + `Service-Worker-Allowed: /`), `/manifest.webmanifest`
+  (no-cache + `Content-Type: application/manifest+json`),
+  `/icon-*.png` and `/favicon.svg` (immutable, 1-year max-age).
+
+### Testing
+
+- Playtest grows by 22 assertions (811 → 833). New coverage:
+  manifest 200, sw.js 200 with expected body, SW reaches
+  `active` state, `sw status` output, `sw --help` block, `sw clear`
+  panic flow, mobile-gate renders at narrow viewport,
+  Continue-anyway sets the bypass flag, body.mobile-mode +
+  soft-key row appear after bypass, soft-key character + multi-
+  char insertion (`|` and ` && `) lands in the input correctly,
+  bypass persists across reload.
+
+### Browser support
+
+- **Chromium-based** (Chrome / Edge / Brave / Opera / Vivaldi):
+  full PWA support, install button appears.
+- **Safari 16.4+ macOS**: full PWA support since Sonoma (Mar 2023).
+- **Firefox 113+**: service worker registers + offline cache works,
+  but install prompt is off by default (browser choice — gated
+  behind `about:config`).
+- **Safari iOS**: install via "Add to Home Screen"; mobile-gate
+  still applies but Continue-anyway works.
+
 ## [1.20.0] - 2026-05-27
 
 **Stateless progress codes — portable `save` / `restore`.** A
@@ -3385,7 +3495,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.20.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.21.0...HEAD
+[1.21.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.17.0...v1.18.0

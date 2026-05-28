@@ -39,6 +39,15 @@
 //       libraries under `/walkthroughs/vendor/*` stay cached at the
 //       SWA default — they're stable across releases.
 //
+//   2c. As of v1.21.0, ALSO bump the `CACHE_VERSION` constant near
+//       the top of `sw.js` to match the new release version. The
+//       service worker uses this as the cache key; bumping it tells
+//       installed-PWA users to retire the previous version's cache
+//       and rebuild from scratch on next visit. Skipping this step
+//       isn't catastrophic (the SW does a network-first / stale-
+//       while-revalidate strategy that catches up within a page
+//       load), but bumping keeps the update latency minimal.
+//
 //   3. Author the level walkthrough at
 //      walkthroughs/<track>/<level>.md. Use level0@linux's walkthrough
 //      as the template (9 sections, 7000-9000 words). Update the
@@ -94,6 +103,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "1.20.0";
+export const VERSION = "1.21.0";
 
 export const VERSION_DISPLAY = "v" + VERSION;

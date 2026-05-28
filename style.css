@@ -656,14 +656,29 @@ body.error-404 {
    `light` theme persisted from an earlier desktop visit, the gate
    inherits the light palette automatically. ─────────────────────── */
 .mobile-gate {
+  /* Dynamic viewport units (dvh) account for iOS Safari's URL bar
+     dynamics — `100vh` measures the LARGEST possible viewport (URL
+     bar collapsed), which clips the bottom of the content on first
+     load when the bar is still visible. `100dvh` resizes with the
+     bar. Fall back to `100vh` on browsers without dvh support. */
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--fg);
   font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
-  padding: 32px 20px 48px;
+  /* Add room at the bottom for iPhone X+ home-indicator safe area;
+     `env(safe-area-inset-bottom)` is 0 on older devices, ~34px on
+     newer ones. `max(48px, …)` keeps the original 48px floor. */
+  padding: 32px 20px max(48px, env(safe-area-inset-bottom));
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  /* Allow the gate to scroll if the boot log + final block exceeds
+     viewport (common on iPhone-portrait once the Continue button +
+     explanatory note are added). Without this the bottom content
+     was unreachable on iOS Safari. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   -webkit-font-smoothing: antialiased;
 }
 .mobile-gate-inner {
@@ -753,4 +768,234 @@ body.error-404 {
 .mobile-gate-final-links a:hover {
   color: var(--fg-bright);
   text-decoration: underline;
+}
+
+/* ─── v1.21.0 mobile-gate "Continue anyway" button ─────────────────
+   Sits in the mobile-gate-final block above the GitHub link. Big tap
+   target (44px+ per Apple HIG) and a clear visual hierarchy: button
+   reads as primary action, the note underneath as the explanation. */
+.mobile-gate-actions {
+  margin: 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mobile-gate-btn {
+  display: inline-block;
+  width: 100%;
+  max-width: 360px;
+  align-self: flex-start;
+  background: var(--accent);
+  color: var(--bg);
+  border: 0;
+  padding: 14px 20px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  text-align: left;
+}
+.mobile-gate-btn:hover,
+.mobile-gate-btn:focus-visible {
+  filter: brightness(1.15);
+  outline: 2px solid var(--fg-bright);
+  outline-offset: 2px;
+}
+.mobile-gate-action-note {
+  color: var(--dim);
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 480px;
+}
+.mobile-gate-action-note code {
+  color: var(--fg-bright);
+  background: var(--bg-soft, var(--bg));
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+/* ─── v1.21.0 soft-key row (mobile-mode only) ──────────────────────
+   Horizontal scroll strip above the OS keyboard with the characters
+   that are painful to type on phone keyboards (Tab / Esc / pipe /
+   $ / && / etc.). Only visible when body.mobile-mode is set. Tap
+   targets meet the 44×44 minimum for touch-friendly UIs.
+
+   DOM placement: softkeys.js inserts #softkey-row as a SIBLING of
+   #input-area (not a child). The parent #screen is flex column, so
+   the soft-key row naturally lands BELOW the prompt + cmd input
+   without competing for horizontal space inside the input row.
+
+   Hard-coded order matches the KEYS array in
+   js/terminal/softkeys.js — special keys first (Tab, Esc, arrows,
+   ^C), then commonly-needed symbols. The buttons inherit theme
+   variables so they look right across all 11 themes. */
+.softkey-row {
+  display: none;
+}
+body.mobile-mode .softkey-row {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 8px;
+  /* Pull tight against the bottom of the screen. Negative left/right
+     margin counteracts #screen's 24px side padding so the soft-key
+     row spans edge-to-edge, giving the OS keyboard a clean horizon
+     to butt up against.
+     v1.21.0-r5: margin-top bumped from 6px to 20px — players were
+     mistaking the soft-key row for part of the input area when
+     they were visually adjacent. The 20px gap makes the input box
+     read as clearly separate. */
+  margin: 20px -24px 0;
+  /* Add home-indicator safe-area padding on iPhone X+ — without this
+     the bottom row of keys sits behind the indicator on landscape. */
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  background: var(--bg-soft, var(--bg));
+  border-top: 2px solid var(--accent);
+  scrollbar-width: none;  /* Firefox */
+  flex-shrink: 0;
+}
+body.mobile-mode .softkey-row::-webkit-scrollbar { display: none; }
+
+/* ─── v1.21.0 mobile-mode #screen + #input-area adjustments ────────
+   On mobile the OS keyboard shrinks the visible viewport. We make
+   #screen use dynamic viewport units (100dvh) so it tracks the
+   actual visible area, and ensure the input row + soft-keys stay
+   pinned at the bottom (flex-shrink: 0). #terminal flexes to fill
+   whatever's left above them, scrolling internally. */
+body.mobile-mode #screen {
+  height: 100vh;
+  height: 100dvh;
+}
+body.mobile-mode #terminal {
+  flex: 1 1 auto;
+  min-height: 0;        /* allow shrink below content size */
+}
+body.mobile-mode #input-area {
+  flex-shrink: 0;
+  /* On mobile, beef up the input row's tap target — desktop's
+     compact 8px padding gives a thin 14px-tall input which is hard
+     to hit with a fingertip. The padding ALSO acts as breathing
+     room: with extra vertical padding the input box reads as
+     clearly separate from the soft-key strip below it, instead
+     of the two visually colliding.
+     v1.21.0-r5: padding bumped from 12px → 16px to widen the
+     visible gap between the input row and the soft-key strip. */
+  padding: 16px 0;
+  min-height: 44px;
+}
+/* Highlight the input region with a slight background tint on
+   mobile so the player can SEE where typing happens. The dashed
+   underline alone wasn't enough when the input was empty — players
+   couldn't tell where the input field actually was. A subtle
+   filled box reads as "this is where you type." */
+body.mobile-mode #input-wrapper {
+  background: rgba(88, 166, 255, 0.06);  /* accent at 6% opacity */
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  border-radius: 4px;
+  padding: 8px 10px;
+  min-height: 24px;
+}
+
+.softkey-btn {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 12px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  /* Disable iOS tap-flash since the button is its own visual feedback */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.softkey-btn:active {
+  background: var(--accent);
+  color: var(--bg);
+  transform: scale(0.97);
+}
+.softkey-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ─── v1.21.0 responsive adjustments for narrow viewports ──────────
+   Triggers at ≤768px (covers iPhone-portrait + most Android phones
+   in portrait). The mobile-gate already handles its own layout; this
+   block kicks in only when the engine itself is rendering (i.e. the
+   gate was bypassed). */
+@media (max-width: 768px) {
+  /* Tighten the topbar so the brand + clock fit on a phone screen */
+  #topbar {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  #topbar-title { font-size: 13px; }
+  #clock        { font-size: 11px; }
+  #level-badge  { font-size: 11px; }
+
+  /* Terminal goes full-width with smaller font so 80-col output fits.
+     v1.21.0-r6: bumped 11→12px for readability. Still narrow enough
+     that most ~70-char engine output lines fit without aggressive
+     wrapping on iPhone-portrait (375px wide). */
+  #terminal {
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 8px 10px;
+  }
+  /* v1.21.0-r6: word-break/overflow-wrap rules retuned for readability.
+     The previous `word-break: break-word` was deprecated AND too
+     aggressive — it would chop mid-word even when there was a space
+     to break at, so a phrase like "Driftwood Systems" would break as
+     "Driftwo|od Systems" if it didn't fit. The new combo prefers
+     normal word-boundary wrapping (`word-break: normal`) and only
+     falls back to mid-word breaking when a single token genuinely
+     overflows (URL, long command, base64 blob). */
+  .line {
+    word-break: normal;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;  /* preserve indentation/spacing in output */
+  }
+
+  /* Input area: full-width prompt, tightened padding */
+  #input-area {
+    padding: 6px 10px;
+  }
+  #prompt-label {
+    font-size: 11px;
+  }
+  /* Mirror spans (the visible "cursor + typed text" overlay) sit at
+     the same size as the terminal body. */
+  #input-wrapper,
+  #mirror-before,
+  #mirror-cursor,
+  #mirror-after {
+    font-size: 12px;
+  }
+  /* iOS Safari auto-zooms into any focused <input> with font-size
+     < 16px. The actual input is invisible (opacity 0) so its size
+     doesn't affect what the player sees — but Safari still zooms
+     based on its rendered font-size. Bumping to 16px on mobile
+     stops the zoom-on-focus while keeping the visible mirror spans
+     at their 12px terminal-style size. */
+  #cmd-input {
+    font-size: 16px;
+  }
+
+  /* Lobby chip-badges: smaller so chip rows don't wrap too aggressively */
+  .chip { font-size: 10px; padding: 1px 5px; }
+
+  /* Tab-hint should not occupy half the viewport on a small screen */
+  #tab-hint { font-size: 10px; }
 }

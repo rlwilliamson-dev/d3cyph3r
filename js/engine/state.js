@@ -55,6 +55,14 @@ let nextJobId = 1;
 // so a reload preserves the count. Key: `${levelKey}:${findId}`.
 export let foundBonuses = new Set();
 
+// v1.21.0: Mobile-mode flag. True when the page is running on a
+// mobile device with the mobile-gate bypassed (player tapped
+// "Continue anyway" or launched the installed PWA). Read by
+// terminal/input.js (soft-key row visibility) and any other module
+// that wants to adapt — e.g. progress-render trimming on narrow
+// viewports. Set ONCE at boot by main.js; doesn't change at runtime.
+export let isMobileMode = false;
+
 export function setCurrentLevelKey(k) { currentLevelKey = k; }
 export function setCurrentPath(p)     { currentPath = p; }
 export function resetPath()           { currentPath = []; }
@@ -62,6 +70,7 @@ export function setAwaitingPassword(v){ awaitingPassword = v; }
 export function setAwaitingPersistenceConsent(v) { awaitingPersistenceConsent = v; }
 export function setAwaitingRestoreConfirmation(v) { awaitingRestoreConfirmation = v; }
 export function setLastExitCode(n)    { lastExitCode = n; }
+export function setMobileMode(v)      { isMobileMode = !!v; }
 export function setTourStep(n)        { tourStep = n; }
 
 // Env-var ops.

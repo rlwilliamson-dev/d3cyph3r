@@ -25,9 +25,17 @@ console.info(
   "color: inherit;"
 );
 
-import { isMobile, renderMobileGate } from "./mobile-gate.js";
+import { isMobile, isMobileBypassed, renderMobileGate } from "./mobile-gate.js";
 
-if (isMobile()) {
+// v1.21.0: the mobile gate became a WARNING rather than a hard block.
+// Players can tap "Continue anyway" (sets localStorage flag) OR launch
+// the installed PWA (matchMedia "standalone") to bypass. Either way,
+// isMobileBypassed() returns true and the engine boots with a mobile-
+// mode flag set so responsive CSS + soft-key row kick in.
+const onMobile = isMobile();
+const mobileBypassed = onMobile && isMobileBypassed();
+
+if (onMobile && !mobileBypassed) {
   renderMobileGate();
 } else {
   // These imports happen unconditionally (ES module semantics), but their
@@ -43,6 +51,17 @@ if (isMobile()) {
   const { loadBonusesFromStorage }   = await import("./engine/state.js");
   const { hydrateFromLocal }         = await import("./engine/persistence.js");
   const { initLevelTimer, flushCurrentLevel } = await import("./engine/leveltimer.js");
+  const { setMobileMode }            = await import("./engine/state.js");
+  const { registerServiceWorker }    = await import("./engine/pwa.js");
+
+  // v1.21.0: tell the engine we're running in mobile-bypass mode so
+  // responsive CSS hooks + the soft-key row activate. The mobile-mode
+  // flag is read on demand by terminal/input.js (soft-key row) and
+  // any other module that needs to adapt.
+  setMobileMode(mobileBypassed);
+  if (mobileBypassed) {
+    document.body.classList.add("mobile-mode");
+  }
 
   // Apply saved theme BEFORE the boot sequence renders so the player
   // doesn't see a flash of the wrong palette.
@@ -92,4 +111,11 @@ if (isMobile()) {
     try { flushCurrentLevel(); } catch (_) { /* silent */ }
   });
   boot();
+
+  // v1.21.0: register the service worker AFTER engine boot so SW
+  // installation doesn't compete with first-paint. The registration
+  // promise is fire-and-forget — SW is a nice-to-have, not a blocker.
+  // pwa.js handles its own failure modes (older browsers, file://
+  // origin, registration errors) so we don't need to catch here.
+  registerServiceWorker();
 }

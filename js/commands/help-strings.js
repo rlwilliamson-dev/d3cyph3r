@@ -113,6 +113,19 @@ Codes are long; paste-don't-type. Hyphens / line breaks inside the
 code are decorative — the decoder ignores both.
 See 'man restore' for full details.`,
 
+  sw: `sw — inspect / control the service worker (v1.21.0)
+usage: sw [status | update | clear]
+  status     show registration + active-SW version (default)
+  update     force-check for a new version now
+  clear      unregister + wipe caches (panic button)
+See 'man sw' for full details.`,
+
+  reload: `reload — refresh the page, applying any pending update (v1.21.0)
+usage: reload
+Triggers skipWaiting on a pending service-worker update (if any),
+then reloads. Your progress survives — only engine code is swapped.
+See 'man reload' for full details.`,
+
   // ─── Filesystem / read-only stubs: short curated message because
   // their MAN_PAGES entries are deliberately terse and the sandbox
   // refusal posture is itself the most useful thing to surface ────

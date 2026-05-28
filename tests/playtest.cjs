@@ -3162,6 +3162,187 @@ async function termText(page) {
   check("v1.20.0 restore preserves the seenOnboarding flag",
         onboardingAfterRestore === "true");
 
+  // ===== v1.21.0 — PWA + mobile support =====
+
+  // --- PWA: manifest + service worker registered ---
+  await typeAndEnter(page, "clear");
+
+  const manifestResp = await page.evaluate(async () => {
+    try {
+      const r = await fetch("/manifest.webmanifest");
+      return { status: r.status, contentType: r.headers.get("content-type") || "" };
+    } catch (e) { return { status: 0, err: String(e) }; }
+  });
+  check("v1.21.0 manifest.webmanifest returns 200",
+        manifestResp.status === 200);
+
+  const swResp = await page.evaluate(async () => {
+    try {
+      const r = await fetch("/sw.js");
+      return { status: r.status, body: (await r.text()).slice(0, 200) };
+    } catch (e) { return { status: 0, err: String(e) }; }
+  });
+  check("v1.21.0 /sw.js returns 200",
+        swResp.status === 200);
+  check("v1.21.0 /sw.js body looks like the service-worker source",
+        !!(swResp.body && swResp.body.includes("D3CYPH3R")));
+
+  // Wait for service worker to be ready (registered + activated)
+  const swState = await page.evaluate(async () => {
+    if (!("serviceWorker" in navigator)) return { supported: false };
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      return {
+        supported: true,
+        hasRegistration: !!reg,
+        active: !!(reg && reg.active),
+        scope: reg ? reg.scope : null,
+      };
+    } catch (e) { return { supported: true, err: String(e) }; }
+  });
+  check("v1.21.0 service worker registers successfully",
+        swState.supported && swState.hasRegistration);
+  check("v1.21.0 service worker reaches 'active' state",
+        swState.active === true);
+
+  // --- `sw` command: status output ---
+  // The sw command is fire-and-forget async: handler returns null
+  // synchronously, runStatus() prints via print() once its
+  // navigator.serviceWorker MessageChannel round-trip resolves.
+  // 1s wait covers the worst-case round-trip in playwright headless.
+  await typeAndEnter(page, "sw");
+  await page.waitForTimeout(1000);
+  let tSW = await termText(page);
+  check("v1.21.0 'sw' prints status header",
+        tSW.includes("Service worker status"));
+  check("v1.21.0 'sw' status shows State: active",
+        /State:\s+active/.test(tSW));
+  check("v1.21.0 'sw' status shows Active version field",
+        tSW.includes("Active version:"));
+  check("v1.21.0 'sw' status shows Scope field",
+        tSW.includes("Scope:"));
+
+  // --- `sw --help` (auto-generated from MAN_PAGES NAME + SYNOPSIS) ---
+  await typeAndEnter(page, "sw --help");
+  await page.waitForTimeout(100);
+  tSW = await termText(page);
+  check("v1.21.0 'sw --help' surfaces curated help block",
+        tSW.includes("status") && tSW.includes("update") && tSW.includes("clear"));
+
+  // --- `sw clear` panic button ---
+  await typeAndEnter(page, "clear");
+  await typeAndEnter(page, "sw clear");
+  await page.waitForTimeout(500);
+  tSW = await termText(page);
+  check("v1.21.0 'sw clear' confirms unregister + cache wipe",
+        tSW.includes("Unregistering") || tSW.includes("Done"));
+
+  // --- Mobile bypass flow (viewport ≤ 900px triggers gate) ---
+  // We resize the viewport to phone-portrait dimensions, reload to
+  // retrigger main.js's gate check, wait for the gate's final block
+  // (FINAL_DELAY in mobile-gate.js = 5200ms), tap Continue, wait
+  // for reload + engine boot, then verify the mobile-mode class +
+  // soft-key row are present.
+  //
+  // Pre-clear the bypass flag so we see the gate even if a prior
+  // test run set it.
+  await page.evaluate(() => { try { sessionStorage.removeItem("d3cyph3r-mobile-bypass"); localStorage.removeItem("d3cyph3r-mobile-bypass"); } catch (_) {} });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  await page.waitForTimeout(5800);  // > FINAL_DELAY + small buffer
+  const gateRendered = await page.evaluate(() => {
+    return !!document.querySelector(".mobile-gate");
+  });
+  check("v1.21.0 narrow viewport renders mobile-gate",
+        gateRendered);
+  const continueBtnVisible = await page.evaluate(() => {
+    const btn = document.getElementById("mobile-gate-continue");
+    if (!btn) return false;
+    // Walk up to make sure the .mobile-gate-final container isn't [hidden]
+    const finalEl = document.getElementById("mobile-gate-final");
+    return !!(finalEl && !finalEl.hidden);
+  });
+  check("v1.21.0 mobile-gate shows Continue-anyway button after FINAL_DELAY",
+        continueBtnVisible);
+
+  // Click the Continue button — triggers localStorage set + reload
+  await page.evaluate(() => {
+    const btn = document.getElementById("mobile-gate-continue");
+    if (btn) btn.click();
+  });
+  await page.waitForTimeout(2000);  // reload + engine boot
+
+  const bypassPersisted = await page.evaluate(() => {
+    try { return sessionStorage.getItem("d3cyph3r-mobile-bypass"); }
+    catch (_) { return null; }
+  });
+  check("v1.21.0 Continue-anyway sets sessionStorage bypass flag (session-scoped per v1.21.0-r7)",
+        bypassPersisted === "1");
+
+  const mobileModeWired = await page.evaluate(() => {
+    return {
+      hasClass: document.body.classList.contains("mobile-mode"),
+      hasSoftkeyRow: !!document.getElementById("softkey-row"),
+      hasInput: !!document.getElementById("cmd-input"),
+    };
+  });
+  check("v1.21.0 body.mobile-mode class is set after bypass",
+        mobileModeWired.hasClass);
+  check("v1.21.0 soft-key row is in DOM after bypass",
+        mobileModeWired.hasSoftkeyRow);
+  check("v1.21.0 engine input element is present (engine booted)",
+        mobileModeWired.hasInput);
+
+  // Soft-key character insertion: tap "|" button, verify it lands in
+  // the input. We synthesize a click on the matching softkey-btn.
+  const insertedPipe = await page.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll(".softkey-btn"));
+    const pipeBtn = buttons.find(b => b.textContent === "|");
+    if (!pipeBtn) return { found: false };
+    const input = document.getElementById("cmd-input");
+    input.focus();
+    input.value = "";
+    pipeBtn.click();
+    return { found: true, value: input.value };
+  });
+  check("v1.21.0 soft-key '|' button exists",
+        insertedPipe.found);
+  check("v1.21.0 tapping '|' inserts the literal char into the input",
+        insertedPipe.value === "|");
+
+  // Multi-char soft-key insertion: tap "&&", verify the spaced form lands
+  const insertedAnd = await page.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll(".softkey-btn"));
+    const andBtn = buttons.find(b => b.textContent === "&&");
+    if (!andBtn) return { found: false };
+    const input = document.getElementById("cmd-input");
+    input.focus();
+    input.value = "";
+    andBtn.click();
+    return { found: true, value: input.value };
+  });
+  check("v1.21.0 soft-key '&&' inserts with spaces around it",
+        insertedAnd.found && insertedAnd.value === " && ");
+
+  // Persistence check: second reload should still bypass the gate
+  await page.reload();
+  await page.waitForTimeout(1500);
+  const stillBypassed = await page.evaluate(() => {
+    return {
+      gateRendered: !!document.querySelector(".mobile-gate"),
+      hasInput: !!document.getElementById("cmd-input"),
+    };
+  });
+  check("v1.21.0 bypass persists across reload — gate does NOT re-render",
+        !stillBypassed.gateRendered);
+  check("v1.21.0 bypass persists across reload — engine boots directly",
+        stillBypassed.hasInput);
+
+  // Restore desktop viewport + clean bypass flag so subsequent
+  // assertions (if any) see the desktop layout.
+  await page.evaluate(() => { try { sessionStorage.removeItem("d3cyph3r-mobile-bypass"); localStorage.removeItem("d3cyph3r-mobile-bypass"); } catch (_) {} });
+  await page.setViewportSize({ width: 1280, height: 800 });
+
   check("No page errors raised", errors.length === 0);
   if (errors.length) errors.forEach(e => console.log("  ", e));
 
