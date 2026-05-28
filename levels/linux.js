@@ -1282,7 +1282,7 @@ Return to the lobby:    ssh guest@d3cyph3r
   "level2@linux": {
     password: "Halton-2024-Q3!",
     track: "linux",
-    title: "Halton prod-bastion audit",
+    title: "Daniel's forgotten cron",
     estimatedMinutes: 12,
     playerUser: "audit",
     objective: "Find the cron job leaking an SSH key passphrase via its own log — and document how an offboarded consultant's account was permitted to keep running production jobs six months after he rolled off.",
