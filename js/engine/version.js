@@ -52,9 +52,28 @@
 //      walkthroughs/<track>/<level>.md. Use level0@linux's walkthrough
 //      as the template (9 sections, 7000-9000 words). Update the
 //      MANIFEST in walkthroughs/walkthrough.js so the index lists it.
-//      Soft gate: the walkthrough MAY ship in a follow-up PR if the
-//      writing slows the level merge — but the level isn't considered
-//      "done" until its walkthrough exists.
+//
+//      WALKTHROUGH GATE (tightened 2026-05-28 after v1.23.0 shipped
+//      a level without its walkthrough): the walkthrough may ship in
+//      its own PR (as a PATCH bump immediately after the level
+//      release) BUT no new level work may start until that walkthrough
+//      PR has merged. The user articulated this as "we always want to
+//      do the walkthrough before building a new level." The pattern
+//      "ship level data → start next level → come back to walkthrough
+//      later" is forbidden; walkthroughs gate forward progress on
+//      the level pipeline.
+//
+//      Two acceptable shipping shapes:
+//        (A) Same PR: level data + walkthrough together in one MINOR
+//            release. Most level PRs to date (v0.8-v0.13) followed
+//            this pattern.
+//        (B) Split: level data in MINOR release N.M.0, walkthrough
+//            in PATCH release N.M.1 IMMEDIATELY AFTER, with zero
+//            level work between them. The skeleton-then-fast-follow
+//            split used in v1.23.0 was a one-time exception while
+//            this rule was being negotiated; v1.23.1 is the
+//            walkthrough closing it out.
+//
 //      ANTI-SPOILER EXCEPTION: the anti-spoiler rule in step 1 does
 //      NOT apply to walkthrough content. Walkthroughs are the
 //      intended destination for full solve paths and credentials;
@@ -157,6 +176,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "1.23.0";
+export const VERSION = "1.23.1";
 
 export const VERSION_DISPLAY = "v" + VERSION;

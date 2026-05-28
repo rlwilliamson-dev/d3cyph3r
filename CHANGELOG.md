@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.1] - 2026-05-28
+
+**Walkthrough for `level2@forensics` ships — closes out v1.23.0.**
+PATCH release; pure documentation. No engine, schema, command, or CSS
+changes. The walkthrough at `walkthroughs/forensics/level2.md` carries
+the full solve path, vulnerability deep-dive, real-world parallels, the
+NIST SP 800-86 / 800-171 Rev 3 / CMMC L2 / NISPOM / CUI Program
+framework stack, certification map (GCFE / GCFA / CHFI / Sec+ / CySA+),
+defender's playbook, bonus-find context, and ~50 curated external
+references (last reviewed: May 2026).
+
+This is the closing PATCH for the v1.23.0 → v1.23.1 split that shipped
+`level2@forensics` without its walkthrough. The pattern is one-time:
+going forward, walkthroughs gate new level work (see `js/engine/
+version.js` step 3 for the tightened rule).
+
+### Added
+
+- **`walkthroughs/forensics/level2.md`** — 6,874 words across the
+  standard 9-section template (§1 setup, §2 step-by-step solve, §3
+  vulnerability framing, §4 real-world parallels, §5 frameworks,
+  §6 certifications, §7 defender's playbook, §7.5 bonus-find context,
+  §8 further reading, §9 takeaways).
+- **MANIFEST entry** under the forensics track in
+  `walkthroughs/walkthrough.js` so the subsite index lists the new page.
+
+### Changed
+
+- **Release checklist tightened** (`js/engine/version.js` step 3):
+  walkthroughs may ship in a follow-up PATCH PR ONLY when it's the
+  immediate next PR with zero level work between. The "skeleton-then-
+  fast-follow" pattern used in v1.23.0 is now explicitly a one-time
+  exception. Future level work — same track or different — is gated
+  on the previous level's walkthrough being merged.
+
 ## [1.23.0] - 2026-05-28
 
 **level2@forensics ships — Phase 1 of the Routine-tier sweep begins.**
@@ -3600,7 +3635,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.1...HEAD
+[1.23.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.23.0...v1.23.1
 [1.23.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.20.0...v1.21.0
