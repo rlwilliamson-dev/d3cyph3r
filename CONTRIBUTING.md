@@ -35,8 +35,49 @@ npx playwright test --grep "lobby" # one test by name
 npx playwright test --headed       # see the browser
 ```
 
-CI runs this on every PR (`.github/workflows/azure-static-web-apps-*.yml`,
-the `playtest_job`). A red playtest blocks the Azure SWA deploy.
+### When CI runs the playtest
+
+As of v1.24.2, the workflow is tuned for fast iteration:
+
+- **PR pushes do NOT run the CI playtest.** Local playtest (`cd tests
+  && npx playwright test`) is the iteration loop. PR pushes still
+  deploy an SWA preview so you can verify behavior in a real browser
+  before merge.
+- **Push to `main` (merge commits) runs the CI playtest** as the deploy
+  gate. The playtest is sharded across 4 parallel runners
+  (`--shard 1/4` through `--shard 4/4`), so wall time is bounded by the
+  slowest shard, not the total content. A failed shard blocks the
+  prod deploy.
+- **Docs-only PRs skip the workflow entirely** (paths-ignore covers
+  CHANGELOG, README, CONTRIBUTING, SECURITY, LICENSE, `.gitignore`,
+  and `.github/**.md`). Walkthrough markdown files are NOT in the
+  ignore list because they ARE deployed and need preview.
+- **Need to force CI playtest on a PR branch?** Use the manual
+  escape hatch: GitHub Actions UI → "Run workflow" → pick the
+  branch. Useful when you've changed CI infrastructure itself and
+  want a pre-merge smoke check.
+
+### Local development practice
+
+Because PR CI no longer runs the playtest, **run the suite locally
+before pushing.** It's fast (~70s on a 5-core dev machine):
+
+```bash
+cd tests && npx playwright test
+```
+
+For tight iteration on a single track or feature, target one spec:
+
+```bash
+npx playwright test linux              # one spec by filename
+npx playwright test --grep "lobby"     # one test by name
+```
+
+A failing local run that gets pushed → merged will be caught by the
+sharded merge-to-main playtest gate, but the deploy will be blocked
+and you'll have to ship a fix-forward PATCH. Better to catch locally.
+
+### How the suite is structured
 
 The suite (v1.24.0+) uses `@playwright/test` with `fullyParallel: true`:
 - **`tests/specs/`** — one spec file per track (`linux.spec.cjs`,
@@ -51,8 +92,8 @@ The suite (v1.24.0+) uses `@playwright/test` with `fullyParallel: true`:
   `waitForOutput(page, text)`, plus `typeKeystrokes` / `pressKey` for
   the readline tests that need real keyboard events.
 - **`tests/playwright.config.cjs`** — `fullyParallel: true` locally,
-  `workers: 2` in CI for runner stability, traces + screenshots on
-  failure, 30s per-test timeout.
+  `workers: 4` in CI (matches the ubuntu-latest runner's vCPU count),
+  traces + screenshots on failure, 30s per-test timeout.
 
 Each `test()` block gets its own browser context, so per-spec state
 (sessionStorage, localStorage, viewport, mobile-bypass flag) is

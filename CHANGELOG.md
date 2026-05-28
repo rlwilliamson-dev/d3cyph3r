@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.24.2] - 2026-05-28
+
+**CI workflow scaling.** Long-term tuning that keeps PR feedback fast as the test suite grows with future level content. No engine, schema, command, or player-facing changes.
+
+### Changed
+
+- **PR pushes no longer run the CI playtest.** Local playtest (`cd tests && npx playwright test`) is now the iteration loop; the SWA preview still deploys on every PR push so behavior can be verified in a real browser. The merge-to-`main` push runs the playtest as the deploy gate.
+- **Playtest sharded across 4 parallel CI runners.** `playtest_job` becomes a matrix with `shard: [1, 2, 3, 4]`; each shard runs `npx playwright test --shard N/4`. Wall time is bounded by the slowest shard, not the total test count — the suite stays fast as more levels ship.
+- **Docs-only changes skip the workflow entirely.** Workflow trigger adds `paths-ignore` for `CHANGELOG.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `.gitignore`, and `.github/**.md`. Walkthrough markdown files are NOT in the ignore list since they ARE deployed.
+
+### Added
+
+- **`workflow_dispatch` trigger** — manual escape hatch via GitHub Actions UI for forcing a playtest run on any PR branch (useful when changing CI infrastructure itself).
+
+### Docs
+
+- `CONTRIBUTING.md` — new "When CI runs the playtest" + "Local development practice" sections explaining the iteration loop and the escape hatch.
+
 ## [1.24.1] - 2026-05-28
 
 **CI tuning.** GitHub Actions `ubuntu-latest` runners ship with 4 vCPUs; the v1.24.0 `playwright.config.cjs` set `workers: 2` in CI out of caution. Bumped to 4 so CI parallelism matches the runner's actual capacity. No engine, schema, command, or player-facing changes. 293/293 tests still pass.
