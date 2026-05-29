@@ -246,4 +246,108 @@ test.describe("network track", () => {
       "exit from level1@network returns to lobby"
     ).toContain("@d3cyph3r:");
   });
+
+  // ── Level 2 — Marcus's leaky cert (v1.26.0) ─────────────────────
+  // The audit-svc cred from level1's AXFR TXT-record leak grants
+  // entry to audit-bypass.atlas.internal. Apache's self-signed cert
+  // is the puzzle: SAN-list internal map + OU-field service email +
+  // exim autoresponder leaking the cleartext level3 cred. Two
+  // bonus finds trigger on the openssl x509 dump (wildcard sprawl
+  // + DELETE BEFORE PROD subject string).
+  test("level2@network — cert SAN map + autoresponder cleartext-cred leak", async ({ page }) => {
+    await dispatchCmd(page, "ssh level2@network");
+    await dispatchCmd(page, "atlas-audit-bypass-2026");
+    // Post-password connectTo() is queued behind a 300ms setTimeout
+    // in handlePasswordInput — wait for the banner before reading state.
+    await waitForOutput(page, "Connected: level2@network");
+    // Persistence-consent prompt fires AFTER the first successful
+    // non-lobby connect — this is a fresh page context, so it fires
+    // here. Dismiss with 'n' so subsequent commands dispatch normally.
+    await waitForOutput(page, "Save your progress across browser sessions?");
+    await dispatchCmd(page, "n");
+    let t = await terminalText(page);
+    expect(t, "Correct password connects to level2@network").toContain("Connected: level2@network");
+    // env_vars.HOSTNAME bumps the prompt host to the fqdn (truncated
+    // at first dot for prompt rendering).
+    expect(await promptText(page), "Prompt host updated to audit-bypass").toContain("@audit-bypass:");
+    expect(await promptText(page), "Prompt user shows in-world identity 'audit-svc'").toMatch(/^audit-svc@/);
+    expect(t, "Lesson mentions the day-three audit framing").toMatch(/Day three|day three/);
+
+    await dispatchCmd(page, "ls");
+    t = await terminalText(page);
+    for (const f of ["welcome.md", "priya-note.md", "atlas-cert-scope.md", "lessons-learned.md"]) {
+      expect(t, `ls shows ${f}`).toContain(f);
+    }
+
+    // openssl s_client — handshake-level cert + verification.
+    await dispatchCmd(page, "openssl s_client -connect localhost:443");
+    t = await terminalText(page);
+    expect(t, "s_client surfaces the self-signed verification result").toContain("self signed certificate");
+    expect(t, "s_client surfaces the audit-bypass CN").toContain("CN=audit-bypass.atlas.internal");
+    expect(t, "s_client surfaces the OU=devops-ci service email").toContain("OU=devops-ci@atlas.health");
+
+    // openssl x509 — full cert dump fires BOTH bonus finds.
+    await dispatchCmd(page, "openssl x509 -text -noout -in /etc/apache2/ssl/audit-bypass.crt");
+    t = await terminalText(page);
+    expect(t, "x509 dump includes the wildcard SAN entry (wildcard-sprawl bonus)")
+      .toContain("DNS:*.atlas.internal");
+    expect(t, "x509 dump includes the DELETE BEFORE PROD subject (self-signed-CA-blunder bonus)")
+      .toContain("DELETE BEFORE PROD");
+    expect(t, "x509 dump enumerates production-tier internal hosts in SAN")
+      .toContain("DNS:phi-warehouse.atlas.internal");
+    expect(t, "x509 dump enumerates the devops-ci pivot in SAN")
+      .toContain("DNS:devops-ci.atlas.internal");
+    // The "wildcard-cert-sprawl" bonus banner pattern + the
+    // "self-signed-ca-blunder" bonus banner pattern should both
+    // have fired by now. The bonus banner format (bonus.js#70) is
+    // "✦ Bonus find unlocked: <name>" — check that BOTH are present.
+    const bonusBanners = (t.match(/Bonus find unlocked:/g) || []).length;
+    expect(bonusBanners, "Both level2@network bonus finds (wildcard + self-signed CA) fire on the same x509 dump").toBeGreaterThanOrEqual(2);
+
+    // crtsh — CT-log permanence enumeration. Should surface the
+    // Tessera bridge + marcus-test entries that thread the
+    // engagement narrative.
+    await dispatchCmd(page, "crtsh atlas.health");
+    t = await terminalText(page);
+    expect(t, "crtsh surfaces the staging.atlas.health public cert (CT-log permanence)")
+      .toContain("staging.atlas.health");
+    expect(t, "crtsh surfaces the Tessera Q4 bridge subdomain (narrative thread from level1)")
+      .toContain("tessera-bridge.atlas.health");
+    expect(t, "crtsh surfaces Marcus's accidental public test issuance")
+      .toContain("marcus-test.atlas.health");
+
+    // The breadcrumb out — exim autoresponder log captures the
+    // cleartext level3 cred in the password-reset reply body.
+    await dispatchCmd(page, "cat /var/log/exim/autoresponder.log");
+    t = await terminalText(page);
+    expect(t, "autoresponder log includes the level3 cred (T3mp-DevopsCI-HD8814!q2)")
+      .toContain("T3mp-DevopsCI-HD8814!q2");
+    expect(t, "autoresponder log includes the helpdesk ticket id HD-2026-Q2-8814")
+      .toContain("HD-2026-Q2-8814");
+
+    await dispatchCmd(page, "whoami");
+    t = await terminalText(page);
+    expect(t, "whoami prints 'audit-svc' on the audit-bypass host")
+      .toMatch(/\baudit-svc\b/);
+
+    await dispatchCmd(page, "exit");
+    // exit → connectTo(LOBBY) queued behind a 200ms setTimeout.
+    await waitForPrompt(page, (s) => s.includes("@d3cyph3r:"));
+    expect(
+      await promptText(page),
+      "exit from level2@network returns to lobby"
+    ).toContain("@d3cyph3r:");
+  });
+
+  // Cold-start gate — wrong password on level2@network rejected.
+  // Mirrors the level1 cold-start test pattern.
+  test("level2@network — wrong password is rejected at the gate", async ({ page }) => {
+    await dispatchCmd(page, "ssh level2@network");
+    await dispatchCmd(page, "wrong-password");
+    await waitForOutput(page, "Permission denied, please try again.");
+    const t = await terminalText(page);
+    expect(t, "Wrong password on level2@network prints 'Permission denied'").toContain(
+      "Permission denied, please try again."
+    );
+  });
 });

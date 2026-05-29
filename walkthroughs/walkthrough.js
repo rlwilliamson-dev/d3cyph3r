@@ -61,30 +61,59 @@ import { initTheme, cycleTheme, getTheme } from "../js/terminal/theme.js";
 // (javascript:, data:, vbscript:, file:, ftp:, etc.) gets dropped.
 const SAFE_URL = /^(?:https?:|mailto:|tel:|#|\/|\.\.?\/)/i;
 
+// Escape a string for safe inclusion in an HTML attribute value.
+// Only used on the title attribute below; href is already validated
+// against SAFE_URL and the renderer-supplied text is pre-rendered HTML
+// (marked tokenizes inline formatting in display text and passes the
+// rendered HTML in, not raw markdown).
+function escAttr(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
 marked.use({
   renderer: {
     // Drop raw HTML tokens entirely (v1.24.3).
     html: () => "",
-    // Sanitize link hrefs (v1.24.4). Returning the inline text without
-    // wrapping it in <a> strips the dangerous href; returning false
-    // tells marked to fall through to its default renderer for normal
-    // (http/relative) links.
-    link(token) {
-      if (!SAFE_URL.test(token.href || "")) {
-        return this.parser.parseInline(token.tokens);
+    // Sanitize link hrefs (v1.24.4 + v1.26.0 fix).
+    //
+    // Marked 12 calls renderer.link with POSITIONAL ARGS
+    // `(href, title, text)`, not a token object. The v1.24.4 code
+    // destructured `token.href` on what was actually the href string,
+    // which always evaluated SAFE_URL against undefined (== false),
+    // dropped every link into the sanitize-and-strip branch, then
+    // crashed when `this.parser.parseInline(token.tokens)` reached for
+    // a parser binding that doesn't exist in marked 12's renderer
+    // call context. (The bug was masked on most walkthroughs because
+    // links rendered as empty `<a>` tags rather than throwing — the
+    // network/level2 markdown was the first to hit the autolinker
+    // path that took the throw branch instead.) Fix: switch to the
+    // documented marked 12 signature and render the safe-case link
+    // ourselves rather than relying on the marked 9-era "return false
+    // to fall through to default" contract that marked 12 no longer
+    // honors for renderer overrides registered via marked.use().
+    link(href, title, text) {
+      if (!SAFE_URL.test(href || "")) {
+        return text || "";
       }
-      return false;
+      const titleAttr = title ? ` title="${escAttr(title)}"` : "";
+      return `<a href="${escAttr(href)}"${titleAttr}>${text}</a>`;
     },
-    // Same treatment for images (v1.24.4). Disallowed src renders as
-    // the alt text (or empty if no alt). Walkthroughs don't currently
-    // embed images, but enforcing this now means a future walkthrough
-    // PR can't accidentally introduce a data:image/svg+xml payload
-    // (which CAN contain scripts that fire on render in some browsers).
-    image(token) {
-      if (!SAFE_URL.test(token.href || "")) {
-        return token.text || "";
+    // Same v1.26.0 signature fix for images. Disallowed src renders
+    // as the alt text (or empty if no alt). Walkthroughs don't
+    // currently embed images, but enforcing this now means a future
+    // walkthrough PR can't accidentally introduce a
+    // data:image/svg+xml payload (which CAN contain scripts that
+    // fire on render in some browsers).
+    image(href, title, text) {
+      if (!SAFE_URL.test(href || "")) {
+        return text || "";
       }
-      return false;
+      const titleAttr = title ? ` title="${escAttr(title)}"` : "";
+      const altAttr = text ? ` alt="${escAttr(text)}"` : "";
+      return `<img src="${escAttr(href)}"${altAttr}${titleAttr}>`;
     },
   },
 });
@@ -144,6 +173,17 @@ const MANIFEST = {
           "staging-DB host's internal DNS resolver gives up the full " +
           "data-center map plus a service-account credential stashed " +
           "in a TXT record. CWE-306 + the sticky-account anti-pattern.",
+      },
+      level2: {
+        title: "What the Cert Knew",
+        blurb:
+          "Day three. The Tessera-dry-run audit-bypass cred lands the " +
+          "player on a host the asset-management tool says doesn't " +
+          "exist. Apache's self-signed cert documents Atlas's internal " +
+          "infrastructure in its SAN list, names a service mailbox in " +
+          "its OU field, and the mailbox's autoresponder log ships the " +
+          "level3 temp credential in cleartext. CWE-1188 + CWE-547 + " +
+          "CWE-532 plus CT-log permanence (RFC 6962).",
       },
     },
   },
