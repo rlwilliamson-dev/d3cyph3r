@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.26.1] - 2026-05-29
+
+**Playtest infra fix.** No engine, schema, level, or walkthrough changes — the persistence-savecode tests now extract the printed save code via `textContent` on the DOM element rather than regex-matching `innerText`, fixing a CI flake that v1.26.0's slightly-longer save code reliably triggered. The flake was blocking the v1.26.0 prod deploy; v1.26.1 is the same gameplay payload plus the test fix.
+
+### Fixed
+
+- **Playtest save-code extraction reads `.line.out` textContent directly.** The `.line` div uses `overflow-wrap: anywhere`, so longer codes wrap visually and `innerText` inserts the wrap as `\n`. The previous regex `/D3C2-[A-Za-z0-9_-]+/` stopped at the first newline and the truncated capture failed CRC32. The new extraction uses `page.evaluate` to read `textContent` (ignores CSS layout), which returns the full code reliably under any viewport and worker count.
+
 ## [1.26.0] - 2026-05-28
 
 **level2@network ships.** Day three of the Atlas Health engagement. The deprecated `audit-svc` identity from level1's AXFR TXT-record leak unlocks `audit-bypass.atlas.internal` — a host the asset-management tool tagged "decommissioned, awaiting reimage" in 2024-Q1 and still serving production-grade TLS in April 2026. Apache 2.4 terminates TLS on a 10-year self-signed cert whose Subject Alternative Name list documents every internal host (prod, staging, the PHI tier) plus a `*.atlas.internal` wildcard. The Subject's OU field carries a service email; the local exim instance's autoresponder ships cleartext temporary credentials in reply to password-reset requests for that mailbox. CT-log enumeration via `crtsh` catalogues Atlas's permanent public footprint (staging hostnames Marcus claimed were VPN-only; a forgotten `marcus-test` cert; the Tessera-bridge cert from the same 2025-09-12 date as level1's TXT-record breadcrumb).
@@ -3731,7 +3739,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.1...HEAD
+[1.26.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.0...v1.26.1
 [1.26.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.2...v1.26.0
 [1.25.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.1...v1.25.2
 [1.25.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.0...v1.25.1
