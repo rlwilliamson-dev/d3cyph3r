@@ -297,7 +297,7 @@ The defenses against all of this are mature and documented; nobody at Atlas appl
 
 **Audit exim / postfix outbound for cleartext-credential patterns.** SIEM rules in Splunk / Sentinel / Elastic looking for `password is`, `temp credential`, `valid for 72 hours`, `T3mp-`-prefixed strings across SMTP relay logs catch the pattern proactively. Atlas's autoresponder pattern would have been flagged by any of these rules; nobody set them up.
 
-**Generate a TLS configuration with mozilla.github.io/server-side-tls.** The [Mozilla TLS Generator](https://ssl-config.mozilla.org/) produces ready-to-paste Apache / nginx / HAProxy / Caddy configs for the modern (intermediate / modern) TLS profiles. The "modern" profile aligns with NIST SP 800-52 Rev 2 and CIS Control 3.10. Operators who use the generator land on safe-by-default configs; operators who copy-paste a 2019 stackoverflow answer land on Atlas's 2023 config.
+**Generate a TLS configuration with the Mozilla TLS generator.** The [Mozilla TLS Generator](https://ssl-config.mozilla.org/) produces ready-to-paste Apache / nginx / HAProxy / Caddy configs for the modern (intermediate / modern) TLS profiles. The "modern" profile aligns with NIST SP 800-52 Rev 2 and CIS Control 3.10. Operators who use the generator land on safe-by-default configs; operators who copy-paste a 2019 stackoverflow answer land on Atlas's 2023 config.
 
 ## §7.5 — Optional exploration: the bonus finds
 

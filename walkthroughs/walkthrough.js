@@ -65,13 +65,24 @@ marked.use({
   renderer: {
     // Drop raw HTML tokens entirely (v1.24.3).
     html: () => "",
-    // Sanitize link hrefs (v1.24.4). Returning the inline text without
-    // wrapping it in <a> strips the dangerous href; returning false
-    // tells marked to fall through to its default renderer for normal
-    // (http/relative) links.
+    // Sanitize link hrefs (v1.24.4). Returning the plain inline text
+    // without wrapping it in <a> strips the dangerous href; returning
+    // false tells marked to fall through to its default renderer for
+    // normal (http/relative) links.
+    //
+    // v1.26.0: switched from `this.parser.parseInline(token.tokens)`
+    // to `token.text` because `this.parser` is not bound on every
+    // renderer invocation in marked 12 — gfm autolinker calls into
+    // the link renderer for autolinked bare-URL patterns from a code
+    // path where `this.parser` is undefined, throwing
+    // "undefined is not an object (evaluating 'this.parser.parseInline')"
+    // on render. We give up nested inline formatting inside rejected
+    // dangerous links (fine — the link is dangerous, who cares how
+    // pretty its text renders); we get a crash-safe sanitizer that
+    // matches the image() override below.
     link(token) {
       if (!SAFE_URL.test(token.href || "")) {
-        return this.parser.parseInline(token.tokens);
+        return token.text || "";
       }
       return false;
     },
