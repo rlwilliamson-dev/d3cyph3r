@@ -295,9 +295,23 @@ test.describe.serial("stateless save/restore (v1.20.0)", () => {
 
     // Codes are "D3C2-" + base64url groups (8-char hyphen-grouped)
     // + a final "-XXXXXXXX" CRC32. Match base64url chars + hyphens.
-    const codeMatch = t.match(/D3C2-[A-Za-z0-9_-]+/);
-    expect(codeMatch).not.toBeNull();
-    const code = codeMatch[0];
+    // Read the save code from the DOM directly. innerText (via
+    // terminalText) reads CSS-visual line breaks because `.line` uses
+    // `overflow-wrap: anywhere`, so the longer v1.26.0 codes wrapped
+    // visually and innerText inserted `\n` mid-code — fragile to
+    // capture via regex against `t` because internal 8-char base64url
+    // chunks can spuriously match a `-[0-9a-f]{8}` tail. textContent
+    // ignores CSS layout, so the `.line.out` div holding the save
+    // code returns the full string unmodified.
+    const code = await page.evaluate(() => {
+      const lines = document.querySelectorAll("#terminal .line.out");
+      for (const line of lines) {
+        const txt = line.textContent.trim();
+        if (txt.startsWith("D3C2-")) return txt;
+      }
+      return null;
+    });
+    expect(code).not.toBeNull();
     expect(code.length).toBeGreaterThan(30);
     expect(code).toMatch(/-[0-9a-f]{8}$/);
     // Binary format keeps mid-game state well under 300 chars.
@@ -333,9 +347,23 @@ test.describe.serial("stateless save/restore (v1.20.0)", () => {
     // Generate a code from the staged state.
     await dispatchCmd(page, "save");
     let t = await terminalText(page);
-    const codeMatch = t.match(/D3C2-[A-Za-z0-9_-]+/);
-    expect(codeMatch).not.toBeNull();
-    const code = codeMatch[0];
+    // Read the save code from the DOM directly. innerText (via
+    // terminalText) reads CSS-visual line breaks because `.line` uses
+    // `overflow-wrap: anywhere`, so the longer v1.26.0 codes wrapped
+    // visually and innerText inserted `\n` mid-code — fragile to
+    // capture via regex against `t` because internal 8-char base64url
+    // chunks can spuriously match a `-[0-9a-f]{8}` tail. textContent
+    // ignores CSS layout, so the `.line.out` div holding the save
+    // code returns the full string unmodified.
+    const code = await page.evaluate(() => {
+      const lines = document.querySelectorAll("#terminal .line.out");
+      for (const line of lines) {
+        const txt = line.textContent.trim();
+        if (txt.startsWith("D3C2-")) return txt;
+      }
+      return null;
+    });
+    expect(code).not.toBeNull();
 
     const visitedBefore = await page.evaluate(() =>
       sessionStorage.getItem("visited"),
@@ -353,9 +381,23 @@ test.describe.serial("stateless save/restore (v1.20.0)", () => {
   test("`restore <code>` confirmation prompt + cancel with 'n'", async ({ page }) => {
     await dispatchCmd(page, "save");
     let t = await terminalText(page);
-    const codeMatch = t.match(/D3C2-[A-Za-z0-9_-]+/);
-    expect(codeMatch).not.toBeNull();
-    const code = codeMatch[0];
+    // Read the save code from the DOM directly. innerText (via
+    // terminalText) reads CSS-visual line breaks because `.line` uses
+    // `overflow-wrap: anywhere`, so the longer v1.26.0 codes wrapped
+    // visually and innerText inserted `\n` mid-code — fragile to
+    // capture via regex against `t` because internal 8-char base64url
+    // chunks can spuriously match a `-[0-9a-f]{8}` tail. textContent
+    // ignores CSS layout, so the `.line.out` div holding the save
+    // code returns the full string unmodified.
+    const code = await page.evaluate(() => {
+      const lines = document.querySelectorAll("#terminal .line.out");
+      for (const line of lines) {
+        const txt = line.textContent.trim();
+        if (txt.startsWith("D3C2-")) return txt;
+      }
+      return null;
+    });
+    expect(code).not.toBeNull();
 
     const visitedBefore = await page.evaluate(() =>
       sessionStorage.getItem("visited"),
@@ -378,9 +420,23 @@ test.describe.serial("stateless save/restore (v1.20.0)", () => {
     // Generate a code from the staged state.
     await dispatchCmd(page, "save");
     let t = await terminalText(page);
-    const codeMatch = t.match(/D3C2-[A-Za-z0-9_-]+/);
-    expect(codeMatch).not.toBeNull();
-    const code = codeMatch[0];
+    // Read the save code from the DOM directly. innerText (via
+    // terminalText) reads CSS-visual line breaks because `.line` uses
+    // `overflow-wrap: anywhere`, so the longer v1.26.0 codes wrapped
+    // visually and innerText inserted `\n` mid-code — fragile to
+    // capture via regex against `t` because internal 8-char base64url
+    // chunks can spuriously match a `-[0-9a-f]{8}` tail. textContent
+    // ignores CSS layout, so the `.line.out` div holding the save
+    // code returns the full string unmodified.
+    const code = await page.evaluate(() => {
+      const lines = document.querySelectorAll("#terminal .line.out");
+      for (const line of lines) {
+        const txt = line.textContent.trim();
+        if (txt.startsWith("D3C2-")) return txt;
+      }
+      return null;
+    });
+    expect(code).not.toBeNull();
 
     // Plant a level-times entry so we can confirm it round-trips.
     await page.evaluate(() => {
