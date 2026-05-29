@@ -614,7 +614,7 @@ Return to the lobby:    ssh guest@d3cyph3r
   "level1@linux": {
     password: "please-rotate-me",
     track: "linux",
-    title: "Halton Bank staging bastion",
+    title: "Daniel's forgotten backup",
     estimatedMinutes: 10,
     playerUser: "app_admin",
     objective: "Find the production database credential a misconfigured backup is leaking — and document the blast radius before Priya rotates it.",

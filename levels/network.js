@@ -419,7 +419,7 @@ Return to the lobby:    ssh guest@d3cyph3r
   "level1@network": {
     password: "atlas-default-2025",
     track: "network",
-    title: "Atlas DNS zone transfer",
+    title: "Marcus's leaked DNS map (AXFR)",
     estimatedMinutes: 15,
     playerUser: "dbadmin",
     objective: "Validate the blast radius reachable from the staging-db host before Marcus's team rotates the default credential — and document everything Atlas's internal DNS gives up to a guest with shell access.",
