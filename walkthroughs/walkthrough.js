@@ -145,6 +145,17 @@ const MANIFEST = {
           "data-center map plus a service-account credential stashed " +
           "in a TXT record. CWE-306 + the sticky-account anti-pattern.",
       },
+      level2: {
+        title: "What the Cert Knew",
+        blurb:
+          "Day three. The Tessera-dry-run audit-bypass cred lands the " +
+          "player on a host the asset-management tool says doesn't " +
+          "exist. Apache's self-signed cert documents Atlas's internal " +
+          "infrastructure in its SAN list, names a service mailbox in " +
+          "its OU field, and the mailbox's autoresponder log ships the " +
+          "level3 temp credential in cleartext. CWE-1188 + CWE-547 + " +
+          "CWE-532 plus CT-log permanence (RFC 6962).",
+      },
     },
   },
   crypto: {

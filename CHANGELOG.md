@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.26.0] - 2026-05-28
+
+**level2@network ships.** Day three of the Atlas Health engagement. The deprecated `audit-svc` identity from level1's AXFR TXT-record leak unlocks `audit-bypass.atlas.internal` — a host the asset-management tool tagged "decommissioned, awaiting reimage" in 2024-Q1 and still serving production-grade TLS in April 2026. Apache 2.4 terminates TLS on a 10-year self-signed cert whose Subject Alternative Name list documents every internal host (prod, staging, the PHI tier) plus a `*.atlas.internal` wildcard. The Subject's OU field carries a service email; the local exim instance's autoresponder ships cleartext temporary credentials in reply to password-reset requests for that mailbox. CT-log enumeration via `crtsh` catalogues Atlas's permanent public footprint (staging hostnames Marcus claimed were VPN-only; a forgotten `marcus-test` cert; the Tessera-bridge cert from the same 2025-09-12 date as level1's TXT-record breadcrumb).
+
+### Added
+
+- **`level2@network` — "What the Cert Knew" / lobby title "Marcus's leaky cert (openssl)".** Host `audit-bypass.atlas.internal`, tier Routine, est. 12 min. Player walks `openssl s_client -connect localhost:443` → `openssl x509 -text -noout -in /etc/apache2/ssl/audit-bypass.crt` → `crtsh atlas.health` → `cat /var/log/exim/autoresponder.log` and extracts the level3 breadcrumb from the password-reset auto-reply body. CWE-1188 (Insecure Default Initialization), CWE-547 (Use of Hard-coded Security-relevant Constants), CWE-532 (Sensitive Info in Log File), plus CT-log permanence per RFC 6962 / RFC 9162. Two bonus finds: wildcard `*.atlas.internal` SAN entry (NIST SP 800-52 Rev 2 §3.1.3 warning), and the "DELETE BEFORE PROD 2023" reminder in the Subject's Organization field (cert metadata is permanent for the cert's lifetime).
+- **`walkthroughs/network/level2.md`** ships in the same release. 9-section format covering the cert-metadata-as-inventory + cert-metadata-as-ID-document layers, NIST SP 800-52 Rev 2 + SP 800-57 Pt 1 Rev 5 + RFC 5280/6962/9162 framework cross-references, OWASP Top 10:2025 A02 + A04 mapping, and a defender playbook from "inventory all internal-CA-issued certs" through "monitor CT logs for your own domain." Mandiant UNC5537 / Snowflake 2024, DigiNotar 2011, and the general subdomain-takeover-via-dangling-CT-log-data class cited as real-world parallels.
+
 ## [1.25.2] - 2026-05-28
 
 **Save-code bonus-find coverage catch-up.** Five level entries were silently dropped from progress codes because the savecode registry hadn't kept pace with the shipped level data: a second `level1@linux` bonus that shipped in v1.9.0, the bonuses on every forensics level (since v0.11.0 / v1.23.0), and the two new `level2@linux` bonuses shipped in v1.25.0. Fixed. Existing codes still decode the same; new codes from `save` now correctly preserve all bonus finds across `restore`.
@@ -3722,7 +3731,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.2...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.0...HEAD
+[1.26.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.2...v1.26.0
 [1.25.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.1...v1.25.2
 [1.25.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.0...v1.25.1
 [1.25.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.4...v1.25.0
