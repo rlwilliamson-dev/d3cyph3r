@@ -272,10 +272,16 @@ export const BONUS_REGISTRY = Object.freeze({
   // array. When adding a new bonus find to an existing level: APPEND
   // its id to that level's array here (don't reorder existing
   // entries). When adding a new level entirely: add a new entry.
-  // Forensics levels currently have no bonus finds shipped — they
-  // get no entry here and contribute 0 bytes per level.
+  //
+  // Catch-up note (v1.25.1): this registry was stale relative to the
+  // actual bonus finds shipping in the level data. The level1@linux
+  // `self-logged-bug` find shipped in v1.9.0, the forensics-track
+  // bonuses shipped in v0.11.0 / v1.23.0, and the level2@linux pair
+  // shipped in v1.25.0 — all silently absent from this map until
+  // v1.25.1 backfilled them. Each append below preserves the
+  // append-only rule (existing indices unchanged).
   "level0@linux":     Object.freeze(["daniel-history-pattern"]),
-  "level1@linux":     Object.freeze(["backup-script"]),
+  "level1@linux":     Object.freeze(["backup-script", "self-logged-bug"]),
   "level0@network":   Object.freeze(["five-sprint-rotation"]),
   "level1@network":   Object.freeze(["dbadmin-shell-drift"]),
   "level0@crypto":    Object.freeze(["daniel-coffee-vendor"]),
@@ -286,6 +292,11 @@ export const BONUS_REGISTRY = Object.freeze({
   "level1@osint":     Object.freeze(["strava-segment-pattern"]),
   "level0@cloud":     Object.freeze(["sts-identity-confirmation"]),
   "level1@cloud":     Object.freeze(["ttl-without-enforcement"]),
+  // v1.25.1 catch-up — finds that shipped earlier but were missing here.
+  "level0@forensics": Object.freeze(["exif-image-direction"]),
+  "level1@forensics": Object.freeze(["certutil-lolbin-pattern"]),
+  "level2@forensics": Object.freeze(["exfil-downloader-in-history"]),
+  "level2@linux":     Object.freeze(["tombstoned-daniel", "password-cargo-cult"]),
 });
 // Build a reverse-lookup: "<levelKey>:<findId>" → { levelIdx, bitN }.
 // The progress code's stored bonus-finds set lives at the "<key>:<id>"
