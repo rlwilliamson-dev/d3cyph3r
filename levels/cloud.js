@@ -135,7 +135,7 @@ export const cloudLevels = {
   "level0@cloud": {
     password: null,
     track: "cloud",
-    title: "Coverline's S3 audit",
+    title: "Coverline's leaky claims bucket",
     estimatedMinutes: 12,
     // v1.22.0 cross-track narrative seed — Vesta's parallel
     // base64-encoding-treated-as-encryption pattern in CLOSING

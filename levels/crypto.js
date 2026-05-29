@@ -35,7 +35,7 @@ export const cryptoLevels = {
   "level0@crypto": {
     password: null,
     track: "crypto",
-    title: "Vesta's base64'd API key",
+    title: "Theo's base64'd API key",
     estimatedMinutes: 8,
     // v1.22.0 cross-track narrative seed — Coverline's parallel
     // "I'll clean that up later" hardcoded-password pattern in

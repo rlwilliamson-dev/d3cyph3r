@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.25.1] - 2026-05-28
+
+**Lobby titles polish — 4 levels renamed for sharper identification of the distinctive finding.** `level1@linux` becomes "Daniel's forgotten backup" (mirroring the v1.25.0 "Daniel's forgotten cron" pattern across the Halton Bank engagement). `level1@network` becomes "Marcus's leaked DNS map (AXFR)" — names the character + artifact + tool, aligning with the walkthrough's "Map Marcus Didn't Mean to Share." `level0@crypto` becomes "Theo's base64'd API key" — restores the Theo character thread visible on the crypto/level1 row. `level0@cloud` becomes "Coverline's leaky claims bucket" — names the specific finding rather than the generic scenario ("S3 audit"). The other 12 in-game titles already named their distinctive artifact / character / tool sharply enough to stay as-is.
+
+### Changed
+
+- **In-game lobby `title:` fields on 4 levels** (`level1@linux`, `level1@network`, `level0@crypto`, `level0@cloud`). The walkthrough MANIFEST titles, CHANGELOG narrative names, and credential chain are unchanged.
+
 ## [1.25.0] - 2026-05-28
 
 **level2@linux ships.** Day three of the Halton Bank engagement. Audit-team identity (`audit`) ssh's into `halton-prod-bastion` using the production DB credential leaked in level1 — same string per Halton's password-reuse policy. Inside, an offboarded consultant's weekly cron job runs under bash `set -x` and writes its own SSH-key passphrase to a world-readable log every Sunday. Cron 101 + tombstoned-account discipline + a deeper look at why Halton's institutional password pattern was the systemic root cause behind both the staging leak (v1.0.0) and this one.
@@ -3705,7 +3713,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.1...HEAD
+[1.25.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.0...v1.25.1
 [1.25.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.4...v1.25.0
 [1.24.4]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.3...v1.24.4
 [1.24.3]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.2...v1.24.3

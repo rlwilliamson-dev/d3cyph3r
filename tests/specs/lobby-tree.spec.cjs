@@ -70,7 +70,7 @@ test.describe("lobby tree (v1.10.0)", () => {
       // After the toggle the lobby re-renders with linux open. Each
       // level row carries the v1.10.0 title + the computed tier tag.
       expect(t).toContain("ssh level1@linux");
-      expect(t).toContain("Halton Bank staging bastion");
+      expect(t).toContain("Daniel's forgotten backup");
       expect(t).toContain("Daniel's laptop handoff");
       // level0/level1 sit in the 0-5 range → Routine tier.
       expect(t).toContain("[Routine]");
