@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.25.2] - 2026-05-28
+
+**Save-code bonus-find coverage catch-up.** Five level entries were silently dropped from progress codes because the savecode registry hadn't kept pace with the shipped level data: a second `level1@linux` bonus that shipped in v1.9.0, the bonuses on every forensics level (since v0.11.0 / v1.23.0), and the two new `level2@linux` bonuses shipped in v1.25.0. Fixed. Existing codes still decode the same; new codes from `save` now correctly preserve all bonus finds across `restore`.
+
+### Fixed
+
+- **`BONUS_REGISTRY` catches up to shipped level data.** 5 entries appended (one new id on `level1@linux`; new entries for `level0/1/2@forensics` and `level2@linux`). Older save codes decode unchanged — entries are append-only — but newly-generated codes now persist the bonus finds players actually earn on these levels.
+- **Persistence-savecode tests are retry-tolerant under CI shard pressure.** Two save→restore round-trip tests occasionally flaked when the playtest ran sharded across 4 parallel CI runners (locally they pass first try). The describe block now configures `retries: 2`.
+
 ## [1.25.1] - 2026-05-28
 
 **Lobby titles polish — 4 levels renamed for sharper identification of the distinctive finding.** `level1@linux` becomes "Daniel's forgotten backup" (mirroring the v1.25.0 "Daniel's forgotten cron" pattern across the Halton Bank engagement). `level1@network` becomes "Marcus's leaked DNS map (AXFR)" — names the character + artifact + tool, aligning with the walkthrough's "Map Marcus Didn't Mean to Share." `level0@crypto` becomes "Theo's base64'd API key" — restores the Theo character thread visible on the crypto/level1 row. `level0@cloud` becomes "Coverline's leaky claims bucket" — names the specific finding rather than the generic scenario ("S3 audit"). The other 12 in-game titles already named their distinctive artifact / character / tool sharply enough to stay as-is.
@@ -3713,7 +3722,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.2...HEAD
+[1.25.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.1...v1.25.2
 [1.25.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.0...v1.25.1
 [1.25.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.4...v1.25.0
 [1.24.4]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.24.3...v1.24.4
