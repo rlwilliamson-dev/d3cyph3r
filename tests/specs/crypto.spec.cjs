@@ -226,4 +226,112 @@ test.describe("crypto track", () => {
       });
     });
   });
+
+  // ── Level 2 — Theo's quick hash (v1.27.0) ───────────────────────
+  // The handoff cred from level1's JWT decode unlocks the Vesta admin
+  // host. Theo's committed backup-passwords.txt holds 200 unsalted
+  // MD5 hashes; john cracks four of them with rockyou.txt and they
+  // all share one plaintext (TheoVesta!1). The aes-backup label is
+  // the level3 breadcrumb; same-password-everywhere fires the
+  // theo-password-reuse bonus, and README.rockyou fires the
+  // 2009-provenance bonus.
+  test.describe("level2@crypto — Theo's Quick Hash", () => {
+    test("wrong password is rejected at the gate", async ({ page }) => {
+      await dispatchCmd(page, "ssh level2@crypto");
+      await dispatchCmd(page, "wrong-password");
+      const t = await terminalText(page);
+      expect(t).toContain("Permission denied, please try again.");
+    });
+
+    test.describe("inside level2", () => {
+      test.beforeEach(async ({ page }) => {
+        await dispatchCmd(page, "ssh level2@crypto");
+        await dispatchCmd(page, "vesta-admin-handoff-2026");
+        await waitForOutput(page, "Connected: level2@crypto");
+        await waitForOutput(page, "Save your progress across browser sessions?");
+        await dispatchCmd(page, "n");
+        await waitForOutput(page, "Progress stays in this tab only");
+      });
+
+      test("connection banner + prompt identity", async ({ page }) => {
+        const t = await terminalText(page);
+        expect(t).toContain("Connected: level2@crypto");
+        // env_vars.HOSTNAME sets prompt host to "admin" (truncated at
+        // first dot from "admin.vesta.internal").
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@admin:");
+        expect(prompt.startsWith("vesta-admin@")).toBeTruthy();
+      });
+
+      test("ls shows the level2 fileset", async ({ page }) => {
+        await dispatchCmd(page, "ls");
+        const t = await terminalText(page);
+        for (const f of [
+          "welcome.md",
+          "priya-note.md",
+          "backup-passwords.txt",
+          "lessons-learned.md",
+        ]) {
+          expect(t, `ls shows ${f}`).toContain(f);
+        }
+      });
+
+      test("hash-id on backup-passwords.txt detects MD5 across the 200 hashes", async ({ page }) => {
+        // v1.27.0 multi-hash extension: hash-id picks the first hash
+        // token off the first non-comment line and analyses it.
+        await dispatchCmd(page, "hash-id backup-passwords.txt");
+        const t = await terminalText(page);
+        expect(t).toContain("MD5");
+        expect(t).toContain("file contains 38 hashes");
+        expect(t).toContain("Crack with: john");
+      });
+
+      test("john backup-passwords.txt cracks four hashes — all the same plaintext", async ({ page }) => {
+        await dispatchCmd(page, "john backup-passwords.txt");
+        const t = await terminalText(page);
+        // Loaded count matches Theo's claimed file size (200).
+        expect(t).toContain("Loaded 200 password hashes");
+        // The four cracked labels.
+        expect(t).toContain("theo@admin");
+        expect(t).toContain("theo@db-prod");
+        expect(t).toContain("aes-backup");
+        expect(t).toContain("s3-readonly");
+        // All four are the same plaintext — TheoVesta!1.
+        const matches = t.match(/TheoVesta!1/g) || [];
+        expect(matches.length, "TheoVesta!1 appears once per cracked label").toBeGreaterThanOrEqual(4);
+        // "4g" appears in the session summary — fires the
+        // theo-password-reuse bonus.
+        expect(t).toContain("4g");
+        expect(t).toContain("Bonus find unlocked");
+        // Bonus name surfaces in the banner.
+        expect(t).toContain("four of Theo's hashes");
+      });
+
+      test("README.rockyou surfaces the 2009 RockYou.com provenance (bonus)", async ({ page }) => {
+        await dispatchCmd(page, "cat /usr/share/wordlists/README.rockyou");
+        const t = await terminalText(page);
+        expect(t).toContain("RockYou.com");
+        expect(t).toContain("December 2009");
+        // The rockyou-2009-provenance bonus banner.
+        expect(t).toContain("Bonus find unlocked");
+      });
+
+      test("whoami prints 'vesta-admin' on the Vesta admin host", async ({ page }) => {
+        await dispatchCmd(page, "whoami");
+        const t = await terminalText(page);
+        expect(t).toMatch(/\bvesta-admin\b/);
+      });
+
+      test("exit from level2@crypto returns to the lobby", async ({ page }) => {
+        await dispatchCmd(page, "exit");
+        await page.waitForFunction(
+          () => document.getElementById("prompt-label")?.innerText.includes("@d3cyph3r:"),
+          null,
+          { timeout: 5000 },
+        );
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@d3cyph3r:");
+      });
+    });
+  });
 });

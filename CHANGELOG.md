@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.27.0] - 2026-05-29
+
+**level2@crypto ships.** Day three of the Vesta Retail pre-PCI-QSA audit. Theo's handoff token from level1's JWT decode unlocks `admin.vesta.internal` as `vesta-admin`. Saanvi (CISO) pulled a wider commit review after yesterday's alg:none finding; Priya surfaced a six-month-old commit titled "backup-passwords: safer than plaintext" — 200 unsalted MD5 hashes in the deploy repo. `hash-id` confirms MD5; `john backup-passwords.txt` cracks four of them in under a second against the default rockyou.txt wordlist; all four crack to the same plaintext (`TheoVesta!1`), one labeled `aes-backup`. PCI-DSS v4.0.1 §3.5.1 requires both strong cipher AND strong key; the backup Theo encrypted with the cracked password is, by the control's definition, functionally plaintext. CWE-916 + CWE-759 + CWE-521 + CWE-262 + the same-password-everywhere antipattern that also drives the linux track's Halton policy.
+
+### Added
+
+- **`level2@crypto` — "Theo's Quick Hash" / lobby title "Theo's quick hash (john)".** Host `admin.vesta.internal`, tier Routine, est. 15 min. Player walks `hash-id backup-passwords.txt` → `john backup-passwords.txt` → `cat /usr/share/wordlists/README.rockyou` and extracts the level3 breadcrumb (`TheoVesta!1`, label `aes-backup`) from john's multi-crack output. CWE-916 (Use of Password Hash With Insufficient Computational Effort), CWE-759 (no salt), CWE-521 (weak password requirements), CWE-262 (no password aging), plus PCI-DSS v4.0.1 §3.5.1 + §8.3.2 and NIST SP 800-63B-4 §5.1.1 Memorized Secret Verifier requirements. Two bonus finds: the four-hashes-one-plaintext password reuse (fires on john's `4g` session summary), and the 2009 RockYou.com provenance note in README.rockyou.
+- **`walkthroughs/crypto/level2.md`** ships in the same release. 9-section format covering the hash-vs-encryption confusion, fast-hash + missing-salt + password-reuse failure stack, NIST SP 800-63B-4 + PCI-DSS v4.0 + OWASP ASVS + OWASP Password Storage Cheat Sheet, and a defender playbook from "rotate all four immediately" through "move to Argon2id + adopt a secrets manager." LinkedIn 2012, RockYou 2009, Adobe 2013, Yahoo 2013/2014, and Ashley Madison 2015 cited as real-world parallels.
+
+### Changed
+
+- **`hash-id` handles multi-hash files.** Skips `#`-prefixed comment headers and blank lines; analyzes the first hash token; reports the file's total hash count when more than one hash is present. Single-hash files are unchanged. The `js/commands/crypto.js` schema doc updated to reflect the new behavior.
+- **`john` supports multi-hash crack arrays.** A new `johnCrack[file].cracks` array shape carries multiple `{ plain, label }` entries; the handler renders one cracked line per entry and a `Ng N/M cracked` footer. The single-hash `{ type, plain, wordlist, time }` shape is preserved; the schema doc names both branches. No existing levels need migration.
+
 ## [1.26.1] - 2026-05-29
 
 **Playtest infra fix.** No engine, schema, level, or walkthrough changes — the persistence-savecode tests now extract the printed save code via `textContent` on the DOM element rather than regex-matching `innerText`, fixing a CI flake that v1.26.0's slightly-longer save code reliably triggered. The flake was blocking the v1.26.0 prod deploy; v1.26.1 is the same gameplay payload plus the test fix.
@@ -3739,7 +3753,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.27.0...HEAD
+[1.27.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.1...v1.27.0
 [1.26.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.0...v1.26.1
 [1.26.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.2...v1.26.0
 [1.25.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.1...v1.25.2

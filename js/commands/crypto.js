@@ -17,11 +17,17 @@
 //                      a level pin a specific decoded string when the
 //                      computed ROT13 would round-trip noise (e.g. a
 //                      mixed-encoding file).
-//   level.johnCrack    { filename: { type, plain, wordlist, time } }
-//                      The crack result, plaintext, attack metadata.
-//                      Required for `john <file>` to succeed; absent
-//                      means the level chose not to make this hash
-//                      crackable.
+//   level.johnCrack    Two supported shapes:
+//                      Single-hash (pre-v1.27.0):
+//                        { filename: { type, plain, wordlist, time } }
+//                      Multi-hash (v1.27.0+):
+//                        { filename: { type, wordlist, time, loaded?,
+//                                      cracks: [{ plain, label }, ...] } }
+//                      `loaded` is the hash-file size (so the footer
+//                      can render "Ng cracked / loaded total"); defaults
+//                      to cracks.length when omitted. Required for
+//                      `john <file>` to succeed; absent means the level
+//                      chose not to make this hash crackable.
 //   level.jwtDecode    optional { token: "curated output" } override
 //                      for jwt(). Used when a level wants a narrative
 //                      layered on top of the decoded JWT (annotations
@@ -106,9 +112,33 @@ export const cryptoCommands = {
     if (!arg) return { text: "Usage: hash-id <file>", cls: "err" };
     const file = resolveFile(level, arg, currentPath);
     if (!(file in level.files)) return { text: `hash-id: ${arg}: No such file`, cls: "err" };
-    const h = level.files[file].trim();
+    const raw = level.files[file];
 
-    const lines = [`Analyzing: ${h}`, ""];
+    // v1.27.0: multi-hash files (one hash per line, optionally with
+    // labels in trailing columns + a `#`-prefixed comment header) now
+    // detect against the first non-comment hash token rather than
+    // matching the whole file. Single-hash files behave identically
+    // to the pre-v1.27.0 path because the loop's first iteration sees
+    // the lone hash, slices the leading token, and falls into the
+    // existing format-detect chain.
+    let h = raw.trim();
+    let multiHashCount = 0;
+    if (h.includes("\n")) {
+      const lines = raw.split("\n");
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t || t.startsWith("#")) continue;
+        const tok = t.split(/\s+/)[0];
+        if (multiHashCount === 0) h = tok;
+        multiHashCount++;
+      }
+    }
+
+    const lines = [`Analyzing: ${h}`];
+    if (multiHashCount > 1) {
+      lines.push(`(file contains ${multiHashCount} hashes — analyzing the first)`);
+    }
+    lines.push("");
     if (/^[0-9a-f]{32}$/i.test(h)) {
       lines.push("[+] Possible algorithms:");
       lines.push("    MD5         (most likely — 32 hex chars, very common)");
@@ -132,17 +162,58 @@ export const cryptoCommands = {
   },
 
   // john: simulated dictionary attack. Reads the crack outcome from
-  // level.johnCrack[file] (type / plain / wordlist / time) and prints
-  // it inside John's standard banner. Levels that omit johnCrack mean
-  // "this hash is not crackable in-game" — typically because the
-  // narrative wants the player to chase a different lead instead.
+  // level.johnCrack[file]. Two shapes supported:
+  //
+  //   Single-hash (pre-v1.27.0):
+  //     { type, plain, wordlist, time }
+  //     One cracked line: "PLAIN  (filename)".
+  //
+  //   Multi-hash (v1.27.0+):
+  //     { type, wordlist, time, cracks: [{ plain, label }, ...] }
+  //     One cracked line per array entry: "PLAIN  (label)". Footer
+  //     prints "Ng 0:TIME DONE ... N/M cracked" where N is array
+  //     length and M is either an explicit `loaded` count or N.
+  //
+  // Levels that omit johnCrack mean "this hash is not crackable in-game" —
+  // typically because the narrative wants the player to chase a
+  // different lead instead.
   john(level, arg) {
     if (!arg) return { text: "Usage: john <hashfile>", cls: "err" };
     const file = resolveFile(level, arg, currentPath);
     if (!level.johnCrack || !level.johnCrack[file]) {
       return { text: `john: ${arg}: no crackable hash found on this level`, cls: "err" };
     }
-    const { type, plain, wordlist, time } = level.johnCrack[file];
+    const data = level.johnCrack[file];
+    const wordlist = data.wordlist || "rockyou.txt";
+    const time = data.time || "00:00:01";
+    const type = data.type || "Raw-MD5";
+
+    // Multi-hash branch — array of cracks.
+    if (Array.isArray(data.cracks) && data.cracks.length > 0) {
+      const loaded = data.loaded || data.cracks.length;
+      const lines = [
+        `Using default input encoding: UTF-8`,
+        `Loaded ${loaded} password hashes (${type})`,
+        `Using wordlist: /usr/share/wordlists/${wordlist}`,
+        `Press CTRL-C to abort, almost any other key for status`,
+        ``,
+        `[+] Running dictionary attack...`,
+        `[+] Trying top 1000 most common passwords...`,
+        ``,
+      ];
+      for (const c of data.cracks) {
+        const plain = String(c.plain || "");
+        const label = c.label || arg;
+        lines.push(`${plain.padEnd(20)} (${label})`);
+      }
+      lines.push(``);
+      lines.push(`${data.cracks.length}g 0:${time} DONE (2024-01-01 12:00) ${data.cracks.length}/${loaded} cracked`);
+      lines.push(`Session completed.`);
+      return { text: lines.join("\n"), cls: "success" };
+    }
+
+    // Single-hash branch (legacy).
+    const { plain } = data;
     const lines = [
       `Using default input encoding: UTF-8`,
       `Loaded 1 password hash (${type})`,
