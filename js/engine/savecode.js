@@ -171,11 +171,12 @@ export const LEVEL_REGISTRY = Object.freeze([
   "level1@osint",        // 11
   "level0@cloud",        // 12
   "level1@cloud",        // 13
-  // ── v1.23.0 / v1.25.0 / v1.26.0 — level2 sweep begins ──
+  // ── v1.23.0 / v1.25.0 / v1.26.0 / v1.27.0 — level2 sweep begins ──
   "level2@forensics",    // 14  — v1.23.0
   "level2@linux",        // 15  — v1.25.0
   "level2@network",      // 16  — v1.26.0
-  // ── future levels append here at index 17, 18, 19, ... ──
+  "level2@crypto",       // 17  — v1.27.0
+  // ── future levels append here at index 18, 19, 20, ... ──
 ]);
 const LEVEL_INDEX = new Map(LEVEL_REGISTRY.map((k, i) => [k, i]));
 
@@ -301,6 +302,10 @@ export const BONUS_REGISTRY = Object.freeze({
   // v1.26.0 — level2@network ships with two bonus finds, both fire
   // on the same openssl x509 cert dump.
   "level2@network":   Object.freeze(["wildcard-cert-sprawl", "self-signed-ca-blunder"]),
+  // v1.27.0 — level2@crypto ships with two bonus finds: john's
+  // multi-crack output reveals the password-reuse, and README.rockyou
+  // documents the 2009 provenance.
+  "level2@crypto":    Object.freeze(["theo-password-reuse", "rockyou-2009-provenance"]),
 });
 // Build a reverse-lookup: "<levelKey>:<findId>" → { levelIdx, bitN }.
 // The progress code's stored bonus-finds set lives at the "<key>:<id>"

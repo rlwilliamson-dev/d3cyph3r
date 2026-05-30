@@ -925,4 +925,747 @@ Return to the lobby:    ssh guest@d3cyph3r
     },
   },
 
+  // ── level 2 — "Theo's quick hash (john)" ────────────────────────
+  // Day three of the Vesta pre-QSA audit. The handoff cred from
+  // level1's JWT decode (vesta-admin-handoff-2026) drops the player
+  // onto admin.vesta.internal as `vesta-admin`. Theo committed a
+  // backup-passwords.txt to the deploy repo six months ago "to
+  // make it safe" — 200 unsalted MD5 hashes covering admin login,
+  // prod-DB account, an AES backup encryption key, an S3 service
+  // account, monitoring, and ~190 other miscellaneous credentials.
+  // john --wordlist=rockyou.txt cracks four of them in a second
+  // and they're ALL the same plaintext (TheoVesta!1) — Theo reused
+  // the same weak password across four security boundaries. The
+  // aes-backup label's plaintext is the level3 entry credential.
+  //
+  // Lessons:
+  //   - CWE-916 (Use of Password Hash With Insufficient
+  //     Computational Effort) — MD5 against modern GPUs.
+  //   - CWE-759 (Use of a One-Way Hash without a Salt) — even
+  //     stronger algorithms fail without per-password salting;
+  //     unsalted MD5 is the worst-case stack.
+  //   - CWE-521 (Weak Password Requirements) — TheoVesta!1 passes
+  //     a literal interpretation of "8+ chars with symbols" but
+  //     fails any modern entropy guidance; rockyou-rule cracks it.
+  //   - CWE-262 (Not Using Password Aging) — six months on disk.
+  //   - NIST SP 800-63B-4 — Argon2id/scrypt/bcrypt/PBKDF2 as
+  //     "Memorized Secret Verifier" requirements; MD5 doesn't
+  //     qualify.
+  //   - OWASP Top 10:2025 A02 Security Misconfiguration + A04
+  //     Cryptographic Failures.
+  //   - PCI-DSS v4.0 §8.3.2 (cryptographically-strong password
+  //     hashing).
+  //
+  // Engine surface used:
+  //   - `hash-id`           extended in v1.27.0 to handle multi-hash
+  //                         files (auto-detects from first hash token,
+  //                         skipping #-comment header lines).
+  //   - `john`              extended in v1.27.0 to render multi-hash
+  //                         crack arrays (johnCrack[file].cracks).
+  //   - `cat` / `ls`        flat-fs read; rockyou.txt + README.rockyou
+  //                         live under /usr/share/wordlists/.
+  "level2@crypto": {
+    password: "vesta-admin-handoff-2026",
+    track: "crypto",
+    title: "Theo's quick hash (john)",
+    estimatedMinutes: 15,
+    playerUser: "vesta-admin",
+    // Cross-track narrative seed — Vesta's password-reuse pattern
+    // echoes Halton Bank's policy (linux track); both produce the
+    // same lateral-movement blast radius. Lessons-learned closes
+    // with that parallel.
+    crossTrackHooks: ["linux"],
+    objective: "Audit Theo's `backup-passwords.txt` — 200 unsalted MD5 hashes Theo committed to the deploy repo six months ago. Identify what cracks, what it cracks to, and which production systems Theo has just made fungible.",
+    lesson: "Day three of Vesta's pre-QSA audit. Yesterday's alg:none JWT finding escalated to Saanvi (CISO); she pulled a wider review across Theo's recent commits. Priya found one called \"backup-passwords.txt\" — Theo committed 200 MD5 hashes six months ago because \"hashes are safer than plaintext, right?\" Saanvi's note says you have 15 minutes before the QSA call to confirm what's actually in there and what cracks. You used `vesta-admin-handoff-2026` from yesterday's JWT decode and you're sitting on Vesta's admin host as `vesta-admin`. Read welcome.md (it explains hash-id + john); then priya-note.md for the day-three context; then walk the file. When you've worked out what cracks and what it gates, read lessons-learned.md.",
+    hints: [
+      "`hash-id backup-passwords.txt` confirms what algorithm Theo used.",
+      "`john backup-passwords.txt` runs the dictionary attack against the default rockyou.txt wordlist. Read the FULL output — the same plaintext shows up multiple times.",
+      "One of the cracked hashes is labeled `aes-backup` — that's the level3 credential.",
+    ],
+
+    // v1.10.0 BONUS FINDS — surface the same-string-different-system
+    // anti-pattern (john output) and the rockyou provenance note that
+    // grounds the wordlist's age (README.rockyou).
+    bonusFinds: [
+      {
+        id:   "theo-password-reuse",
+        name: "The same plaintext cracks four of Theo's hashes",
+        hint: "john's session summary shows 4g cracked — four hashes, all the same plaintext (TheoVesta!1). Theo reused one weak password across the admin login, the prod-DB account, the AES backup encryption, and the S3 read-only credential. Same-string-different-system collapses four security boundaries into one credential rotation; CWE-521 + CWE-262 in textbook form. (Halton Bank's policy in the linux track has the same shape — different industry, same antipattern.)",
+        trigger: { command: "john", argMatches: /backup-passwords\.txt/, outputContains: "4g" },
+      },
+      {
+        id:   "rockyou-2009-provenance",
+        name: "The rockyou.txt wordlist on disk is the 2009 RockYou.com leak",
+        hint: "README.rockyou next to the wordlist captures the provenance: ~14.3M plaintext passwords leaked from the RockYou.com social-app account database in December 2009 via SQL injection. The bundle has shipped with Kali / Parrot / BlackArch for fifteen years; every modern wordlist-based crack chain still descends from it. \"We used a unique password\" only holds if you can prove your password isn't a near-neighbor of one of the 14 million.",
+        trigger: { command: "cat", argMatches: /README\.rockyou/, outputContains: "RockYou.com" },
+      },
+    ],
+
+    // ENV — HOSTNAME flips the prompt to the Vesta admin fqdn so
+    // hostname + prompt agree. EDITOR=vim because Theo's habit.
+    env_vars: {
+      EDITOR:   "vim",
+      HOSTNAME: "admin.vesta.internal",
+    },
+
+    // ── john multi-crack data ──
+    // Theo's 200-hash file. john --wordlist=rockyou.txt cracks four
+    // of them in a second — all the same plaintext (TheoVesta!1)
+    // because Theo reused the password. The aes-backup label is the
+    // level3 breadcrumb; the other three (theo@admin, theo@db-prod,
+    // s3-readonly) are the password-reuse blast-radius proof.
+    johnCrack: {
+      "backup-passwords.txt": {
+        type: "Raw-MD5",
+        wordlist: "rockyou.txt",
+        time: "00:00:00",
+        loaded: 200,
+        cracks: [
+          { plain: "TheoVesta!1", label: "theo@admin" },
+          { plain: "TheoVesta!1", label: "theo@db-prod" },
+          { plain: "TheoVesta!1", label: "aes-backup" },
+          { plain: "TheoVesta!1", label: "s3-readonly" },
+        ],
+      },
+    },
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Vesta Retail / admin.vesta.internal (vesta-admin) ─────────
+
+Day three. Yesterday's level1 alg:none JWT finding escalated to
+Saanvi (CISO); she pulled a wider review across Theo's recent
+commits. You used the \`vesta-admin-handoff-2026\` token from
+yesterday's JWT decode to ssh into the Vesta admin host. You're
+now \`vesta-admin\` — the role Theo handed you with the token.
+
+Priya found one of Theo's commits flagged in the review:
+\`backup-passwords.txt\` — 200 MD5 hashes committed to the
+deploy repo six months ago. Theo's commit message: "made the
+prod creds safer — md5'd them so they're not plaintext anymore."
+
+Saanvi has 15 minutes before the QSA call. She wants confirmed
+findings.
+
+
+─── NEW COMMANDS ──────────────────────────────────────────────
+
+  hash-id <file>        Identify the likely hash algorithm by
+                        inspecting the first hash in the file
+                        (skips #-prefixed comment headers).
+                        Surfaces a "Crack with: john" hint when
+                        the format is known-weak.
+
+  john <hashfile>       Simulated dictionary attack (John the
+                        Ripper). Loads the hash(es) from the file,
+                        runs against /usr/share/wordlists/rockyou.txt,
+                        and prints the cracked plaintext with its
+                        label. Multi-hash files show every crack
+                        in a single session summary.
+
+
+─── WHY HASHES AREN'T A SAFETY NET ────────────────────────────
+
+A hash function maps an arbitrary-length input to a fixed-length
+output that's "one-way" (you can't invert it cryptographically).
+
+The catch: if the attacker can GUESS the input, they can hash
+each guess and compare. If your input is in a wordlist somebody
+already has, the attacker doesn't need to invert anything —
+they just hash the whole wordlist and look up your hash.
+
+MD5 is fast. A modern GPU does ~50 billion MD5/s. The rockyou
+wordlist is 14 million entries. End-to-end crack time against
+an unsalted MD5: under a second. Hashes alone do NOT make a
+password file safe. The mitigations are:
+
+  - Per-password SALT (so identical plaintexts hash to different
+    outputs and rainbow tables don't apply).
+  - Memory-hard / cost-tunable functions (Argon2id, scrypt,
+    bcrypt, PBKDF2) so each guess is expensive.
+  - Don't roll your own. Use the password-hashing modes your
+    framework ships (Django auth, Rails has_secure_password, etc.).
+
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat priya-note.md            Day-three context.
+  2.  cat backup-passwords.txt     What Theo committed.
+  3.  hash-id backup-passwords.txt Confirm the algorithm.
+  4.  john backup-passwords.txt    Crack. Read every cracked
+                                   line in the output, not just
+                                   the first.
+  5.  ls /usr/share/wordlists/     Optional — see what john
+                                   used as the dictionary.
+  6.  cat lessons-learned.md       Post-mortem.
+`
+        },
+
+        "priya-note.md": {
+          type: "file",
+          content:
+`# Vesta Retail — engagement update (day three)
+
+Yesterday's alg:none JWT finding closed clean on the technical
+side — Theo took the news fine and his patched verify middleware
+is in review. But Saanvi (CISO) escalated. She told me \"I want
+to know what else Theo shipped recently that I should be
+looking at.\" She pulled the QSA forward to today's noon call.
+
+I spent an hour walking Theo's recent commits with her this
+morning. Most of them are fine. ONE is not. From the deploy
+repo, six months ago:
+
+    commit a9c1f0e Theo Hassan
+    Date:   2024-06-15 14:22
+    Subject: backup-passwords: safer than plaintext
+
+    Md5'd all the production passwords so they're not
+    plaintext in the repo anymore. Hashes are safer right?
+    Don't share lol.
+
+The file is in vesta-admin's home directory as
+\`backup-passwords.txt\` — 200 lines. Each line is a label
+column + an MD5 hash column. The labels are the production
+systems Theo had access to when he wrote the file.
+
+## Rules of engagement
+
+1. You're on the admin host. Don't ssh anywhere else. Don't
+   try to authenticate to the production DB with anything you
+   crack — Saanvi explicitly said "I want the finding, not the
+   demonstration."
+
+2. Run \`hash-id backup-passwords.txt\` to confirm what we're
+   dealing with. Then \`john backup-passwords.txt\` to see what
+   cracks against the default rockyou wordlist.
+
+3. Read the FULL john output. The QSA call is at noon and
+   Saanvi needs the exact number of cracked hashes and the
+   exact plaintexts. Multiple labels with the same plaintext
+   is the finding she's going to lead with.
+
+4. The aes-backup label specifically — Theo encrypted last
+   quarter's payment-card token backup with that password.
+   Saanvi wants confirmation that the password is in the
+   crackable set. If it is, the encrypted backup is
+   functionally plaintext from a PCI standpoint.
+
+## What I expect you to find
+
+The hashes are MD5. john cracks four of them in seconds. All
+four are the same plaintext. One of the four labels is
+aes-backup. That's the finding for the QSA call.
+
+Saanvi's note: "If those four hashes are the same plaintext,
+we have a Phase-1-remediation conversation to have with
+Theo's manager about whether Theo's commit access stays
+hot."
+
+— Priya
+  2026-04-12, 10:47am
+`
+        },
+
+        "backup-passwords.txt": {
+          type: "file",
+          content:
+`# backup-passwords.txt
+# Theo's safer prod creds file (md5'd) — 2024-06-15 commit
+# (don't share lol)
+# format: <md5-hex>  <label>
+
+e10adc3949ba59abbe56e057f20f883e  theo@admin
+21232f297a57a5a743894a0e4a801fc3  theo@db-prod
+482c811da5d5b4bc6d497ffa98491e38  aes-backup
+da25e54ef34fb0d8a35a78fcbb8db95f  s3-readonly
+ee11cbb19052e40b07aac0ca060c23ee  monitoring-svc
+3899dcbab79f92af727c2cf4f2450b07  grafana-readonly
+5f4dcc3b5aa765d61d8327deb882cf99  legacy-sftp-1
+6cb75f652a9b52798eb6cf2201057c73  legacy-sftp-2
+202cb962ac59075b964b07152d234b70  fraud-portal-svc
+827ccb0eea8a706c4c34a16891f84e7b  jenkins-deploy
+e99a18c428cb38d5f260853678922e03  redis-cache-prod
+8b1a9953c4611296a827abf8c47804d7  vesta-mgmt-vpn
+25d55ad283aa400af464c76d713c07ad  bigquery-reader
+25f9e794323b453885f5181f1b624d0b  airflow-svc
+72b302bf297a228a75730123efef7c41  prom-blackbox
+68053af2923e00204c3ca7c6a3150cf7  sumologic-shipper
+b59c67bf196a4758191e42f76670ceba  audit-syslog
+fcea920f7412b5da7be0cf42b8c93759  stripe-webhook-svc
+9e107d9d372bb6826bd81d3542a419d6  shopify-app-svc
+e4d909c290d0fb1ca068ffaddf22cbd0  segment-write
+fa246d0262c3925617b0c72bb20eeb1d  twilio-shortcode
+57b53d65e4ba0e7c00c4b2db5c8ad9f1  ses-noreply
+bfd2c2fbd06e0e8a7e9d18ecdc5c0aaf  rds-replica-monitor
+33a5fee98d62692abf3b07a2cc18cba0  athena-readonly
+72f5d4a5e26c4dd4b46c8ef7d3ec9c08  okta-scim
+1b4a3705c20aacbc8e87a30ed9a83120  pagerduty-incident
+de8a847bff8c343d69b853a215e6ee65  hashicorp-vault-init
+0c0f5b9c4af55b6c9e3b1c7f0b6a8f24  rabbitmq-shovel
+4d0e9e6c5c5e91823d3d6dbb6e0a8f31  kafka-mirror
+21fb2e5b3a5e4f3d99a82a9c0e2b1b3c  consul-bootstrap
+6e8df4f1c4b5e07a1e25a6c80f8c0b78  cloudtrail-archive
+7b3e9d40f10b9023c92c1cc7e8a14e5a  glue-crawler
+0a8c1bcd2c4d4e34a5b6c7d8e9f01234  dynamodb-stream-fanout
+3f5e4d2b1a0c9d8e7f6b5a4c3d2e1f00  prom-pushgateway
+e9d71f5ee7c92d6dc9e92ffdad17b8bd  finrest-payments-readonly
+ab56b4d92b40713acc5af89985d4b786  fivetran-connector
+14e1b600b1fd579f47433b88e8d85291  github-deploy-key
+5b2dc1ab9b1f5f3ad8b09a9b09e26a7b  bitbucket-pipelines
+# ... (162 lines elided in display; total file = 200 lines)
+`
+        },
+
+        ".bash_history": {
+          type: "file",
+          content:
+`ls
+cat priya-note.md
+cat backup-passwords.txt | head -10
+hash-id backup-passwords.txt
+john backup-passwords.txt
+ls /usr/share/wordlists/
+cat /usr/share/wordlists/README.rockyou
+cat lessons-learned.md
+exit
+`
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+You just cracked four production credentials in under a second
+using a wordlist that's been in the public domain since 2009.
+All four are the same plaintext. One of them is the password
+Theo used to encrypt last quarter's payment-card token backup.
+PCI Council's working definition of "encrypted" requires a
+cryptographically-strong cipher AND a cryptographically-strong
+key. The cipher Theo used (AES-128) is fine. The key Theo used
+(\`TheoVesta!1\`) is in rockyou. So the backup is, by the
+control's own definition, plaintext.
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+Three independent failures stack on top of each other to produce
+this finding. Each one alone would be a finding; together they
+are an instant-Phase-2-remediation conversation.
+
+  1. Theo used MD5. Modern GPUs hash MD5 at ~50 billion/s.
+     Against the 14M-entry rockyou wordlist that's roughly
+     300 microseconds of compute time. The "hash" provides
+     zero work-factor protection.
+
+  2. Theo didn't salt. With no per-password salt, identical
+     plaintexts hash to identical outputs. That's how a single
+     john run cracked four hashes simultaneously — and it's
+     how rainbow tables (precomputed hash→plaintext mappings
+     for common passwords) have been operating since the 1990s.
+
+  3. Theo reused. The same plaintext (\`TheoVesta!1\`)
+     gates the admin login, the prod-DB password, the AES
+     backup encryption key, and the S3 read-only service account.
+     Rotating one rotates the user's authentication; rotating
+     all four requires coordinated downtime on four systems.
+     The math: four credentials, one rotation event.
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+Saanvi's note read "If those four hashes are the same plaintext,
+we have a Phase-1-remediation conversation to have with Theo's
+manager about whether Theo's commit access stays hot." That
+conversation is now scheduled. The PCI QSA call is at noon.
+
+For Driftwood, the finding writes itself: Vesta's commit
+review didn't catch a file labeled "backup-passwords.txt"
+containing 200 MD5 hashes of production credentials, despite
+the file being in the deploy repo for six months. Whatever
+the commit review WAS catching, this wasn't part of it.
+
+The credential-rotation conversation is harder. Four credentials
+gating four systems means a single coordinated rotation event.
+The token backup the aes-backup password encrypts has to be
+re-encrypted with a new (strong, unique) key, then the original
+backup destroyed. The S3 service account requires application-
+side coordination. The prod-DB password requires application
+connection-string rotation across every consumer.
+
+Halton Bank's track had a structurally identical finding from
+a different angle: Halton's password policy mandated the same
+string format across the DB and the bastion login, so one
+leaked file traversed multiple systems. Same blast radius math,
+different industry, different mechanism. The remediation is
+the same: cryptographically-random per-credential strings,
+managed via a secrets manager (HashiCorp Vault, AWS Secrets
+Manager, GCP Secret Manager, Azure Key Vault, 1Password
+Business, Doppler, Bitwarden Secrets Manager — pick one).
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  CWE-916: Use of Password Hash With Insufficient
+  Computational Effort
+    The surgical CWE for "MD5 / SHA-1 / SHA-256 against
+    GPU-accelerated dictionary attacks." Modern guidance is
+    Argon2id (winner of the Password Hashing Competition,
+    2015); failing that, scrypt or bcrypt; PBKDF2 for FIPS-
+    constrained shops. The work-factor parameter (Argon2's
+    iterations / memory, bcrypt's cost) is the actual
+    security boundary.
+
+  CWE-759: Use of a One-Way Hash without a Salt
+    The reason john cracked four hashes simultaneously. Per-
+    password salt (a random 16-byte string concatenated with
+    the password before hashing) makes identical plaintexts
+    hash to distinct outputs. Rainbow tables stop working;
+    bulk-cracking parallelism stops working. Argon2id /
+    bcrypt / scrypt / PBKDF2 all include salt as a non-
+    optional parameter.
+
+  CWE-521: Weak Password Requirements
+    \`TheoVesta!1\` passes a literal "8+ chars, contains a
+    symbol" policy. It fails any entropy-aware policy
+    (NIST SP 800-63B-4's blocklist-against-known-bad-passwords
+    approach, OWASP ASVS Authentication V2.1, CIS Critical
+    Security Control 5.2). The fix is not a longer minimum
+    length — it's checking candidate passwords against the
+    rockyou-class blocklist before accepting them.
+
+  CWE-262: Not Using Password Aging
+    The hash file was committed six months ago. The
+    underlying plaintexts have been valid for six months on
+    four systems. Aging policy debate aside, the deployment
+    pattern that wrote credentials to a repo at all is the
+    real failure here.
+
+  CWE-798: Use of Hard-coded Credentials (committed-to-repo
+  variant)
+    The hashed-versus-plaintext distinction does not matter
+    for this control. The credentials were committed to source
+    control; the audit trail extends back to whoever's had
+    commit access for six months. Modern secrets-in-code
+    scanners (gitleaks, trufflehog, GitHub Secret Scanning,
+    Snyk) all flag hash files; Vesta's commit-review process
+    didn't.
+
+  NIST SP 800-63B-4 — Digital Identity Guidelines:
+  Authentication and Lifecycle Management
+    Final document published August 2025 (the long-awaited
+    refresh of 800-63B-2). §5.1.1 covers Memorized Secret
+    Verifiers; password storage is in §5.1.1.2. The mandated
+    approach: an approved one-way memory-hard function with a
+    randomly-generated salt at least 32 bits long, and an
+    additional secret keyed-hash (HMAC) component stored
+    outside the database. MD5 is explicitly not approved.
+
+  PCI-DSS v4.0.1
+    §3.5.1 Strong Cryptography — covers any storage of
+    Account Data (PAN, expiration, cardholder name,
+    sensitive authentication data). The backup Theo
+    encrypted with the cracked password contains PAN tokens;
+    a key recoverable in <1 second from a 15-year-old
+    wordlist does not meet "strong cryptography."
+    §8.3.2 Strong Cryptography for Password / Passphrase
+    Hashing — requires a one-way cryptographic function
+    that includes a salt. MD5 unsalted fails both clauses.
+
+  OWASP Top 10 (2025) — A02 Security Misconfiguration
+    + A04 Cryptographic Failures (the modern name for
+    "Sensitive Data Exposure"). Both apply.
+
+  OWASP Application Security Verification Standard (ASVS) v4.0.3
+    V2.4 (Credential Storage) — verifies that any password
+    hash uses Argon2 / bcrypt / scrypt / PBKDF2 with appropriate
+    parameters, and includes salt.
+
+  CIS Critical Security Controls v8.1
+    5.2 — Use Unique Passwords. The four hashes being the
+    same plaintext is a direct violation.
+    16.4 — Establish and Maintain an Inventory of Application
+    Authorization Methods. Theo's repo-committed credentials
+    bypass any inventory.
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  CompTIA Security+ (SY0-701)
+    Domain 1 (General Security Concepts) — symmetric / hash
+    primitives. Domain 4 (Security Operations) — credential
+    management. Wordlist-based dictionary attacks are named
+    tooling.
+
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    Domain 1 (Security Operations) — incident response on
+    credential exposure. Domain 4 (Reporting & Communication)
+    — the "what would you tell the auditor" question
+    rockyou.txt makes inevitable.
+
+  CompTIA PenTest+ (PT0-003)
+    Domain 3 (Attacks and Exploits) — Hashcat / John / Hydra
+    naming, rockyou.txt as a named wordlist, salt vs
+    unsalt-aware crack approaches.
+
+  CISSP
+    Domain 3 (Security Architecture and Engineering) — modern
+    password hashing. Domain 4 (Communication & Network
+    Security) — credential transit. Domain 5 (Identity and
+    Access Management) — credential lifecycle.
+
+  OSCP / PEN-200
+    \`john\` and \`hashcat\` are the assumed tooling. The lab
+    exercises wordlist-based MD5 / SHA-1 / NTLM cracking
+    against extracted hashes; this level is the textbook
+    minimum-viable post-extraction exercise.
+
+  Offensive Security CompTIA-equivalent — OSWP / OSWE /
+    OSEP — all assume rockyou-derived dictionary work.
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+What you simulated maps to:
+
+  T1110.002 — Brute Force: Password Cracking. The named
+              technique for offline dictionary attacks against
+              extracted hashes. Sub-technique covers John,
+              Hashcat, Aircrack-ng, and the wordlist-based
+              attack pattern.
+
+  T1552.001 — Credentials In Files. Theo's commit to the
+              deploy repo IS this technique. The hash-not-
+              plaintext distinction does not move the mapping.
+
+  T1078     — Valid Accounts. The cracked password gates
+              valid logins on four systems; a follower of the
+              kill chain moves to this technique with each.
+
+  T1003.008 — OS Credential Dumping: /etc/passwd and
+              /etc/shadow. Adjacent — same primitive (offline
+              dictionary attack against extracted hashes), more
+              common Linux-attacker version.
+
+  T1187     — Forced Authentication. Indirectly: if the
+              cracked credential is reused on a system that
+              accepts NetNTLMv2 challenge-response, the
+              dictionary attack extends past the original
+              extraction.
+
+T1552.001 is the most-frequently-cited credential-related
+technique in published threat reports — it's the entry-point
+finding in roughly 1 of every 4 cloud breach narratives.
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. Rotate ALL FOUR. The cracked credentials are fungible;
+     attackers harvesting Vesta's repo got all four with one
+     wordlist run. Coordinated rotation is non-negotiable
+     even if you think only one is "really" exposed.
+
+  2. Move to Argon2id (or scrypt / bcrypt / PBKDF2 if
+     framework constrained). The work-factor parameters
+     (Argon2id: iterations=2-3, memory=64MB, parallelism=1
+     as a 2025-era starting point; tune to ~250ms verify
+     time on your hardware) are the actual security boundary.
+     The function name without the parameter tuning is
+     theater.
+
+  3. Per-credential salt at the application layer; OR
+     adopt a secrets manager that handles this for you.
+     Modern frameworks (Django auth, Rails has_secure_password,
+     Laravel's Hash::make, Node's bcrypt + bcrypt-nodejs)
+     all use Argon2id or bcrypt with per-credential salt
+     by default — opting OUT of that takes more code than
+     opting IN.
+
+  4. Block rockyou-class passwords at registration. NIST
+     800-63B-4 §5.1.1 calls for a blocklist of "values known
+     to be commonly-used, expected, or compromised." The
+     HIBP (Have I Been Pwned) "Pwned Passwords" API exposes
+     this exact dataset; integration is a handful of lines.
+
+  5. Scan repos for committed credentials. gitleaks,
+     trufflehog, GitHub Secret Scanning, GitLab Secret
+     Detection, AWS Secrets Manager auto-rotation, Doppler
+     CLI's pre-commit hooks — pick the toolchain that matches
+     your platform. \`backup-passwords.txt\` would have been
+     flagged before Theo's push by any of these.
+
+  6. Move secrets out of repos entirely. The pattern
+     \"committed because we needed to share them across
+     environments\" is solved by HashiCorp Vault / AWS Secrets
+     Manager / GCP Secret Manager / Azure Key Vault, with
+     per-environment access controls and short-lived
+     credentials. The cost of adoption is ~one day of
+     ops work; the cost of NOT adopting is what you just
+     documented.
+
+  7. Educate. The \`hash-id\` → \`john\` → \`cat README.rockyou\`
+     sequence in this level is identical to what every
+     intro-tier red-team / blue-team training program teaches.
+     Engineers shipping production credentials should be aware
+     of how cheap the offline attack is.
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+The intuition that "hashes are safer than plaintext" is
+correct only when the hash function meets modern computational
+hardness requirements AND the input domain isn't trivially
+enumerable. Both conditions fail simultaneously for unsalted
+MD5 + an in-wordlist plaintext. The hash didn't make the file
+safer; it made the file look safer to whoever reviewed Theo's
+commit.
+
+What kept Theo's hashes \"safe\" for six months wasn't the MD5
+— it was that nobody who had read access to the repo had run
+\`john\` against the file. Vesta is one OF a long list of
+companies whose unsalted-hash files lived in their codebase
+quietly until somebody decided to check.
+
+Halton Bank's track surfaced a structurally identical pattern
+from the opposite direction: Halton's password POLICY mandated
+the same string format across systems, so one leaked file
+traversed multiple systems by design. Different industry, same
+blast-radius math. The fix is the same too: cryptographically-
+random per-credential strings, managed via a secrets manager.
+
+Return to the lobby:    ssh guest@d3cyph3r
+`
+        },
+
+        // /usr/share/wordlists — rockyou.txt + README.rockyou.
+        // The wordlist itself is a small sample (the actual rockyou
+        // is 14M lines, 130MB). README.rockyou captures the 2009
+        // provenance that triggers the bonus find.
+        "usr": {
+          type: "dir",
+          children: {
+            "share": {
+              type: "dir",
+              children: {
+                "wordlists": {
+                  type: "dir",
+                  children: {
+
+                    "rockyou.txt": {
+                      type: "file",
+                      content:
+`123456
+12345
+123456789
+password
+iloveyou
+princess
+1234567
+rockyou
+12345678
+abc123
+nicole
+daniel
+babygirl
+monkey
+lovely
+jessica
+654321
+michael
+ashley
+qwerty
+111111
+iloveu
+000000
+michelle
+tigger
+sunshine
+chocolate
+password1
+soccer
+anthony
+friends
+butterfly
+purple
+angel
+jordan
+liverpool
+justin
+loveme
+123123
+football
+secret
+andrea
+carlos
+jennifer
+joshua
+bubbles
+1234567890
+superman
+hannah
+amanda
+... (truncated — full file has 14,341,564 entries)
+`
+                    },
+
+                    "README.rockyou": {
+                      type: "file",
+                      content:
+`README.rockyou — distribution notes
+
+The rockyou.txt wordlist shipped with this distribution is
+derived from the December 2009 RockYou.com SQL-injection breach,
+which exposed approximately 14,341,564 plaintext passwords from
+the RockYou social-game accounts database.
+
+The leak became the canonical wordlist for offline dictionary
+attacks against unsalted password hashes because:
+
+  - It's large enough to cover the actual password distribution
+    of real users (not the artificial top-1000 lists).
+  - It's plaintext, so it can be combined with mangling rules
+    (john's --rules / hashcat's --rules) to generate billions
+    of derivative guesses (e.g., "summer" → "Summer2024!",
+    "password" → "P@ssw0rd1").
+  - It's free.
+
+The RockYou.com breach happened because RockYou stored its
+users' plaintext passwords in a database without hashing or
+encryption — a class of failure that, in 2025, would be a
+material weakness disclosed in a 10-K. The breach's
+secondary effect is that those 14 million passwords are now
+in every wordlist any attacker uses against any password file
+they extract, anywhere in the world, for the rest of forever.
+
+The fact that you can crack a hash by running \`john
+hashfile.txt\` with no additional setup is because of this
+leak. Modern password storage (Argon2id / scrypt / bcrypt
+with per-credential salt) is designed to make rockyou-class
+wordlists ineffective; password files using older or
+incomplete schemes (unsalted MD5, unsalted SHA-1, NTLM, SHA-
+256 without salt) remain trivially crackable against this
+dictionary.
+
+References:
+  - RockYou breach disclosure: Imperva / TechCrunch, December 2009
+  - Wordlist distribution: ships with Kali Linux, Parrot OS,
+    BlackArch, and most penetration-testing distributions
+  - For the historical record: the underlying RockYou
+    settlement included a $250,000 FTC payment for COPPA
+    violations affecting the under-13 subset of accounts.
+`
+                    },
+
+                  },
+                },
+              },
+            },
+          },
+        },
+
+      },
+    },
+  },
+
 };

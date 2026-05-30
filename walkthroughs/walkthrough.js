@@ -209,6 +209,17 @@ const MANIFEST = {
           "alg:none get accepted. CWE-347 + CWE-532 for the secrets " +
           "in the debug log.",
       },
+      level2: {
+        title: "Theo's Quick Hash",
+        blurb:
+          "Day three. Saanvi (CISO) pulled a wider review and Priya " +
+          "found Theo's commit titled \"safer than plaintext\" — 200 " +
+          "unsalted MD5 hashes in the deploy repo. john --wordlist=" +
+          "rockyou.txt cracks four of them in under a second; all " +
+          "four are the same plaintext (TheoVesta!1), one labeled " +
+          "aes-backup. CWE-916 + CWE-759 + CWE-521 + CWE-262, plus " +
+          "PCI-DSS v4.0 §3.5.1 + §8.3.2 + NIST SP 800-63B-4.",
+      },
     },
   },
   web: {

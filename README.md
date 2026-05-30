@@ -8,13 +8,13 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end; Linux, Forensics, and Network ship through level2 (v1.25.0 + v1.23.0 + v1.26.0). 17 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end; Linux, Forensics, Network, and Crypto ship through level2 (v1.25.0 + v1.23.0 + v1.26.0 + v1.27.0). 18 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
 | Linux | `level0@linux` ("Daniel's Last Day"), `level1@linux` ("The Backup Daniel Forgot"), `level2@linux` ("Daniel's Forgotten Cron") | Halton Bank | GLBA |
 | Network | `level0@network` ("Atlas Health Perimeter Check"), `level1@network` ("The Map Marcus Didn't Mean to Share"), `level2@network` ("What the Cert Knew") | Atlas Health | HIPAA |
-| Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't") | Vesta Retail | PCI-DSS |
+| Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't"), `level2@crypto` ("Theo's Quick Hash") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall") | Meridian State University | FERPA |
 | Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw"), `level2@forensics` ("What Reed's Browser Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
 | OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project") | Veridian Analytics | HIPAA / HITRUST CSF |
@@ -159,7 +159,7 @@ d3cyph3r/
 │   ├── index.js             Registers tracks → LEVELS map; flatten init
 │   ├── linux.js             Linux track (level0 + level1 + level2) — Halton Bank / GLBA
 │   ├── network.js           Network track (level0 + level1 + level2) — Atlas Health / HIPAA
-│   ├── crypto.js            Crypto track (level0 + level1) — Vesta Retail / PCI-DSS
+│   ├── crypto.js            Crypto track (level0 + level1 + level2) — Vesta Retail / PCI-DSS
 │   ├── web.js               Web track (level0 + level1) — Meridian State U / FERPA
 │   ├── forensics.js         Forensics track (level0 + level1 + level2) — Polaris DS / CMMC
 │   ├── osint.js             OSINT track (level0 + level1) — Veridian / HIPAA + HITRUST
@@ -188,7 +188,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 ## Roadmap
 
-All seven tracks ship level0 + level1; Linux, Forensics, and Network now ship through level2 (v1.25.0 + v1.23.0 + v1.26.0). The next phase continues filling level2 across the remaining four tracks. Every shipped level1 already leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
+All seven tracks ship level0 + level1; Linux, Forensics, Network, and Crypto now ship through level2 (v1.25.0 + v1.23.0 + v1.26.0 + v1.27.0). The next phase continues filling level2 across the remaining three tracks. Every shipped level1 already leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 
