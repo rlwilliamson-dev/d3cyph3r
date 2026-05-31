@@ -346,7 +346,7 @@ Beyond the named incidents, IDOR / BOLA is consistently one of the highest-frequ
 
 The reason for the persistence is not technical mystery. The reason is that *authentication* is provided by frameworks and middleware in a roughly turnkey fashion ("add this line, your route is now SSO-gated"), and *authorization* requires per-route logic that varies by resource type and access model. Carlos used the framework's authentication middleware correctly. He just stopped there. That stopping point is the pattern.
 
-## §5 — Frameworks that cover this
+## §5 — Frameworks, deep dive
 
 The post-mortem at the bottom of the level (`lessons-learned.md`) walks through the high-level framework mapping. This section expands each with the specific section / control / paragraph identifiers a compliance auditor would cite.
 
@@ -422,7 +422,7 @@ The Center for Internet Security's *Critical Security Controls v8.1* (June 2024)
 
 **OWASP Cheat Sheet — Authorization.** <https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html>. Walks through the layered model (authentication vs authorization), the centralization pattern, the per-resource-check pattern, and the audit-the-codebase pattern. Read it as a defender; hand it to Carlos.
 
-## §6 — Where this shows up on certifications
+## §6 — Cert exam relevance
 
 IDOR is taught everywhere. If you study any of the certs below, you've seen the pattern.
 
@@ -438,7 +438,7 @@ IDOR is taught everywhere. If you study any of the certs below, you've seen the 
 
 **SANS GIAC GWAPT (GIAC Web Application Penetration Tester).** Covers IDOR in depth. The associated course (SEC542) maps IDOR to its OWASP categorization and walks through detection in the labs.
 
-## §7 — What a defender should actually do
+## §7 — What a defender does
 
 The bulleted version is in the in-game `lessons-learned.md`. This section expands each with the specific operational details.
 
@@ -530,7 +530,7 @@ Assume the application-level authz check will, at some point, be missing. Belt-a
 
 The principle: any single layer that can be bypassed by a missing check (the application authz, the database RLS, the gateway policy) is meaningfully harder to bypass when all three are present.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` lists what you've unlocked.
 
@@ -552,7 +552,23 @@ The 2024 [Snowflake UNC5537 campaign](https://cloud.google.com/blog/topics/threa
 
 Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Still a finding.
 
-## §8 — Further reading
+## §8 — Key takeaways
+
+- **Authentication asks "who are you?" Authorization asks "are you allowed to do this?"** Frameworks make the first question easy. The second question is yours to answer, every time, on every route, on every resource. Carlos answered the first; he didn't ask the second.
+
+- **IDOR / BOLA is the most-reported bug class in modern web applications.** Not because the technique is exotic — because per-resource authorization is per-route work, every new route needs the check, and the check gets forgotten. The defensive answer is centralization: a single policy entry point that every route runs through, not scattered per-handler logic.
+
+- **Unguessable IDs help but don't fix.** UUIDs / ULIDs raise the cost of enumeration; they do not replace the authorization check. The check is the fix; the unguessable ID is the defense-in-depth layer for when the check is, eventually, missing somewhere.
+
+- **Free-form text fields accumulate things they shouldn't.** Anywhere your schema allows free-form text (advisor notes, ticket descriptions, profile bios, comment fields), assume the contents will eventually include credentials, tokens, and other secrets stashed "temporarily." Content scanning, schema-level constraints, and DLP on egress are the layered defenses.
+
+- **Sticky accounts created for "temporary" purposes outlive their purpose.** BluePier's M-0000001 demo account was scheduled for decommission in Q4 2024. It was still live in 2026. Same pattern as the audit-bypass account in `level1@network`, same pattern as countless real-world incidents. Registry + automated deprovisioning + recertification workflow is the fix.
+
+- **For FERPA-covered environments specifically**, transcript IDOR is a §99.31 and §99.32 violation in one move. The federal-funding mechanism means a confirmed exposure is not just a compliance line item; it's a budget-line risk. Universities should fold IDOR / BOLA testing into their annual web-audit scope — Cedarwood Mutual's renewal-driven audit is one model, but it shouldn't be the only annual review.
+
+- **Carlos's pattern is the universal junior-developer pattern.** Authentication middleware was easy to add. Authorization is, in Carlos's mental model, "the SSO already proved who they are; what's left?" The diagnostic conversation is "what's left is checking whether THIS user is allowed to access THIS resource" — a fifteen-second whiteboard sketch that converts the lesson from "I shipped a bug" to "I now know what I was missing." The fix is mundane; the institutional habit of catching this before it ships is the harder thing.
+
+## §9 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
@@ -600,19 +616,3 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 - **Semgrep registry**: <https://semgrep.dev/r/>. Search for `idor`, `bola`, `authorization`.
 - **CodeQL**: <https://codeql.github.com/>. GitHub-native semantic code analysis with IDOR-aware queries in the default JavaScript, Python, and Java suites.
 - **Burp Suite Authorize extension**: <https://portswigger.net/bappstore/f9bbac8c4acf4aefa4d7dc92a991af2f>.
-
-## §9 — Key takeaways
-
-- **Authentication asks "who are you?" Authorization asks "are you allowed to do this?"** Frameworks make the first question easy. The second question is yours to answer, every time, on every route, on every resource. Carlos answered the first; he didn't ask the second.
-
-- **IDOR / BOLA is the most-reported bug class in modern web applications.** Not because the technique is exotic — because per-resource authorization is per-route work, every new route needs the check, and the check gets forgotten. The defensive answer is centralization: a single policy entry point that every route runs through, not scattered per-handler logic.
-
-- **Unguessable IDs help but don't fix.** UUIDs / ULIDs raise the cost of enumeration; they do not replace the authorization check. The check is the fix; the unguessable ID is the defense-in-depth layer for when the check is, eventually, missing somewhere.
-
-- **Free-form text fields accumulate things they shouldn't.** Anywhere your schema allows free-form text (advisor notes, ticket descriptions, profile bios, comment fields), assume the contents will eventually include credentials, tokens, and other secrets stashed "temporarily." Content scanning, schema-level constraints, and DLP on egress are the layered defenses.
-
-- **Sticky accounts created for "temporary" purposes outlive their purpose.** BluePier's M-0000001 demo account was scheduled for decommission in Q4 2024. It was still live in 2026. Same pattern as the audit-bypass account in `level1@network`, same pattern as countless real-world incidents. Registry + automated deprovisioning + recertification workflow is the fix.
-
-- **For FERPA-covered environments specifically**, transcript IDOR is a §99.31 and §99.32 violation in one move. The federal-funding mechanism means a confirmed exposure is not just a compliance line item; it's a budget-line risk. Universities should fold IDOR / BOLA testing into their annual web-audit scope — Cedarwood Mutual's renewal-driven audit is one model, but it shouldn't be the only annual review.
-
-- **Carlos's pattern is the universal junior-developer pattern.** Authentication middleware was easy to add. Authorization is, in Carlos's mental model, "the SSO already proved who they are; what's left?" The diagnostic conversation is "what's left is checking whether THIS user is allowed to access THIS resource" — a fifteen-second whiteboard sketch that converts the lesson from "I shipped a bug" to "I now know what I was missing." The fix is mundane; the institutional habit of catching this before it ships is the harder thing.

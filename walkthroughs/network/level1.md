@@ -275,7 +275,7 @@ More routinely (and less famously), the pattern shows up in nearly every publish
 
 The audit-bypass account in today's level is fictional, but it represents the modal real-world finding: an account created in good faith for a specific purpose, documented insufficiently, deprovisioned never. The DNS-TXT-record credential leak compounds the failure, but the underlying weakness — the account existing at all, five months past its scheduled removal — is the larger problem.
 
-## §5 — Frameworks that cover this
+## §5 — Frameworks, deep dive
 
 The post-mortem at the bottom of the level (`lessons-learned.md`) walks through the high-level framework mapping. This section expands each with the specific section / control / paragraph identifiers a compliance auditor would cite, plus the exact remediation language each framework expects.
 
@@ -351,7 +351,7 @@ The Center for Internet Security's *Critical Security Controls v8.1* (released J
 
 The 2025 Top 10 also expanded **A03: Software Supply Chain Failures** (broader than the 2021 *Vulnerable and Outdated Components* category — now covers the full software supply chain rather than just outdated dependencies) and retained **A07: Authentication Failures** (renamed from 2021's *Identification and Authentication Failures*, same position). Default credentials map into the A07 category by content and A02 by example-list inclusion; most auditors will cite both. The 2025 edition also introduces a brand-new **A10: Mishandling of Exceptional Conditions** and elevates **A04: Cryptographic Failures** (which had been A02 in 2021) — neither applies directly to today's finding, but they're worth knowing when comparing 2021-era and 2025-era audit reports against each other.
 
-## §6 — Where this shows up on certifications
+## §6 — Cert exam relevance
 
 The certification industry has been teaching this finding for decades. If you study any of the certs below, you've seen — or will see — the DNS zone transfer example.
 
@@ -367,7 +367,7 @@ The certification industry has been teaching this finding for decades. If you st
 
 **SANS GIAC GSEC / GCIH / GCIA / GPEN.** The SANS curriculum covers DNS recon across multiple courses — GSEC's *Security Essentials*, GCIH's *Hacker Tools, Techniques, and Incident Handling*, GCIA's *Intrusion Analyst* (DNS log analysis is a substantial chapter), and GPEN's *Network Penetration Tester* (AXFR is among the named techniques). The GCIH and GPEN material is the most directly relevant.
 
-## §7 — What a defender should actually do
+## §7 — What a defender does
 
 The bulleted version is in the in-game `lessons-learned.md`. This section expands each bullet with the specific operational details that get a defender from "I read about this" to "I have shipped the change to production."
 
@@ -501,7 +501,7 @@ Current commercial offerings: **Microsoft Defender External Attack Surface Manag
 
 For internal-perimeter visibility specifically, **Project Sonar** (Rapid7's continuous internet-wide scanning project) publishes its data; you can query Sonar for your own org's exposed services. The value of running an ASM tool against your own org is the same as the value of running today's AXFR query — you find out what an attacker would find, before they look.
 
-## §7.5 — Optional verification: walk the perimeter you just enumerated
+## §7.5 — Optional exploration
 
 The credential lifts straight out of the AXFR TXT record; you don't need anything below to solve the level. This section is *bonus* — a set of cross-check commands the level supports so you can confirm in-band what the zone transfer told you out-of-band. The commands shipped with the engine in v1.7.0, but the walkthrough above predates them.
 
@@ -533,7 +533,23 @@ None of this changes the solve. It does change how a written-up finding *reads* 
 
 **What it teaches:** welcome.md's parenthetical aside notes that *somebody* enabled `/bin/bash` on `dbadmin` during a vendor upgrade six months ago and never reverted to the original `nologin` shell. A real attacker doing yesterday's exact sequence ends up here, with a working interactive shell on a host the account wasn't supposed to be interactive on. Service-account shell drift is its own finding category: the original control intent was that the vendor service account could connect to PostgreSQL but **not run shell commands** if the credential leaked. That control evaporated the moment somebody needed the shell "just for this debug session." The CIS Distribution-Independent Linux Benchmark control 5.5.1 (the shell-of-service-accounts check) addresses exactly this drift; running it on a quarterly cycle, with named-owner review of every diff, is the operational answer. Worth flagging in the same engagement report as the AXFR finding — same root cause (operational shortcuts that *outlive their justification*), different surface.
 
-## §8 — Further reading
+## §8 — Key takeaways
+
+- **AXFR is one of the cheapest defender wins in the catalog.** One config line plus a TSIG key, applied at every authoritative nameserver in your environment, eliminates the technique. The fact that the misconfiguration persists at internet scale is a problem of organizational attention, not of difficulty.
+
+- **DNS TXT records are a credential dumpster.** Anything someone needs to "stash somewhere quickly" can end up in a TXT record because TXT records are infinitely flexible and trivially editable. Periodic audits — a `dig <zone> AXFR | grep TXT` from a trusted host, reviewed against an approved baseline — catch these before AXFR exposure does.
+
+- **Service accounts created for one-time engagements are the modal sticky-account anti-pattern.** Audit-bypass accounts, vendor-engagement accounts, third-party integration accounts. They get created with good intent, an unfocused expiration discussion, and no automated enforcement; they live forever. The fix is registry-plus-automation, not spreadsheets.
+
+- **The directory of internal services is a target.** Knowing where `prod-db` lives, where the PHI tier sits, which subnet has the backups — all of this turns "where do I attack?" into "I have a map; I can plan." Restrict who can read the directory; segment so unauthorized discovery doesn't produce useful targets even when it succeeds.
+
+- **Compound failures are how breaches happen.** Today's finding required five mundane misconfigurations to stack: unrotated credential, interactive shell on a service account, reach to internal DNS, unrestricted AXFR, credential in TXT record. None individually is exotic. Each independently is fixable. The lesson is not "fix the AXFR" — the lesson is that any one of the five would have stopped the chain.
+
+- **Authorized post-finding reconnaissance is real defender work.** Today's level is not an attack — it's a sized blast-radius validation, performed under written authorization, with documented rules of engagement, producing an incident-report appendix. The discipline distinguishing "controlled exception to validate scope" from "we just made the problem bigger" is paperwork, scope discipline, and the willingness to stop when the rules say stop.
+
+- **For HIPAA-covered environments, DNS reconnaissance is HIPAA reconnaissance.** Hostname enumeration that reveals PHI-tier systems is implicated under the Security Rule's Access Control and Transmission Security technical safeguards, and under the Privacy Rule's minimum-necessary standard. The fact that no PHI was directly transmitted in today's recon does not exempt the finding from HIPAA scope.
+
+## §9 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
@@ -574,19 +590,3 @@ None of this changes the solve. It does change how a written-up finding *reads* 
 - **CISA Healthcare and Public Health Sector advisories**: <https://www.cisa.gov/topics/cybersecurity-best-practices/healthcare>. The sector-specific advisories track recent ransomware operator TTPs against healthcare, including the network-enumeration playbook.
 - **Verizon Data Breach Investigations Report (annual)**: <https://www.verizon.com/business/resources/reports/dbir/>. The credential-abuse statistics referenced throughout this walkthrough come from the most recent editions.
 - **HHS Office for Civil Rights — Resolution Agreements**: <https://www.hhs.gov/hipaa/for-professionals/compliance-enforcement/agreements/index.html>. The settlements OCR has negotiated with breach-affected covered entities. Useful for calibrating the financial side of "how seriously does HHS treat this category of failure."
-
-## §9 — Key takeaways
-
-- **AXFR is one of the cheapest defender wins in the catalog.** One config line plus a TSIG key, applied at every authoritative nameserver in your environment, eliminates the technique. The fact that the misconfiguration persists at internet scale is a problem of organizational attention, not of difficulty.
-
-- **DNS TXT records are a credential dumpster.** Anything someone needs to "stash somewhere quickly" can end up in a TXT record because TXT records are infinitely flexible and trivially editable. Periodic audits — a `dig <zone> AXFR | grep TXT` from a trusted host, reviewed against an approved baseline — catch these before AXFR exposure does.
-
-- **Service accounts created for one-time engagements are the modal sticky-account anti-pattern.** Audit-bypass accounts, vendor-engagement accounts, third-party integration accounts. They get created with good intent, an unfocused expiration discussion, and no automated enforcement; they live forever. The fix is registry-plus-automation, not spreadsheets.
-
-- **The directory of internal services is a target.** Knowing where `prod-db` lives, where the PHI tier sits, which subnet has the backups — all of this turns "where do I attack?" into "I have a map; I can plan." Restrict who can read the directory; segment so unauthorized discovery doesn't produce useful targets even when it succeeds.
-
-- **Compound failures are how breaches happen.** Today's finding required five mundane misconfigurations to stack: unrotated credential, interactive shell on a service account, reach to internal DNS, unrestricted AXFR, credential in TXT record. None individually is exotic. Each independently is fixable. The lesson is not "fix the AXFR" — the lesson is that any one of the five would have stopped the chain.
-
-- **Authorized post-finding reconnaissance is real defender work.** Today's level is not an attack — it's a sized blast-radius validation, performed under written authorization, with documented rules of engagement, producing an incident-report appendix. The discipline distinguishing "controlled exception to validate scope" from "we just made the problem bigger" is paperwork, scope discipline, and the willingness to stop when the rules say stop.
-
-- **For HIPAA-covered environments, DNS reconnaissance is HIPAA reconnaissance.** Hostname enumeration that reveals PHI-tier systems is implicated under the Security Rule's Access Control and Transmission Security technical safeguards, and under the Privacy Rule's minimum-necessary standard. The fact that no PHI was directly transmitted in today's recon does not exempt the finding from HIPAA scope.

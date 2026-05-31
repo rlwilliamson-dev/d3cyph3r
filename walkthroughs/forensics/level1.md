@@ -210,7 +210,7 @@ Windows event log forensics shows up in essentially every major IR investigation
 
 What unites these cases is the asymmetry of audit-log value: the logs are cheap to generate, cheap to retain at modern storage costs, very valuable to reconstruct after-the-fact, and operationally inert until someone reads them. Polaris is not Sony or OPM; Polaris is a small DIB subcontractor whose CMMC posture happens to fund a SOC that happens to retain Driftwood that happens to actually open the file. That entire chain has to hold for the finding to emerge. It held here.
 
-## §5 — Frameworks that cover this
+## §5 — Frameworks, deep dive
 
 ### NIST SP 800-53 Rev. 5 — Audit and Accountability (AU) family
 
@@ -289,7 +289,7 @@ The Living Off The Land Binaries, Scripts and Libraries project (lolbas-project.
 
 The Sigma project (sigmahq.io) defines a YAML-based detection-rule format that compiles down to platform-specific SIEM queries (Splunk SPL, Elastic ESQL, Microsoft Sentinel KQL, Chronicle YARA-L, etc.). The defensive recommendation in §7 below is written in Sigma syntax. The SigmaHQ public ruleset (github.com/SigmaHQ/sigma) ships pre-built detection rules for many of the patterns this engagement surfaced; check it before writing new content from scratch.
 
-## §6 — Where this shows up on certifications
+## §6 — Cert exam relevance
 
 Windows event log forensics is core curriculum across the IR/DFIR certification landscape and shows up in SOC analyst, blue-team, and cleared-environment certs as well.
 
@@ -325,7 +325,7 @@ The Microsoft-native SOC cert. Microsoft Sentinel KQL queries, Microsoft Defende
 
 Module 13 (Windows Forensics) covers event logs in depth — both the binary EVTX format and the analytical patterns. CHFI is a whole-cert forensics credential, generally considered weaker than GCFE/GCFA in the DFIR community but holds federal-recognition status (DoD 8570 / 8140 baseline cert for IAT/IAM/CSSP roles) that GCFE/GCFA don't.
 
-## §7 — What a defender should actually do
+## §7 — What a defender does
 
 Two parallel remediation tracks, plus the longer-arc audit-log-program improvements.
 
@@ -396,7 +396,7 @@ For aggregation: ship Security.evtx and Sysmon logs via Windows Event Forwarding
 
 Dana coordinates with General Counsel on DC3 notification timing. The 72-hour clock is real and missing it is a contractual non-compliance event. The DIBNET portal (dibnet.dod.mil) is where the report files; Polaris's FSO has the credentials. The reporting form requires specific facts (the affected system, the timeline, the artifacts) — your timeline write-up is what Dana hands the FSO to populate the form.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` lists what you've unlocked.
 
@@ -420,7 +420,27 @@ The canonical LOLBin references for the Polaris IR team to add to their hunting 
 
 For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-encode` argument by any user in the manufacturing-engineering OU" would have caught Reed's encoding step in near real-time. Add to the hunting library.
 
-## §8 — Further reading
+## §8 — Key takeaways
+
+- **Windows event logs catch what defenders forget to look at — but only if defenders look.** CMMC AU.L2-3.3.x mandates the audit infrastructure; what it doesn't mandate is that anyone actually reads it. Most CMMC-compliant environments are AU-2/AU-12 compliant (logs are generated) but AU-6 noncompliant in practice (logs are not actively reviewed). Polaris's posture was funded by their CMMC certification; Driftwood's retainer was funded by Polaris's posture; this engagement happened because that whole chain held. None of it is automatic.
+
+- **Reed's chain looked legitimate at every individual step.** Valid credentials, Microsoft-signed binaries, default-permitted PowerShell, default-permitted certutil, default-permitted chrome. The malicious *combination* — Compress-Archive of a CUI directory, followed by certutil -encode, followed by chrome to mega.nz — is what makes the case. The detection content that would have alerted on this combination is exactly the kind of correlation rule SOCs add *after* incidents like this one. Detection engineering is reactive by nature; the lesson the SOC takes back to its rule library is the durable output of the investigation.
+
+- **certutil -encode is a textbook LOLBin and has been on every detection engineer's "watch this binary" list for nearly a decade.** The pattern is documented in the LOLBAS project, in MITRE ATT&CK T1027, and across dozens of post-incident reports. If your environment hasn't deployed detection content for certutil-with-encode-or-decode-flags, that's the easiest detection-engineering win in any SOC operating under CMMC, PCI-DSS, or any other audit-driven posture.
+
+- **The 4625 typed-password-as-username pattern is a real-world finding category, not a hypothetical.** SubStatus 0xC0000064 (STATUS_NO_SUCH_USER) combined with a TargetUserName that looks like a password (mixed case + digits + symbols, length > 12-16 chars) is the signature. Most SIEM platforms don't ship the detection by default; SOCs add it after either finding it themselves or reading about another SOC finding it. The Sigma rule in §7 above is the starting point.
+
+- **CMMC posture is what funds defensive depth in small DIB subcontractors.** Polaris is not Sony or Target — Polaris is a ~$80M-revenue defense subcontractor whose security budget exists primarily because losing CMMC certification would end their ability to bid on contracts. The audit-log program that surfaced both of today's findings is paid for by the regulatory floor. That floor matters more in DIB environments than in any other vertical; the regulatory mechanism is what closes the gap between "we technically have the controls" and "we operate the controls."
+
+- **The audit infrastructure that catches a CUI-exfil insider is the same audit infrastructure that catches an exhausted IR responder's typo.** The system doesn't know the difference between a malicious actor and a process failure. Both findings landed in the same log file in the same engagement. Both got remediation. The lesson for IR teams: the audit log is not just a tool you use against attackers, it's a record of YOUR behavior too, and the discipline of treating it as both is what makes the institution healthier over time.
+
+- **For DIB and other DFARS-bound environments specifically**, the 72-hour DC3 reporting clock starts at *discovery* of the CUI compromise, not at the original badge event. Discovery here is when Dana receives this engagement's report. The clock-management lesson: forensic engagements that confirm CUI exposure should be timed in coordination with General Counsel, because the discovery moment is also the notification-clock-start moment. Don't surprise the client.
+
+- **Chain of custody is what makes the finding admissible.** Sign and hash `Security.evtx` at receipt. Preserve the original alongside any working copies. Document every tool you ran against it. The forensic finding has to survive cross-examination if Reed's case develops into a federal criminal proceeding under 18 U.S.C. § 1832 (theft of trade secrets) or § 1030 (Computer Fraud and Abuse Act). The procedural discipline you applied during this engagement is what protects both the institution and — perversely — the subject, by ensuring that whatever consequence follows is supported by evidence that was handled correctly.
+
+- **The narrow lesson: read the failed-logon events.** Most SIEM dashboards aggregate 4625s into a count by hour and alert only on high-volume spikes (brute-force signal). Real-world findings — typo'd credentials, sprayed-username reconnaissance, abandoned-account probes — live in the *low-volume* 4625 traffic that the count-based alerting ignores. Make a habit of reading the 4625 stream by hand once a week if you don't have detection content for the long tail. The investment is small; the asymmetric upside is large.
+
+## §9 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
@@ -485,23 +505,3 @@ For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-e
 - **13Cubed YouTube channel**: <https://www.youtube.com/@13cubed>. Practitioner-friendly Windows forensics videos including event-log walkthroughs.
 - **Roberto Rodriguez (Cyb3rWard0g)** — HELK, Mordor, OSSEM projects: <https://github.com/Cyb3rWard0g>. Threat-hunting infrastructure and adversary-emulation datasets including 4625 anomaly detection content.
 - **Eric Zimmerman blog**: <https://ericzimmerman.github.io/>. Author of the EZ Tools forensics suite.
-
-## §9 — Key takeaways
-
-- **Windows event logs catch what defenders forget to look at — but only if defenders look.** CMMC AU.L2-3.3.x mandates the audit infrastructure; what it doesn't mandate is that anyone actually reads it. Most CMMC-compliant environments are AU-2/AU-12 compliant (logs are generated) but AU-6 noncompliant in practice (logs are not actively reviewed). Polaris's posture was funded by their CMMC certification; Driftwood's retainer was funded by Polaris's posture; this engagement happened because that whole chain held. None of it is automatic.
-
-- **Reed's chain looked legitimate at every individual step.** Valid credentials, Microsoft-signed binaries, default-permitted PowerShell, default-permitted certutil, default-permitted chrome. The malicious *combination* — Compress-Archive of a CUI directory, followed by certutil -encode, followed by chrome to mega.nz — is what makes the case. The detection content that would have alerted on this combination is exactly the kind of correlation rule SOCs add *after* incidents like this one. Detection engineering is reactive by nature; the lesson the SOC takes back to its rule library is the durable output of the investigation.
-
-- **certutil -encode is a textbook LOLBin and has been on every detection engineer's "watch this binary" list for nearly a decade.** The pattern is documented in the LOLBAS project, in MITRE ATT&CK T1027, and across dozens of post-incident reports. If your environment hasn't deployed detection content for certutil-with-encode-or-decode-flags, that's the easiest detection-engineering win in any SOC operating under CMMC, PCI-DSS, or any other audit-driven posture.
-
-- **The 4625 typed-password-as-username pattern is a real-world finding category, not a hypothetical.** SubStatus 0xC0000064 (STATUS_NO_SUCH_USER) combined with a TargetUserName that looks like a password (mixed case + digits + symbols, length > 12-16 chars) is the signature. Most SIEM platforms don't ship the detection by default; SOCs add it after either finding it themselves or reading about another SOC finding it. The Sigma rule in §7 above is the starting point.
-
-- **CMMC posture is what funds defensive depth in small DIB subcontractors.** Polaris is not Sony or Target — Polaris is a ~$80M-revenue defense subcontractor whose security budget exists primarily because losing CMMC certification would end their ability to bid on contracts. The audit-log program that surfaced both of today's findings is paid for by the regulatory floor. That floor matters more in DIB environments than in any other vertical; the regulatory mechanism is what closes the gap between "we technically have the controls" and "we operate the controls."
-
-- **The audit infrastructure that catches a CUI-exfil insider is the same audit infrastructure that catches an exhausted IR responder's typo.** The system doesn't know the difference between a malicious actor and a process failure. Both findings landed in the same log file in the same engagement. Both got remediation. The lesson for IR teams: the audit log is not just a tool you use against attackers, it's a record of YOUR behavior too, and the discipline of treating it as both is what makes the institution healthier over time.
-
-- **For DIB and other DFARS-bound environments specifically**, the 72-hour DC3 reporting clock starts at *discovery* of the CUI compromise, not at the original badge event. Discovery here is when Dana receives this engagement's report. The clock-management lesson: forensic engagements that confirm CUI exposure should be timed in coordination with General Counsel, because the discovery moment is also the notification-clock-start moment. Don't surprise the client.
-
-- **Chain of custody is what makes the finding admissible.** Sign and hash `Security.evtx` at receipt. Preserve the original alongside any working copies. Document every tool you ran against it. The forensic finding has to survive cross-examination if Reed's case develops into a federal criminal proceeding under 18 U.S.C. § 1832 (theft of trade secrets) or § 1030 (Computer Fraud and Abuse Act). The procedural discipline you applied during this engagement is what protects both the institution and — perversely — the subject, by ensuring that whatever consequence follows is supported by evidence that was handled correctly.
-
-- **The narrow lesson: read the failed-logon events.** Most SIEM dashboards aggregate 4625s into a count by hour and alert only on high-volume spikes (brute-force signal). Real-world findings — typo'd credentials, sprayed-username reconnaissance, abandoned-account probes — live in the *low-volume* 4625 traffic that the count-based alerting ignores. Make a habit of reading the 4625 stream by hand once a week if you don't have detection content for the long tail. The investment is small; the asymmetric upside is large.

@@ -415,7 +415,7 @@ falsepositives:
 
 This rule, tuned by replacing "medium" with "high" for service accounts and dropping the `/home/` filter for cases where credentials shouldn't be anywhere outside the vault, is the kind of detection a SOC would deploy at scale.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 This section is bonus. The credential chain works without it; the post-mortem above stands without it. The level seeds one hidden bonus find that fires if you happen to run a particular command — type `progress --detail` from the lobby to see what's in your discovered list.
 

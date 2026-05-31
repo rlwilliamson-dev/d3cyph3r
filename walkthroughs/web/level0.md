@@ -458,7 +458,7 @@ falsepositives:
 
 This rule, fed into Meridian's SIEM (Splunk, Sentinel, ElasticSearch, whatever), would alert on the next external retrieval of any sensitive path — turning the audit cadence into a real-time detection.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` lists what you've unlocked.
 

@@ -306,7 +306,7 @@ JWT misconfigurations rarely make front-page news on their own — they tend to 
 
 The named incidents are useful for setting context, but the more important point is the *base rate*: JWT misconfigurations are routine findings in penetration tests across industries, with reporting volume that suggests the actual rate of vulnerable deployments is substantially higher than the rate of disclosed incidents.
 
-## §5 — Frameworks that cover this
+## §5 — Frameworks, deep dive
 
 The post-mortem at the bottom of the level (`lessons-learned.md`) walks through the high-level framework mapping. This section expands each with the specific section / control / paragraph identifiers a compliance auditor would cite, plus the exact remediation language each framework expects.
 
@@ -364,7 +364,7 @@ NIST Special Publication 800-53 Revision 5 (the federal control catalog; widely 
 
 **RFC 8725 — JSON Web Token Best Current Practices.** The BCP document specifically dedicated to JWT security, published in February 2020. Section 3.1 (*Perform Algorithm Verification*) is the most directly applicable: *"Libraries MUST enable the caller to specify a supported set of algorithms and MUST NOT use any other algorithms when performing cryptographic operations."* Theo's caller doesn't specify; the library doesn't enforce; the token's claimed algorithm is honored. RFC 8725 also covers key-injection attacks (Section 3.2), key-identifier (`kid`) attacks (Section 3.5), and signing-secret management (elsewhere in Section 3).
 
-## §6 — Where this shows up on certifications
+## §6 — Cert exam relevance
 
 The certification industry has been teaching JWT misuse since shortly after the McLean disclosure landed in 2015. If you study any of the certs below, you've seen — or will see — alg:none and its cousins.
 
@@ -382,7 +382,7 @@ The certification industry has been teaching JWT misuse since shortly after the 
 
 **SANS GIAC GWAPT.** *GIAC Web Application Penetration Tester* — the SANS web-pentesting cert. The course (SEC542) covers JWT-class vulnerabilities in depth, including the algorithm-confusion family, weak-secret cracking, and the key-injection variants.
 
-## §7 — What a defender should actually do
+## §7 — What a defender does
 
 The bulleted version is in the in-game `lessons-learned.md`. This section expands each bullet with the specific operational details that get a defender from "I read about this" to "I have shipped the change to production."
 
@@ -521,7 +521,7 @@ If admin auth is materially important — and for systems that can rotate produc
 
 The retrofit is non-trivial but reduces the surface dramatically. For a system that already has a JWT-based auth model, the migration path is usually "swap the verifier middleware for the IdP's SDK" — one library swap, one redeploy, plus key-rotation coordination.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` from any prompt lists what you've unlocked.
 
@@ -538,7 +538,23 @@ The pattern in real consulting work: *the library is rarely the bug; the integra
 
 For JWT specifically, **always pass the `algorithms` parameter on every `verify()` call.** Modern versions of `jsonwebtoken` (9.x+) have made this stricter, but Theo's pinned dependency may not be on 9.x, and even on 9.x the configuration discipline is what saves you, not the version. Pin behavior, not version.
 
-## §8 — Further reading
+## §8 — Key takeaways
+
+- **The original sin of JWT verification is letting unauthenticated input pick the algorithm.** A token's `alg` header is data. The verifier must specify the algorithms it accepts; anything else is the alg:none / key-confusion class waiting to happen. RFC 8725 Section 3.1 spells this out explicitly: implementations MUST either pin the expected algorithm or use a whitelist.
+
+- **JWT payloads are not confidential.** They're base64url, not encrypted. JWS (the signed variant most production systems use) provides integrity but not confidentiality. Anything you put in a JWT payload — including a credential someone "stashed" in a claim — is readable by anyone who holds the token. For confidentiality you need JWE, which is a different envelope.
+
+- **Modern libraries reject alg:none by default — but that's not enough.** The explicit whitelist remains the defense-in-depth requirement, and the moment your code pins to an older library version, accepts an attacker-controlled algorithms list, or trusts a `jku` URL it didn't validate, the attack is back.
+
+- **Audit logs that capture Authorization headers are credential dumps in disguise.** Anyone with read access to the log can replay any token in it. Redact at the proxy, redact at the application, redact at the log pipeline — defense in depth, because the application code that should never have logged the credential will, eventually, do exactly that.
+
+- **For PCI-DSS-scoped admin APIs, JWT-as-DIY is risk you don't have to take.** Managed identity platforms — Auth0, Okta, Entra, Cognito, Stytch — handle algorithm enforcement, key rotation, session revocation, and audit logging at a level of operational discipline that's hard to reproduce in-house. The retrofit cost is finite; the long-tail vulnerability surface of self-managed JWT verification is not.
+
+- **Theo's pattern is not unique to Theo.** Junior engineers writing their first auth middleware reach for the most-downloaded library, copy the two-argument verify example from the README, and ship. The disciplined platform answer is a code-review checklist line ("does this verify call specify algorithms?") plus a Semgrep rule in CI ("any two-argument jwt.verify is a build failure"). Both are cheap; neither requires the junior engineer to understand the depth of what they got wrong, only to follow the guardrail until they do.
+
+- **The same lesson scales across "junior engineer crypto mistakes."** Level 0 was "I base64-encoded the secret, so it's protected." Level 1 is "I JWT-encoded the auth, so it's authenticated." Level 2 of this track (whenever it ships) will pull on a third thread of the same yarn ball. The shared diagnosis: there is a real cryptographic primitive that does what the engineer thought they were doing, and the engineer used something else.
+
+## §9 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
@@ -588,19 +604,3 @@ For JWT specifically, **always pass the `algorithms` parameter on every `verify(
 ### Background / depth
 
 - **Auth0 — "JWT Handbook"** (free e-book): historically published as a free download; check Auth0's resources page for the current location. ~100 pages of JWT operational depth.
-
-## §9 — Key takeaways
-
-- **The original sin of JWT verification is letting unauthenticated input pick the algorithm.** A token's `alg` header is data. The verifier must specify the algorithms it accepts; anything else is the alg:none / key-confusion class waiting to happen. RFC 8725 Section 3.1 spells this out explicitly: implementations MUST either pin the expected algorithm or use a whitelist.
-
-- **JWT payloads are not confidential.** They're base64url, not encrypted. JWS (the signed variant most production systems use) provides integrity but not confidentiality. Anything you put in a JWT payload — including a credential someone "stashed" in a claim — is readable by anyone who holds the token. For confidentiality you need JWE, which is a different envelope.
-
-- **Modern libraries reject alg:none by default — but that's not enough.** The explicit whitelist remains the defense-in-depth requirement, and the moment your code pins to an older library version, accepts an attacker-controlled algorithms list, or trusts a `jku` URL it didn't validate, the attack is back.
-
-- **Audit logs that capture Authorization headers are credential dumps in disguise.** Anyone with read access to the log can replay any token in it. Redact at the proxy, redact at the application, redact at the log pipeline — defense in depth, because the application code that should never have logged the credential will, eventually, do exactly that.
-
-- **For PCI-DSS-scoped admin APIs, JWT-as-DIY is risk you don't have to take.** Managed identity platforms — Auth0, Okta, Entra, Cognito, Stytch — handle algorithm enforcement, key rotation, session revocation, and audit logging at a level of operational discipline that's hard to reproduce in-house. The retrofit cost is finite; the long-tail vulnerability surface of self-managed JWT verification is not.
-
-- **Theo's pattern is not unique to Theo.** Junior engineers writing their first auth middleware reach for the most-downloaded library, copy the two-argument verify example from the README, and ship. The disciplined platform answer is a code-review checklist line ("does this verify call specify algorithms?") plus a Semgrep rule in CI ("any two-argument jwt.verify is a build failure"). Both are cheap; neither requires the junior engineer to understand the depth of what they got wrong, only to follow the guardrail until they do.
-
-- **The same lesson scales across "junior engineer crypto mistakes."** Level 0 was "I base64-encoded the secret, so it's protected." Level 1 is "I JWT-encoded the auth, so it's authenticated." Level 2 of this track (whenever it ships) will pull on a third thread of the same yarn ball. The shared diagnosis: there is a real cryptographic primitive that does what the engineer thought they were doing, and the engineer used something else.

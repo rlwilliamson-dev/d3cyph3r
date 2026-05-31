@@ -536,7 +536,7 @@ The rule, fed into Coverline's SIEM, would alert on the next attempt to create a
 
 **6. The broader OPSEC lesson (defender side).** Public cloud storage is the modern equivalent of an unauthenticated FTP server on the internet, except it happens to companies that wouldn't dream of running an unauthenticated FTP server. The mental model is wrong; the reality is the same. *"Public"* is a feature for marketing assets, OSS artifacts, and documented public APIs. It is a defect for anything else, including any byproduct of an operational process — logs, dumps, exports, migrations, backups, snapshots, scratch. The default of *"private"* is correct; the exceptions should be explicit, named, reviewed, and continuously monitored.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run the right command — `progress --detail` lists what you've unlocked.
 

@@ -57,7 +57,7 @@ section dividers when starting a new file.
 | 3 | The solve (mechanical)        | Step-by-step commands with outputs. Include "If you got stuck" sub-note  |
 | 4 | The vulnerability             | Name the stacked failures. Why each is independently a finding           |
 | 5 | Real-world parallels          | 2–3 named, well-documented incidents. Include the *response* angle       |
-| 6 | Framework deep dive           | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
+| 6 | Frameworks, deep dive         | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
 | 7 | Cert exam relevance           | Equal-depth treatment of every cert cited. Sample exam-question framings |
 | 8 | What a defender does          | Concrete tools, sample detection rules, audit evidence                   |
 | 8.5 | Optional exploration (§7.5) | Bonus finds + any optional content (pivot hosts, verification commands). Spoiler-tolerant section; see template below |
