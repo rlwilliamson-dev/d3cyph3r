@@ -25,6 +25,22 @@
 //                      handler emits a "Tip: base64 -d <value>" hint
 //                      after the table because base64-looking session
 //                      cookies are a recurring teaching pattern.
+//   level.sqli         { "<base-url>": { param, template, columns,
+//                                        dbVersion, dbUser, dbName, tables } }
+//                      A *vulnerable* GET endpoint (v1.28.0). When `curl`
+//                      hits a URL whose path matches one of these keys, the
+//                      raw query-param value is concatenated into the
+//                      endpoint's SQL `template` (at the `{INJECT}` marker)
+//                      and the resulting query is ACTUALLY EXECUTED against
+//                      the in-memory `tables` by js/commands/sqli.js. That
+//                      makes SQL injection behave like the real thing — a
+//                      lone quote throws a syntax error, a tautology dumps
+//                      every row, a bad UNION column count errors out — which
+//                      an exact-string URL map (level.web) cannot do for the
+//                      open-ended payload space of injection. See sqli.js for
+//                      the full endpoint shape + supported SQL grammar.
+
+import { runInjectableQuery } from "./sqli.js";
 
 // Strip outer matching quotes from a URL the player typed. Real bash
 // would have stripped these during tokenization; the engine's parse
@@ -102,6 +118,26 @@ export const webCommands = {
       const lines = Object.entries(headers).map(([k, v]) => k === "HTTP/1.1" ? `HTTP/1.1 ${v}` : `${k}: ${v}`);
       if (reqLines.length) return { text: [...reqLines, "", ...lines].join("\n"), cls: "out" };
       return { text: lines.join("\n"), cls: "out" };
+    }
+
+    // Vulnerable SQLi endpoint (v1.28.0). If the URL's path matches a
+    // registered level.sqli endpoint, execute the injected query for real
+    // (see sqli.js) rather than doing an exact-string body lookup. GET only —
+    // the teaching payloads all live in the `?q=` query string.
+    if (method === "GET") {
+      const hit = matchSqliEndpoint(level, url);
+      if (hit) {
+        const { body, status } = renderSqliResponse(hit.endpoint, hit.value);
+        const out = [];
+        if (reqLines.length) out.push(...reqLines, "");
+        if (verbose) {
+          out.push(`< HTTP/1.1 ${status}`);
+          out.push(`< Content-Type: application/json`);
+          out.push(`<`);
+        }
+        out.push(body);
+        return { text: out.join("\n"), cls: "out" };
+      }
     }
 
     // -L: walk Location: redirects up to 5 hops.
@@ -226,3 +262,76 @@ export const webCommands = {
     return { text: lines.join("\n"), cls: "out" };
   },
 };
+
+// ── SQLi endpoint plumbing (v1.28.0) ───────────────────────────────────────
+
+// Does this URL hit a registered vulnerable endpoint? Returns
+// { endpoint, value } (value = the decoded injection param) or null.
+//
+// Matching is on the PATH portion only (everything before the first "?"),
+// exact-string against the level.sqli keys (one trailing-slash difference is
+// tolerated). The query string is then split on "&"/"=" to pull the
+// endpoint's parameter; a missing value defaults to "" (an empty search,
+// which the template renders as `LIKE '%%'` → match-all, exactly like a real
+// search box with no term).
+function matchSqliEndpoint(level, url) {
+  if (!level.sqli) return null;
+  const qIdx = url.indexOf("?");
+  const base = qIdx === -1 ? url : url.slice(0, qIdx);
+  const qs   = qIdx === -1 ? "" : url.slice(qIdx + 1);
+
+  const key = Object.keys(level.sqli).find(
+    k => k === base || `${k}/` === base || k === `${base}/`,
+  );
+  if (!key) return null;
+
+  const endpoint = level.sqli[key];
+  const param = endpoint.param || "q";
+  let raw = "";
+  for (const pair of qs.split("&")) {
+    const eq = pair.indexOf("=");
+    const name = eq === -1 ? pair : pair.slice(0, eq);
+    if (name === param) { raw = eq === -1 ? "" : pair.slice(eq + 1); break; }
+  }
+  return { endpoint, value: lenientPercentDecode(raw) };
+}
+
+// Percent-decode only well-formed %XX escapes; leave a stray "%" alone (SQLi
+// payloads are full of bare "%" from LIKE wildcards, and decodeURIComponent on
+// the whole string would throw on those). This lets BOTH `' OR 1=1` typed
+// literally AND its %27%20… URL-encoded form reach the evaluator intact.
+function lenientPercentDecode(s) {
+  return String(s).replace(/%[0-9A-Fa-f]{2}/g, (m) => {
+    try { return decodeURIComponent(m); } catch { return m; }
+  });
+}
+
+// Run the injected query and render the HTTP response body. On success →
+// a JSON results array (each row mapped positionally onto endpoint.columns,
+// so UNION-injected data surfaces in the app's normal output slots). On
+// failure → a JSON error body that leaks the raw DB error AND the constructed
+// query (the CWE-209 "verbose errors in production" anti-pattern the bonus
+// keys on). Syntax errors are rendered in MySQL's canonical 1064 form so the
+// learner can fingerprint the backend.
+function renderSqliResponse(endpoint, rawValue) {
+  const r = runInjectableQuery(endpoint, rawValue);
+  if (r.error) {
+    const dberr = /You have an error in your SQL syntax/i.test(r.error)
+      ? `You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '${r.near}' at line 1`
+      : r.error;
+    const body = JSON.stringify({
+      status: "error",
+      message: "Database query failed",
+      error: dberr,
+      query: r.query,
+    }, null, 2);
+    return { body, status: "500 Internal Server Error" };
+  }
+  const results = r.rows.map((row) => {
+    const obj = {};
+    endpoint.columns.forEach((c, i) => { obj[c] = row[i] === undefined ? null : row[i]; });
+    return obj;
+  });
+  const body = JSON.stringify({ results, count: results.length }, null, 2);
+  return { body, status: "200 OK" };
+}

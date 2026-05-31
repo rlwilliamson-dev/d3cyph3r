@@ -244,6 +244,17 @@ const MANIFEST = {
           "IDOR via CWE-639 + a BluePier-era demo account whose " +
           "advisor_notes field carries the level2 breadcrumb.",
       },
+      level2: {
+        title: "The Search Bar That Talks",
+        blurb:
+          "Day three. The portal-svc credential from level1 (SSH-reused " +
+          "across hosts) lands you on the catalog host, where BluePier's " +
+          "2021 course-search glues the query parameter straight into a " +
+          "SQL string. UNION-based SQL injection through a public, " +
+          "unauthenticated search box dumps the app's config table — the " +
+          "plaintext DB-admin credential — and reaches the FERPA-protected " +
+          "students table. CWE-89 + verbose-error (CWE-209) leak.",
+      },
     },
   },
   forensics: {

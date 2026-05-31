@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.28.0] - 2026-05-30
+
+**level2@web ships.** Day three of the Meridian State University web audit. The `portal-svc` service credential recovered from level1's BluePier demo account — SSH-reused across hosts — lands the player on the catalog webapp host as `portal-svc`. BluePier's 2021 public course-catalog search glues the `q` query parameter straight into a SQL string: a lone single quote returns a verbose MySQL error (echoing the constructed query), a tautology dumps every course, and a `UNION SELECT` walks `information_schema` to dump the application's `app_config` table — the database-admin credential, stored in plaintext, recovered through a public unauthenticated search box. The same injection reaches the FERPA-protected `students` table because the public catalog shares the student-portal database with an over-privileged account. CWE-89 + OWASP A05:2025 Injection, with CWE-209 (verbose errors), CWE-312/522 (plaintext credential), and CWE-250 (least privilege).
+
+### Added
+
+- **`level2@web` — "The Search Bar That Talks" / lobby title "Meridian's catalog search (SQLi)".** Host `catalog.meridian.edu`, tier Routine, est. 22 min. The player probes with a single quote, confirms with a tautology, counts columns with `ORDER BY` / `UNION SELECT NULL`, fingerprints via `@@version`/`user()`/`database()`, enumerates `information_schema`, and dumps `app_config` to recover the level3 breadcrumb. Two bonus finds: verbose database errors in production (CWE-209, fires on the single-quote probe) and a public endpoint with no WAF and no rate limiting (surfaced in the deployment notes).
+- **Vulnerable SQL-injection endpoint engine — `js/commands/sqli.js` + the `level.sqli` schema field.** A level can declare a vulnerable GET endpoint with a server-side query template (marked with `{INJECT}`) and a set of in-memory tables. `curl` substitutes the raw query-parameter value into the template and **executes the resulting query for real**, supporting `SELECT` / `WHERE` (LIKE + boolean tautologies) / `UNION [ALL] SELECT` / `ORDER BY` / comment terminators (`-- `, `#`) / the `information_schema.tables` and `.columns` virtual tables / the `@@version`, `user()`, `database()` scalar functions. Any syntactically valid injection behaves like a real MySQL endpoint — a lone quote throws the canonical 1064 syntax error, a wrong UNION column count throws "different number of columns" — so the level handles the open-ended payload variance an exact-string URL map cannot.
+- **`walkthroughs/web/level2.md`** ships in the same release. 9-section format covering the data-vs-code distinction, the one-line parameterized-query fix, the three-failure stack (string concatenation + verbose errors + over-privileged shared DB account), OWASP A05:2025 + the SQL Injection Prevention Cheat Sheet + NIST SP 800-53 SI-10/SI-11/AC-6 + CIS Control 16 + FERPA, and a defender playbook. Heartland 2008, Sony/LulzSec 2011, TalkTalk 2015, and MOVEit 2023 (CVE-2023-34362) cited as real-world parallels.
+
+### Changed
+
+- **`curl` routes registered `level.sqli` endpoints through the SQL evaluator** ahead of its existing exact-string URL lookup. A GET request whose path matches a declared vulnerable endpoint executes the injected query; every other request falls through to the unchanged `level.web` / `level.webRequests` behavior. No existing level data changes.
+
 ## [1.27.0] - 2026-05-29
 
 **level2@crypto ships.** Day three of the Vesta Retail pre-PCI-QSA audit. Theo's handoff token from level1's JWT decode unlocks `admin.vesta.internal` as `vesta-admin`. Saanvi (CISO) pulled a wider commit review after yesterday's alg:none finding; Priya surfaced a six-month-old commit titled "backup-passwords: safer than plaintext" — 200 unsalted MD5 hashes in the deploy repo. `hash-id` confirms MD5; `john backup-passwords.txt` cracks four of them in under a second against the default rockyou.txt wordlist; all four crack to the same plaintext (`TheoVesta!1`), one labeled `aes-backup`. PCI-DSS v4.0.1 §3.5.1 requires both strong cipher AND strong key; the backup Theo encrypted with the cracked password is, by the control's definition, functionally plaintext. CWE-916 + CWE-759 + CWE-521 + CWE-262 + the same-password-everywhere antipattern that also drives the linux track's Halton policy.
@@ -3753,7 +3767,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.27.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.28.0...HEAD
+[1.28.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.1...v1.27.0
 [1.26.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.0...v1.26.1
 [1.26.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.25.2...v1.26.0
