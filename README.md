@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end; Linux, Forensics, Network, Crypto, and Web ship through level2 (v1.25.0 + v1.23.0 + v1.26.0 + v1.27.0 + v1.28.0). 19 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end; Linux, Forensics, Network, Crypto, Web, and OSINT ship through level2 (v1.25.0 + v1.23.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0). 20 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -17,7 +17,7 @@ All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship lev
 | Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't"), `level2@crypto` ("Theo's Quick Hash") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall"), `level2@web` ("The Search Bar That Talks") | Meridian State University | FERPA |
 | Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw"), `level2@forensics` ("What Reed's Browser Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
-| OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project") | Veridian Analytics | HIPAA / HITRUST CSF |
+| OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project"), `level2@osint` ("The Internet Never Forgets") | Veridian Analytics | HIPAA / HITRUST CSF |
 | Cloud | `level0@cloud` ("Coverline's Twelfth Bucket"), `level1@cloud` ("The Migration Table Nobody Dropped") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
 
 ## Running it locally
@@ -162,7 +162,7 @@ d3cyph3r/
 │   ├── crypto.js            Crypto track (level0 + level1 + level2) — Vesta Retail / PCI-DSS
 │   ├── web.js               Web track (level0 + level1 + level2) — Meridian State U / FERPA
 │   ├── forensics.js         Forensics track (level0 + level1 + level2) — Polaris DS / CMMC
-│   ├── osint.js             OSINT track (level0 + level1) — Veridian / HIPAA + HITRUST
+│   ├── osint.js             OSINT track (level0 + level1 + level2) — Veridian / HIPAA + HITRUST
 │   └── cloud.js             Cloud track (level0 + level1) — Coverline / SOC 2 + NAIC
 ├── walkthroughs/            Long-form solve guides (separate subsite)
 │   ├── index.html           Walkthrough reader shell
@@ -188,7 +188,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 ## Roadmap
 
-All seven tracks ship level0 + level1; Linux, Forensics, Network, Crypto, and Web now ship through level2 (v1.25.0 + v1.23.0 + v1.26.0 + v1.27.0 + v1.28.0). The next phase continues filling level2 across the remaining two tracks (OSINT and Cloud). Every shipped level1 already leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
+All seven tracks ship level0 + level1; Linux, Forensics, Network, Crypto, Web, and OSINT now ship through level2 (v1.25.0 + v1.23.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0). The next phase finishes the v2.0.0 "Apprentice" milestone with level2 for the last remaining track (Cloud). Every shipped level1 already leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 
