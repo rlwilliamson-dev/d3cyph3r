@@ -380,7 +380,7 @@ falsepositives:
 
 The rule's value is recognizing the *signature* — many usernames, few attempts per username, high failure rate, single source — which is the credential-stuffing pattern regardless of which specific corpus the attacker is testing against.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run the right command — `progress --detail` lists what you've unlocked.
 

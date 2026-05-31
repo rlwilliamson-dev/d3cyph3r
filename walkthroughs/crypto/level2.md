@@ -269,7 +269,7 @@ Theo used MD5 with no salt, which combines all three failure modes. The four has
 
 **Educate.** The `hash-id` → `john` → `cat README.rockyou` sequence is identical to what every intro-tier red-team / blue-team training program teaches. Engineers shipping production credentials should be aware of how cheap the offline attack is. [The HashCat wiki](https://hashcat.net/wiki/) and [Hashcat Crackstation](https://hashcat.net/wiki/doku.php?id=cracking_wpawpa2) have the canonical defender-side reference material.
 
-## §7.5 — Optional exploration: the bonus finds
+## §7.5 — Optional exploration
 
 Both bonus finds in this level surface auxiliary lessons the main finding doesn't directly require. Each captures a distinct dimension of the broader password-storage problem space.
 

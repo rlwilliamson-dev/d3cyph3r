@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.1] - 2026-05-30
+
+**Walkthrough consistency pass.** No gameplay, engine, or level changes — a documentation pass that makes every walkthrough on the subsite follow the same section outline.
+
+### Changed
+
+- **Standardized the section structure across all 20 walkthroughs.** Section headings had drifted into two variants across tracks — for example, "Further reading" appeared as §8 in some guides and §9 in others, and the §5–§7 titles differed. Every walkthrough now follows one structure (§5 Frameworks, deep dive · §6 Cert exam relevance · §7 What a defender does · §7.5 Optional exploration · §8 Key takeaways · §9 Further reading), matching the author guide's documented template.
+
 ## [1.29.0] - 2026-05-30
 
 **level2@osint ships.** Day three of the Veridian Analytics executive-exposure engagement. The AWS secret access key recovered from level1's committed `.env` is the password in — and the fact that it still works is the first finding: it was never rotated. After level1, Dr. Aaron Hines deleted the leaky GitHub repo and considered it fixed. The new `wayback` tool (the Internet Archive's Wayback Machine) proves otherwise — the 2023-24 captures still serve the deleted repo while the live URL 404s, so "I deleted it" remediated nothing. An archive sweep of Aaron's long-scrubbed 2009 personal site recovers a pseudonymous handle he'd disconnected from his professional identity; `sherlock` maps that alias's footprint, and a self-hosted homelab blog post pastes a cleartext admin credential in a `docker-compose` — the level3 breadcrumb. The lesson stack: deletion-is-not-remediation (rotation is the only fix), Internet Archive permanence, alias attribution via selector reuse, and robots.txt as a disclosure — not access — control. CWE-312 + CWE-540 + CWE-798; MITRE T1593 / T1593.001 / T1589.001.
@@ -3776,7 +3784,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.1...HEAD
+[1.29.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.0...v1.29.1
 [1.29.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.1...v1.27.0

@@ -258,7 +258,7 @@ Five remediation actions, ordered by reversibility (most-reversible first; the i
 
 **Bonus: monitor what you're already capturing.** Halton's audit policy required the snapshot trace to exist. The trace existing is fine. The trace *not being audited* is the structural finding. The minimum bar is a periodic (daily, weekly, on-rotation) scan of recently-written log files in `/var/log/` for credential patterns. CrowdStrike Falcon, SentinelOne, gitleaks, trufflehog, and Microsoft Purview's data-loss-prevention engine all do this; pick one and run it.
 
-## §7.5 — Optional exploration: the bonus finds
+## §7.5 — Optional exploration
 
 Two bonus finds on this level seed orthogonal lessons. `progress --detail` from anywhere shows your discovered list. Neither find changes the breadcrumb chain.
 

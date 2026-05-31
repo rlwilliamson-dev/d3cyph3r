@@ -338,7 +338,7 @@ This rule, run as a pre-commit hook against staged files, would have flagged The
 
 **8. Audit cadence.** Quarterly credential-scanning audits across the entire repository inventory. Annually, a full source-control sweep with history scanning enabled (the credentials that pre-date the credential scanner are the ones most likely to still be there). The audit produces a list of findings; remediation has a defined SLA.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` from any prompt lists what you've unlocked.
 

@@ -312,7 +312,7 @@ The through-line across all four: SQL injection's prevalence has fallen, but its
 
 **Scan for the pattern in CI.** The "glue input into SQL" shape repeats across a codebase. [Semgrep](https://semgrep.dev/) and [CodeQL](https://codeql.github.com/) both ship SQL-injection rule packs that flag string-concatenated queries at the pull-request gate. Find every query built by concatenation, not just this one — and add a lint rule that fails the build on new ones.
 
-## §7.5 — Optional exploration: the bonus finds
+## §7.5 — Optional exploration
 
 Both bonus finds surface the conditions that made the injection worse than it had to be.
 

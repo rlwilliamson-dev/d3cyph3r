@@ -256,7 +256,7 @@ Source-control credential leakage is one of the most documented categories of cy
 
 What unites these cases is the structural inevitability of the leak: as long as humans write code that needs to authenticate, and as long as the easiest local-dev pattern is to put credentials in a config file next to the code, secrets will be committed by mistake. The defensive posture is layered (pre-commit hooks + push protection + post-push scanning + IAM hygiene + automated rotation) precisely because no single layer catches everything.
 
-## §5 — Frameworks that cover this
+## §5 — Frameworks, deep dive
 
 ### NIST SP 800-218 — Secure Software Development Framework (SSDF) v1.1
 
@@ -329,7 +329,7 @@ The relevant techniques:
 - **T1078.004 (Valid Accounts: Cloud Accounts)** — specifically relevant for AWS access keys.
 - **T1098 (Account Manipulation)** — what an adversary might do post-compromise to establish persistence.
 
-## §6 — Where this shows up on certifications
+## §6 — Cert exam relevance
 
 ### SANS GOSI (GIAC Open Source Intelligence)
 
@@ -367,7 +367,7 @@ The AWS-native security cert. AWS released SCS-C03 in late 2025 / early 2026 as 
 
 CEH v13 is the current version (2024 release). OSINT is covered in the reconnaissance phase. CEH is broadly recognized at federal/DoD level under 8140M; less practitioner-respected than the SANS / OffSec equivalents.
 
-## §7 — What a defender should actually do
+## §7 — What a defender does
 
 Three parallel remediation tracks: Aaron specifically, Veridian as the employer, and Driftwood for our own practice.
 
@@ -411,7 +411,7 @@ Three parallel remediation tracks: Aaron specifically, Veridian as the employer,
 
 **Note the adjacent findings, don't pursue them.** The Strava presence in `sherlock` output is interesting OPSEC adjacent — Aaron's segment leaderboards in his own neighborhood are how the LinkedIn DM's "her school in Coolidge Corner" intel could have been derived. Worth flagging in the writeup as an adjacent observation; explicitly out of scope for active investigation today.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run the sherlock command — `progress --detail` lists what you've unlocked.
 
@@ -434,7 +434,25 @@ For the project: this is the kind of finding that sits between "out of scope" an
 
 For broader awareness: every fitness app, every social media platform, every "find friends nearby" feature shipping in 2026 is the same shape. The 2018 Strava incident is the named example; the underlying pattern is general.
 
-## §8 — Further reading
+## §8 — Key takeaways
+
+- **Source-control credential leakage is the single most-discovered credential-exposure vector in modern OSINT.** Not because the technique is exotic — because the structural mechanic (git's content-addressable history + `.gitignore`'s forward-only semantics) makes mistakes permanent and because GitHub is the world's largest searchable code corpus. The defensive answer is layered: pre-commit hooks + push protection + post-push scanning + IAM hygiene + automated rotation. No single layer catches everything.
+
+- **`.gitignore` does not retroactively untrack files.** Aaron's pattern — committed `.env`, added `.gitignore` later, assumed the issue was resolved — is universal. The git data model is content-addressable: every committed object is immutable from the moment it's hashed. `.gitignore` is forward-looking. The correct sequence is `git rm --cached <file>` + commit + push, plus credential rotation (which is what actually matters; the historical file is recoverable but the rotated credential is inert).
+
+- **GitHub Secret Scanning is default-on and free for public repos since March 2023.** Push Protection is default-on and free since 2024. If Aaron's repo had been scanned cleanly at push time AND the AWS revocation partner integration had fired, the credentials would have been auto-disabled within minutes of the push. Defense-in-depth assumes that doesn't always work, but the baseline has improved dramatically.
+
+- **Personal-account credential exposure is an executive-OPSEC category most security programs underweight.** Public-figure executives — CMOs, CFOs, GCs, founders — accumulate personal-account footprints over decades that pre-date their current employer's security posture. The cost of a 30-minute HIBP + 30-minute GitHub OSINT engagement during onboarding is trivial; the cost of not doing one is the kind of incident where a 2023 committed AWS key becomes a 2026 breach.
+
+- **For HIPAA-adjacent environments specifically**, personal-AWS exposure that touches clinical-era data creates a multi-party legal question. Aaron's AWS bucket is personal, not Veridian's, but if it contained patient-identifying data from his pre-Veridian employer's clinical work, the BAA / notification chain runs through that prior employer's GC. The OSINT engagement surfaces the technical exposure; the GC determines the regulatory response.
+
+- **OSINT scope discipline is the durable differentiator.** The natural pull on a GitHub OSINT engagement is to chase every thread — enumerate every repo, drill into every commit, pivot from the bucket name to the AWS account, follow up on the Strava segments. Don't. The engagement scope was narrow ("identify committed credentials in public repos"), the deliverable was narrow ("one finding plus a remediation list"), and the next engagement (if Marisol authorizes it) can be a separate authorization for active testing. Sticking to the line is what gets you the next engagement.
+
+- **Aaron's pattern is the universal mid-career-professional pattern.** Personal-OPSEC postures were established a decade or two ago when the professional's public footprint was smaller and the threat model was different. Year-suffix passwords (level0's `BostonStrong#2013`), committed `.env` files (today's finding), public GitHub bios that name current and prior employers — none of these are individually scandalous; their *combination* under the bright light of a public-figure-tier threat model is what makes them load-bearing. The remediation cost is mundane; the institutional habit of catching this *before* the threat model changes is the harder piece.
+
+- **The two findings on this case (Friday's password reuse + Monday's committed AWS key) compose into a single risk picture.** Aaron almost certainly uses `BostonStrong#2013` somewhere; Aaron has live AWS credentials in a public repo. Either finding alone is remediable in minutes; together they describe an executive whose personal-credential hygiene needs a documented refresh. The Veridian recommendation is a one-week OPSEC refresh — password manager rollout, 2FA enrollment, AWS key rotation, GitHub repo audit, brief on personal-account-footprint OPSEC. ~3 hours of Aaron's time, indefinite reduction in the personal-account threat surface.
+
+## §9 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
@@ -491,21 +509,3 @@ For broader awareness: every fitness app, every social media platform, every "fi
 - **SANS GOSI / SEC497 reading list**: <https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/>.
 - **Trace Labs CTF**: <https://www.tracelabs.org/>. Real-world OSINT practice (missing-persons cases, with explicit ethical framing).
 - **OSINT Framework (community-maintained)**: <https://osintframework.com/>. Index of OSINT tools by category.
-
-## §9 — Key takeaways
-
-- **Source-control credential leakage is the single most-discovered credential-exposure vector in modern OSINT.** Not because the technique is exotic — because the structural mechanic (git's content-addressable history + `.gitignore`'s forward-only semantics) makes mistakes permanent and because GitHub is the world's largest searchable code corpus. The defensive answer is layered: pre-commit hooks + push protection + post-push scanning + IAM hygiene + automated rotation. No single layer catches everything.
-
-- **`.gitignore` does not retroactively untrack files.** Aaron's pattern — committed `.env`, added `.gitignore` later, assumed the issue was resolved — is universal. The git data model is content-addressable: every committed object is immutable from the moment it's hashed. `.gitignore` is forward-looking. The correct sequence is `git rm --cached <file>` + commit + push, plus credential rotation (which is what actually matters; the historical file is recoverable but the rotated credential is inert).
-
-- **GitHub Secret Scanning is default-on and free for public repos since March 2023.** Push Protection is default-on and free since 2024. If Aaron's repo had been scanned cleanly at push time AND the AWS revocation partner integration had fired, the credentials would have been auto-disabled within minutes of the push. Defense-in-depth assumes that doesn't always work, but the baseline has improved dramatically.
-
-- **Personal-account credential exposure is an executive-OPSEC category most security programs underweight.** Public-figure executives — CMOs, CFOs, GCs, founders — accumulate personal-account footprints over decades that pre-date their current employer's security posture. The cost of a 30-minute HIBP + 30-minute GitHub OSINT engagement during onboarding is trivial; the cost of not doing one is the kind of incident where a 2023 committed AWS key becomes a 2026 breach.
-
-- **For HIPAA-adjacent environments specifically**, personal-AWS exposure that touches clinical-era data creates a multi-party legal question. Aaron's AWS bucket is personal, not Veridian's, but if it contained patient-identifying data from his pre-Veridian employer's clinical work, the BAA / notification chain runs through that prior employer's GC. The OSINT engagement surfaces the technical exposure; the GC determines the regulatory response.
-
-- **OSINT scope discipline is the durable differentiator.** The natural pull on a GitHub OSINT engagement is to chase every thread — enumerate every repo, drill into every commit, pivot from the bucket name to the AWS account, follow up on the Strava segments. Don't. The engagement scope was narrow ("identify committed credentials in public repos"), the deliverable was narrow ("one finding plus a remediation list"), and the next engagement (if Marisol authorizes it) can be a separate authorization for active testing. Sticking to the line is what gets you the next engagement.
-
-- **Aaron's pattern is the universal mid-career-professional pattern.** Personal-OPSEC postures were established a decade or two ago when the professional's public footprint was smaller and the threat model was different. Year-suffix passwords (level0's `BostonStrong#2013`), committed `.env` files (today's finding), public GitHub bios that name current and prior employers — none of these are individually scandalous; their *combination* under the bright light of a public-figure-tier threat model is what makes them load-bearing. The remediation cost is mundane; the institutional habit of catching this *before* the threat model changes is the harder piece.
-
-- **The two findings on this case (Friday's password reuse + Monday's committed AWS key) compose into a single risk picture.** Aaron almost certainly uses `BostonStrong#2013` somewhere; Aaron has live AWS credentials in a public repo. Either finding alone is remediable in minutes; together they describe an executive whose personal-credential hygiene needs a documented refresh. The Veridian recommendation is a one-week OPSEC refresh — password manager rollout, 2FA enrollment, AWS key rotation, GitHub repo audit, brief on personal-account-footprint OPSEC. ~3 hours of Aaron's time, indefinite reduction in the personal-account threat surface.

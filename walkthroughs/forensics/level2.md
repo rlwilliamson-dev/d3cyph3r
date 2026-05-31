@@ -253,7 +253,7 @@ The thread running through all these cases is the same: SQLite is the universal 
 
 ---
 
-## §5 — Frameworks that cover this
+## §5 — Frameworks, deep dive
 
 The forensic side of this engagement sits inside a stack of overlapping frameworks. Reading them top-down:
 
@@ -308,7 +308,7 @@ A third technique is relevant on the defender side:
 
 ---
 
-## §6 — Where this shows up on certifications
+## §6 — Cert exam relevance
 
 Forensic curricula align tightly to the techniques this level demonstrates. A non-exhaustive list of where you'll see browser-DB / SQLite forensics tested:
 
@@ -332,7 +332,7 @@ The pattern across all of these: SQL formation against SQLite-backed application
 
 ---
 
-## §7 — What a defender should actually do
+## §7 — What a defender does
 
 Polaris's forensic posture comes out of this case looking pretty good. Maya's IR team had the discipline to image the workstation under correct procedure; Sgt. Chen escalated correctly under NISPOM; Dana coordinated outside counsel; the chain-of-custody discipline held through three days of analysis. The walkthrough is critical of the IR-team-password reuse anti-pattern (and so is Maya — she put it in the lessons-learned), but procedurally the case is textbook.
 
@@ -383,7 +383,7 @@ The fact that outside counsel had a Google subpoena in flight Monday morning, re
 
 ---
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 This level carries one bonus find, accessible via the `progress --detail` command after you discover it. It's orthogonal to the credential-chain solve (you can complete the level without finding it) but it's the kind of artifact that turns a forensic engagement into a thorough one.
 
@@ -412,7 +412,21 @@ The bonus find awards a marker in the engine's progress tracking and surfaces an
 
 ---
 
-## §8 — Further reading
+## §8 — Key takeaways
+
+- **SQLite is the universal user-activity ledger.** Every browser, every mobile OS, every desktop app that stores local state — all SQLite. Whenever an investigation asks "what did this user do on this machine," there is almost always a SQLite database holding the answer.
+- **The forensic asymmetry favors the defender.** A suspect can clear browsing data and log out of accounts, but SQLite WAL pages, cookie last_access timestamps, and download target_path strings survive far longer than the suspect's mental model expects. Reed knew he was being investigated by 03:14 Saturday (the "CUI how to identify if a document is marked" search proves it). He didn't clear his history. He didn't sign out of Gmail. The asymmetry favored the defender on this case.
+- **Hash before, hash after.** Chain-of-custody discipline is what makes forensic findings defensible under cross-examination. The `chain-of-custody.txt` baseline + the pre-query and post-query `sha256sum` runs are the procedural form. If the hashes diverge, the analysis is contaminated and STOPS. This isn't optional ceremony; it's the difference between a finding that holds up in a deposition and one that doesn't.
+- **Don't read content unless authorized.** Today's task was the session-token deliverable, not the message content. The discipline of saying "out of scope" and meaning it is what distinguishes the firm.
+- **When two artifacts agree, the case writes itself.** The level1 4688 PowerShell chain and this level's downloads-table `rc-archive-helper.ps1` row are independent artifact sources pointing at the same behavior. One artifact could be coincidence; two is rehearsal. Always query orthogonally to find the second source.
+- **SQL formation is the workhorse skill.** Forensic tools (FTK, EnCase, AXIOM, Cellebrite, Autopsy) automate the heavy lifting, but the analyst who can compose queries directly is the one who can answer questions the tool didn't anticipate. The grammar this level taught (SELECT … FROM … WHERE LIKE … ORDER BY … LIMIT … COUNT(\*)) is enough for ~80% of practical forensic queries.
+- **The framework stack matters.** NIST SP 800-86 (forensic process) + NIST SP 800-171 Rev 3 (CUI controls) + CMMC Level 2 (assessment) + NISPOM (cleared-facility regulation) + DoD CUI program (data-handling regulation) are the layered authority Polaris is operating under. The deliverable you produced sits inside that stack and is reviewable against it.
+- **Defender hygiene is endpoint policy + DLP + forensic readiness.** Chrome Enterprise policies, file-staging DLP rules, browser-history retention discipline, and pre-positioned cloud-provider legal-process relationships are what turn a possible incident into a manageable one. None of these are expensive; all of them require operational maturity to actually deploy.
+- **The walkthrough closes the level.** This document is what makes `level2@forensics` a finished engagement rather than a half-shipped exercise. Per the rule that took effect at v1.23.1: walkthroughs gate new level work. The next forensics level (`level3@forensics` — Reed's outbound mail headers) won't open until this writeup is merged.
+
+Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
+
+## §9 — Further reading
 
 Last reviewed: May 2026.
 
@@ -482,17 +496,3 @@ Last reviewed: May 2026.
 - [Chrome Enterprise policy list](https://chromeenterprise.google/policies/). The catalog defenders should configure.
 
 ---
-
-## §9 — Key takeaways
-
-- **SQLite is the universal user-activity ledger.** Every browser, every mobile OS, every desktop app that stores local state — all SQLite. Whenever an investigation asks "what did this user do on this machine," there is almost always a SQLite database holding the answer.
-- **The forensic asymmetry favors the defender.** A suspect can clear browsing data and log out of accounts, but SQLite WAL pages, cookie last_access timestamps, and download target_path strings survive far longer than the suspect's mental model expects. Reed knew he was being investigated by 03:14 Saturday (the "CUI how to identify if a document is marked" search proves it). He didn't clear his history. He didn't sign out of Gmail. The asymmetry favored the defender on this case.
-- **Hash before, hash after.** Chain-of-custody discipline is what makes forensic findings defensible under cross-examination. The `chain-of-custody.txt` baseline + the pre-query and post-query `sha256sum` runs are the procedural form. If the hashes diverge, the analysis is contaminated and STOPS. This isn't optional ceremony; it's the difference between a finding that holds up in a deposition and one that doesn't.
-- **Don't read content unless authorized.** Today's task was the session-token deliverable, not the message content. The discipline of saying "out of scope" and meaning it is what distinguishes the firm.
-- **When two artifacts agree, the case writes itself.** The level1 4688 PowerShell chain and this level's downloads-table `rc-archive-helper.ps1` row are independent artifact sources pointing at the same behavior. One artifact could be coincidence; two is rehearsal. Always query orthogonally to find the second source.
-- **SQL formation is the workhorse skill.** Forensic tools (FTK, EnCase, AXIOM, Cellebrite, Autopsy) automate the heavy lifting, but the analyst who can compose queries directly is the one who can answer questions the tool didn't anticipate. The grammar this level taught (SELECT … FROM … WHERE LIKE … ORDER BY … LIMIT … COUNT(\*)) is enough for ~80% of practical forensic queries.
-- **The framework stack matters.** NIST SP 800-86 (forensic process) + NIST SP 800-171 Rev 3 (CUI controls) + CMMC Level 2 (assessment) + NISPOM (cleared-facility regulation) + DoD CUI program (data-handling regulation) are the layered authority Polaris is operating under. The deliverable you produced sits inside that stack and is reviewable against it.
-- **Defender hygiene is endpoint policy + DLP + forensic readiness.** Chrome Enterprise policies, file-staging DLP rules, browser-history retention discipline, and pre-positioned cloud-provider legal-process relationships are what turn a possible incident into a manageable one. None of these are expensive; all of them require operational maturity to actually deploy.
-- **The walkthrough closes the level.** This document is what makes `level2@forensics` a finished engagement rather than a half-shipped exercise. Per the rule that took effect at v1.23.1: walkthroughs gate new level work. The next forensics level (`level3@forensics` — Reed's outbound mail headers) won't open until this writeup is merged.
-
-Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.

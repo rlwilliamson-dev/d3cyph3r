@@ -383,7 +383,7 @@ This rule, with the allowed CIDR list maintained as part of the firewall-as-code
 
 **7. Quarterly perimeter checks remain the audit floor.** The quarterly verification Driftwood performs continues to have value as an audit artifact and as the contractual evidence of due diligence. But it is the *floor* of the security program, not the ceiling. The ceiling is continuous monitoring; the floor is the documented quarterly walkthrough that exists so the audit report has the right signatures on it.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` from any prompt lists what you've unlocked.
 

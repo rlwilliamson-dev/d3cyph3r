@@ -226,7 +226,7 @@ Database row-value credential leakage is less publicized than source-control cre
 
 What unites these cases is the structural similarity to today's finding: databases accumulate credentials over time because operational tasks require credentials and the path of least resistance is "put it in a row." The defensive posture is to redirect that path of least resistance through a dedicated secret store (Secrets Manager, Parameter Store, Vault) so the database never sees a cleartext credential in the first place. Application code reads from the secret store at runtime; the secret never persists in the operational data.
 
-## §5 — Frameworks that cover this
+## §5 — Frameworks, deep dive
 
 ### SOC 2 Trust Services Criteria (2017, refreshed 2022)
 
@@ -310,7 +310,7 @@ Relevant techniques:
 - **T1078.001 (Default Accounts)** — adjacent for the RDS master account scenario.
 - **T1098 (Account Manipulation)** — what an adversary might do post-compromise.
 
-## §6 — Where this shows up on certifications
+## §6 — Cert exam relevance
 
 ### AWS Certified Security – Specialty (SCS-C03)
 
@@ -352,7 +352,7 @@ Domain 5 (Identity and Access Management) covers the credential lifecycle includ
 
 There's no formal vendor certification for PostgreSQL administration in the way Oracle has OCP. EnterpriseDB (EDB) offers PostgreSQL certifications that include security as a topic, and the PostgreSQL community itself maintains the [Postgres Security documentation](https://www.postgresql.org/docs/current/security.html).
 
-## §7 — What a defender should actually do
+## §7 — What a defender does
 
 Three parallel remediation tracks: Coverline today, Coverline this quarter, and the broader institutional lesson.
 
@@ -392,7 +392,7 @@ Every query we ran today, with the timestamp, the database, the table queried, a
 
 Database rows are a credential-storage anti-pattern that organizations underestimate. The intuition is "the database is protected by the application, so row contents are safe." That intuition breaks the moment any credential that opens the database leaks — at which point every credential STORED IN the database also leaks. The defensive answer is layered: never put credentials in the database in the first place (use Secrets Manager / Parameter Store / Vault), enforce that policy through automated detection (entropy scanners, schema-column-name scanners), and treat any historical credential-row finding as a structural sign that the prevention layer is broken upstream.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you query `migration_artifacts` — `progress --detail` lists what you've unlocked.
 
@@ -420,7 +420,27 @@ The longer-arc lesson: **documented intent is a planning artifact; an automated 
 
 For Coverline's CC6.1 control re-attestation work post-this-engagement: every TTL or retention column in every customer-facing table needs an enforcement-mechanism inventory, and any gap is a near-term remediation.
 
-## §8 — Further reading
+## §8 — Key takeaways
+
+- **Credentials stored in database row values are the modern equivalent of credentials in source-control config files.** Different storage medium, identical anti-pattern: the path of least resistance puts a credential in a row, the task that needed the credential completes, the row outlives the task. The fix is to redirect the path of least resistance through a dedicated secret store (Secrets Manager, Parameter Store, Vault) so the database never sees a cleartext credential in the first place.
+
+- **`migration_artifacts` and tables like it accumulate credential debt.** The intent was right — explicit TTL columns acknowledged the cleanup obligation. The execution failed — nothing in the pipeline enforced the TTL. Designs that name a risk and don't enforce its mitigation are designs that pretend to address the risk. The fix is either (a) deletion-by-default with manual extension, enforced by a scheduled job, or (b) don't put credentials in the table in the first place.
+
+- **"Fallback credentials" outlive their fallback purpose.** Coverline's broker-portal team kept the migration-era credential "in case Secrets Manager lookup fails." That fallback never gets removed because removing it requires confirming Secrets Manager is fully load-bearing, and that confirmation never happens. The same pattern surfaces in network/level1's audit-bypass account, web/level1's BluePier demo account, osint/level1's committed-but-rotated-elsewhere AWS keys. Migration to a new credential system has to include explicit deletion of the old credentials as a discrete completion step.
+
+- **The audit log told the story, but only partially.** Coverline's RDS audit logging captured the database user (`coverline_admin`) for the 2026-05-20 anomalous schema query but not the source IP — `pgaudit` wasn't enabled with source-IP capture. The fix is one parameter group setting and one configuration line. Five-minute change, large forensic value. Most enterprise environments have RDS audit logging in basic mode; few have pgaudit configured for IR-grade source attribution.
+
+- **For SOC 2 / NAIC / NYDFS / GLBA-bound environments specifically**, the breach-notification clocks key off the *determination* moment, not the *discovery* moment. The CISO + GC + outside counsel triangle determines whether the exposure satisfies "reasonable belief of unauthorized acquisition" — and the triangle's determination is informed by exactly the kind of enumeration this engagement produced. The forensic finding is the determination's input; the regulatory clock starts at the triangle's call.
+
+- **The dormant-account pattern is universal across enterprise environments.** Coverline's vikram.shah row is one example; every enterprise has dozens to hundreds of equivalent rows accumulated over years. The fix is automated lifecycle deprovisioning — a custom Lambda subscribed to the HR-system termination event for environments where SCIM doesn't reach (RDS, on-prem systems, legacy SaaS). Without automation, "deletion of terminated employee accounts" is a manual cleanup task that competes with every other manual cleanup task for attention. It always loses.
+
+- **For Coverline specifically**, this week's two findings (Friday's public S3 bucket + today's DB enumeration) produce a budget line for next quarter: Secrets Manager rollout across every production credential surface, Database Activity Streams on every production RDS cluster, GuardDuty RDS Protection enabled, automated user-lifecycle deprovisioning, quarterly automated review of database tables for credential-shaped row contents, and `pgaudit` properly configured with source-IP capture. That budget line is the price of avoiding the next version of this same finding in 2027.
+
+- **The credential-leak cascade is the through-line of this engagement.** Friday's S3 bucket exposed an RDS master credential. Today's DB walk used that credential to find a broker-portal credential. A future level2 engagement using the broker-portal credential could find broker-mediated credentials for downstream insurance carriers. Each link in the chain is structurally similar — a credential created for a specific narrow purpose that outlived its narrow purpose. The system-level fix is rotating secrets through dedicated stores, but the cultural fix is treating credential lifecycle as a continuous ownership rather than an occasional audit-driven cleanup.
+
+- **The forensic finding is small. The system around it is what makes it actionable.** The two findings on this Coverline case took ~3 hours of Driftwood time across two engagements. The system around them — Coverline's SOC 2 posture, Driftwood's retainer, outside counsel's pull-string, the breach-notification regulatory ladder — is what converts the findings into Coverline's documented breach-response posture. The technical work is the small visible part of a much larger institutional process.
+
+## §9 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
@@ -467,23 +487,3 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 - **MOVEit Transfer 2023 (CL0P) — CISA advisory**: <https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a>. The June 2023 CISA + FBI joint advisory.
 - **Snowflake customer compromises 2024 — Mandiant writeup**: <https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion/>. The UNC5537 threat-actor attribution.
 - **Verizon DBIR 2026** (latest edition as of the review date): <https://www.verizon.com/business/resources/reports/dbir/>.
-
-## §9 — Key takeaways
-
-- **Credentials stored in database row values are the modern equivalent of credentials in source-control config files.** Different storage medium, identical anti-pattern: the path of least resistance puts a credential in a row, the task that needed the credential completes, the row outlives the task. The fix is to redirect the path of least resistance through a dedicated secret store (Secrets Manager, Parameter Store, Vault) so the database never sees a cleartext credential in the first place.
-
-- **`migration_artifacts` and tables like it accumulate credential debt.** The intent was right — explicit TTL columns acknowledged the cleanup obligation. The execution failed — nothing in the pipeline enforced the TTL. Designs that name a risk and don't enforce its mitigation are designs that pretend to address the risk. The fix is either (a) deletion-by-default with manual extension, enforced by a scheduled job, or (b) don't put credentials in the table in the first place.
-
-- **"Fallback credentials" outlive their fallback purpose.** Coverline's broker-portal team kept the migration-era credential "in case Secrets Manager lookup fails." That fallback never gets removed because removing it requires confirming Secrets Manager is fully load-bearing, and that confirmation never happens. The same pattern surfaces in network/level1's audit-bypass account, web/level1's BluePier demo account, osint/level1's committed-but-rotated-elsewhere AWS keys. Migration to a new credential system has to include explicit deletion of the old credentials as a discrete completion step.
-
-- **The audit log told the story, but only partially.** Coverline's RDS audit logging captured the database user (`coverline_admin`) for the 2026-05-20 anomalous schema query but not the source IP — `pgaudit` wasn't enabled with source-IP capture. The fix is one parameter group setting and one configuration line. Five-minute change, large forensic value. Most enterprise environments have RDS audit logging in basic mode; few have pgaudit configured for IR-grade source attribution.
-
-- **For SOC 2 / NAIC / NYDFS / GLBA-bound environments specifically**, the breach-notification clocks key off the *determination* moment, not the *discovery* moment. The CISO + GC + outside counsel triangle determines whether the exposure satisfies "reasonable belief of unauthorized acquisition" — and the triangle's determination is informed by exactly the kind of enumeration this engagement produced. The forensic finding is the determination's input; the regulatory clock starts at the triangle's call.
-
-- **The dormant-account pattern is universal across enterprise environments.** Coverline's vikram.shah row is one example; every enterprise has dozens to hundreds of equivalent rows accumulated over years. The fix is automated lifecycle deprovisioning — a custom Lambda subscribed to the HR-system termination event for environments where SCIM doesn't reach (RDS, on-prem systems, legacy SaaS). Without automation, "deletion of terminated employee accounts" is a manual cleanup task that competes with every other manual cleanup task for attention. It always loses.
-
-- **For Coverline specifically**, this week's two findings (Friday's public S3 bucket + today's DB enumeration) produce a budget line for next quarter: Secrets Manager rollout across every production credential surface, Database Activity Streams on every production RDS cluster, GuardDuty RDS Protection enabled, automated user-lifecycle deprovisioning, quarterly automated review of database tables for credential-shaped row contents, and `pgaudit` properly configured with source-IP capture. That budget line is the price of avoiding the next version of this same finding in 2027.
-
-- **The credential-leak cascade is the through-line of this engagement.** Friday's S3 bucket exposed an RDS master credential. Today's DB walk used that credential to find a broker-portal credential. A future level2 engagement using the broker-portal credential could find broker-mediated credentials for downstream insurance carriers. Each link in the chain is structurally similar — a credential created for a specific narrow purpose that outlived its narrow purpose. The system-level fix is rotating secrets through dedicated stores, but the cultural fix is treating credential lifecycle as a continuous ownership rather than an occasional audit-driven cleanup.
-
-- **The forensic finding is small. The system around it is what makes it actionable.** The two findings on this Coverline case took ~3 hours of Driftwood time across two engagements. The system around them — Coverline's SOC 2 posture, Driftwood's retainer, outside counsel's pull-string, the breach-notification regulatory ladder — is what converts the findings into Coverline's documented breach-response posture. The technical work is the small visible part of a much larger institutional process.

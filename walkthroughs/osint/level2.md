@@ -188,7 +188,7 @@ The robots.txt finding (see §7.5) is a fourth, smaller weakness: using a *discl
 
 What unites these cases: the web has a long memory and several independent ones. Removal at the source is necessary but never sufficient, and the only durable defenses are *rotation* (for secrets) and *not creating the linkage in the first place* (for identity).
 
-## §5 — Frameworks that cover this
+## §5 — Frameworks, deep dive
 
 ### The Internet Archive / archive permanence (the mechanic, not a control)
 
@@ -224,7 +224,7 @@ The Robots Exclusion Protocol — originally Martijn Koster's 1994 convention �
 - **CWE-798 (Use of Hard-Coded Credentials)** — carryover: the un-rotated AWS key, still a hard-coded, now-public credential.
 - **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — the umbrella; mapping-Discouraged in current MITRE guidance, so cite the specific children above.
 
-## §6 — Where this shows up on certifications
+## §6 — Cert exam relevance
 
 ### SANS SEC497 (Practical Open-Source Intelligence) + GIAC GOSI
 
@@ -250,7 +250,7 @@ Domain 1 (Security and Risk Management) covers threat intelligence / OSINT; Doma
 
 The leaked-credential IR pattern is squarely in scope — and so is its classic failure mode: removing the artifact instead of rotating the secret. The "leaked credential → rotate → audit usage" workflow is the canonical case.
 
-## §7 — What a defender should actually do
+## §7 — What a defender does
 
 Three tracks: Aaron specifically, Veridian as employer, and Driftwood for our own practice.
 
@@ -280,7 +280,7 @@ Three tracks: Aaron specifically, Veridian as employer, and Driftwood for our ow
 
 **Stop at the first concrete finding.** Marisol asked for a *light* sweep. You found a live credential exposure; that's the deliverable. Enumerating Aaron's entire pseudonymous life beyond the security finding is scope creep, and (for any third parties who appear in his hobby spaces) an ethics problem.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. `level2@osint` seeds two bonus finds; `progress --detail` lists what you've unlocked.
 
@@ -296,7 +296,23 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 
 **What it teaches:** the archived 2011 `robots.txt` lists `Disallow:` paths pointing at exactly what Aaron wanted hidden — an old CV PDF, a `/backup/` directory, and a draft of the `saltyhelm` sailing blog (which corroborates the alias pivot independently of the homepage). robots.txt tells crawlers what to skip; it tells a human analyst precisely where to look. It's a *disclosure* control, never an *access* control — formalized in [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309.html) and tested under OWASP [WSTG-INFO-03](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage). The defender fix is to move private content off the public server, not to `Disallow` it.
 
-## §8 — Further reading
+## §8 — Key takeaways
+
+- **Deletion is not remediation.** For a leaked secret, removing the page it leaked from does nothing about the secret. Two truths: the artifact is effectively permanent (the Wayback Machine, archive.today, GitHub's fork network, clones, and caches all survive a delete), and the credential is compromised regardless. The only action that shrinks the exposure is **rotation/revocation at the provider**. Aaron deleted the repo and skipped the rotation; the AWS key still works, which is why it was the password to this level.
+
+- **On GitHub specifically, "deleted" provably isn't gone.** Truffle Security's 2024 CFOR research showed deleted repos, deleted forks, and even private repos remain accessible by design — they recovered 40 live API keys from deleted forks. The correct response to a committed secret is never "delete the repo"; it's "rotate the credential, then optionally clean history."
+
+- **Pseudonymity is not anonymity.** People link their separate identities somewhere — and the link survives in a place they've forgotten. Aaron's `saltyhelm` handle was recovered from a page he wrote and later scrubbed; the archive kept the scrubbed version, and a reused email removed all doubt. The canonical case is Ross Ulbricht, deanonymized by a reused "altoid" handle and a forum post carrying his real-name Gmail. Reused selectors collapse identities.
+
+- **The oldest, most-forgotten account is the most exposed.** Old accounts carry the weakest passwords, no MFA, and the most personal data — and nobody remembers to close them. For a publicly-named executive in a hostile-attention campaign, that forgotten footprint is the soft target. Inventory it; close the dead accounts; never reuse a handle across the personal/professional wall.
+
+- **robots.txt is a disclosure control, not an access control.** Every path in a `Disallow:` line is fully readable by anyone who opens the file — and the file is a map of what the owner wanted hidden. Move private content off the public server; don't advertise it with a `Disallow` line (RFC 9309 / OWASP WSTG-INFO-03).
+
+- **OSINT scope discipline is the durable differentiator.** Attributing the alias from Aaron's own archived page is in scope; logging into the Nextcloud or using the AWS key to "verify" is not. The deliverable was two findings and a remediation list, stopped at the first concrete exposure. Holding that line — read, don't touch — is what makes the client trust you with the next engagement.
+
+- **The three Veridian OSINT tasks compose into one picture.** Reused password → committed AWS key → pasted homelab credential: three channels, one person whose personal security model was built for a quieter career and never updated for his current public-figure exposure. None of the findings is exotic; their accumulation, assembled in the right order, is the story. OSINT done well is mostly that — assembling the ordinary before an adversary does.
+
+## §9 — Further reading
 
 > *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, RFC/standard IDs, historical-case dates, CWE/MITRE mapping status) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
 
@@ -340,19 +356,3 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 
 - **SANS SEC497 (Practical OSINT)**: <https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/>.
 - **OSINT Framework (community index)**: <https://osintframework.com/>.
-
-## §9 — Key takeaways
-
-- **Deletion is not remediation.** For a leaked secret, removing the page it leaked from does nothing about the secret. Two truths: the artifact is effectively permanent (the Wayback Machine, archive.today, GitHub's fork network, clones, and caches all survive a delete), and the credential is compromised regardless. The only action that shrinks the exposure is **rotation/revocation at the provider**. Aaron deleted the repo and skipped the rotation; the AWS key still works, which is why it was the password to this level.
-
-- **On GitHub specifically, "deleted" provably isn't gone.** Truffle Security's 2024 CFOR research showed deleted repos, deleted forks, and even private repos remain accessible by design — they recovered 40 live API keys from deleted forks. The correct response to a committed secret is never "delete the repo"; it's "rotate the credential, then optionally clean history."
-
-- **Pseudonymity is not anonymity.** People link their separate identities somewhere — and the link survives in a place they've forgotten. Aaron's `saltyhelm` handle was recovered from a page he wrote and later scrubbed; the archive kept the scrubbed version, and a reused email removed all doubt. The canonical case is Ross Ulbricht, deanonymized by a reused "altoid" handle and a forum post carrying his real-name Gmail. Reused selectors collapse identities.
-
-- **The oldest, most-forgotten account is the most exposed.** Old accounts carry the weakest passwords, no MFA, and the most personal data — and nobody remembers to close them. For a publicly-named executive in a hostile-attention campaign, that forgotten footprint is the soft target. Inventory it; close the dead accounts; never reuse a handle across the personal/professional wall.
-
-- **robots.txt is a disclosure control, not an access control.** Every path in a `Disallow:` line is fully readable by anyone who opens the file — and the file is a map of what the owner wanted hidden. Move private content off the public server; don't advertise it with a `Disallow` line (RFC 9309 / OWASP WSTG-INFO-03).
-
-- **OSINT scope discipline is the durable differentiator.** Attributing the alias from Aaron's own archived page is in scope; logging into the Nextcloud or using the AWS key to "verify" is not. The deliverable was two findings and a remediation list, stopped at the first concrete exposure. Holding that line — read, don't touch — is what makes the client trust you with the next engagement.
-
-- **The three Veridian OSINT tasks compose into one picture.** Reused password → committed AWS key → pasted homelab credential: three channels, one person whose personal security model was built for a quieter career and never updated for his current public-figure exposure. None of the findings is exotic; their accumulation, assembled in the right order, is the story. OSINT done well is mostly that — assembling the ordinary before an adversary does.

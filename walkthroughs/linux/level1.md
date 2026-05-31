@@ -463,7 +463,7 @@ The rule, fed into Halton's SIEM, would alert on the next `sudo cp` operation th
 - **Train the engineering team on the shadow-copy pattern specifically.** It's the most common single-engineer convenience anti-pattern in modern production systems. A 30-minute internal-wiki article + a quarterly "spot-check" exercise (find the shadow copies on a sample of production systems) closes the institutional gap.
 - **For contractors and consultants specifically:** the engagement-closeout checklist should include *audit the contractor's home directory and `~/.bash_history` for any sensitive content before the laptop is wiped and the access is revoked.* This is exactly what level0@linux's audit found on Daniel's laptop; the same discipline applied at engagement-end at *every* client would have caught the shadow copy on the Halton jumphost months earlier.
 
-## §7.5 — Optional exploration: the pivot host
+## §7.5 — Optional exploration
 
 The solve above ends when you've recovered the production DB credential and read `lessons-learned.md`. Everything in this section is *bonus* — no breadcrumb to level2 lives down this path, and you can skip it without missing anything load-bearing.
 

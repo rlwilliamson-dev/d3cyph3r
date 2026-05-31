@@ -299,7 +299,7 @@ The defenses against all of this are mature and documented; nobody at Atlas appl
 
 **Generate a TLS configuration with the Mozilla TLS generator.** The [Mozilla TLS Generator](https://ssl-config.mozilla.org/) produces ready-to-paste Apache / nginx / HAProxy / Caddy configs for the modern (intermediate / modern) TLS profiles. The "modern" profile aligns with NIST SP 800-52 Rev 2 and CIS Control 3.10. Operators who use the generator land on safe-by-default configs; operators who copy-paste a 2019 stackoverflow answer land on Atlas's 2023 config.
 
-## §7.5 — Optional exploration: the bonus finds
+## §7.5 — Optional exploration
 
 Both bonus finds trigger on the same `openssl x509 -text -noout -in /etc/apache2/ssl/audit-bypass.crt` command. They surface the two specific failures that make the cert worse than a generic "old self-signed cert" finding.
 

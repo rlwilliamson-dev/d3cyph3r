@@ -417,7 +417,7 @@ The rule would not have stopped Reed from submitting the photograph — that's n
 
 **6. The longer-arc institutional habit.** Insider-threat investigations have a specific procedural shape *because their findings can result in firings, clearance revocations, and criminal referrals.* The shape protects both the institution and the subject. Do not shortcut it. Do not let a forensic examiner volunteer an opinion on guilt. Do not let an HR team act before the institutional Insider Threat Program working group has met. Do not let the subject be confronted before the forensic finding is in writing. Each procedural rail exists because at some point in the history of similar cases, skipping the rail produced a worse outcome than following it.
 
-## §7.5 — Optional exploration: bonus finds
+## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` lists what you've unlocked.
 
