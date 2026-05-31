@@ -171,13 +171,14 @@ export const LEVEL_REGISTRY = Object.freeze([
   "level1@osint",        // 11
   "level0@cloud",        // 12
   "level1@cloud",        // 13
-  // ── v1.23.0 / v1.25.0 / v1.26.0 / v1.27.0 / v1.28.0 — level2 sweep ──
+  // ── v1.23.0 / v1.25.0 / v1.26.0 / v1.27.0 / v1.28.0 / v1.29.0 — level2 sweep ──
   "level2@forensics",    // 14  — v1.23.0
   "level2@linux",        // 15  — v1.25.0
   "level2@network",      // 16  — v1.26.0
   "level2@crypto",       // 17  — v1.27.0
   "level2@web",          // 18  — v1.28.0
-  // ── future levels append here at index 19, 20, 21, ... ──
+  "level2@osint",        // 19  — v1.29.0
+  // ── future levels append here at index 20, 21, 22, ... ──
 ]);
 const LEVEL_INDEX = new Map(LEVEL_REGISTRY.map((k, i) => [k, i]));
 
@@ -310,6 +311,10 @@ export const BONUS_REGISTRY = Object.freeze({
   // v1.28.0 — level2@web ships with two bonus finds: the verbose SQL
   // error fires on the probe, the no-WAF note fires on cat deploy-notes.
   "level2@web":       Object.freeze(["verbose-sql-errors", "no-waf-no-ratelimit"]),
+  // v1.29.0 — level2@osint ships with two bonus finds: deletion-theatre
+  // fires on waybacking the deleted repo, robots-txt-map on curling the
+  // archived robots.txt.
+  "level2@osint":     Object.freeze(["deletion-theatre", "robots-txt-map"]),
 });
 // Build a reverse-lookup: "<levelKey>:<findId>" → { levelIdx, bitN }.
 // The progress code's stored bonus-finds set lives at the "<key>:<id>"

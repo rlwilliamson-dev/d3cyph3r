@@ -1774,4 +1774,756 @@ Return to the lobby:    ssh guest@d3cyph3r`
     },
   },
 
+  // ── level 2 — "Aaron's Other Lives" ─────────────────────────────
+  // Third task on the Veridian engagement. After Wednesday's GitHub
+  // finding (a live AWS access key committed in personal-pgx-tool/.env),
+  // Aaron's remediation instinct was to DELETE the repo — without
+  // rotating the key. This level teaches that takedown is not
+  // remediation, and that the Internet Archive decouples "online now"
+  // from "ever online": deleting the origin does nothing to the captures.
+  //
+  // New concept: archive-driven OSINT + identity correlation. The new
+  // tool is `wayback` (Internet Archive). The level REUSES `curl` (to
+  // read an archived snapshot's body) and `sherlock` (to pivot onto a
+  // newly-discovered handle) — no new engine command, pure level data.
+  // That deliberately satisfies the "audit existing commands before
+  // adding one" rule: the wayback->curl->sherlock workflow is exactly
+  // how an analyst reads archived pages and pivots on a found alias.
+  //
+  // Player path:
+  //   1. wayback the "deleted" repo  -> 2023-24 captures still 200 while
+  //      the live URL now 404s. Deletion didn't remove the capture, and
+  //      the key was never rotated (which is why that same key was the
+  //      password that let the player in). [bonus: deletion-theatre]
+  //   2. wayback Aaron's old personal site (captured since 2009).
+  //   3. curl the 2011 homepage snapshot -> it names a pseudonymous
+  //      handle ("saltyhelm") that Aaron scrubbed from his current
+  //      profile but the archive kept. [bonus path: curl the archived
+  //      robots.txt -> Disallow: lines map what he wanted hidden]
+  //   4. sherlock saltyhelm -> the alias's live footprint ("other lives").
+  //   5. curl the saltyhelm homelab blog post -> Aaron pasted a Nextcloud
+  //      docker-compose with NEXTCLOUD_ADMIN_PASSWORD in cleartext. That
+  //      value (S4ltyHelm-Nextcloud-2022!) is the level3@osint breadcrumb.
+  //
+  // Lesson stack: deletion != remediation (rotate/revoke is the only
+  // fix); archive permanence (archive.org / archive.today / Google
+  // Cache); alias attribution + selector reuse (pseudonymous != private);
+  // robots.txt as a disclosure control, never an access control; secrets
+  // pasted into public help/blog content. CWE-312 (Cleartext Storage) +
+  // CWE-540 (Sensitive Info in Source) + CWE-798 (carryover: the
+  // unrotated key). MITRE T1593 (Search Open Websites/Domains) +
+  // T1593.001 (Social Media) + T1589.001 (Gather Victim Identity
+  // Information: Credentials). Gated on the AWS secret key from level1.
+  "level2@osint": {
+    password: "AaronHinesMD/Pers0nal+AWS/2024+BrightBlu",
+    track: "osint",
+    title: "Aaron's other handle (wayback)",
+    estimatedMinutes: 20,
+    playerUser: "intel",
+    objective: "Aaron deleted his personal-pgx-tool repo after Wednesday's AWS-key finding. Marisol wants two things: confirm whether deleting it actually remediated the exposure, and sweep the Internet Archive for anything else in Aaron's footprint he's forgotten about.",
+    lesson: "Wednesday you delivered the GitHub finding — a live AWS access key committed in Aaron's public `personal-pgx-tool` repo since July 2023, never rotated. (That same secret access key is what you just typed to get in here: it still works, which tells you Aaron never rotated it.) Aaron's reaction Thursday morning was to delete the whole repo and call it fixed. Marisol's question now: did that actually remediate anything — and while you're in the archive, is there anything else of Aaron's still exposed that he's long since forgotten? Authorization basis unchanged: Aaron + CPO consent, read-only public-data OSINT, no active testing, no family. Today's new tool is `wayback` — the Internet Archive's Wayback Machine. Read welcome.md first. Then `wayback` the deleted repo to see what the archive kept, `wayback` Aaron's old personal site (it's been captured since 2009), `curl` the archived snapshots to read them, and pivot with `sherlock` on whatever handle turns up. Read lessons-learned.md once you've found Aaron's other life.",
+
+    // v1.10.0 BONUS FINDS.
+    //   1. deletion-theatre: the "deleted" repo is still served from
+    //      archive.org captures; deletion is not remediation (and the
+    //      key was never rotated). Triggered by waybacking the repo.
+    //   2. robots-txt-map: the archived robots.txt enumerates the very
+    //      paths Aaron wanted hidden. Triggered by curling the archived
+    //      robots.txt snapshot. Neither gates the credential chain.
+    bonusFinds: [
+      {
+        id:   "deletion-theatre",
+        name: "Deletion theatre",
+        hint: "wayback shows aaron-hines-md/personal-pgx-tool still served from its 2023-2024 captures even though the live repo now 404s — Aaron deleted it Thursday morning. Deleting a repo doesn't purge existing Wayback captures, and it does nothing about the real problem: the committed AWS key was never rotated (that's why it still worked as your way in). Takedown is not remediation; rotation/revocation at the provider is the only fix for a leaked secret. Real pattern: GitHub's own guidance plus GitGuardian's State of Secrets Sprawl reporting — a secret stays valid until it is revoked, regardless of whether the repo still exists.",
+        trigger: { command: "wayback", argMatches: /personal-pgx-tool/, outputContains: "archived" },
+      },
+      {
+        id:   "robots-txt-map",
+        name: "robots.txt as a treasure map",
+        hint: "The archived 2011 robots.txt for aaronhines.net lists Disallow: paths pointing at exactly the things Aaron wanted hidden — an old CV PDF, a /backup/ directory, and a draft of the 'saltyhelm' sailing blog. robots.txt tells crawlers what to skip; it tells a human analyst precisely where to look. Real pattern: robots.txt / sitemap review (OWASP WSTG-INFO-03, 'Review Webserver Metafiles for Information Leakage') — the file is a disclosure control, never an access control.",
+        trigger: { command: "curl", argMatches: /robots\.txt/, outputContains: "Disallow" },
+      },
+    ],
+
+    // Wayback Machine timelines. The repo's last row is a post-deletion
+    // 404 (live URL gone) while the 2023-24 rows are still 200 (captures
+    // persist) — the visual core of the deletion-theatre lesson. The old
+    // personal site includes a robots.txt capture (the robots bonus hook)
+    // and a 2011 homepage capture (the alias-pivot hook).
+    waybackResults: {
+      "https://github.com/aaron-hines-md/personal-pgx-tool": [
+        { timestamp: "2023-08-02 14:11:50", status: 200, snapshot_url: "https://web.archive.org/web/20230802141150/https://github.com/aaron-hines-md/personal-pgx-tool" },
+        { timestamp: "2023-11-19 09:42:03", status: 200, snapshot_url: "https://web.archive.org/web/20231119094203/https://github.com/aaron-hines-md/personal-pgx-tool" },
+        { timestamp: "2024-03-09 22:05:31", status: 200, snapshot_url: "https://web.archive.org/web/20240309220531/https://github.com/aaron-hines-md/personal-pgx-tool" },
+        { timestamp: "2026-05-21 11:38:02", status: 404, snapshot_url: "https://web.archive.org/web/20260521113802/https://github.com/aaron-hines-md/personal-pgx-tool" },
+      ],
+      "http://www.aaronhines.net": [
+        { timestamp: "2009-10-15 08:30:12", status: 200, snapshot_url: "https://web.archive.org/web/20091015083012/http://www.aaronhines.net/" },
+        { timestamp: "2011-02-10 16:15:00", status: 200, snapshot_url: "https://web.archive.org/web/20110210161500/http://www.aaronhines.net/robots.txt" },
+        { timestamp: "2011-06-14 09:32:10", status: 200, snapshot_url: "https://web.archive.org/web/20110614093210/http://www.aaronhines.net/" },
+        { timestamp: "2013-04-22 19:48:55", status: 200, snapshot_url: "https://web.archive.org/web/20130422194855/http://www.aaronhines.net/" },
+      ],
+    },
+
+    // Handle-pivot: sherlock on the pseudonym surfaced by the archived
+    // homepage. Shows a whole pseudonymous footprint ("other lives") and
+    // points at the homelab blog post carrying the breadcrumb.
+    sherlockResults: {
+      "saltyhelm": [
+        "[+] Blog:       http://www.saltyhelm.net  (self-hosted; latest post: /posts/self-hosting-the-boat-logs , 2022-03-19)",
+        "[+] GitHub:     https://github.com/saltyhelm  (3 repos — homelab dotfiles + a Nextcloud compose; last push 2022-09)",
+        "[+] Mastodon:   https://mas.to/@saltyhelm  (homelab + sailing; last toot 2023-05-30)",
+        "[+] Reddit:     https://reddit.com/user/saltyhelm  (active in r/selfhosted, r/sailing)",
+        "[-] Twitter:    404",
+        "[-] Instagram:  404",
+        "[-] TikTok:     404",
+      ],
+    },
+
+    // curl-able pages. Keys are the EXACT snapshot/blog URLs the player
+    // copies out of wayback / sherlock output (curl does exact-string
+    // matching against level.web — see js/commands/web.js). Three entries:
+    // the archived 2011 homepage (names the pseudonym), the archived
+    // robots.txt (robots bonus), and the live saltyhelm blog (index +
+    // the homelab post that carries the level3 breadcrumb).
+    web: {
+      "https://web.archive.org/web/20110614093210/http://www.aaronhines.net/":
+`[ Wayback Machine — captured 2011-06-14 09:32:10 ]
+[ Archived from: http://www.aaronhines.net/ ]
+
+  Aaron Hines
+
+  [ About ]  [ Research ]  [ Running ]  [ Sailing ]  [ Links ]
+
+  Hi — I'm Aaron. I'm a resident in internal medicine at MGH here
+  in Boston. Outside the hospital I run (slowly), sail (badly),
+  and tinker with small computers (enthusiastically). This little
+  site is where I keep the stuff that doesn't fit on a CV.
+
+  ── Around the web ──────────────────────────────────────────
+  I try to keep my professional and personal lives separate, so
+  most of these are under a handle rather than my name:
+
+    - Code (GitHub):          github.com/aaron-hines-md
+    - Sailing + homelab blog:  saltyhelm.net   <- that one's me;
+                               I post as "saltyhelm"
+    - Running log:             on Strava (ask me for the link)
+
+  The sailing blog is mostly boat-maintenance notes and write-ups
+  of the little self-hosting projects I run off the Raspberry Pi
+  in the boat's nav station. Nerdy. You've been warned.
+
+  ── Contact ─────────────────────────────────────────────────
+    aaron.hines.md@gmail.com
+
+  (c) 2011 Aaron Hines. Powered by hand-written HTML and coffee.`,
+
+      "https://web.archive.org/web/20110210161500/http://www.aaronhines.net/robots.txt":
+`[ Wayback Machine — captured 2011-02-10 16:15:00 ]
+[ Archived from: http://www.aaronhines.net/robots.txt ]
+
+User-agent: *
+Disallow: /private/
+Disallow: /cv/aaron-hines-cv-2011.pdf
+Disallow: /backup/
+Disallow: /sailing/saltyhelm-blog-draft/
+Sitemap: http://www.aaronhines.net/sitemap.xml
+
+# note to self: "Disallow" keeps Google from indexing these, it
+# does NOT keep anyone from reading them. they're still public.
+# move the real private stuff off the web server. -- AH, 2011`,
+
+      "http://www.saltyhelm.net":
+`saltyhelm.net — salt, sailing, and self-hosting
+
+  Recent posts
+  ──────────────────────────────────────────
+  - Self-hosting my boat-maintenance logs on the cabin Pi
+      /posts/self-hosting-the-boat-logs        (2022-03-19)
+  - Solar + LiFePO4: a week at the mooring off-grid
+      /posts/solar-week-at-the-mooring         (2022-07-02)
+  - Why I moved my git off GitHub (a small rant)
+      /posts/why-i-moved-my-git-off-github     (2022-09-11)
+
+  About: I'm "saltyhelm." I sail a tired old 30-footer out of
+  Boston and run a few small servers I probably shouldn't. Posts
+  are mostly notes-to-self. No tracking, no ads, no comments
+  section to moderate.`,
+
+      "http://www.saltyhelm.net/posts/self-hosting-the-boat-logs":
+`saltyhelm.net — Self-hosting my boat-maintenance logs on the cabin Pi
+posted 2022-03-19 by saltyhelm
+
+I finally got tired of losing maintenance notes to a dead phone,
+so I stood up a little Nextcloud on the Raspberry Pi 4 in the
+boat's nav station. Solar power, a cellular hotspot at the
+mooring, dynamic DNS so I can reach it from the dock. Works
+great for logging oil changes and engine hours.
+
+Posting my docker-compose here in case it helps anyone doing the
+same thing. Yes, I know I should use a secrets file instead of
+inline env — this is a boat, not prod, and (I told myself) the
+Pi isn't reachable from the internet. Don't @ me.
+
+    version: "3"
+    services:
+      nextcloud:
+        image: nextcloud:24
+        ports:
+          - "8080:80"
+        environment:
+          - NEXTCLOUD_ADMIN_USER=saltyhelm
+          - NEXTCLOUD_ADMIN_PASSWORD=S4ltyHelm-Nextcloud-2022!
+          - NEXTCLOUD_TRUSTED_DOMAINS=helm.saltyhelm.net
+        volumes:
+          - ./nc-data:/var/www/html/data
+
+UPDATE (2022-08): a couple of folks pointed out that setting
+NEXTCLOUD_TRUSTED_DOMAINS=helm.saltyhelm.net plus the dynamic DNS
+means I did, in fact, expose this box to the open internet
+without thinking it through. It's fine, it's just boat logs.
+
+(It is not fine. Do not paste working admin passwords on your
+blog. Do not expose a Pi running a years-old container image to
+the internet. Past me was an idiot. -- present me, still saltyhelm)`,
+    },
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Driftwood Systems / OSINT Engagement Workstation ──────────
+
+Still \`intel\` on the same OSINT workstation. Day three of the
+Veridian engagement. Wednesday's GitHub finding went to Marisol:
+a live AWS access key committed in Aaron's public
+\`personal-pgx-tool\` repo since July 2023, never rotated. Aaron's
+response Thursday morning was to delete the repo and call it
+fixed.
+
+You're here because Marisol asked two questions: did deleting
+the repo actually remediate anything, and is there anything else
+of Aaron's still exposed in the Internet Archive that he's long
+since forgotten? Same authorization basis (Aaron + CPO consent),
+read-only public-data OSINT, no active testing, no family.
+
+
+─── NEW TOOL ──────────────────────────────────────────────────
+
+  wayback <url>     Query the Internet Archive's Wayback Machine
+                    for archived snapshots of a URL. Returns a
+                    timeline of captures: the date, the HTTP
+                    status at capture time, and the permanent
+                    snapshot URL for each one.
+
+  You'll also use a tool you've already met:
+
+  curl <url>        Fetch a URL and print the response body. Here
+                    you point it at the snapshot URLs wayback
+                    hands you, to read the archived page itself.
+
+
+─── WHAT THE WAYBACK MACHINE DOES ─────────────────────────────
+
+The Internet Archive (archive.org, founded 1996) crawls and
+permanently stores snapshots of public web pages. The Wayback
+Machine (live since 2001) is its front end: give it a URL and it
+shows you every capture it holds, going back two decades.
+
+For OSINT this is one of the highest-value sources, for a single
+reason: it decouples "what's online now" from "what was ever
+online." When a target deletes something — a repo, a blog post,
+an old personal site, a careless link — the live copy disappears,
+but the archived captures remain, served from archive.org's own
+infrastructure. Deletion at the origin does NOT remove the
+capture. The same is true of archive.today and (historically)
+Google Cache.
+
+Two patterns make this brutal for a target who thinks they
+"cleaned up":
+
+  1. DELETION ISN'T REMEDIATION.  Deleting a repo that leaked a
+     credential does nothing about the credential. The capture
+     still carries it — and, far more important, the credential
+     stays VALID until it's rotated/revoked at the provider.
+
+  2. THE ARCHIVE REMEMBERS WHO YOU WERE.  Old captures preserve
+     the handles, links, and aliases people scrub from their
+     current profiles. A pseudonym someone disconnected years
+     ago is often still sitting in a decade-old snapshot, one
+     hop from their real name.
+
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat engagement-notes.md   Veridian update + Thursday scope
+  2.  cat subject-update.txt    The two URLs to check + reminders
+  3.  wayback https://github.com/aaron-hines-md/personal-pgx-tool
+                                Is the "deleted" repo really gone?
+  4.  wayback http://www.aaronhines.net
+                                Aaron's old site (archived since 2009)
+  5.  curl <the 2011 homepage snapshot URL from step 4>
+                                Read the archived page; note the handle
+  6.  sherlock <the handle you find>
+                                Pivot: map that handle's footprint
+  7.  curl <the blog-post URL sherlock surfaces>
+                                Read what Aaron pasted there
+  8.  cat lessons-learned.md    Post-mortem (read after step 7)
+
+  Tip: copy the snapshot URL exactly as wayback prints it (the
+  long web.archive.org/... string) when you curl it.
+
+  Optional: curl the archived robots.txt snapshot from step 4 —
+  a robots.txt is a map of what a site owner wanted hidden.`
+        },
+
+        "engagement-notes.md": {
+          type: "file",
+          content:
+`# Veridian Analytics — engagement notes (continued)
+
+Client: Veridian Analytics (HIPAA Business Associate; HITRUST
+        CSF v11; NIST SP 800-66 Rev. 2 reference)
+Case ID: VER-EXP-2026-002 — Aaron Hines exposure check
+         (continuation, task 3)
+Driftwood handler: Priya
+Client counterpart: Marisol Vega (General Counsel)
+Driftwood task ID: DW-OSINT-VER-2026-005 (continued)
+
+## What happened since the last task
+
+Wednesday 2026-05-20, COB: We delivered the GitHub finding to
+Marisol — a live AWS access key (AKIA-prefixed IAM user key)
+committed in Aaron's public \`personal-pgx-tool\` repo on
+2023-07-14, still present at HEAD, never rotated. Recommended
+remediation, in order: (1) rotate the key at AWS immediately,
+(2) review CloudTrail / GuardDuty for misuse, (3) optionally
+clean the git history.
+
+Thursday 2026-05-21, 07:50: Aaron — anxious, well-meaning, and
+not a security person — deleted the entire \`personal-pgx-tool\`
+repository from GitHub. He emailed Marisol: "Taken care of, the
+repo's gone." He did NOT mention rotating the key.
+
+That last detail is the whole reason for today's task. Marisol's
+note to Priya:
+
+  "Aaron thinks deleting the repo fixed it. I don't think it did,
+   and I want to be able to tell him exactly why before he files
+   this as closed. Two things:
+
+   1. Show me what the Internet Archive still serves for that
+      repo. If the capture still carries the .env, the 'fix'
+      fixed nothing — and the key needs rotating regardless of
+      whether the repo exists.
+
+   2. While you're in the archive: Aaron has been online since
+      his residency. He's exactly the type to have a personal
+      site and half-forgotten side projects from fifteen years
+      ago. Do a LIGHT sweep for anything still exposed that he's
+      stopped thinking about. Same scope as before — public
+      data, read-only, Aaron only, no family."
+
+## Scope (Thursday addendum)
+
+  IN SCOPE:
+    - Internet Archive / Wayback Machine lookups against Aaron's
+      known URLs (the deleted repo; his old personal site).
+    - Reading archived snapshots (curl against archive.org
+      snapshot URLs is reading public archived content).
+    - Handle-pivot OSINT (sherlock) on any of Aaron's OWN
+      handles that surface.
+
+  STILL OUT OF SCOPE:
+    - Veridian-issued credentials / accounts.
+    - Active testing of any account or service. Do NOT log in,
+      do NOT connect to a host, do NOT submit a credential —
+      not the AWS key, not anything you find archived. We read;
+      we don't touch.
+    - Aaron's family members.
+
+  AUTHORIZATION: Aaron + CPO consent, unchanged.
+
+## A note from Priya
+
+The teaching point Marisol wants in the brief is the one most
+people get wrong: for a leaked secret, "I deleted it" is not a
+remediation. The only remediation is rotation / revocation at
+the provider. The archive is just the proof — it lets us show
+Aaron that the deleted repo is still readable, so "I deleted it"
+plainly didn't make the secret unreadable, let alone invalid.
+
+On the sweep: keep it light and keep it Aaron. His old personal
+site (aaronhines.net — it's in subject-update.txt) has been
+captured since 2009. People link their other handles from old
+"about / links" pages and then scrub those links when they go
+professional. The archive keeps the scrubbed version. If a
+handle turns up, sherlock it, see where it's still live, read
+what's there, and stop at the first concrete finding. We don't
+need Aaron's whole life — just whatever's still exposed.
+
+— Priya`
+        },
+
+        "subject-update.txt": {
+          type: "file",
+          content:
+`VERIDIAN ANALYTICS — SUBJECT EXPOSURE BRIEF (UPDATE 2)
+Case ID:           VER-EXP-2026-002
+Status:            ACTIVE — archive sweep + remediation check
+Updated by:        Marisol Vega (General Counsel)
+Date:              2026-05-21 (Thursday)
+Driftwood ref:     DW-OSINT-VER-2026-005 (continuation, task 3)
+
+PRIOR FINDINGS
+─────────────────────────────────────────────────────────────
+  Task 1 (Fri 05-15): HIBP — BostonStrong#2013 reused across the
+    LinkedIn 2012 and LiveJournal 2014 breach corpora.
+  Task 2 (Wed 05-20): GitHub — a live AWS access key committed
+    in personal-pgx-tool/.env on 2023-07-14, never rotated.
+
+  Thursday 07:50: Aaron deleted the personal-pgx-tool repo. He
+  did NOT confirm key rotation. THAT is the open item.
+
+URLs TO CHECK (IN SCOPE)
+─────────────────────────────────────────────────────────────
+  Deleted repo (verify the remediation actually remediated):
+    https://github.com/aaron-hines-md/personal-pgx-tool
+
+  Aaron's old personal site (archive sweep):
+    http://www.aaronhines.net
+      Per Task 1's brief, this has been in the Wayback Machine
+      since at least 2009 (it's how we dated his Gmail). It
+      predates his professional profiles — it's the version of
+      Aaron that linked his hobby accounts in public, before he
+      cleaned them off his current bio.
+
+WHAT WE ARE BEING ASKED
+─────────────────────────────────────────────────────────────
+  1. Show what the Internet Archive still serves for the deleted
+     repo. If the capture still carries the file tree / .env,
+     the deletion did not remediate the credential exposure.
+
+  2. Sweep Aaron's archived old-site footprint for any handle,
+     account, or project he's stopped maintaining and forgotten
+     is still public. Pivot with sherlock on any handle that's
+     his. Read what's there. Stop at the first concrete exposure.
+
+METHOD REMINDER
+─────────────────────────────────────────────────────────────
+  - wayback <url>        lists captures + their permanent
+                         snapshot URLs.
+  - curl <snapshot-url>  reads the archived page itself. Copy the
+                         snapshot URL exactly as wayback prints it.
+  - Read-only. Do not use, submit, or log in with anything you
+    find. Findings go to Marisol; she writes Aaron's brief.
+
+  Findings due COB Friday 2026-05-22.`
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+You ran the archive sweep and turned up two distinct findings.
+
+First, the remediation check: \`wayback\` on the "deleted"
+\`personal-pgx-tool\` repo shows it's still served from the
+2023-2024 captures, even though the live URL now 404s. Aaron
+deleted the repository; he did not delete the captures (he
+can't — they live on archive.org's infrastructure), and far
+more importantly he did not ROTATE the AWS key. You know the key
+is still valid because it was the password that let you into
+this workstation. "I deleted the repo" remediated nothing.
+
+Second, the sweep: Aaron's old personal site (aaronhines.net,
+captured since 2009) has a 2011 "Around the web" page that names
+a handle — "saltyhelm" — he kept off his professional profiles.
+\`sherlock saltyhelm\` mapped a whole second footprint (a blog, a
+GitHub, Mastodon, Reddit), and the homelab blog post pastes a
+working Nextcloud admin password in a docker-compose, on a box
+he admits he exposed to the internet. A pseudonym is not a
+secret, and "personal / hobby" content leaks credentials exactly
+like professional content does.
+
+Your job ends at the finding. You did not use the AWS key, you
+did not log into the Nextcloud, you did not connect to anything.
+Marisol writes the brief; she decides whether any of this becomes
+an active-testing engagement.
+
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+Two myths died on this task.
+
+MYTH 1: "I deleted it, so it's handled." Deletion is not
+remediation for a leaked secret, for two independent reasons.
+(a) The artifact persists. The Internet Archive, archive.today,
+Google's historical cache, forks, clones, and anyone's local
+copy all survive an origin delete. You cannot un-publish. (b)
+Even if every copy vanished, the SECRET is still valid. A
+committed AWS key, API token, or password is compromised the
+instant it touches a public surface; the only fix is to rotate
+or revoke it at the provider so the leaked value stops working.
+Aaron did the satisfying-but-useless thing (delete the repo) and
+skipped the only thing that mattered (rotate the key). This is
+one of the most common incident-response mistakes there is.
+
+MYTH 2: "It's under a pseudonym, so it's private." Pseudonymity
+is not anonymity, and neither is privacy. People link their
+"other" handles from somewhere — an old bio, an about page, a
+reused avatar, a reused contact email, a writing style — and the
+link is usually preserved in a place they've forgotten. Here the
+link was literally a 2011 web page Aaron wrote himself and later
+scrubbed; the archive kept the scrubbed version. Once the alias
+is attributed, the "personal" content gets read with the same
+eyes as the professional content — and hobby projects are where
+people are most careless, because they think nobody's looking.
+
+The throughline of this whole engagement (reused password ->
+committed AWS key -> pasted Nextcloud password) is one person's
+security model lagging a decade behind his exposure. The fixes
+are all the same shape: rotate, use a password manager and a
+secrets manager, and assume that anything ever published is
+permanent.
+
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+The brief Marisol writes has to make the deletion-vs-rotation
+distinction unmissable, because the client (Aaron) already
+believes the problem is closed. The persuasive move is the
+archive snapshot: you can SHOW him the "deleted" repo, still
+readable, dated after he deleted it. That converts an abstract
+argument ("deletion doesn't remediate") into a screenshot. The
+recommended language for the brief:
+
+  - The repo deletion reduced casual discoverability. It did not
+    remediate the credential. ROTATE the AWS access key today;
+    until then, treat it as compromised and monitor the account
+    (GuardDuty / CloudTrail) for misuse.
+  - The saltyhelm finding is a SEPARATE exposure: a working
+    credential for a personal service, published on a public
+    blog, on a host Aaron exposed to the internet. Rotate that
+    too, take the post down (knowing the archive keeps it), and
+    fold the alias into the monitoring scope.
+
+Scope discipline still applies, and it's load-bearing here. We
+attributed the saltyhelm alias to Aaron from his own archived
+page — that's read-only OSINT on the authorized subject. We did
+NOT log into the Nextcloud to "confirm" the password, we did NOT
+use the AWS key, and we did NOT enumerate the exposed host. Each
+of those would cross from passive OSINT into active testing — a
+different authorization, a different statement of work, and
+(for the Nextcloud and the host) potentially a different legal
+posture entirely. The temptation to "just verify it works" is
+exactly the line a professional doesn't cross without paper.
+
+A note on minors and bystanders, repeated from the prior tasks:
+the sweep is Aaron only. The blog has no comment section and no
+third parties; if it had, we'd read only what bears on Aaron's
+exposure and nothing else.
+
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  Internet Archive / Wayback Machine — the mechanic
+    archive.org (founded 1996) is a non-profit digital library;
+    the Wayback Machine (2001) is its web-capture front end.
+    Site owners can request exclusion of their own captures,
+    but it's opt-in, manual, and doesn't touch other archives —
+    which is why "deleted" content stays reachable by default.
+    Treat the archive as permanent; build your remediation on
+    rotation, not removal.
+
+  robots.txt — Robots Exclusion Protocol (RFC 9309, 2022)
+    robots.txt is a politeness signal to well-behaved crawlers
+    about what NOT to index. It is NOT an access control: every
+    path it lists is still fully reachable by anyone who reads
+    the file. Listing /backup/ or a draft directory in robots.txt
+    advertises exactly where the sensitive material is. Move
+    private content off the public server; don't "hide" it with
+    a Disallow line. (Maps to OWASP WSTG-INFO-03, "Review
+    Webserver Metafiles for Information Leakage.")
+
+  Secret rotation — the real remediation
+    NIST SP 800-53 Rev. 5, IA-5 (Authenticator Management),
+      including IA-5(1): when an authenticator is compromised,
+      revoke/replace it. A leaked credential is a compromised
+      authenticator by definition.
+    NIST SP 800-218 (SSDF v1.1), PW.6 / PS.1 — secrets
+      management and protecting code; the response to an exposed
+      secret is rotation, not just removal from HEAD.
+    AWS guidance for an exposed access key is explicit: deactivate
+      and delete the key, create a replacement, and audit usage —
+      deletion of the repository is not on the list.
+
+  OWASP
+    WSTG-INFO-03  Review Webserver Metafiles for Information
+      Leakage (robots.txt, sitemap.xml, security.txt).
+    A07:2025 Authentication Failures — pseudonymous personal
+      accounts with reused / pasted credentials feed the same
+      credential-stuffing threat as anything else.
+
+  CWE
+    CWE-312  Cleartext Storage of Sensitive Information — the
+      Nextcloud admin password pasted, in cleartext, in a public
+      blog post. Primary mapping for the saltyhelm finding.
+    CWE-540  Inclusion of Sensitive Information in Source Code —
+      the docker-compose snippet is configuration-as-published.
+    CWE-798  Use of Hard-Coded Credentials — carryover: the
+      AWS key Aaron never rotated is still a hard-coded,
+      now-public credential.
+    CWE-200  Exposure of Sensitive Information to an Unauthorized
+      Actor — the umbrella (note: CWE-200 is mapping-Discouraged
+      in current MITRE guidance; cite the specific CWE-312 /
+      CWE-540 for direct mappings).
+
+  Privacy / OPSEC
+    The durable lesson is data-minimization and identity
+    hygiene: the oldest, most-forgotten accounts carry the
+    weakest passwords, no MFA, and the most personal data, and
+    they're the ones nobody remembers to close. For a publicly-
+    named executive, the forgotten footprint is the soft target.
+
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  SANS SEC497 (Practical Open-Source Intelligence) and GIAC
+  GOSI — archive-based recon, Wayback pivoting, deleted-content
+    recovery, and username / alias attribution are core OSINT
+    curriculum. "Deleted isn't gone" is a first-week lesson.
+
+  CompTIA PenTest+ (PT0-003)
+    Domain 1 (Engagement Management) and Domain 2 (Recon and
+    Enumeration) — passive recon, metadata review (robots.txt /
+    sitemap), and OSINT pivoting.
+
+  CompTIA CySA+ (CS0-003 / CS0-004)
+    Domain 1 (Security Operations) — OSINT-driven threat intel
+    and exposed-asset discovery. CS0-004 launched in early 2026
+    for parallel availability; CS0-003 retires June 2026.
+
+  CompTIA Security+ (SY0-701)
+    Domain 2 covers reconnaissance and OSINT; Domain 4 covers
+    identity and credential management (rotation, MFA).
+
+  ISC2 CISSP
+    Domain 1 (threat intelligence / OSINT) and Domain 2 (data
+    lifecycle, retention, and the reality that "delete" rarely
+    means destroyed).
+
+  GIAC GCIH (Certified Incident Handler)
+    The leaked-credential IR pattern — and the classic mistake
+    of removing the artifact instead of rotating the secret —
+    is squarely in scope.
+
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+  Reconnaissance phase — what we just did:
+
+  T1593      Search Open Websites/Domains — the Internet Archive
+             is the textbook "open website" recon source for
+             content that's no longer on the live origin.
+  T1593.001  Search Open Websites/Domains: Social Media — the
+             sherlock handle pivot across the alias's platforms.
+  T1589.001  Gather Victim Identity Information: Credentials —
+             both the still-archived AWS key and the pasted
+             Nextcloud password are credentials recovered from
+             open sources.
+  T1591      Gather Victim Org Information — Aaron's archived
+             pages tie his identity, employer history, and
+             contact details together.
+
+  Credential Access / Initial Access — what an adversary would
+  do next (and where our scope ends):
+
+  T1552.001  Unsecured Credentials: Credentials In Files — the
+             archived .env and the pasted compose file.
+  T1078      Valid Accounts — using either recovered credential.
+             We did NOT do this; it's the active-testing boundary.
+
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. For Aaron specifically:
+     - ROTATE the AWS access key now (deactivate, delete, create
+       a replacement). This is the actual remediation for the
+       Task 2 finding; the repo deletion was not.
+     - Rotate the Nextcloud admin password and the OpenFDA key,
+       and take the saltyhelm blog post down (accepting that the
+       archive keeps a copy — rotation is what neutralizes it).
+     - Treat the exposed homelab host as compromised until
+       proven otherwise: patch/replace the years-old container
+       image, put it behind a VPN or take it off the internet,
+       and review it for unauthorized access.
+     - Audit the forgotten footprint: close or secure the old
+       accounts the sweep surfaced (unique passwords, MFA).
+
+  2. For Veridian:
+     - Add an archive sweep to the new-executive exposure
+       playbook alongside the HIBP and GitHub steps. It's cheap
+       and it catches the "forgotten old identity" surface that
+       the live-web checks miss.
+     - Build the deletion-vs-rotation distinction into incident
+       response training. The instinct to "take it down" is
+       universal and the rotation step is the one that gets
+       skipped under pressure.
+
+  3. For Driftwood (us):
+     - Hold the read-only line. Attributing the alias from
+       Aaron's own archived page is in scope; logging into the
+       Nextcloud or using the AWS key to "confirm" is not.
+     - Document the snapshot URLs and capture dates. The brief's
+       persuasive force is the dated archive evidence; cite it
+       precisely so Aaron can verify it himself.
+
+  4. For the broader OPSEC lesson (defender side):
+     - Assume permanence. Anything published to a public surface
+       — code, config, a credential, a link to an alias — should
+       be treated as captured forever the moment it's live.
+     - Manage identity sprawl. The accounts that hurt you are
+       the ones you forgot you had. Inventory them, close the
+       dead ones, and never reuse a handle or a password across
+       the "professional" and "personal" walls — the wall is
+       thinner than it looks, and the archive remembers both
+       sides.
+
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+The most useful thing this task produced wasn't the saltyhelm
+password — it was the screenshot of a "deleted" repo that's
+still readable. That single artifact closes the argument Aaron
+was about to lose to himself: that deleting something makes it
+gone. It doesn't. The web has a long memory and several
+independent ones, and the only move that actually shrinks your
+exposure is invalidating the thing that leaked, not hiding the
+page it leaked from.
+
+The wider pattern across all three Veridian tasks is worth
+saying plainly. Aaron isn't careless; he's a competent person
+whose personal security model was built for a quieter life and
+never updated when he became a publicly-named executive of a
+HIPAA business associate. The reused password, the committed
+key, the pasted homelab credential, the forgotten alias — none
+of them is exotic. They're the ordinary residue of a normal
+digital life, sitting in public, waiting for someone to assemble
+them. OSINT done well is mostly that: assembling the ordinary,
+in the right order, before an adversary does.
+
+Return to the lobby:    ssh guest@d3cyph3r`
+        },
+
+      },
+    },
+  },
+
 };

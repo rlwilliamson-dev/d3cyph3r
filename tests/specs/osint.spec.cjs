@@ -3,7 +3,9 @@
 // OSINT track playtest — covers level0@osint (Veridian's Open Letter,
 // HIBP breach-corpus enumeration of Dr. Aaron Hines's personal email)
 // and level1@osint (Aaron's Weekend Project, GitHub developer-footprint
-// + leaked .env AWS credential).
+// + leaked .env AWS credential), and level2@osint (Aaron's Other Lives,
+// Wayback-Machine archive sweep — deletion-theatre + a username pivot to
+// a pseudonymous homelab blog leaking a Nextcloud credential).
 //
 // Ported from the v1.23.x monolithic playtest.cjs lines 1214-1372.
 // Uses the v1.24.0 dispatchCmd helper (value-set + Enter dispatch)
@@ -14,8 +16,9 @@
 // the level1 tests since assertions depend on being inside the level.
 //
 // Credential chain: level0 (no password) → leak: BostonStrong#2013
-// → level1 (gated on BostonStrong#2013) → leak: AaronHinesMD/...
-// (consumed by level2@cloud).
+// → level1 (gated on BostonStrong#2013) → leak: AaronHinesMD/Pers0nal+AWS
+// → level2 (gated on that AWS secret key) → leak: S4ltyHelm-Nextcloud-2022!
+// (the level3@osint breadcrumb).
 //
 // Note: `intel` is the in-world `playerUser` for the OSINT workstation
 // (`prompt: intel@osint:`), not the engine slot name.
@@ -283,6 +286,139 @@ test.describe("osint track", () => {
           { timeout: 5000 },
         );
         expect(await promptText(page), "exit from level1@osint returns to lobby").toContain("@d3cyph3r:");
+      });
+    });
+  });
+
+  // ── Level 2 — Aaron's Other Lives ─────────────────────────────────
+  // Gated on the AWS secret key leaked by level1's committed .env. New
+  // concept: archive-driven OSINT (wayback) + identity correlation.
+  // Reuses curl (read an archived snapshot body) + sherlock (pivot on the
+  // recovered pseudonym). Two bonus finds: deletion-theatre (wayback the
+  // deleted repo) + robots-txt-map (curl the archived robots.txt).
+  test.describe("level2@osint — Aaron's Other Lives", () => {
+    const GATE = "AaronHinesMD/Pers0nal+AWS/2024+BrightBlu";
+
+    test("wrong password is rejected at the gate", async ({ page }) => {
+      await dispatchCmd(page, "ssh level2@osint");
+      await dispatchCmd(page, "not-the-key");
+      const t = await terminalText(page);
+      expect(t, "Wrong password on level2@osint prints 'Permission denied'")
+        .toContain("Permission denied, please try again.");
+    });
+
+    test.describe("inside level2", () => {
+      test.beforeEach(async ({ page }) => {
+        await dispatchCmd(page, "ssh level2@osint");
+        await dispatchCmd(page, GATE);
+        await waitForOutput(page, "Connected: level2@osint");
+        // v1.11.0 persistence opt-in dismissal (see level0 beforeEach).
+        await waitForOutput(page, "Save your progress across browser sessions?");
+        await dispatchCmd(page, "n");
+        await waitForOutput(page, "Progress stays in this tab only");
+      });
+
+      test("connection banner + prompt identity + intro lore", async ({ page }) => {
+        const t = await terminalText(page);
+        expect(t, "AWS-secret-key password connects to level2@osint").toContain("Connected: level2@osint");
+        expect(await promptText(page), "Prompt host stays 'osint' on level2").toContain("@osint:");
+        expect(await promptText(page), "Prompt user stays 'intel' on level2@osint").toMatch(/^intel@/);
+        expect(t, "Intro references the new wayback tool / Internet Archive").toMatch(/wayback|Wayback Machine/);
+        expect(t, "Intro references Aaron (subject continuity)").toContain("Aaron");
+      });
+
+      test("ls shows the level2 fileset", async ({ page }) => {
+        await dispatchCmd(page, "ls");
+        const t = await terminalText(page);
+        for (const f of ["welcome.md", "engagement-notes.md", "subject-update.txt", "lessons-learned.md"]) {
+          expect(t, `ls shows ${f}`).toContain(f);
+        }
+      });
+
+      test("engagement-notes.md makes the deletion-vs-rotation point", async ({ page }) => {
+        await dispatchCmd(page, "cat engagement-notes.md");
+        const t = await terminalText(page);
+        expect(t, "engagement-notes mentions Marisol (continuity)").toContain("Marisol");
+        expect(t, "engagement-notes notes Aaron deleted the repo").toContain("deleted");
+        expect(t, "engagement-notes calls out rotation as the real fix").toMatch(/rotat/i);
+      });
+
+      test("subject-update.txt lists the deleted repo + old personal site", async ({ page }) => {
+        await dispatchCmd(page, "cat subject-update.txt");
+        const t = await terminalText(page);
+        expect(t, "subject-update names the deleted repo").toContain("personal-pgx-tool");
+        expect(t, "subject-update names Aaron's old personal site").toContain("aaronhines.net");
+      });
+
+      test("wayback on the 'deleted' repo proves the capture survives (deletion-theatre bonus)", async ({ page }) => {
+        await dispatchCmd(page, "wayback https://github.com/aaron-hines-md/personal-pgx-tool");
+        await waitForOutput(page, "Deletion theatre");
+        const t = await terminalText(page);
+        expect(t, "wayback renders the Wayback Machine header").toContain("Wayback Machine");
+        expect(t, "wayback shows the post-deletion 404 row").toContain("404");
+        expect(t, "deletion-theatre bonus fires").toContain("Bonus find unlocked: Deletion theatre");
+      });
+
+      test("wayback on the old personal site lists captures back to 2009", async ({ page }) => {
+        await dispatchCmd(page, "wayback http://www.aaronhines.net");
+        const t = await terminalText(page);
+        expect(t, "wayback shows the old-site URL").toContain("aaronhines.net");
+        expect(t, "wayback shows a 2009 capture").toContain("2009");
+      });
+
+      test("curl the archived 2011 homepage recovers the 'saltyhelm' handle", async ({ page }) => {
+        await dispatchCmd(page, "curl https://web.archive.org/web/20110614093210/http://www.aaronhines.net/");
+        const t = await terminalText(page);
+        expect(t, "archived homepage has the 'Around the web' links block").toContain("Around the web");
+        expect(t, "archived homepage names the pseudonymous handle").toContain("saltyhelm");
+      });
+
+      test("curl the archived robots.txt maps hidden paths (robots-txt-map bonus)", async ({ page }) => {
+        await dispatchCmd(page, "curl https://web.archive.org/web/20110210161500/http://www.aaronhines.net/robots.txt");
+        await waitForOutput(page, "treasure map");
+        const t = await terminalText(page);
+        expect(t, "archived robots.txt has Disallow lines").toContain("Disallow:");
+        expect(t, "robots-txt-map bonus fires").toContain("Bonus find unlocked: robots.txt as a treasure map");
+      });
+
+      test("sherlock on the recovered handle maps Aaron's other footprint", async ({ page }) => {
+        await dispatchCmd(page, "sherlock saltyhelm");
+        const t = await terminalText(page);
+        expect(t, "sherlock checks the saltyhelm handle").toContain("Checking username");
+        expect(t, "sherlock surfaces the saltyhelm blog").toContain("saltyhelm.net");
+        expect(t, "sherlock surfaces the alias's Mastodon account").toContain("Mastodon");
+      });
+
+      test("curl the homelab blog post extracts the level3 breadcrumb", async ({ page }) => {
+        await dispatchCmd(page, "curl http://www.saltyhelm.net/posts/self-hosting-the-boat-logs");
+        const t = await terminalText(page);
+        expect(t, "blog post shows the pasted Nextcloud env block").toContain("NEXTCLOUD_ADMIN_PASSWORD");
+        expect(t, "blog post leaks the level3 breadcrumb credential").toContain("S4ltyHelm-Nextcloud-2022!");
+      });
+
+      test("lessons-learned.md cites the archive/rotation lesson + CWE/MITRE", async ({ page }) => {
+        await dispatchCmd(page, "cat lessons-learned.md");
+        const t = await terminalText(page);
+        expect(t, "lessons-learned cites CWE-312 (Cleartext Storage)").toContain("CWE-312");
+        expect(t, "lessons-learned cites CWE-540 (Sensitive Info in Source)").toContain("CWE-540");
+        expect(t, "lessons-learned cites MITRE T1593 (Search Open Websites/Domains)").toContain("T1593");
+        expect(t, "lessons-learned makes the deletion-vs-rotation point").toMatch(/rotat/i);
+      });
+
+      test("whoami prints 'intel' (in-world OSINT workstation identity)", async ({ page }) => {
+        await dispatchCmd(page, "whoami");
+        const t = await terminalText(page);
+        expect(t, "whoami prints 'intel' on the OSINT workstation").toMatch(/\bintel\b/);
+      });
+
+      test("exit from level2@osint returns to lobby", async ({ page }) => {
+        await dispatchCmd(page, "exit");
+        await page.waitForFunction(
+          () => document.getElementById("prompt-label")?.innerText.includes("@d3cyph3r:"),
+          null,
+          { timeout: 5000 },
+        );
+        expect(await promptText(page), "exit from level2@osint returns to lobby").toContain("@d3cyph3r:");
       });
     });
   });

@@ -317,6 +317,19 @@ const MANIFEST = {
           "doesn't retroactively untrack the file. CWE-798 + CWE-540, with " +
           "the universal source-control credential-leak mechanic on display.",
       },
+      level2: {
+        title: "The Internet Never Forgets",
+        blurb:
+          "Day three. Aaron deleted the leaky repo and called it fixed — " +
+          "so the `wayback` Machine becomes the proof that deletion isn't " +
+          "remediation: the 2023-24 captures still serve the repo while the " +
+          "live URL 404s, and the AWS key was never rotated. An archive " +
+          "sweep of Aaron's scrubbed 2009 personal site recovers a " +
+          "pseudonymous handle, `sherlock` maps his 'other life,' and a " +
+          "homelab blog post pastes a cleartext Nextcloud admin password " +
+          "that gates level3. Internet Archive permanence, alias " +
+          "attribution, robots.txt as a map (WSTG-INFO-03), CWE-312.",
+      },
     },
   },
   cloud: {

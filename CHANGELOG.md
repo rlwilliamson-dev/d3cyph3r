@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-05-30
+
+**level2@osint ships.** Day three of the Veridian Analytics executive-exposure engagement. The AWS secret access key recovered from level1's committed `.env` is the password in — and the fact that it still works is the first finding: it was never rotated. After level1, Dr. Aaron Hines deleted the leaky GitHub repo and considered it fixed. The new `wayback` tool (the Internet Archive's Wayback Machine) proves otherwise — the 2023-24 captures still serve the deleted repo while the live URL 404s, so "I deleted it" remediated nothing. An archive sweep of Aaron's long-scrubbed 2009 personal site recovers a pseudonymous handle he'd disconnected from his professional identity; `sherlock` maps that alias's footprint, and a self-hosted homelab blog post pastes a cleartext admin credential in a `docker-compose` — the level3 breadcrumb. The lesson stack: deletion-is-not-remediation (rotation is the only fix), Internet Archive permanence, alias attribution via selector reuse, and robots.txt as a disclosure — not access — control. CWE-312 + CWE-540 + CWE-798; MITRE T1593 / T1593.001 / T1589.001.
+
+### Added
+
+- **`level2@osint` — "The Internet Never Forgets" / lobby title "Aaron's other handle (wayback)".** Driftwood OSINT workstation, tier Routine, est. 20 min. Built entirely from existing primitives — no new engine command: `wayback` (the Internet Archive lookup) is the new *concept*, and the player reuses `curl` to read archived snapshots and `sherlock` to pivot onto a recovered handle. Path: wayback the deleted repo → wayback the old personal site → curl the archived 2011 homepage to recover a scrubbed handle → sherlock the handle → curl the homelab blog post for the level3 breadcrumb. Two bonus finds: "deletion theatre" (the deleted repo still served from its old captures, fires on waybacking it) and "robots.txt as a treasure map" (the archived robots.txt lists the very paths the owner wanted hidden, fires on curling it).
+- **`walkthroughs/osint/level2.md`** ships in the same release. 9-section format covering deletion-vs-rotation, Internet Archive / archive.today / Google-Cache permanence, alias attribution, robots.txt (RFC 9309 / OWASP WSTG-INFO-03), secret-rotation discipline (NIST SP 800-53 IA-5), and a defender playbook. Truffle Security's July 2024 "deleted/private GitHub data is recoverable" (CFOR) research, the Ross Ulbricht / "altoid" deanonymization, Google's February 2024 Search-cache retirement, and the 2018 Strava heatmap cited as real-world parallels.
+
 ## [1.28.0] - 2026-05-30
 
 **level2@web ships.** Day three of the Meridian State University web audit. The `portal-svc` service credential recovered from level1's BluePier demo account — SSH-reused across hosts — lands the player on the catalog webapp host as `portal-svc`. BluePier's 2021 public course-catalog search glues the `q` query parameter straight into a SQL string: a lone single quote returns a verbose MySQL error (echoing the constructed query), a tautology dumps every course, and a `UNION SELECT` walks `information_schema` to dump the application's `app_config` table — the database-admin credential, stored in plaintext, recovered through a public unauthenticated search box. The same injection reaches the FERPA-protected `students` table because the public catalog shares the student-portal database with an over-privileged account. CWE-89 + OWASP A05:2025 Injection, with CWE-209 (verbose errors), CWE-312/522 (plaintext credential), and CWE-250 (least privilege).
@@ -3767,7 +3776,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.28.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.0...HEAD
+[1.29.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.1...v1.27.0
 [1.26.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.26.0...v1.26.1
