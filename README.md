@@ -59,7 +59,7 @@ Each level ships with a long-form companion walkthrough under the `/walkthroughs
 https://www.d3cyph3r.com/walkthroughs/
 ```
 
-The walkthroughs (~7,000 words each, 9 sections) cover the solve path, the vulnerability class in depth, real-world parallels (Uber 2014 / Optus 2022 / Toyota 2022 / SolarWinds / MOVEit / Snowflake, etc.), framework + cert tie-ins (SOC 2 / NIST / NAIC / NYDFS / GLBA / OWASP / CIS / CWE), MITRE ATT&CK mapping, defender-action recommendations, and curated further reading. They're spoiler-bearing — only read a walkthrough after solving the level.
+The walkthroughs (~7,000 words each, nine numbered sections) cover the solve path, the vulnerability class in depth, real-world parallels (Uber 2014 / Optus 2022 / Toyota 2022 / SolarWinds / MOVEit / Snowflake, etc.), framework + cert tie-ins (SOC 2 / NIST / NAIC / NYDFS / GLBA / OWASP / CIS / CWE), MITRE ATT&CK mapping, defender-action recommendations, and curated further reading. They're spoiler-bearing — only read a walkthrough after solving the level.
 
 The subsite is publicly indexable as of v1.0.0 — search-engine traffic finding the walkthroughs is desired behavior, and the spoiler-warning callout at the top of each walkthrough guards against accidental spoilers. Hash-based routing means direct walkthrough URLs are bookmarkable.
 
@@ -169,7 +169,7 @@ d3cyph3r/
 │   ├── walkthrough.css      Docs-reader theme (distinct from main terminal)
 │   ├── walkthrough.js       Hash router + markdown renderer (vendored marked.js)
 │   ├── vendor/marked.esm.min.js  Markdown → HTML library (CC-BY-3.0 attribution in vendor/)
-│   ├── linux/level0.md      One walkthrough per shipped level — 14 total as of v1.0.0
+│   ├── linux/level0.md      One walkthrough per shipped level — 21 total as of v2.0.0
 │   └── (etc., one per level)
 ├── tests/                   @playwright/test suite + OG-image generator
 │   ├── playwright.config.cjs Per-spec parallelism config (v1.24.0+)
@@ -188,7 +188,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 ## Roadmap
 
-All seven tracks now ship level0, level1, AND level2 — the level2 sweep is complete (v1.23.0 + v1.25.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0 + v1.30.0), which meets the bar for the v2.0.0 "Apprentice" milestone: level2 playable on every track. Every shipped level2 in turn leaks a breadcrumb credential staged for its level3, so the per-track credential chain stays consistent as level3 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
+All seven tracks ship level0, level1, AND level2 — and as of **v2.0.0 "Apprentice"**, every level also carries an in-game `hint` ladder. The level2 sweep that built toward this milestone landed across v1.23.0–v1.30.0; v2.0.0 itself is the coronation — a polish + consistency pass (hint coverage on all 21 levels, a framework-citation refresh, docs accuracy) with no new gameplay, mirroring how v1.0.0 "Foundation" crowned the level0 + level1 work. Every shipped level2 in turn leaks a breadcrumb credential staged for its level3, so the per-track credential chain stays consistent as level3 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 

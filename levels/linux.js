@@ -180,7 +180,7 @@
 //   hints: [
 //     "Look at all the files in the home directory, including hidden ones.",
 //     "Daniel kept a credential cheat sheet — its name is on the nose.",
-//     "Try `cat creds.txt`. The password is in there, prefixed with PASSWORD=.",
+//     "Try `cat creds.txt`. The password is in there, prefixed with `pass:`.",
 //   ]
 //
 // Per-level hint position is tracked in sessionStorage so the
@@ -1491,7 +1491,11 @@ The system paths work like you'd expect on any Linux box:
 
   ls /etc/cron.d/        System-wide cron entries managed by
                          packages or ops engineers. One line per
-                         job. Different from user crontabs.
+                         job. Different from user crontabs. This
+                         is the one command the finding needs.
+
+  (The two below are optional — they're for the §7.5 bonus
+   exploration, not the required solve path.)
 
   crontab -l             Your own crontab.
   crontab -l -u <user>   Another user's crontab. (You'll see

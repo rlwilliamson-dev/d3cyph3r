@@ -40,6 +40,12 @@ export const webLevels = {
     objective: "Audit Meridian State University's public web stack ahead of their cyber-insurance renewal. Find anything BluePier Digital left behind that the carrier's reviewer would flag.",
     lesson: "Meridian State University is one of Driftwood's smaller clients — public regional uni in Oregon, ~30,000 students, FERPA in scope across all student-record systems. Their cyber-insurance policy is up for renewal and the carrier requires a third-party web audit as a renewal condition. Carlos, Meridian's in-house web developer, inherited the public web stack from a dismissed agency (BluePier Digital) that left work-product files scattered on the production server. He's been cleaning them up but suspects he hasn't caught all of them. You're on Driftwood's web-audit workstation (the shell calls you `secops`, the shared service account the security team uses for client recon). Read welcome.md first — it explains gobuster. Then read engagement-notes.md, then meridian-scope.txt, then start enumerating. Read lessons-learned.md once you've found the FERPA-grade exposure.",
 
+    hints: [
+      "Read `engagement-notes.md` + `meridian-scope.txt` for scope, then enumerate paths with `gobuster <site-url>`. Watch for a directory that returns `200` with a listing.",
+      "BluePier left a `/backup/` directory with autoindex (directory listing) turned ON. `curl https://www.meridian.edu/backup/` to see what's inside.",
+      "Read `/backup/db-creds.txt` — the production DB credential there is the FERPA-grade exposure, and it's your password into `level1@web`.",
+    ],
+
     // v1.10.0 BONUS FINDS — robots.txt as inadvertent attack-surface
     // billboard. Orthogonal to the autoindex finding; the bonus
     // requires a brief detour off the gobuster path.
@@ -661,6 +667,12 @@ Return to the lobby:    ssh guest@d3cyph3r`
     playerUser: "webapp_admin",
     objective: "Audit Carlos's transcript-download endpoint at Meridian — confirm whether the SSO wrapper is doing the authorization work Carlos thinks it's doing, and document the blast radius if it isn't.",
     lesson: "Day two at Meridian. Yesterday's level0 backup-dir finding closed within the hour — Carlos deleted the directory and proactively notified Cedarwood Mutual (he is, increasingly, an A+ client). The `M3rid14n!2023-prod` DB credential is still live until Friday's rotation window; you used it to ssh into the student-portal webapp host with Carlos's standing authorization. You're now logged in as `webapp_admin` — the database user whose shell access was enabled six months ago for a debug session and never reverted. (That's a finding too, but not today's.) Carlos mentioned a 'quick transcript download' he shipped to the student portal last sprint — self-service for students to grab unofficial transcripts. It's behind Meridian SSO. He thinks that's enough. Priya, with Meridian's general counsel cc'd, has asked us to verify. Read welcome.md first; then priya-note.md for the day-2 context; then look at the code Carlos shipped and exercise the endpoint with curl.",
+
+    hints: [
+      "The endpoint is `curl 'https://portal.meridian.edu/api/transcript?student_id=<id>'`. welcome.md gives a real student ID to start. SSO logged you in — but does the API check WHOSE transcript you're requesting?",
+      "It doesn't — that's the IDOR (authentication is not authorization). Change `student_id` to other values; `id-conventions.md` lists the ID ranges, including the old `M-000xxxx` legacy block.",
+      "Request the lowest legacy ID, `M-0000001` — a leftover BluePier demo account whose `advisor_notes` field leaks the `portal-svc` credential that gates `level2@web`.",
+    ],
 
     // v1.10.0 BONUS FINDS — surfaces the ten-year service-account
     // session token detail tucked into session.txt. Orthogonal to
@@ -1346,6 +1358,14 @@ Return to the lobby:    ssh guest@d3cyph3r
     playerUser: "portal-svc",
     objective: "Audit Meridian's public course-catalog search at catalog.meridian.edu for SQL injection. Confirm whether the search box prospective students use can be turned into a query against the rest of the database — and document the blast radius if it can.",
     lesson: "Day three at Meridian. The level1 transcript IDOR closed the same afternoon — Carlos shipped the one-line ownership check and decommissioned the BluePier demo account. While cleaning up he recovered the portal-svc service credential BluePier had stashed in that demo account and, on a hunch, checked the catalog webapp host — the same key was in its authorized_keys. So you're on catalog.meridian.edu as `portal-svc` now (BluePier reused one service account across hosts; flag it as its own finding). Today's target is the public course-catalog search BluePier wrote in 2021 and Carlos never rewrote — the box prospective students use to browse courses, no login required by design. The search term goes straight into a SQL string. Read welcome.md first, then priya-note.md for the rules of engagement, then read catalog-search.js and exercise the live endpoint with curl. Priya — general counsel cc'd again — wants to know exactly how far that search box reaches.",
+
+    hints: [
+      "Probe first: append a single quote to the search term — `curl \"https://catalog.meridian.edu/search?q='\"`. A SQL error means your input reaches the query unescaped (read the echoed query in the error — that verbose error is CWE-209 helping you).",
+      "Count the query's columns so a UNION can match: `q=' ORDER BY 1-- -`, then `2`, `3`, `4`... The last number that doesn't error is the column count.",
+      "Build a UNION with that many columns, padding with NULL and putting readable values where the page prints them: `q=' UNION SELECT @@version,user(),database(),NULL-- -`.",
+      "Enumerate the schema through the UNION: `... UNION SELECT table_name,NULL,NULL,NULL FROM information_schema.tables-- -`, then list a table's columns with `information_schema.columns WHERE table_name='app_config'`.",
+      "Dump `app_config` — configuration tables are where credentials hide. The DB-admin credential there is the breadcrumb to `level3@web`.",
+    ],
 
     // v1.10.0 BONUS FINDS — both surface real-world anti-patterns that
     // ride alongside the injection. Orthogonal to the credential chain.

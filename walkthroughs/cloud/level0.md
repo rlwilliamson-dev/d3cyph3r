@@ -309,17 +309,16 @@ Three CSF 2.0 sub-categories apply to Coverline:
 
 **DE.CM — Continuous Monitoring.** The Detect function's continuous-monitoring sub-category. This is the layer Coverline was missing — the automated, continuous evaluation of bucket configurations against policy. AWS Config, AWS Macie, and AWS Security Hub collectively implement DE.CM for AWS cloud assets at the production-scale Coverline operates.
 
-### CIS AWS Foundations Benchmark v5.0.0 — §2.1.1 through §2.1.5
+### CIS AWS Foundations Benchmark v7.0.0 — §3.1.1 through §3.1.4 (S3)
 
-The Center for Internet Security publishes the **CIS AWS Foundations Benchmark**, currently at **version 5.0.0** as the AWS Security Hub-supported version (CIS has since published v6.0.0 and v7.0.0; Security Hub tooling support for the newer versions had not caught up as of the audit date). The Benchmark is a prescriptive configuration baseline for AWS accounts — specific, opinionated recommendations that map to the broader CIS Controls. Section 2 covers **Storage**; subsection 2.1 covers **S3 specifically**. Note: v5.0.0 consolidated the legacy v3.0.0 §2.1.6 (KMS-based encryption) into §2.1.3 (encryption-at-rest), so the S3 sub-control list is now five items rather than six.
+The Center for Internet Security publishes the **CIS AWS Foundations Benchmark**, a prescriptive configuration baseline for AWS accounts — specific, opinionated recommendations that map to the broader CIS Controls. The current release is **v7.0.0** (April 2026), which reorganized the sections: **Section 3 now covers Storage**, with subsection **3.1 covering S3 specifically** (in v5.0.0 and earlier, S3 lived in §2.1.x). One operational caveat worth knowing: **AWS Security Hub's managed CIS standard still tops out at v5.0.0**, so the findings you see in the Security Hub console will report the older §2.1.x numbering for these same controls.
 
-Five sub-controls in §2.1 apply to Coverline's situation:
+Four sub-controls in §3.1 apply to Coverline's situation:
 
-- **§2.1.1 — Ensure S3 Bucket Policy is set to deny HTTP requests.** Buckets should require TLS for all requests. Tangential to today's finding but a hygiene item.
-- **§2.1.2 — Ensure MFA Delete is enabled on S3 buckets.** Prevents accidental or malicious bucket-object deletion by requiring MFA.
-- **§2.1.3 — Ensure all S3 buckets employ encryption-at-rest with KMS.** S3 default encryption with customer-managed KMS keys, giving the customer control over key rotation and access.
-- **§2.1.4 — Ensure S3 Block Public Access setting is enabled at the account level.** **The headline control that would have prevented Coverline's finding entirely.** A single setting at the AWS account root that overrides every per-bucket setting; turning it on org-wide via SCP makes "accidentally public" structurally impossible.
-- **§2.1.5 — Ensure S3 Block Public Access setting is enabled at the bucket level.** Defense-in-depth: even if account-level BPA is somehow disabled, per-bucket BPA provides a second enforcement layer.
+- **§3.1.1 — Ensure S3 Bucket Policy is set to deny HTTP requests.** Buckets should require TLS for all requests. Tangential to today's finding but a hygiene item.
+- **§3.1.2 — Ensure MFA Delete is enabled on S3 buckets.** Prevents accidental or malicious bucket-object deletion by requiring MFA.
+- **§3.1.3 — Ensure all data in S3 is discovered, classified, and secured.** The v7.0.0 control (Macie-driven data classification) that replaced the older standalone "enable encryption-at-rest with KMS" recommendation, after AWS made SSE-S3 the default for all new objects.
+- **§3.1.4 — Ensure S3 is configured with 'Block Public Access' enabled.** **The headline control that would have prevented Coverline's finding entirely.** v7.0.0 merged the former account-level and bucket-level BPA controls into this single one; a setting at the AWS account root overrides every per-bucket setting, and turning it on org-wide via SCP makes "accidentally public" structurally impossible.
 
 Audit evidence for the CIS AWS Foundations Benchmark is typically generated automatically by AWS Security Hub (which has a managed standard for the Benchmark) or by third-party CSPM tools (Prisma Cloud, Wiz, Lacework, Orca Security). The standard pattern is: deploy AWS Security Hub with the CIS Benchmark standard enabled, set finding-noncompliance alerts to page the security team, and review findings during the monthly compliance-review cadence.
 
@@ -570,12 +569,12 @@ The CIS AWS Foundations Benchmark addresses this from the *audited* side: separa
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: June 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 - [AICPA SOC 2 Trust Services Criteria — 2017 framework with 2022 revisions](https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services)
 - [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final)
 - [NIST Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework)
-- [CIS AWS Foundations Benchmark (Security Hub-supported v5.0.0; v6.0.0 and v7.0.0 also published)](https://www.cisecurity.org/benchmark/amazon_web_services)
+- [CIS AWS Foundations Benchmark (current release v7.0.0; AWS Security Hub's managed standard still implements v5.0.0)](https://www.cisecurity.org/benchmark/amazon_web_services)
 - [ISO/IEC 27017:2015 — Code of practice for cloud services](https://www.iso.org/standard/43757.html)
 - [OWASP Cloud-Native Application Security Top 10 (GitHub canonical — 2022 edition)](https://github.com/OWASP/Cloud-Native-Application-Security-Top-10)
 - [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (MITRE flags as "Discouraged" for direct vulnerability mapping; CWE-732 is the preferred citation for this scenario)](https://cwe.mitre.org/data/definitions/200.html)

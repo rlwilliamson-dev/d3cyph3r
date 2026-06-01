@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-01
+
+**"Apprentice" — every track playable through level2.** The v2.0.0 milestone: all seven tracks (Linux · Network · Crypto · Web · Forensics · OSINT · Cloud) are now playable level0 → level1 → level2, **21 levels** in total. This release is a polish-and-consistency pass over that body of work — no new levels, the way v1.0.0 "Foundation" crowned the level0 + level1 work rather than adding gameplay.
+
+### Added
+
+- **In-game `hint` coverage on every level.** All 21 levels now carry a three-step escalating `hint` ladder (gentle nudge → specific direction → near-answer that names the breadcrumb's location). Previously only the Linux track and the most recent level2s had hints; the other 14 levels relied solely on their welcome.md "HOW TO PLAY" recipe. Now a stuck player on any level — type `hint` — gets the same graduated in-game safety net, with the multi-step levels (UNION SQLi, the wayback archive chain, the alg:none JWT) getting the most careful ladders.
+
+### Changed
+
+- **Cloud track framework references refreshed to CIS AWS Foundations Benchmark v7.0.0** (the current release), bringing `level0@cloud` and `level1@cloud` in line with `level2@cloud`. S3 controls renumber to §3.1.x and IAM access-key rotation to §2.12, each annotated with the note that AWS Security Hub's managed CIS standard still implements v5.0.0 — so its console findings show the older §2.1.x / §1.x numbering.
+- **Documentation accuracy pass** across README and CONTRIBUTING: level and walkthrough counts updated to 21, walkthrough section-count wording clarified, and the stylesheet cache-bust comment corrected to reflect that it only changes when the CSS does.
+
 ## [1.30.0] - 2026-06-01
 
 **level2@cloud ships — every one of the seven tracks is now playable through level2.** Day three of the Coverline Insurance engagement. The `broker-portal-svc` credential recovered from level1's migration-artifacts table turns out to be an over-permissioned IAM user, and Driftwood runs an IAM least-privilege audit across Coverline's AWS account. Among 16 principals, a 2024-migration `legacy-deploy-bot` still carries `AdministratorAccess` — full `*:*` over the entire account — and its access key is still Active, last used back in 2024. It is a dormant, god-mode credential nobody turned off, orphaned when the migration's owner left the company before cutover even finished. The lesson stack: least privilege is a continuous subtraction, not a one-time setting; "Active" and "last used" are different questions you must ask separately; and AWS never returns a secret after creation, so dormant keys leak from leftover files, not from any API. CWE-269 + CWE-250; CIS AWS Foundations Benchmark 1.4 / 1.12 / 1.14 / 1.16; MITRE T1078.004.
@@ -3794,7 +3807,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.30.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.30.0...v2.0.0
 [1.30.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.1...v1.30.0
 [1.29.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.0...v1.29.1
 [1.29.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.28.0...v1.29.0

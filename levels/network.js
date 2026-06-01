@@ -37,6 +37,12 @@ export const networkLevels = {
     objective: "Verify Atlas Health's claim that their staging environment is VPN-only — and document what's exposed if it isn't.",
     lesson: "Atlas Health is one of Driftwood's largest healthcare clients — they handle PHI for ~400,000 patients across the Pacific Northwest. Their DevOps lead, Marcus, told Priya last quarter that staging.atlas.health is now VPN-only. We do a routine perimeter verification on every client engagement every quarter; today is Atlas's turn. You're on Driftwood's audit workstation (the shell calls you `secops`, the shared service account the security team uses for these checks). Read welcome.md first — it explains nmap. Then read the engagement notes, then start scanning. When you've found what's wrong, read lessons-learned.md.",
 
+    hints: [
+      "`cat atlas-perimeter.txt` (the worksheet) lists what each host SHOULD expose. Then `nmap <host>` each one and compare — anything beyond the expected ports is the finding.",
+      "Run `nmap -sV` against the staging host to fingerprint the unexpected service. It's a database port that should never face the public internet.",
+      "The exposed service is PostgreSQL (5432). The default vendor credential the engagement notes flag as still-live and pending rotation is your password into `level1@network` — read the notes for it.",
+    ],
+
     // v1.10.0 BONUS FINDS — orthogonal lesson surfaced from Priya's
     // engagement-notes audit-trail paragraph. Doesn't gate the
     // credential chain.
@@ -424,6 +430,12 @@ Return to the lobby:    ssh guest@d3cyph3r
     playerUser: "dbadmin",
     objective: "Validate the blast radius reachable from the staging-db host before Marcus's team rotates the default credential — and document everything Atlas's internal DNS gives up to a guest with shell access.",
     lesson: "Day two of the Atlas Health audit. Last night's perimeter finding was escalated; Marcus's team patches the firewall this morning and rotates the default credential in Friday's change window. Priya has authorized a one-time, documented blast-radius check. You used `atlas-default-2025` to ssh into staging-db.atlas.health and you're now logged in as `dbadmin` — the default vendor service account, configured with /bin/bash because somebody needed the shell for an upgrade six months ago and never reverted. Read welcome.md (it explains the new tool you'll need today); then priya-note.md for the rules of engagement; then start from the internal DNS resolver. When you've documented the scope, read lessons-learned.md.",
+
+    hints: [
+      "Start at the internal DNS resolver. welcome.md's new tool is the zone transfer: `dig atlas.internal AXFR` dumps every record in the zone at once (real servers should restrict this; this one doesn't).",
+      "Read the AXFR output top to bottom — the TXT records are the junk drawer where people stash notes that should never have gone into DNS.",
+      "One TXT record leaks an `audit-svc` credential — that's your password into `level2@network`.",
+    ],
 
     // v1.10.0 BONUS FINDS — surfaces the welcome.md aside about the
     // vendor service account that still carries /bin/bash. Orthogonal

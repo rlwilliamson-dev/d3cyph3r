@@ -184,8 +184,8 @@ mirror the same UX pattern: red error stays, friendly hint
 layers underneath.
 
 **Bonus finds on every level (v1.10.0).** `level.bonusFinds`
-introduced in v1.9.0 is now seeded on all 14 shipped levels
-(linux + the 12 non-linux tracks). Each level has at least one
+introduced in v1.9.0 is now seeded on all 21 shipped levels
+(all 7 tracks through level2). Each level has at least one
 bonus find, computed against `js/engine/bonus.js#checkBonusFinds`,
 that surfaces an orthogonal lesson distinct from the credential-
 chain solve. Triggers use existing in-level content (file reads,
@@ -480,7 +480,7 @@ dimmed.
 
 Each shipped level has a long-form companion walkthrough under
 `walkthroughs/<track>/<level>.md`. Use any existing walkthrough as a
-template — they all follow the same 9-section structure:
+template — they all follow the same nine-numbered-section structure (§1–§9, plus the spoiler header and §7.5):
 
 1. **§1 The setup** — narrative continuation from the prior level
 2. **§2 The solve** — step-by-step solution path
@@ -551,7 +551,7 @@ This is a deliberate decision (committed v1.22.0), not an oversight:
   taxonomy, and CWE reference the levels cite. Translating those would
   defeat the post-mortems' point.
 - A hobby project can't sustain the maintenance burden of N translated
-  copies of 14+ levels' worth of welcome.md / lessons-learned.md, plus
+  copies of 21+ levels' worth of welcome.md / lessons-learned.md, plus
   the walkthroughs (currently ~110k words), plus drift management as
   citations get updated.
 - The engine has no string-extraction conventions. Player-facing

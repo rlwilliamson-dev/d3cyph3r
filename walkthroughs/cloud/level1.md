@@ -254,12 +254,12 @@ Released February 2024. Relevant functions and categories:
 - **PR.DS (Data Security)** — including PR.DS-01 (Protection of Data-at-Rest), which the unencrypted credential rows violate.
 - **DE.CM (Continuous Monitoring)** — the detection capability gap that left the 2026-05-20 query un-attributed.
 
-### CIS AWS Foundations Benchmark v5.0.0
+### CIS AWS Foundations Benchmark v7.0.0
 
-Released March 31, 2025; the version AWS Security Hub natively supports (Security Hub adopted v5.0.0 in October 2025). CIS published v7.0.0 in April 2026 — Security Hub support for v7 is still consolidating as of the May 2026 review date. Relevant safeguards:
+The current release (April 2026). One operational caveat: AWS Security Hub's managed CIS standard still tops out at **v5.0.0** (which it adopted in October 2025), so Security Hub findings report the older numbering — what is `§2.12` in v7.0.0 was `§1.13`/`§1.14` in v5.0.0. Relevant safeguards:
 
-- **§1.14** — Ensure access keys are rotated every 90 days or less. Credentials in database rows have effectively infinite rotation cadence and fail this safeguard structurally.
-- **§2.1.4 / §2.1.5** — S3 Block Public Access (the remediation already completed in Friday's containment).
+- **§2.12** — Ensure access keys are rotated every 90 days or less. Credentials stashed in database rows have effectively infinite rotation cadence and fail this safeguard structurally. (`§1.14` in the v5.0.0 numbering Security Hub still reports.)
+- **§3.1.4** — S3 Block Public Access (the remediation already completed in Friday's containment).
 - **§4.x** family — Monitoring (CloudTrail / CloudWatch / GuardDuty) covering the detection layer that today's finding exposed as gap-filled.
 
 ### CIS PostgreSQL Benchmark (v15 through v18)
@@ -442,7 +442,7 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 
 ## §9 — Further reading
 
-> *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+> *Last reviewed: June 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
 ### AWS-specific
 
@@ -461,7 +461,7 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 - **NAIC Insurance Data Security Model Law**: <https://content.naic.org/sites/default/files/model-law-668.pdf>. The 2017 model with state-by-state adoption status.
 - **NYDFS 23 NYCRR 500 (current text)**: <https://www.dfs.ny.gov/industry_guidance/cybersecurity>. November 2023 amendment is the current version.
 - **GLBA Safeguards Rule (16 CFR Part 314)**: <https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-314>. FTC amendments (December 2021, with notification provision §314.5 effective May 2024).
-- **CIS AWS Foundations Benchmark**: <https://www.cisecurity.org/benchmark/amazon_web_services>. v5.0.0 is the Security Hub-supported version; v6.0.0 and v7.0.0 have shipped on cisecurity.org but Security Hub tooling support is lagging.
+- **CIS AWS Foundations Benchmark**: <https://www.cisecurity.org/benchmark/amazon_web_services>. v7.0.0 is the current release (S3 in §3.1, IAM in §2); AWS Security Hub's managed standard still implements v5.0.0, so console findings show the older §2.1.x / §1.x numbering.
 - **CIS PostgreSQL Benchmark**: <https://www.cisecurity.org/benchmark/postgresql>. Per-version hardening guides for v15, v16, and v17 (plus historical versions for legacy estates).
 
 ### CWE / MITRE ATT&CK
