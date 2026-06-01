@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end; Linux, Forensics, Network, Crypto, Web, and OSINT ship through level2 (v1.25.0 + v1.23.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0). 20 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end, and now all seven ship through level2 as well (v1.23.0 + v1.25.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0 + v1.30.0). 21 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -18,7 +18,7 @@ All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship lev
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall"), `level2@web` ("The Search Bar That Talks") | Meridian State University | FERPA |
 | Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw"), `level2@forensics` ("What Reed's Browser Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
 | OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project"), `level2@osint` ("The Internet Never Forgets") | Veridian Analytics | HIPAA / HITRUST CSF |
-| Cloud | `level0@cloud` ("Coverline's Twelfth Bucket"), `level1@cloud` ("The Migration Table Nobody Dropped") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
+| Cloud | `level0@cloud` ("Coverline's Twelfth Bucket"), `level1@cloud` ("The Migration Table Nobody Dropped"), `level2@cloud` ("The Key Nobody Turned Off") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
 
 ## Running it locally
 
@@ -163,7 +163,7 @@ d3cyph3r/
 │   ├── web.js               Web track (level0 + level1 + level2) — Meridian State U / FERPA
 │   ├── forensics.js         Forensics track (level0 + level1 + level2) — Polaris DS / CMMC
 │   ├── osint.js             OSINT track (level0 + level1 + level2) — Veridian / HIPAA + HITRUST
-│   └── cloud.js             Cloud track (level0 + level1) — Coverline / SOC 2 + NAIC
+│   └── cloud.js             Cloud track (level0 + level1 + level2) — Coverline / SOC 2 + NAIC
 ├── walkthroughs/            Long-form solve guides (separate subsite)
 │   ├── index.html           Walkthrough reader shell
 │   ├── walkthrough.css      Docs-reader theme (distinct from main terminal)
@@ -188,7 +188,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 ## Roadmap
 
-All seven tracks ship level0 + level1; Linux, Forensics, Network, Crypto, Web, and OSINT now ship through level2 (v1.25.0 + v1.23.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0). The next phase finishes the v2.0.0 "Apprentice" milestone with level2 for the last remaining track (Cloud). Every shipped level1 already leaks a breadcrumb credential staged for its level2; the credential-chain stays consistent track-to-track even as the level2 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
+All seven tracks now ship level0, level1, AND level2 — the level2 sweep is complete (v1.23.0 + v1.25.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0 + v1.30.0), which meets the bar for the v2.0.0 "Apprentice" milestone: level2 playable on every track. Every shipped level2 in turn leaks a breadcrumb credential staged for its level3, so the per-track credential chain stays consistent as level3 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 
@@ -208,7 +208,7 @@ See `help` inside the terminal for the full reference. Track-by-track:
 - **Web:** `curl` (+ `-X` / `-d` / `-H` / `-I` / `-L` / `-o` / `-kvs`) / `gobuster` (+ `-u` / `-w` / `-x` / `-t`) / `cookies`
 - **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sqlite3` (read-only SQLite queries — `.tables`, `.schema`, SELECT with WHERE/LIKE/ORDER BY/LIMIT/COUNT) / `sha256sum` / `md5sum`
 - **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo` / `github` (+ `/repo` + `file <path>`)
-- **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity` / `psql` (+ `-d` / `\l` / `\dt` / `SELECT … FROM … [LIMIT N]`)
+- **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws iam list-access-keys` / `aws iam get-access-key-last-used` / `aws iam get-account-summary` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity` / `psql` (+ `-d` / `\l` / `\dt` / `SELECT … FROM … [LIMIT N]`)
 - **Text processing (pipe-friendly):** `wc` / `sort` / `uniq` / `cut` / `tr` / `awk` / `sed` (`s/pat/repl/[g]`, `-n 'Np'`) / `printf` / `jq` (`.path` queries, `-r` / `-c`)
 - **System info:** `which` / `type` / `id` / `uname` / `date` / `uptime` / `hostname`
 - **System inspection:** `crontab -l` / `last` / `who` / `w` / `lsof` / `ss` / `journalctl` / `systemctl status` / `dmesg` / `df` / `du` / `free`

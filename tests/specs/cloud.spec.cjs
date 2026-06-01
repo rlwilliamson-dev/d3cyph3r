@@ -370,4 +370,175 @@ test.describe("cloud track", () => {
       });
     });
   });
+
+  // ── Level 2 — The Bot That Kept Admin ─────────────────────────────
+  // IAM least-privilege audit: a dormant legacy-deploy-bot with
+  // AdministratorAccess. Gate is level1's broker-portal-svc breadcrumb.
+  test.describe("level2@cloud — The Bot That Kept Admin", () => {
+    test("wrong password is rejected at the gate", async ({ page }) => {
+      await dispatchCmd(page, "ssh level2@cloud");
+      await dispatchCmd(page, "not-the-password");
+      const t = await terminalText(page);
+      expect(t).toContain("Permission denied, please try again.");
+    });
+
+    test.describe("inside level2", () => {
+      test.beforeEach(async ({ page }) => {
+        await dispatchCmd(page, "ssh level2@cloud");
+        await dispatchCmd(page, "Cv-BrokerSvc-Pr0d-2024-Migration");
+        await waitForOutput(page, "Connected: level2@cloud");
+        // Dismiss the v1.11.0 persistence opt-in prompt.
+        await waitForOutput(page, "Save your progress across browser sessions?");
+        await dispatchCmd(page, "n");
+        await waitForOutput(page, "Progress stays in this tab only");
+      });
+
+      test("connection banner + prompt identity", async ({ page }) => {
+        const t = await terminalText(page);
+        expect(t).toContain("Connected: level2@cloud");
+        // Objective/lesson reference the IAM audit.
+        expect(t).toMatch(/IAM|privilege|principal/i);
+
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@cloud:");
+        expect(prompt.startsWith("cloudsec@")).toBeTruthy();
+      });
+
+      test("ls shows the level2 fileset incl. the migration tooling dir", async ({ page }) => {
+        await dispatchCmd(page, "ls");
+        const t = await terminalText(page);
+        for (const f of [
+          "welcome.md",
+          "engagement-notes.md",
+          "migration-2024",
+          "lessons-learned.md",
+        ]) {
+          expect(t, `ls shows ${f}`).toContain(f);
+        }
+      });
+
+      test("aws sts get-caller-identity confirms broker-portal-svc in Coverline's account", async ({ page }) => {
+        await dispatchCmd(page, "aws sts get-caller-identity");
+        const t = await terminalText(page);
+        expect(t).toContain("broker-portal-svc");
+        expect(t).toContain("390210448812");
+      });
+
+      test("aws iam list-users enumerates the migration-era principals", async ({ page }) => {
+        await dispatchCmd(page, "aws iam list-users");
+        const t = await terminalText(page);
+        for (const u of [
+          "legacy-deploy-bot",
+          "migration-runner-bot",
+          "ci-deploy-svc",
+          "vikram.shah",
+          "broker-portal-svc",
+        ]) {
+          expect(t, `list-users shows ${u}`).toContain(u);
+        }
+      });
+
+      test("legacy-deploy-bot has AdministratorAccess attached (THE finding)", async ({ page }) => {
+        await dispatchCmd(page, "aws iam list-attached-user-policies --user-name legacy-deploy-bot");
+        const t = await terminalText(page);
+        expect(t).toContain("AdministratorAccess");
+      });
+
+      test("get-policy on AdministratorAccess shows the *:* god-mode grant", async ({ page }) => {
+        await dispatchCmd(page, "aws iam get-policy --policy-arn arn:aws:iam::aws:policy/AdministratorAccess");
+        const t = await terminalText(page);
+        expect(t).toContain('"Action": "*"');
+        expect(t).toContain('"Resource": "*"');
+      });
+
+      test("migration-runner-bot is tightly scoped (the least-privilege contrast)", async ({ page }) => {
+        await dispatchCmd(page, "aws iam list-attached-user-policies --user-name migration-runner-bot");
+        const t = await terminalText(page);
+        // The scoped policy name is the contrast vs legacy-deploy-bot's
+        // AdministratorAccess. (A negative `.not.toContain` would false-
+        // positive on the connection banner, which prints the objective —
+        // and the objective text names AdministratorAccess.)
+        expect(t).toContain("coverline-migration-s3-scoped");
+        // The scoped policy doc grants only s3 on the migration buckets.
+        await dispatchCmd(page, "aws iam get-policy --policy-arn arn:aws:iam::390210448812:policy/coverline-migration-s3-scoped");
+        const t2 = await terminalText(page);
+        expect(t2).toContain("coverline-migration-*");
+      });
+
+      test("legacy-deploy-bot's access key is Active and dates to the 2024 migration", async ({ page }) => {
+        await dispatchCmd(page, "aws iam list-access-keys --user-name legacy-deploy-bot");
+        const t = await terminalText(page);
+        expect(t).toContain("AKIA7X4DEPLOYB0T2024");
+        expect(t).toContain("Active");
+        expect(t).toContain("2024-02-15");
+      });
+
+      test("get-access-key-last-used shows the bot's key dormant since 2024 (the dormancy signal)", async ({ page }) => {
+        await dispatchCmd(page, "aws iam get-access-key-last-used --access-key-id AKIA7X4DEPLOYB0T2024");
+        const t = await terminalText(page);
+        expect(t).toContain("legacy-deploy-bot");
+        expect(t).toContain("2024-03-02");
+      });
+
+      test("BONUS: inspecting vikram.shah's still-Active key fires 'Ghost of a terminated admin'", async ({ page }) => {
+        await dispatchCmd(page, "aws iam list-access-keys --user-name vikram.shah");
+        const t = await terminalText(page);
+        expect(t).toContain("Active");
+        expect(t, "ghost-terminated-admin bonus fires").toContain("Bonus find unlocked: Ghost of a terminated admin");
+      });
+
+      test("BONUS: ci-deploy-svc's 2019 key fires 'A key older than the cloud team'", async ({ page }) => {
+        await dispatchCmd(page, "aws iam list-access-keys --user-name ci-deploy-svc");
+        const t = await terminalText(page);
+        expect(t).toContain("2019");
+        expect(t, "ancient-access-key bonus fires").toContain("Bonus find unlocked: A key older than the cloud team");
+      });
+
+      test("BONUS: get-account-summary reveals a root access key + fires the root bonus", async ({ page }) => {
+        await dispatchCmd(page, "aws iam get-account-summary");
+        const t = await terminalText(page);
+        expect(t).toContain("AccountAccessKeysPresent");
+        expect(t, "root-access-key bonus fires").toContain("Bonus find unlocked: Root still has an access key");
+      });
+
+      test("the leftover bootstrap-creds file carries the level3 breadcrumb", async ({ page }) => {
+        // THE BREADCRUMB — the secret for the dormant admin bot, left
+        // in cleartext in Vikram's 2024 migration tooling.
+        await dispatchCmd(page, "cat migration-2024/bootstrap-iam-keys.env");
+        const t = await terminalText(page);
+        expect(t).toContain("AKIA7X4DEPLOYB0T2024");
+        expect(t).toContain("Ldb0t"); // start of the legacy-deploy-bot secret (level3 gate)
+        expect(t).toContain("legacy-deploy-bot");
+      });
+
+      test("lessons-learned.md cites the relevant frameworks", async ({ page }) => {
+        await dispatchCmd(page, "cat lessons-learned.md");
+        const t = await terminalText(page);
+        expect(t).toContain("AC-6");
+        expect(t).toContain("CWE-269");
+        expect(t).toContain("CWE-250");
+        expect(t).toContain("T1078.004");
+        expect(t).toContain("SCS-C03");
+        expect(t).toContain("500.07");
+        expect(t).toContain("least privilege");
+      });
+
+      test("whoami prints 'cloudsec' on the bastion", async ({ page }) => {
+        await dispatchCmd(page, "whoami");
+        const t = await terminalText(page);
+        expect(t).toMatch(/\bcloudsec\b/);
+      });
+
+      test("exit from level2@cloud returns to the lobby", async ({ page }) => {
+        await dispatchCmd(page, "exit");
+        await page.waitForFunction(
+          () => document.getElementById("prompt-label")?.innerText.includes("@d3cyph3r:"),
+          null,
+          { timeout: 5000 },
+        );
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@d3cyph3r:");
+      });
+    });
+  });
 });

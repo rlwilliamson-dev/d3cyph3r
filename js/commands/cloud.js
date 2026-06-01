@@ -9,11 +9,26 @@
 //   aws iam list-users
 //   aws iam list-attached-user-policies --user-name <user>
 //   aws iam get-policy --policy-arn <arn>
+//   aws iam list-access-keys --user-name <user>
+//   aws iam get-access-key-last-used --access-key-id <id>
+//   aws iam get-account-summary
 //   aws ec2 describe-instances
 //   aws ec2 describe-security-groups
 //   aws sts get-caller-identity
 //
-// Reads from `level.cloud = { s3, iam, ec2, sts }`. Treats
+// The three access-key / account-summary `iam` reads (added in
+// v1.30.0 for level2@cloud) are the real AWS commands an auditor
+// uses to answer "is this credential active, and when was it last
+// used?" — list-access-keys reports Status + CreateDate but NOT the
+// secret (AWS never returns a secret after creation), get-access-
+// key-last-used reports the dormancy signal Trusted Advisor keys
+// off, and get-account-summary surfaces account-wide posture flags
+// like AccountAccessKeysPresent (a root access key — CIS 1.4).
+//
+// Reads from `level.cloud = { s3, iam, ec2, sts }`, where `iam` now
+// also carries `accessKeys` (per-user key metadata), `accessKeyLast-
+// Used` (per-key last-used record), and `accountSummary` (the
+// SummaryMap). Treats
 // `--no-sign-request` and `--profile <name>` as no-ops (the player
 // can include them for realism without breaking the command).
 //
@@ -64,6 +79,9 @@ Available services:
   iam  list-users
        list-attached-user-policies --user-name <user>
        get-policy --policy-arn <arn>
+       list-access-keys --user-name <user>
+       get-access-key-last-used --access-key-id <id>
+       get-account-summary
 
   ec2  describe-instances
        describe-security-groups
@@ -197,6 +215,91 @@ function awsIamGetPolicy(level, rest) {
   } else {
     lines.push(`    (no document attached)`);
   }
+  return { text: lines.join("\n"), cls: "out" };
+}
+
+// `aws iam list-access-keys --user-name <user>` — list the access
+// keys provisioned for an IAM user. Mirrors the real API's
+// AccessKeyMetadata: each entry carries the AccessKeyId, the Status
+// (Active | Inactive), and the CreateDate — but NEVER the secret
+// (AWS only ever returns a secret once, at creation time). Reads
+// from `level.cloud.iam.accessKeys[user]`, an array of
+// `{ AccessKeyId, Status, CreateDate }`. A user with no keys returns
+// an empty AccessKeyMetadata; an unknown user returns NoSuchEntity
+// (matching the other iam reads).
+function awsIamListAccessKeys(level, rest) {
+  const idx = rest.indexOf("--user-name");
+  if (idx < 0 || !rest[idx + 1]) {
+    return { text: "Usage: aws iam list-access-keys --user-name <user>", cls: "err" };
+  }
+  const user = rest[idx + 1];
+  const keys = level.cloud?.iam?.accessKeys?.[user];
+  if (!keys) {
+    return { text: `An error occurred (NoSuchEntity) when calling the ListAccessKeys operation: The user with name ${user} cannot be found.`, cls: "err" };
+  }
+  if (keys.length === 0) return { text: "AccessKeyMetadata: (no access keys for this user)", cls: "dim" };
+  const lines = ["AccessKeyMetadata:"];
+  keys.forEach(k => {
+    lines.push(``);
+    lines.push(`  UserName:     ${user}`);
+    lines.push(`  AccessKeyId:  ${k.AccessKeyId}`);
+    lines.push(`  Status:       ${k.Status}`);
+    lines.push(`  CreateDate:   ${k.CreateDate}`);
+  });
+  return { text: lines.join("\n"), cls: "out" };
+}
+
+// `aws iam get-access-key-last-used --access-key-id <id>` — the
+// dormancy signal. Reports when an access key was last used to call
+// AWS, by which service, in which region. This is the data AWS
+// Trusted Advisor's "unused IAM credentials" check and the IAM
+// credential report key off. A key can be Status: Active yet have a
+// LastUsedDate two years in the past — that's the exact "dormant but
+// not disabled" finding this level teaches. Reads from
+// `level.cloud.iam.accessKeyLastUsed[accessKeyId]` =
+// `{ UserName, LastUsedDate, ServiceName, Region }`. A key that has
+// NEVER been used reports LastUsedDate absent + ServiceName/Region
+// = "N/A" (we render any falsy field as "N/A", matching real AWS).
+function awsIamGetAccessKeyLastUsed(level, rest) {
+  const idx = rest.indexOf("--access-key-id");
+  if (idx < 0 || !rest[idx + 1]) {
+    return { text: "Usage: aws iam get-access-key-last-used --access-key-id <id>", cls: "err" };
+  }
+  const id = rest[idx + 1];
+  const lu = level.cloud?.iam?.accessKeyLastUsed?.[id];
+  if (!lu) {
+    return { text: `An error occurred (NoSuchEntity) when calling the GetAccessKeyLastUsed operation: The Access Key with id ${id} cannot be found.`, cls: "err" };
+  }
+  const lines = [
+    `UserName:  ${lu.UserName}`,
+    `AccessKeyLastUsed:`,
+    `  LastUsedDate:  ${lu.LastUsedDate || "N/A"}`,
+    `  ServiceName:   ${lu.ServiceName || "N/A"}`,
+    `  Region:        ${lu.Region || "N/A"}`,
+  ];
+  return { text: lines.join("\n"), cls: "out" };
+}
+
+// `aws iam get-account-summary` — account-wide IAM posture. Mirrors
+// the real API's SummaryMap: a flat map of account-level counts and
+// boolean flags (encoded as 0/1 by AWS). The security-relevant ones:
+//   AccountAccessKeysPresent  1 = the root user has an access key
+//                             (CIS AWS Foundations 1.4 — should be 0)
+//   AccountMFAEnabled         0 = root MFA is off (CIS 1.5)
+//   Users / Policies / etc.   inventory counts
+// Reads the map verbatim from `level.cloud.iam.accountSummary` and
+// renders it aligned. Order is preserved from the level data so the
+// author controls which flag the player sees first.
+function awsIamGetAccountSummary(level) {
+  const summary = level.cloud?.iam?.accountSummary;
+  if (!summary) {
+    return { text: "(account summary not available with the current credentials)", cls: "dim" };
+  }
+  const keys = Object.keys(summary);
+  if (keys.length === 0) return { text: "SummaryMap: (empty)", cls: "dim" };
+  const w = Math.max(...keys.map(k => k.length));
+  const lines = ["SummaryMap:"];
+  keys.forEach(k => lines.push(`  ${(k + ":").padEnd(w + 1)}  ${summary[k]}`));
   return { text: lines.join("\n"), cls: "out" };
 }
 
@@ -465,6 +568,9 @@ export const cloudCommands = {
     if (svc === "iam" && sub === "list-users")                   return awsIamListUsers(level);
     if (svc === "iam" && sub === "list-attached-user-policies")  return awsIamListAttachedUserPolicies(level, rest);
     if (svc === "iam" && sub === "get-policy")                   return awsIamGetPolicy(level, rest);
+    if (svc === "iam" && sub === "list-access-keys")             return awsIamListAccessKeys(level, rest);
+    if (svc === "iam" && sub === "get-access-key-last-used")     return awsIamGetAccessKeyLastUsed(level, rest);
+    if (svc === "iam" && sub === "get-account-summary")          return awsIamGetAccountSummary(level);
 
     if (svc === "ec2" && sub === "describe-instances")        return awsEc2DescribeInstances(level);
     if (svc === "ec2" && sub === "describe-security-groups")  return awsEc2DescribeSecurityGroups(level);
