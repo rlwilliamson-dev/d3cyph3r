@@ -359,6 +359,21 @@ const MANIFEST = {
           "(`pgaudit` was never enabled). CWE-798 + CWE-540 + the " +
           "credentials-in-DB-rows anti-pattern.",
       },
+      level2: {
+        title: "The Key Nobody Turned Off",
+        blurb:
+          "Day three. The recovered broker-portal-svc credential turns out " +
+          "to be an over-permissioned IAM user, so Driftwood runs a " +
+          "least-privilege pass across Coverline's account. Among 16 " +
+          "principals, a 2024-migration `legacy-deploy-bot` still carries " +
+          "AdministratorAccess and a still-Active access key last used in " +
+          "2024 — a dormant god-mode credential nobody turned off. Its " +
+          "secret, left in a leftover bootstrap-creds file on the bastion, " +
+          "is the level3 breadcrumb. Three bonus finds: an orphaned " +
+          "terminated-employee account, a never-rotated 2019 key, and a " +
+          "root access key. CWE-269 / CWE-250 + CIS AWS 1.4/1.12/1.16 + " +
+          "MITRE T1078.004.",
+      },
     },
   },
 };

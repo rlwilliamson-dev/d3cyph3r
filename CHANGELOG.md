@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.30.0] - 2026-06-01
+
+**level2@cloud ships — every one of the seven tracks is now playable through level2.** Day three of the Coverline Insurance engagement. The `broker-portal-svc` credential recovered from level1's migration-artifacts table turns out to be an over-permissioned IAM user, and Driftwood runs an IAM least-privilege audit across Coverline's AWS account. Among 16 principals, a 2024-migration `legacy-deploy-bot` still carries `AdministratorAccess` — full `*:*` over the entire account — and its access key is still Active, last used back in 2024. It is a dormant, god-mode credential nobody turned off, orphaned when the migration's owner left the company before cutover even finished. The lesson stack: least privilege is a continuous subtraction, not a one-time setting; "Active" and "last used" are different questions you must ask separately; and AWS never returns a secret after creation, so dormant keys leak from leftover files, not from any API. CWE-269 + CWE-250; CIS AWS Foundations Benchmark 1.4 / 1.12 / 1.14 / 1.16; MITRE T1078.004.
+
+### Added
+
+- **`level2@cloud` — "The Key Nobody Turned Off" / lobby title "The bot that kept admin (iam)".** Coverline cloud-audit bastion, tier Routine, est. 15 min. The player enumerates IAM (`list-users` → `list-attached-user-policies` → `get-policy` → `list-access-keys` → `get-access-key-last-used`), proves which migration-era service account holds dormant administrative access, and recovers its secret from a leftover bootstrap-credentials file to carry the engagement to level3. Three bonus finds: an orphaned terminated-employee IAM user still Active 2.5 years on, a service access key created in 2019 and never rotated, and a root-user access key surfaced by the account summary.
+- **Three faithful `aws iam` read subcommands** (`js/commands/cloud.js`): `list-access-keys --user-name`, `get-access-key-last-used --access-key-id`, and `get-account-summary`. These are the real AWS commands an auditor uses to answer "is this credential active, and when was it last used?" — `list-access-keys` reports status and creation date but never the secret (AWS only returns a secret once, at creation), `get-access-key-last-used` reports the dormancy signal, and `get-account-summary` surfaces account-wide posture flags like a present root access key.
+- **`walkthroughs/cloud/level2.md`** ships in the same release. 9-section format covering least privilege as continuous subtraction, the active-versus-dormant distinction, why dormant secrets leak from files rather than APIs, NIST SP 800-53 AC-6 / AC-2, the CIS AWS Foundations Benchmark §1 controls, NIST CSF 2.0 PR.AA, SOC 2 CC6, NYDFS 500.07, and a defender playbook (IAM Access Analyzer, AWS Config rules, SCPs, permissions boundaries, short-lived credentials). Capital One 2019, the 2018 Cisco ex-employee WebEx-deletion case, and Unit 42's 2023 EleKtra-Leak campaign cited as real-world parallels.
+
 ## [1.29.1] - 2026-05-30
 
 **Walkthrough consistency pass.** No gameplay, engine, or level changes — a documentation pass that makes every walkthrough on the subsite follow the same section outline.
@@ -3784,7 +3794,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.30.0...HEAD
+[1.30.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.1...v1.30.0
 [1.29.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.0...v1.29.1
 [1.29.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.27.0...v1.28.0

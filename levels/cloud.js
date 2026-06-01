@@ -38,6 +38,28 @@
 //           Document: { Version: "2012-10-17", Statement: [...] },
 //         },
 //       },
+//       // v1.30.0 — access-key metadata + account posture (level2@cloud).
+//       accessKeys: {                                 // `aws iam list-access-keys
+//         "legacy-deploy-bot": [                      //  --user-name <user>`
+//           { AccessKeyId: "AKIA...", Status: "Active", CreateDate: "2024-02-15" },
+//           // NOTE: the SECRET is never stored here — AWS never returns
+//           // a secret after creation, and neither does this engine.
+//         ],
+//       },
+//       accessKeyLastUsed: {                          // `aws iam get-access-key-
+//         "AKIA...": {                                //  last-used --access-key-id <id>`
+//           UserName: "legacy-deploy-bot",
+//           LastUsedDate: "2024-03-02 07:41:55",      // falsy => rendered "N/A"
+//           ServiceName: "s3",                        //  (key never used)
+//           Region: "us-east-2",
+//         },
+//       },
+//       accountSummary: {                             // `aws iam get-account-summary`
+//         Users: 18,                                  //  — flat SummaryMap; AWS
+//         AccountAccessKeysPresent: 1,                //  encodes booleans as 0/1.
+//         AccountMFAEnabled: 0,                       //  Author controls key order
+//         // ...                                      //  (= player's reading order).
+//       },
 //     },
 //     ec2: {
 //       instances: [
@@ -2175,6 +2197,740 @@ The forensic finding is small. The system around it is what
 makes it actionable.
 
 Return to the lobby:    ssh guest@d3cyph3r`
+        },
+
+      },
+    },
+  },
+
+  // ── level 2 — "The bot that kept admin (iam)" ───────────────────
+  // Day three of the Coverline engagement. The broker-portal-svc
+  // credential recovered from level1's RDS migration_artifacts table
+  // turns out to be an over-permissioned IAM user (account-wide read),
+  // and that read access is the lens for an IAM least-privilege audit.
+  //
+  // The teaching artifact is `legacy-deploy-bot`: an IAM user created
+  // by vikram.shah's 2024 us-east-1 -> us-east-2 migration pipeline,
+  // handed AWS-managed AdministratorAccess ("*" on "*") to unblock the
+  // cutover, and never torn down — vikram was terminated 2024-01-31
+  // (USR-004 in level1's users table), the teardown had no other
+  // owner, and the bot's access key is STILL Status: Active two-plus
+  // years later, last used 2024-03-02. Active + AdministratorAccess +
+  // unused = the quietest catastrophic finding in cloud security
+  // (CWE-269 / CWE-250; CIS AWS 2.11 + 2.14; MITRE T1078.004).
+  //
+  // The player enumerates IAM (list-users -> list-attached-user-
+  // policies -> get-policy -> list-access-keys -> get-access-key-last-
+  // used) to prove the blast radius. The bot's SECRET is NOT
+  // retrievable from AWS (no API returns a secret after creation), so
+  // it leaks the realistic way: a leftover 2024 bootstrap-creds file
+  // on the bastion (~/migration-2024/bootstrap-iam-keys.env) carries
+  // five service-account key pairs in cleartext. IAM enumeration is
+  // what tells the player WHICH of the five (legacy-deploy-bot) is the
+  // god-mode dormant identity worth assuming — its 40-char secret is
+  // the level3@cloud entry gate.
+  //
+  // Three bonus finds, all orthogonal to the breadcrumb, all firing on
+  // commands the player already runs:
+  //   - ghost-terminated-admin : vikram.shah's IAM user + key still
+  //     Active 2.5 years post-termination (offboarding / JML failure).
+  //   - ancient-access-key     : ci-deploy-svc's key created 2019,
+  //     never rotated (CIS 2.12 / 90-day rotation).
+  //   - root-access-key        : get-account-summary shows
+  //     AccountAccessKeysPresent = 1 (root has a key — CIS 2.4).
+  //
+  // New engine surface (v1.30.0, js/commands/cloud.js): three faithful
+  // `aws iam` reads — list-access-keys, get-access-key-last-used,
+  // get-account-summary — added because no existing primitive could
+  // express "this credential is active but hasn't been used since
+  // 2024." Everything else reuses the AWS CLI shipped since v0.4.
+  "level2@cloud": {
+    password: "Cv-BrokerSvc-Pr0d-2024-Migration",
+    track: "cloud",
+    title: "The bot that kept admin (iam)",
+    estimatedMinutes: 15,
+    playerUser: "cloudsec",
+    objective: "Audit Coverline's AWS IAM for over-privileged and dormant principals left behind by the 2024 us-east-1 to us-east-2 migration. Find any IAM user with account-wide or AdministratorAccess privileges, any access key that is Active but unused, and any account that should have been deprovisioned. Recover the credential that demonstrates the worst blast radius for the level3 follow-on. Read-only audit — enumerate, don't modify.",
+    lesson: "Day three at Coverline. The broker-portal-svc credential you recovered from the database turned out to be more than a database password — it is an over-permissioned IAM user with account-wide read, configured as this shell's AWS profile. Before Coverline rotates every credential the engagement surfaced, Sloane Becker wants an IAM hygiene pass: which principals can do what, and which ones from the 2024 migration were never torn down? Read welcome.md for the three new `aws iam` reads, then engagement-notes.md for the tasking. The migration left tooling on this bastion — look under ~/migration-2024. Read lessons-learned.md once you have found the principal that kept admin.",
+
+    hints: [
+      "Start with `aws sts get-caller-identity` (you are broker-portal-svc), then `aws iam list-users` to see every principal in Coverline's account. The engagement notes say to start with the non-human 'service' accounts from the 2024 migration — those are the names that aren't firstname.lastname.",
+      "For each suspect, `aws iam list-attached-user-policies --user-name <user>`. One migration service account has AdministratorAccess attached; confirm the blast radius with `aws iam get-policy --policy-arn arn:aws:iam::aws:policy/AdministratorAccess` (Action '*' on Resource '*'). Compare it to migration-runner-bot, which is tightly scoped — checking the policy, not the name, is the whole skill.",
+      "`aws iam list-access-keys --user-name legacy-deploy-bot` shows the key is still Active; `aws iam get-access-key-last-used --access-key-id <id>` shows it has not been used since 2024. Active + unused + AdministratorAccess is the finding. The bot's secret key itself was left behind in vikram.shah's migration tooling — `ls migration-2024/` then read bootstrap-iam-keys.env.",
+    ],
+
+    // v1.9.0 SHELL ENVIRONMENT — the bastion's AWS profile is the
+    // recovered broker-portal-svc identity. `env` shows it; reinforces
+    // that `aws` calls run as that (over-permissioned) service user.
+    env_vars: {
+      AWS_PROFILE: "broker-portal-svc",
+      AWS_DEFAULT_REGION: "us-east-2",
+    },
+
+    // v1.10.0 BONUS FINDS — see the design comment above. All three
+    // fire on `aws` subcommands the player runs during the audit and
+    // do not gate the credential chain.
+    bonusFinds: [
+      {
+        id:   "ghost-terminated-admin",
+        name: "Ghost of a terminated admin",
+        hint: "vikram.shah left Coverline on 2024-01-31 (he is the terminated USR-004 from yesterday's database). His IAM user — and a PowerUserAccess-class access key — are still Active. Disabling a leaver everywhere is the 'L' in joiner-mover-leaver, and it is the half organizations skip: HR offboarding and IAM deprovisioning are rarely wired together. MITRE T1078.004 (Valid Accounts: Cloud Accounts) — a valid, never-revoked credential is the cleanest persistence an attacker can inherit.",
+        trigger: { command: "aws", argMatches: /vikram\.shah/ },
+      },
+      {
+        id:   "ancient-access-key",
+        name: "A key older than the cloud team",
+        hint: "ci-deploy-svc's access key was created 2019-06-03 and is still Active in 2026 — never rotated, seven years old. CIS AWS Foundations Benchmark 2.12 calls for rotation every 90 days; AWS Trusted Advisor and the IAM credential report both flag key age. Long-lived static keys are the credential type most likely to end up in a git history, a CI log, or a laptop backup. The modern answer is short-lived credentials (IAM roles / OIDC federation) so there is no static key to rotate at all.",
+        trigger: { command: "aws", argMatches: /ci-deploy-svc/, outputContains: "2019" },
+      },
+      {
+        id:   "root-access-key",
+        name: "Root still has an access key",
+        hint: "get-account-summary reports AccountAccessKeysPresent = 1 — the AWS account root user has a long-lived access key. This is CIS AWS Foundations Benchmark 2.4, one of the most serious account-level findings there is: the root user cannot be constrained by IAM policies or SCPs, so a leaked root key is unrecoverable game-over. Root should have NO access keys and MFA enabled (AccountMFAEnabled here is 0 — also a finding), and be used only for the handful of tasks that genuinely require it.",
+        trigger: { command: "aws", argMatches: /get-account-summary/, outputContains: "AccountAccessKeysPresent" },
+      },
+    ],
+
+    cloud: {
+      // The player is authenticated as broker-portal-svc inside
+      // Coverline's account (390210448812), distinct from Driftwood's
+      // own account (778899012345) used for level0's external recon.
+      sts: {
+        UserId: "AIDABROKERPORTALSVC01",
+        Account: "390210448812",
+        Arn: "arn:aws:iam::390210448812:user/broker-portal-svc",
+      },
+      iam: {
+        // 16 principals: 8 humans (firstname.lastname) + 8 machine
+        // identities (svc / bot / ci). vikram.shah is the orphaned
+        // terminated employee; legacy-deploy-bot is the prize.
+        users: [
+          { user_name: "sloane.becker",        arn: "arn:aws:iam::390210448812:user/sloane.becker" },
+          { user_name: "jordan.nguyen",        arn: "arn:aws:iam::390210448812:user/jordan.nguyen" },
+          { user_name: "priya.raman",          arn: "arn:aws:iam::390210448812:user/priya.raman" },
+          { user_name: "marcus.webb",          arn: "arn:aws:iam::390210448812:user/marcus.webb" },
+          { user_name: "kim.chen",             arn: "arn:aws:iam::390210448812:user/kim.chen" },
+          { user_name: "sarah.mitchell",       arn: "arn:aws:iam::390210448812:user/sarah.mitchell" },
+          { user_name: "james.okafor",         arn: "arn:aws:iam::390210448812:user/james.okafor" },
+          { user_name: "vikram.shah",          arn: "arn:aws:iam::390210448812:user/vikram.shah" },
+          { user_name: "broker-portal-svc",    arn: "arn:aws:iam::390210448812:user/broker-portal-svc" },
+          { user_name: "legacy-deploy-bot",    arn: "arn:aws:iam::390210448812:user/legacy-deploy-bot" },
+          { user_name: "migration-runner-bot", arn: "arn:aws:iam::390210448812:user/migration-runner-bot" },
+          { user_name: "ci-deploy-svc",        arn: "arn:aws:iam::390210448812:user/ci-deploy-svc" },
+          { user_name: "backup-svc",           arn: "arn:aws:iam::390210448812:user/backup-svc" },
+          { user_name: "naic-exchange-svc",    arn: "arn:aws:iam::390210448812:user/naic-exchange-svc" },
+          { user_name: "terraform-ci",         arn: "arn:aws:iam::390210448812:user/terraform-ci" },
+          { user_name: "monitoring-svc",       arn: "arn:aws:iam::390210448812:user/monitoring-svc" },
+        ],
+        attachedUserPolicies: {
+          "sloane.becker":        [{ PolicyName: "SecurityAudit", PolicyArn: "arn:aws:iam::aws:policy/SecurityAudit" }, { PolicyName: "IAMReadOnlyAccess", PolicyArn: "arn:aws:iam::aws:policy/IAMReadOnlyAccess" }],
+          "jordan.nguyen":        [{ PolicyName: "ReadOnlyAccess", PolicyArn: "arn:aws:iam::aws:policy/ReadOnlyAccess" }],
+          "priya.raman":          [{ PolicyName: "CoverlinePlatformAdmin", PolicyArn: "arn:aws:iam::390210448812:policy/CoverlinePlatformAdmin" }],
+          "marcus.webb":          [{ PolicyName: "CoverlineDevOpsAccess", PolicyArn: "arn:aws:iam::390210448812:policy/CoverlineDevOpsAccess" }],
+          "kim.chen":             [{ PolicyName: "CoverlineAdjusterAccess", PolicyArn: "arn:aws:iam::390210448812:policy/CoverlineAdjusterAccess" }],
+          "sarah.mitchell":       [{ PolicyName: "CoverlineAdjusterAccess", PolicyArn: "arn:aws:iam::390210448812:policy/CoverlineAdjusterAccess" }],
+          "james.okafor":         [{ PolicyName: "CoverlineAdjusterAccess", PolicyArn: "arn:aws:iam::390210448812:policy/CoverlineAdjusterAccess" }],
+          // BONUS: a terminated employee (left 2024-01-31) with
+          // PowerUserAccess — broad (everything-but-IAM) and never
+          // revoked. PowerUserAccess, not AdministratorAccess, keeps
+          // legacy-deploy-bot as the unique full-admin prize.
+          "vikram.shah":          [{ PolicyName: "PowerUserAccess", PolicyArn: "arn:aws:iam::aws:policy/PowerUserAccess" }],
+          // Finding zero: a broker-portal service with account-wide
+          // IAM read. The player is authenticated AS this user.
+          "broker-portal-svc":    [{ PolicyName: "coverline-broker-portal-readonly", PolicyArn: "arn:aws:iam::390210448812:policy/coverline-broker-portal-readonly" }],
+          // THE finding: AdministratorAccess on a dormant deploy bot.
+          "legacy-deploy-bot":    [{ PolicyName: "AdministratorAccess", PolicyArn: "arn:aws:iam::aws:policy/AdministratorAccess" }],
+          // The well-behaved contrast: a tightly-scoped migration bot.
+          "migration-runner-bot": [{ PolicyName: "coverline-migration-s3-scoped", PolicyArn: "arn:aws:iam::390210448812:policy/coverline-migration-s3-scoped" }],
+          "ci-deploy-svc":        [{ PolicyName: "coverline-ci-deploy", PolicyArn: "arn:aws:iam::390210448812:policy/coverline-ci-deploy" }],
+          "backup-svc":           [{ PolicyName: "coverline-backup-s3", PolicyArn: "arn:aws:iam::390210448812:policy/coverline-backup-s3" }],
+          "naic-exchange-svc":    [{ PolicyName: "coverline-naic-exchange", PolicyArn: "arn:aws:iam::390210448812:policy/coverline-naic-exchange" }],
+          "terraform-ci":         [{ PolicyName: "coverline-terraform-ci", PolicyArn: "arn:aws:iam::390210448812:policy/coverline-terraform-ci" }],
+          "monitoring-svc":       [{ PolicyName: "CloudWatchReadOnlyAccess", PolicyArn: "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess" }],
+        },
+        // Policy Documents the player is likely to inspect. The two
+        // that matter most are AdministratorAccess (the "*":"*" god
+        // mode) and coverline-migration-s3-scoped (least privilege done
+        // right) — the side-by-side is the lesson. get-policy on an arn
+        // not listed here returns a graceful "Policy not found".
+        policies: {
+          "arn:aws:iam::aws:policy/AdministratorAccess": {
+            PolicyName: "AdministratorAccess",
+            Description: "Provides full access to AWS services and resources.",
+            DefaultVersionId: "v1",
+            Document: { Version: "2012-10-17", Statement: [{ Effect: "Allow", Action: "*", Resource: "*" }] },
+          },
+          "arn:aws:iam::aws:policy/PowerUserAccess": {
+            PolicyName: "PowerUserAccess",
+            Description: "Provides full access to AWS services and resources, but does not allow management of Users and groups.",
+            DefaultVersionId: "v5",
+            Document: { Version: "2012-10-17", Statement: [{ Effect: "Allow", NotAction: ["iam:*", "organizations:*", "account:*"], Resource: "*" }] },
+          },
+          "arn:aws:iam::390210448812:policy/coverline-broker-portal-readonly": {
+            PolicyName: "coverline-broker-portal-readonly",
+            Description: "Read access for the broker-portal service. Provisioned 2024-02 during the migration and never scoped down.",
+            DefaultVersionId: "v3",
+            Document: { Version: "2012-10-17", Statement: [{ Sid: "BrokerPortalBroadRead", Effect: "Allow", Action: ["iam:List*", "iam:Get*", "s3:Get*", "s3:List*", "rds:Describe*", "ec2:Describe*", "cloudwatch:Get*"], Resource: "*" }] },
+          },
+          "arn:aws:iam::390210448812:policy/coverline-migration-s3-scoped": {
+            PolicyName: "coverline-migration-s3-scoped",
+            Description: "Least-privilege policy for migration-runner-bot: read/write the migration S3 buckets only.",
+            DefaultVersionId: "v1",
+            Document: { Version: "2012-10-17", Statement: [{ Sid: "MigrationBucketsOnly", Effect: "Allow", Action: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"], Resource: ["arn:aws:s3:::coverline-migration-*", "arn:aws:s3:::coverline-migration-*/*"] }] },
+          },
+          "arn:aws:iam::390210448812:policy/coverline-ci-deploy": {
+            PolicyName: "coverline-ci-deploy",
+            Description: "CI/CD deploy permissions for ci-deploy-svc.",
+            DefaultVersionId: "v2",
+            Document: { Version: "2012-10-17", Statement: [{ Sid: "CiDeploy", Effect: "Allow", Action: ["codedeploy:*", "s3:GetObject", "s3:PutObject", "ecs:UpdateService", "ecs:DescribeServices"], Resource: "*" }] },
+          },
+          "arn:aws:iam::390210448812:policy/CoverlineAdjusterAccess": {
+            PolicyName: "CoverlineAdjusterAccess",
+            Description: "Scoped access for claims adjusters: read claims objects only.",
+            DefaultVersionId: "v1",
+            Document: { Version: "2012-10-17", Statement: [{ Sid: "AdjusterReadClaims", Effect: "Allow", Action: ["s3:GetObject", "s3:ListBucket"], Resource: ["arn:aws:s3:::coverline-claims-*", "arn:aws:s3:::coverline-claims-*/*"] }] },
+          },
+        },
+        // Per-user access-key metadata (list-access-keys). Humans use
+        // console + MFA (no long-lived keys); machine identities carry
+        // keys. legacy-deploy-bot: Active. migration-runner-bot:
+        // Inactive (disabled by a later cleanup — the good outcome).
+        // ci-deploy-svc: a 2019 key (BONUS). vikram.shah: still Active.
+        accessKeys: {
+          "sloane.becker":        [],
+          "jordan.nguyen":        [],
+          "priya.raman":          [],
+          "marcus.webb":          [],
+          "kim.chen":             [],
+          "sarah.mitchell":       [],
+          "james.okafor":         [],
+          "vikram.shah":          [{ AccessKeyId: "AKIAVSHAH2022DEVOPSX", Status: "Active",   CreateDate: "2022-03-11" }],
+          "broker-portal-svc":    [{ AccessKeyId: "AKIABRKRPORTALSVC024", Status: "Active",   CreateDate: "2024-02-15" }],
+          "legacy-deploy-bot":    [{ AccessKeyId: "AKIA7X4DEPLOYB0T2024", Status: "Active",   CreateDate: "2024-02-15" }],
+          "migration-runner-bot": [{ AccessKeyId: "AKIAMIGRUNNERB0T024X", Status: "Inactive", CreateDate: "2024-02-15" }],
+          "ci-deploy-svc":        [{ AccessKeyId: "AKIA3RC1DEPLOY2019XQ", Status: "Active",   CreateDate: "2019-06-03" }],
+          "backup-svc":           [{ AccessKeyId: "AKIABACKUPSVC2023RDS", Status: "Active",   CreateDate: "2023-08-20" }],
+          "naic-exchange-svc":    [{ AccessKeyId: "AKIANAICEXCH2024SFTP", Status: "Active",   CreateDate: "2024-01-10" }],
+          "terraform-ci":         [{ AccessKeyId: "AKIATERRAFRMC12024XQ", Status: "Active",   CreateDate: "2024-05-02" }],
+          "monitoring-svc":       [{ AccessKeyId: "AKIAMONITORINGSVC024", Status: "Active",   CreateDate: "2024-06-18" }],
+        },
+        // Per-key last-used (get-access-key-last-used). The dormancy
+        // signal: legacy-deploy-bot last used 2024-03-02 (~2.2 yrs idle
+        // but Active). vikram.shah last used 2024-01-29 (just before
+        // termination, never since). ci-deploy-svc used recently — its
+        // finding is key AGE, not dormancy.
+        accessKeyLastUsed: {
+          "AKIAVSHAH2022DEVOPSX": { UserName: "vikram.shah",          LastUsedDate: "2024-01-29 16:50:33", ServiceName: "ec2",            Region: "us-east-2" },
+          "AKIABRKRPORTALSVC024": { UserName: "broker-portal-svc",    LastUsedDate: "2026-06-01 08:02:11", ServiceName: "iam",            Region: "us-east-2" },
+          "AKIA7X4DEPLOYB0T2024": { UserName: "legacy-deploy-bot",    LastUsedDate: "2024-03-02 07:41:55", ServiceName: "s3",             Region: "us-east-2" },
+          "AKIAMIGRUNNERB0T024X": { UserName: "migration-runner-bot", LastUsedDate: "2024-04-30 23:18:02", ServiceName: "s3",             Region: "us-east-2" },
+          "AKIA3RC1DEPLOY2019XQ": { UserName: "ci-deploy-svc",        LastUsedDate: "2026-05-31 02:14:50", ServiceName: "codedeploy",     Region: "us-east-2" },
+          "AKIABACKUPSVC2023RDS": { UserName: "backup-svc",           LastUsedDate: "2026-06-01 03:05:00", ServiceName: "rds",            Region: "us-east-2" },
+          "AKIANAICEXCH2024SFTP": { UserName: "naic-exchange-svc",    LastUsedDate: "2026-05-28 06:00:00", ServiceName: "s3",             Region: "us-east-2" },
+          "AKIATERRAFRMC12024XQ": { UserName: "terraform-ci",         LastUsedDate: "2026-05-30 19:22:41", ServiceName: "cloudformation", Region: "us-east-2" },
+          "AKIAMONITORINGSVC024": { UserName: "monitoring-svc",       LastUsedDate: "2026-06-01 07:59:00", ServiceName: "monitoring",     Region: "us-east-2" },
+        },
+        // Account posture (get-account-summary). AWS encodes booleans
+        // as 0/1. AccountAccessKeysPresent = 1 (root key — CIS 2.4,
+        // BONUS) + AccountMFAEnabled = 0 (root MFA off — CIS 2.5).
+        accountSummary: {
+          Users: 16,
+          UsersQuota: 5000,
+          Groups: 6,
+          Policies: 24,
+          AccountAccessKeysPresent: 1,
+          AccountMFAEnabled: 0,
+          AccountSigningCertificatesPresent: 0,
+          MFADevices: 13,
+          MFADevicesInUse: 13,
+          AccessKeysPerUserQuota: 2,
+        },
+      },
+    },
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Driftwood Systems / Cloud Audit Workstation ───────────────
+
+Still cloudsec, still on Coverline's cloud-audit bastion host
+(jumpbox-cloud-audit.coverline-internal). Day three of the
+Coverline engagement.
+
+The credential you recovered yesterday from the RDS
+migration_artifacts table — broker-portal-svc — turned out to
+be more than a database password. Coverline's IAM team
+confirmed broker-portal-svc is also an IAM *user* with
+programmatic AWS keys, provisioned during the 2024 region
+migration and never scoped down. Those keys are configured as
+this shell's default AWS profile, so every aws call you run
+executes as broker-portal-svc.
+
+That a "broker portal service" can read the entire IAM account
+is itself finding zero. Sloane Becker wants Driftwood to use
+that (over-broad) read access to answer one question before
+Coverline rotates everything: which principals can do what, and
+which ones from the 2024 migration were never torn down?
+
+
+─── NEW COMMANDS ──────────────────────────────────────────────
+
+  aws iam list-access-keys --user-name <user>
+        Access keys for a user: AccessKeyId, Status (Active or
+        Inactive), and CreateDate. NOTE: the secret is never
+        shown — AWS returns a secret only once, at creation.
+
+  aws iam get-access-key-last-used --access-key-id <id>
+        When a key was last used to call AWS, by which service,
+        in which region. The dormancy signal: a key can be
+        Active yet unused for years.
+
+  aws iam get-account-summary
+        Account-wide IAM posture (the SummaryMap): user counts,
+        whether the root user has an access key, whether root
+        MFA is enabled, and more.
+
+Already available from earlier in the engagement:
+
+  aws sts get-caller-identity                 who am I?
+  aws iam list-users                          every principal
+  aws iam list-attached-user-policies --user-name <user>
+  aws iam get-policy --policy-arn <arn>       what a policy grants
+
+
+─── WHAT IAM ENUMERATION REVEALS ──────────────────────────────
+
+"Least privilege" is easy to say and hard to keep. Every
+migration, incident, and late-night production fix is a reason
+to grant one more permission "just to unblock this." The grants
+accumulate; almost nothing removes them. An IAM audit is the
+inventory that finds the grants that outlived their reason.
+
+Two questions drive a credential-hygiene pass:
+
+  1. Who has more than they need? Look for IAM users with
+     AdministratorAccess (Action '*' on Resource '*'), with
+     account-wide read, or with policies far broader than the
+     principal's job. Service accounts are the worst offenders —
+     they get broad grants to "get the pipeline working" and no
+     human logs in as them to notice.
+
+  2. What is dormant but still live? An access key with
+     Status: Active that has not been used in months or years is
+     a standing risk with no upside. The owner is gone, the
+     pipeline that used it is retired, but the key still opens
+     the door. Terminated employees, decommissioned bots, and
+     "temporary" migration identities are where these hide.
+
+The blast radius of one AdministratorAccess credential is the
+entire account: read every bucket, assume every role, delete
+every log. The whole point of least privilege is to ensure no
+single leaked credential can do that. A dormant admin key is
+that exact failure, sitting unused and unmonitored — the
+quietest catastrophic finding in cloud security.
+
+Defensive controls Coverline should have (and partially does):
+  - AWS IAM Access Analyzer (unused-access findings; policy
+    generation from CloudTrail history; policy validation)
+  - AWS IAM credential report + get-account-summary on a cadence
+  - AWS Config rules: iam-user-unused-credentials-check,
+    access-keys-rotated, iam-policy-no-statements-with-admin-
+    access, iam-root-access-key-check
+  - AWS Trusted Advisor (IAM use; unused credentials)
+  - Service Control Policies (SCPs) capping who may attach
+    AdministratorAccess; permissions boundaries
+  - Automated joiner-mover-leaver deprovisioning via IAM
+    Identity Center / SCIM
+
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  cat engagement-notes.md      Sloane's tasking + scope
+  aws sts get-caller-identity  Confirm you are broker-portal-svc
+  aws iam list-users           Enumerate every principal
+  aws iam list-attached-user-policies --user-name <user>
+  aws iam get-policy --policy-arn <arn>
+  aws iam list-access-keys --user-name <user>
+  aws iam get-access-key-last-used --access-key-id <id>
+  ls migration-2024/           Vikram's leftover migration tooling
+  hint                         Stuck? Three escalating hints.
+  cat lessons-learned.md       The post-mortem (read after solving)
+`,
+        },
+
+        "engagement-notes.md": {
+          type: "file",
+          content:
+`─── ENGAGEMENT NOTES — Coverline IAM hygiene pass ─────────────
+
+  From:  Sloane Becker (CISO, Coverline) via Jordan Nguyen
+  To:    Driftwood Systems — cloudsec
+  Re:    IAM least-privilege + dormant-credential review
+  Date:  Day 3 of engagement
+
+
+─── CONTEXT ───────────────────────────────────────────────────
+
+Friday's S3 finding and yesterday's database enumeration both
+traced back to the same root cause: credentials created for the
+2024 us-east-1 -> us-east-2 migration that were never cleaned
+up. Before we rotate every credential the engagement surfaced, I
+want to know the shape of the IAM blast radius. The recovered
+broker-portal-svc identity has account-wide read — use it.
+
+
+─── WHAT I NEED FROM YOU ──────────────────────────────────────
+
+  1. Over-privileged principals. Any IAM user with
+     AdministratorAccess attached, or with privileges far beyond
+     its job. I am especially worried about the non-human
+     "service" identities from the migration — nobody logs in as
+     them, so nobody notices what they can do. broker-portal-svc
+     itself is already on that list (a portal service should not
+     be able to read all of IAM).
+
+  2. Dormant-but-active credentials. Access keys with Status:
+     Active that have not been used in months. A key nobody uses
+     is pure downside — confirm last-used dates.
+
+  3. Orphaned accounts. Anyone who has left Coverline but still
+     has an IAM user. Our HR offboarding and our IAM
+     deprovisioning have never been wired together. You already
+     know one such name from yesterday's user table.
+
+  4. Account-level posture. One get-account-summary call tells us
+     whether the root user has an access key and whether root MFA
+     is enabled. The auditor will ask.
+
+
+─── WHERE TO START ────────────────────────────────────────────
+
+Vikram Shah ran the 2024 migration. His tooling is still on this
+bastion under ~/migration-2024 — it was never removed when he
+left in January 2024. Start there, then confirm everything
+against live IAM. Whatever credential demonstrates the worst
+blast radius, recover it so the level3 follow-on can show the
+board exactly what an attacker would have held.
+
+Read-only. Enumerate, don't modify. — Sloane
+`,
+        },
+
+        "migration-2024": {
+          type: "dir",
+          children: {
+
+            "README.txt": {
+              type: "file",
+              content:
+`us-east-1 -> us-east-2 migration tooling
+=========================================
+Owner: vikram.shah   (deprecated — see NOTE)
+
+Scripts and bootstrap credentials for the 2024 Aurora + S3
+region migration. The pipeline assumes one service identity per
+stage; bootstrap-iam-keys.env carries the programmatic keys so
+the stages can run unattended.
+
+Runbook:
+  set -a; source bootstrap-iam-keys.env; set +a
+  ./01-snapshot-source.sh
+  ./02-copy-to-us-east-2.sh
+  ./03-verify-cutover.sh
+
+TEARDOWN (post-cutover):
+  - disable every bootstrap access key
+      (aws iam update-access-key --status Inactive ...)
+  - delete legacy-deploy-bot. It was only created to unblock the
+    cutover and has FAR too much access to keep around.
+  - shred bootstrap-iam-keys.env
+  - remove this directory from the bastion
+
+NOTE (added by platform team, 2026-05):
+  Cutover completed 2024-04-30. Teardown was never performed.
+  vikram.shah left Coverline 2024-01-31 — before cutover even
+  finished — and the teardown step had no other owner.
+  migration-runner-bot's key was disabled by a later cleanup,
+  but legacy-deploy-bot and this file are still here. Flagged
+  for the Driftwood engagement.
+`,
+            },
+
+            "bootstrap-iam-keys.env": {
+              type: "file",
+              content:
+`# ─────────────────────────────────────────────────────────────
+# bootstrap-iam-keys.env
+# Programmatic credentials for the us-east-1 -> us-east-2
+# migration. Source into the deploy shell so each pipeline stage
+# can run as its service identity without an interactive login:
+#
+#     set -a; source bootstrap-iam-keys.env; set +a
+#
+# DELETE THIS FILE AFTER CUTOVER. Do NOT commit. Do NOT leave on
+# the bastion. — vshah, 2024-02-15
+# (cutover verified 2024-04-30; this file was never deleted)
+# ─────────────────────────────────────────────────────────────
+
+# broker-portal-svc — seeds the broker-portal service accounts.
+# (This is the identity you are authenticated as right now; the
+#  same credential surfaced in the RDS migration_artifacts table.)
+BROKER_PORTAL_SVC_ACCESS_KEY_ID=AKIABRKRPORTALSVC024
+BROKER_PORTAL_SVC_SECRET_ACCESS_KEY=Cv-BrokerSvc-Pr0d-2024-Migration
+
+# migration-runner-bot — runs the Aurora schema/data copy. Scoped
+# to the migration S3 buckets. (Key disabled 2024-04-30 at cutover.)
+MIGRATION_RUNNER_BOT_ACCESS_KEY_ID=AKIAMIGRUNNERB0T024X
+MIGRATION_RUNNER_BOT_SECRET_ACCESS_KEY=8fJ2migRunner+ScopedS3/cutover2024Qk
+
+# legacy-deploy-bot — "temporary" deploy identity. Given broad
+# access to unblock the cutover; meant to be torn down with this
+# file. (Still Active. Still AdministratorAccess. Still here.)
+LEGACY_DEPLOY_BOT_ACCESS_KEY_ID=AKIA7X4DEPLOYB0T2024
+LEGACY_DEPLOY_BOT_SECRET_ACCESS_KEY=Ldb0t/Adm1nDeploy+Migr8/2024+us-east-2XQ
+
+# ci-deploy-svc — long-lived CI/CD identity (predates the migration).
+CI_DEPLOY_SVC_ACCESS_KEY_ID=AKIA3RC1DEPLOY2019XQ
+CI_DEPLOY_SVC_SECRET_ACCESS_KEY=ciDeploy2019+longLived/neverR0tatedXQ8
+
+# backup-svc — nightly RDS snapshot exporter. Scoped to backups.
+BACKUP_SVC_ACCESS_KEY_ID=AKIABACKUPSVC2023RDS
+BACKUP_SVC_SECRET_ACCESS_KEY=bkupSvc+RDSsnapshot/2023scoped/Xq7Lm2
+`,
+            },
+
+          },
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`═══ POST-MORTEM ═══════════════════════════════════════════════
+  level2@cloud — "The bot that kept admin"
+  Coverline Insurance · IAM least privilege + dormant credentials
+
+
+─── BLUNT VERSION ─────────────────────────────────────────────
+
+A service account called legacy-deploy-bot was created in
+February 2024 to unblock a region migration. Someone attached
+the AWS-managed AdministratorAccess policy to it — Action '*' on
+Resource '*', the entire account — because that was faster than
+working out the handful of specific permissions the migration
+actually needed. The bot was supposed to be deleted at cutover.
+Cutover finished 2024-04-30. The engineer who owned the teardown,
+vikram.shah, left Coverline on 2024-01-31, before cutover even
+completed, and the teardown step had no other owner.
+
+Two years and four months later, legacy-deploy-bot still exists,
+still has AdministratorAccess, and its access key is still
+Status: Active. The key has not been used since 2024-03-02. It is
+a dormant credential with god-mode over the entire AWS account,
+sitting unused and almost certainly unmonitored — and its secret
+was left in cleartext in a bootstrap file on the audit bastion,
+next to four other service-account keys.
+
+That is the whole finding: a credential that can do anything,
+that nobody uses, that nobody watches, that nobody remembered to
+turn off. It is the quietest catastrophic finding in cloud
+security, and it is extremely common.
+
+
+─── CONSULTING-FIRM ANGLE ─────────────────────────────────────
+
+The three Coverline findings this week are the same finding in
+three costumes:
+
+  Friday  — a public S3 bucket with a hardcoded RDS password.
+  Monday  — that password opens a database holding MORE
+            credentials in its rows.
+  Today   — one of those credentials is an IAM user, and the IAM
+            account is full of migration-era principals that were
+            never torn down.
+
+Every one is a credential created for a narrow, time-boxed
+purpose that outlived that purpose because no process actively
+removes credentials. Organizations staff "create access" heavily
+(it blocks work when missing) and staff "remove access" almost
+not at all (nothing breaks when it is skipped). Least privilege
+is not a one-time configuration; it is a continuous subtraction
+that has to be owned the way uptime is owned. When it isn't, you
+get a legacy-deploy-bot.
+
+The deliverable for Coverline is not "delete the bot" — that
+takes thirty seconds. It is: who is allowed to attach
+AdministratorAccess, what automatically flags a credential unused
+for N days, and who owns the leaver half of joiner-mover-leaver.
+The bot is a symptom; the missing lifecycle is the finding.
+
+
+─── FRAMEWORKS ────────────────────────────────────────────────
+
+NIST SP 800-53 Rev. 5
+  AC-6 Least Privilege — the control this level is about.
+    AC-6(1) authorize access to security functions; AC-6(2)
+    non-privileged access for nonsecurity functions; AC-6(5)
+    privileged accounts limited to a defined set; AC-6(9) audit
+    the execution of privileged functions. AdministratorAccess on
+    a deploy bot fails all of these.
+  AC-2 Account Management — AC-2(3) disable inactive accounts
+    (the dormant key); AC-2(13) disable accounts of individuals
+    who pose a risk (the terminated employee).
+  IA-4 Identifier Management / IA-5 Authenticator Management —
+    IA-5(1) credential rotation (the 2019 CI key).
+
+CIS AWS Foundations Benchmark v7.0.0 (§2 Identity & Access Mgmt;
+the IAM block moved from §1 to §2 in v7.0.0 when an Organizations
+section was added)
+  2.4   No 'root' user access key exists. (Coverline:
+        AccountAccessKeysPresent = 1 — fails.)
+  2.5   MFA enabled for the 'root' user. (AccountMFAEnabled = 0 —
+        fails.)
+  2.11  Credentials unused for 45 days or more are disabled.
+        (legacy-deploy-bot's key: idle since 2024 — fails.)
+  2.12  Access keys rotated every 90 days or less. (ci-deploy-svc:
+        created 2019, never rotated — fails.)
+  2.14  IAM policies that allow full "*:*" administrative
+        privileges are not attached. (legacy-deploy-bot — fails.)
+
+NIST CSF 2.0
+  PR.AA (Identity Management, Authentication, and Access Control)
+    — PR.AA-01 identities and credentials managed; PR.AA-05 access
+    permissions enforced per least privilege and separation of
+    duties.
+
+SOC 2 (Trust Services Criteria)
+  CC6.1 logical access / least privilege; CC6.2 access authorized
+  before issuance; CC6.3 access modified or removed on role change
+  or termination. Coverline's attestation depends on these; this
+  is a CC6.1 / CC6.3 gap.
+
+Regulatory (insurance)
+  NYDFS 23 NYCRR 500.07 (Access Privileges and Management), as
+    amended (Second Amendment, effective Nov 2023, phased through
+    2025): periodic review of access privileges, limiting the
+    number of privileged accounts, and removing access no longer
+    needed. A dormant admin bot is the textbook violation.
+  NAIC Insurance Data Security Model Law — Information Security
+    Program access-control requirements (state adoptions vary).
+
+CWE
+  CWE-269 Improper Privilege Management — the admin-bound bot.
+  CWE-250 Execution with Unnecessary Privileges — the bot ran the
+    migration with far more than it needed.
+  CWE-798 Use of Hard-coded Credentials / CWE-312 Cleartext
+    Storage of Sensitive Information — the bootstrap-iam-keys.env
+    file with five secret keys in plaintext.
+
+
+─── CERTIFICATIONS ────────────────────────────────────────────
+
+AWS Certified Security – Specialty (SCS-C03; the successor to
+SCS-C02, which was decommissioned Dec 1, 2025)
+  Identity and Access Management is the heart of this exam.
+  Expect least-privilege policy design, detecting unused
+  credentials (IAM credential report, Access Analyzer
+  unused-access findings), and SCPs / permissions boundaries as
+  guardrails. This level is a Security Specialty scenario in
+  miniature.
+
+AWS Certified Solutions Architect – Associate (SAA-C03)
+  IAM fundamentals: users vs roles, managed vs inline policies,
+  least privilege as a design default, and why short-lived role
+  credentials beat long-lived access keys.
+
+CompTIA Security+ (SY0-701)
+  Domain 4 (identity and access management): provisioning and
+  deprovisioning, account types, least privilege, privileged
+  access management. Sample framing: "A service account used for
+  a one-time migration still has administrative rights months
+  later. Which principle was violated?" — least privilege.
+
+ISC2 CCSP
+  Domain 5 (Cloud Security Operations) plus the IAM content in
+  Domain 3: identity lifecycle, entitlement reviews, and
+  privileged-access management in cloud environments.
+
+
+─── MITRE ATT&CK ──────────────────────────────────────────────
+
+  T1078.004  Valid Accounts: Cloud Accounts — a dormant, valid IAM
+             credential is the cleanest initial-access and
+             persistence primitive there is: no malware, no
+             exploit, just a key that still works.
+  T1098.001  Account Manipulation: Additional Cloud Credentials —
+             with admin, an attacker mints new keys on other
+             principals to entrench.
+  T1098.003  Account Manipulation: Additional Cloud Roles —
+             attaching more privileges / assuming more roles.
+  T1136.003  Create Account: Cloud Account — admin lets the
+             attacker create fresh backdoor identities.
+  T1530      Data from Cloud Storage — the blast radius:
+             admin reads every bucket in the account.
+
+
+─── DEFENDER ACTION ───────────────────────────────────────────
+
+Immediate (today):
+  1. Deactivate legacy-deploy-bot's access key (aws iam
+     update-access-key --status Inactive), then delete the user
+     once nothing breaks. Rotate every key in the bootstrap file
+     and shred the file.
+  2. Remove the root access key; enable root MFA (CIS 2.4 / 2.5).
+  3. Disable vikram.shah's IAM user (terminated Jan 2024).
+
+Detective / continuous:
+  - AWS IAM Access Analyzer "unused access" findings surface
+    unused roles, users, and keys automatically. Access Analyzer
+    policy generation rebuilds a least-privilege policy from a
+    principal's real CloudTrail history — turn the bot's handful
+    of actual actions into a handful-of-actions policy.
+  - AWS Config managed rules: iam-user-unused-credentials-check,
+    access-keys-rotated, iam-policy-no-statements-with-admin-
+    access, iam-root-access-key-check,
+    mfa-enabled-for-iam-console-access.
+  - IAM credential report + get-account-summary on a cadence.
+  - AWS Trusted Advisor IAM and unused-credential checks.
+
+Preventive (guardrails):
+  - Service Control Policies (SCPs) at the Organizations level
+    denying attachment of AdministratorAccess except to a named
+    break-glass role; deny root usage outright.
+  - Permissions boundaries capping what service accounts can be
+    granted, so "just attach admin" stops being possible.
+  - Wire HR offboarding to IAM deprovisioning (IAM Identity
+    Center + SCIM) so leavers lose access automatically — close
+    the joiner-mover-leaver gap that left vikram.shah active.
+  - GuardDuty for anomalous credential use (a dormant key
+    suddenly active from a new region or ASN is a high-fidelity
+    alert).
+
+
+─── CLOSING THOUGHT ───────────────────────────────────────────
+
+The bot took thirty seconds to create and would have taken thirty
+seconds to delete. What made it dangerous was the two years in
+between, during which it was nobody's job to notice it. Cloud IAM
+makes granting power trivial and makes revoking power optional —
+and "optional" reliably becomes "never" without a control that
+forces the question.
+
+The skill this level teaches is not "find the admin bot." It is
+the audit reflex: for every principal, ask what it can do and
+when it last did anything, and treat any answer of the form "more
+than its job needs" or "active but idle for months" as a finding
+to close, not a curiosity to note. Run that reflex continuously,
+with tooling, owned by someone — and legacy-deploy-bot never sees
+its second birthday.
+
+Recover legacy-deploy-bot's key from ~/migration-2024 to carry
+the engagement forward. Then return to the lobby:
+
+    ssh guest@d3cyph3r`
         },
 
       },
