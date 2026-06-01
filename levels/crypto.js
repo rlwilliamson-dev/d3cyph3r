@@ -45,6 +45,12 @@ export const cryptoLevels = {
     objective: "Decide whether Theo's 'I base64-encoded the API key for safety' commit at Vesta Retail counts as PCI-DSS Requirement 3 protection — and document what the actual key looks like to anyone with read access on the box.",
     lesson: "Vesta Retail's annual PCI-DSS re-attestation is in six weeks. Their CTO, Saanvi, wants Driftwood to walk the payment-deploy code before the QSA does. Priya pulled deploy.sh from Vesta's repo on Friday and flagged the API key handling: their backend engineer Theo committed a change last sprint that 'cleaned up' the script by base64-encoding the production payment-processor API key into a separate file. Theo believes the key is now safer because it's not in plaintext. You're on Driftwood's crypto-analysis workstation (the shell calls you `secops`, the shared service account for code and binary reviews). Read welcome.md first — it explains base64. Then read engagement-notes.md, look at deploy.sh, and decode the key. Read lessons-learned.md once you've seen it.",
 
+    hints: [
+      "Theo base64-encoded the production API key into `api-key.b64` and believes that makes it safe. base64 is reversible *encoding*, not encryption — anyone with read access can reverse it. Run `ls` to find the file; `cat deploy.sh` shows the script reading it.",
+      "Decode it: `base64 api-key.b64` (the engine decodes by default; `base64 -d` also works). The output is the real, plaintext payment-processor API key.",
+      "The decoded `vesta_pk_live_...` key IS the finding — and it's the password to enter `level1@crypto`.",
+    ],
+
     // v1.10.0 BONUS FINDS — surfaces Priya's "side note unrelated
     // to today's finding" aside in engagement-notes about the
     // Vendolux coffee machine. Orthogonal to the encoding lesson;
@@ -457,6 +463,12 @@ Return to the lobby:    ssh guest@d3cyph3r
     playerUser: "vesta-deploy",
     objective: "Audit Theo's homegrown JWT auth on Vesta's internal admin API — decide whether the tokens in the access log are actually being verified, and document the blast radius if they aren't.",
     lesson: "Day two of Vesta's pre-QSA audit. Yesterday's base64-encoded-API-key finding closed clean; Theo took the news well and the rotation is on the calendar for Friday. During the conversation Theo mentioned a second project — a 'quick token-based auth' he shipped for Vesta's internal admin API three weeks ago. Saanvi authorized you to use the still-live API key from yesterday to ssh into the payment-deploy host where the admin-API logs are mirrored. You're now logged in as `vesta-deploy`. Read welcome.md first (it introduces the `jwt` command and what JWTs are); then priya-note.md for the day-two context; then look at verify-middleware.js and admin-access.log. When you've worked out what's wrong, read lessons-learned.md.",
+
+    hints: [
+      "`cat admin-access.log` — the long `eyJ...` string on the DEBUG Authorization line IS the JWT. Copy it and run `jwt <that-string>` to decode it.",
+      "Read the decoder's red-flag notes: `alg: none` plus an empty signature means the token was never cryptographically verified — anyone can forge one by hand.",
+      "JWT payloads are base64url, NOT confidential. The decoded payload's `handoff_token` claim is the credential for `level2@crypto`.",
+    ],
 
     // v1.10.0 BONUS FINDS — surfaces Theo's library-popularity-as-
     // safety reasoning quoted in priya-note. Orthogonal to the

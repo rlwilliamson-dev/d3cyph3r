@@ -59,6 +59,12 @@ export const osintLevels = {
     objective: "Run a personal-credential exposure check on Veridian's new CMO, Dr. Aaron Hines. Marisol Vega wants to know what's in public breach corpora against his known personal email before she decides whether to escalate to executive protection.",
     lesson: "Veridian Analytics is one of Driftwood's healthcare-vertical clients — a mid-sized healthcare-analytics SaaS company headquartered in Boston (~250 engineers, founded 2018). They handle claims and outcomes data on behalf of insurers and provider networks, which makes them a HIPAA Business Associate under signed BAAs with each customer. PHI handling is in scope across their entire production environment, and they layer HITRUST CSF v11 on top for the customer-facing assurance their insurance-carrier customers require. Their General Counsel, Marisol Vega, opened this engagement last Friday. Their newly-hired Chief Medical Officer, Dr. Aaron Hines, has surfaced in an open-letter campaign about a controversial clinical trial he ran at his previous employer (Helix Therapeutics); the campaign has produced one identifiable LinkedIn DM with a snippet of Aaron's personal information in it, and Marisol wants a baseline read on Aaron's public credential exposure before deciding whether to engage an executive-protection vendor. You're on Driftwood's OSINT-engagement workstation (the shell calls you `intel`, the shared service account the recon team uses for client-side intel work). Read welcome.md first — it explains how `hibp` works. Then read engagement-notes.md, then subject-brief.txt, then run the lookup. Read lessons-learned.md once you've seen what's in the breach corpus.",
 
+    hints: [
+      "`cat subject-brief.txt` for Aaron's known email address, then `hibp <that-email>` to check it against the public breach corpora.",
+      "Read the breach hits closely — look for the SAME cleartext password appearing in more than one breach. Two breaches with one password is a high-confidence reuse signal.",
+      "That reused password (recovered from both the LinkedIn and LiveJournal corpora) is the credential to flag — and it's your password into `level1@osint`.",
+    ],
+
     // v1.10.0 BONUS FINDS — Adobe 2013 hint field as OSINT-grade
     // intel layer. Orthogonal to the password-reuse finding;
     // doesn't gate the credential chain.
@@ -820,6 +826,12 @@ Return to the lobby:    ssh guest@d3cyph3r`
     playerUser: "intel",
     objective: "Map Aaron Hines's public developer footprint. Marisol expanded scope after Friday's HIBP finding — `sherlock` and the new `github` command are in scope. Identify any committed credentials or sensitive disclosures in Aaron's public GitHub.",
     lesson: "Friday's HIBP lookup confirmed Aaron's password-reuse signal (BostonStrong#2013 recovered from both LinkedIn 2012 and LiveJournal 2014). Marisol Vega expanded engagement scope over the weekend after seeing the finding: source-control OSINT (the new `github` command) and handle-pivot OSINT (`sherlock`) are now authorized for Aaron's public developer footprint. Authorization basis unchanged — Aaron + Veridian's Chief People Officer consent reconfirmed Monday morning — broader public-data lookup, still no active testing of any account, still no enumeration of family members. Today: walk Aaron's public GitHub presence and identify any sensitive disclosures (committed credentials, internal references, personal-AWS exposure) that warrant remediation. Read welcome.md first — it explains the new `github` command. Then read engagement-notes.md and subject-update.txt. Use `sherlock aaron-hines-md` to confirm the GitHub handle, then `github aaron-hines-md` to enumerate his public repos. Read lessons-learned.md once you've found what's there.",
+
+    hints: [
+      "`sherlock aaron-hines-md` confirms the GitHub handle, then `github aaron-hines-md` lists his public repos. `engagement-notes.md` names the file types worth hunting (`.env`, config, credentials).",
+      "Dig into the `personal-pgx-tool` repo: `github aaron-hines-md/personal-pgx-tool` shows its file tree. Note the committed `.env` — adding `.gitignore` later does NOT untrack a file already committed.",
+      "`github aaron-hines-md/personal-pgx-tool file .env` prints it — the live AWS secret access key inside is the finding, and it's your password into `level2@osint`.",
+    ],
 
     // v1.10.0 BONUS FINDS — Strava segment leaderboards as residential-
     // pattern leak. Orthogonal to the GitHub credential finding;
@@ -1822,6 +1834,13 @@ Return to the lobby:    ssh guest@d3cyph3r`
     playerUser: "intel",
     objective: "Aaron deleted his personal-pgx-tool repo after Wednesday's AWS-key finding. Marisol wants two things: confirm whether deleting it actually remediated the exposure, and sweep the Internet Archive for anything else in Aaron's footprint he's forgotten about.",
     lesson: "Wednesday you delivered the GitHub finding — a live AWS access key committed in Aaron's public `personal-pgx-tool` repo since July 2023, never rotated. (That same secret access key is what you just typed to get in here: it still works, which tells you Aaron never rotated it.) Aaron's reaction Thursday morning was to delete the whole repo and call it fixed. Marisol's question now: did that actually remediate anything — and while you're in the archive, is there anything else of Aaron's still exposed that he's long since forgotten? Authorization basis unchanged: Aaron + CPO consent, read-only public-data OSINT, no active testing, no family. Today's new tool is `wayback` — the Internet Archive's Wayback Machine. Read welcome.md first. Then `wayback` the deleted repo to see what the archive kept, `wayback` Aaron's old personal site (it's been captured since 2009), `curl` the archived snapshots to read them, and pivot with `sherlock` on whatever handle turns up. Read lessons-learned.md once you've found Aaron's other life.",
+
+    hints: [
+      "Two starting URLs are in `subject-update.txt` — `wayback` each: the deleted `personal-pgx-tool` repo and Aaron's old personal site `www.aaronhines.net`.",
+      "On the old site, `curl` the 2011 homepage capture (not the robots.txt one). Copy the snapshot URL exactly as `wayback` printed it — the archive serves that exact URL.",
+      "The archived homepage names a handle Aaron later scrubbed from his professional identity. `sherlock <that-handle>` maps where else the alias appears.",
+      "`curl` the homelab blog post sherlock surfaces — Aaron pasted a Nextcloud admin password into a docker-compose. That cleartext credential is the breadcrumb into `level3@osint`.",
+    ],
 
     // v1.10.0 BONUS FINDS.
     //   1. deletion-theatre: the "deleted" repo is still served from

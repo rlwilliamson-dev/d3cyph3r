@@ -224,6 +224,14 @@ test.describe("cloud track", () => {
         expect(prompt.startsWith("cloudsec@")).toBeTruthy();
       });
 
+      // v2.0.0 hint backfill — level1@cloud previously had no hints.
+      test("hint returns the backfilled escalating hints (v2.0.0)", async ({ page }) => {
+        await dispatchCmd(page, "hint");
+        const t = await terminalText(page);
+        expect(t).not.toMatch(/no hints|doesn't have any hints/i);
+        expect(t).toContain("lists the databases"); // level1@cloud hint #1
+      });
+
       test("ls shows the level1 fileset", async ({ page }) => {
         await dispatchCmd(page, "ls");
         const t = await terminalText(page);

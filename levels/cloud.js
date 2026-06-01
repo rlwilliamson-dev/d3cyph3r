@@ -146,7 +146,7 @@ export const cloudLevels = {
   // lesson is the public-S3-bucket-as-pwn-primitive — the single most
   // common cloud-data-exposure pattern in real consulting work —
   // mapped to SOC 2 Trust Services Criteria (CC6 / CC7), CIS AWS
-  // Foundations Benchmark v5.0.0 (§2.1), NIST SP 800-53 Rev. 5
+  // Foundations Benchmark v7.0.0 (§3.1 S3), NIST SP 800-53 Rev. 5
   // (AC-3 / SC-7), NIST CSF 2.0 (PR.AA / PR.DS), ISO 27017 (Cloud
   // services security), NAIC Insurance Data Security Model Law, NYDFS
   // 23 NYCRR 500, CWE-200 / CWE-732 / CWE-285, OWASP Cloud-Native Top
@@ -166,6 +166,12 @@ export const cloudLevels = {
     playerUser: "cloudsec",
     objective: "Walk Coverline's 6-bucket SOC 2 audit worksheet from outside the Coverline account. For each bucket, run an unauthenticated `aws s3 ls --no-sign-request` probe and record the response. Flag any bucket that isn't behaving the way the worksheet says it should.",
     lesson: "Coverline Insurance is one of Driftwood's insurtech clients — a mid-sized property & casualty carrier specializing in small-business policies (~150 engineers, founded 2019, HQ in Hartford, Connecticut). They sell direct AND white-label their product to ~40 regional insurance carriers, which is why the SOC 2 Type II report is non-negotiable — every carrier customer requires it before they'll resell. State-insurance regs add layers: NAIC Insurance Data Security Model Law has been adopted in ~25 states Coverline operates in, and NYDFS 23 NYCRR 500 applies because they're licensed in New York. Coverline is mid-SOC-2-cycle right now and the audit firm flagged a gap last week: there's no documented evidence trail for the 'S3 bucket public-access review' control (CC6.1). The auditors produced a 6-bucket worksheet with the expected access state for each, and Coverline needs each one walked and the response recorded as evidence. Coverline's DevOps team is fully committed on an us-east-1-to-us-east-2 cutover; Jordan Nguyen (Coverline's Sr. Director of Cloud Infrastructure) asked Driftwood to fill in. You're on Driftwood's cloud-audit workstation (the shell calls you `cloudsec`, the shared service account the cloud-security team uses for client recon). Read welcome.md first — it explains how the unauthenticated S3 probe works. Then read engagement-notes.md, then audit-worksheet.txt, then walk the buckets. Read lessons-learned.md once you've found the bucket that doesn't match the worksheet.",
+
+    hints: [
+      "`cat audit-worksheet.txt` for the 6 buckets + their expected access state, then probe each: `aws s3 ls --no-sign-request s3://<bucket>`. A properly-secured bucket returns AccessDenied.",
+      "One bucket lists when the worksheet says it shouldn't — `coverline-claims-uploads-prod`. List it and you'll see claims PII plus a stale 2023 deploy script.",
+      "`aws s3 cp s3://coverline-claims-uploads-prod/legacy-deploy/migrate-rds.sh -` — the hardcoded RDS master password in that script is your password into `level1@cloud`.",
+    ],
 
     // v1.10.0 BONUS FINDS — confirming you're probing from your own
     // Driftwood account, not Coverline's. Orthogonal to the bucket
@@ -920,22 +926,23 @@ travels far past the bucket itself.
     DE.CM  Continuous Monitoring — the detection layer
       Coverline was missing.
 
-  CIS AWS Foundations Benchmark v5.0.0
-  (the Security Hub-supported version; CIS has since
-   published v6.0.0 and v7.0.0, but Security Hub tooling
-   support for the newer versions has not caught up)
-    §2.1.1  Ensure S3 Bucket Policy is set to deny HTTP
+  CIS AWS Foundations Benchmark v7.0.0
+  (the current release. v7.0.0 moved Storage to Section 3,
+   so S3 now lives in §3.1.x. NOTE: AWS Security Hub's managed
+   CIS standard still tops out at v5.0.0 — where S3 was §2.1.x —
+   so Security Hub findings will show the older numbering.)
+    §3.1.1  Ensure S3 Bucket Policy is set to deny HTTP
       requests (TLS-only). Tangential here but relevant
       hygiene.
-    §2.1.2  Ensure MFA Delete is enabled on S3 buckets.
-    §2.1.3  Ensure all S3 buckets employ encryption-at-rest
-      with KMS (v5 consolidated the legacy v3 §2.1.6 KMS
-      requirement into §2.1.3).
-    §2.1.4  Ensure S3 Block Public Access setting is enabled
-      at the account level — the headline control that
-      would have prevented this finding.
-    §2.1.5  Ensure S3 Block Public Access setting is enabled
-      at the bucket level (defense-in-depth).
+    §3.1.2  Ensure MFA Delete is enabled on S3 buckets.
+    §3.1.3  Ensure all data in S3 is discovered, classified,
+      and secured (the v7 control that replaced the older
+      standalone encryption recommendation, after AWS made
+      SSE-S3 the default).
+    §3.1.4  Ensure S3 is configured with 'Block Public Access'
+      enabled — the headline control that would have prevented
+      this finding. v7.0.0 merged the former account-level and
+      bucket-level BPA controls into this single one.
 
   ISO/IEC 27017:2015 (Code of practice for information security
   controls based on ISO/IEC 27002 for cloud services)
@@ -1293,6 +1300,12 @@ Return to the lobby:    ssh guest@d3cyph3r`
     playerUser: "cloudsec",
     objective: "Enumerate the coverline_claims production database with the leaked RDS master credential. Identify any other credentials stored in row data, dormant employee accounts, or anomalous audit-log entries that change the breach-notification math. Read-only audit only — no INSERT/UPDATE/DELETE.",
     lesson: "After Friday's S3 finding closed the CC6.1 control gap, Coverline's CISO (Sloane Becker) + GC + outside counsel spent the weekend on the breach-notification math. The leaked RDS master credential (Cl41ms-Pr0d-M4st3r-2024) is rotation-pending; before they rotate, Sloane wants Driftwood to enumerate what's actually in the database — every abandoned migration artifact, every dormant employee account, every credential stashed in row data — so the notification analysis can cover the full secondary-exposure surface. Jordan Nguyen authorized the follow-on engagement Monday morning and pre-staged the leaked credential in `~/.pgpass` on Coverline's cloud-audit bastion host (the shell you're on now). Read welcome.md first — it explains the new `psql` command. Then read engagement-notes.md and bastion-handoff.txt. Walk the coverline_claims schema with `psql`. Read lessons-learned.md once you've surfaced the findings.",
+
+    hints: [
+      "The connection is pre-staged in `~/.pgpass`. `psql \"\\l\"` lists the databases; then `psql -d coverline_claims \"\\dt\"` lists that database's tables.",
+      "Focus the table named after the 2024 migration: `psql -d coverline_claims \"SELECT * FROM migration_artifacts\"`.",
+      "Read the `notes` column — row 2 (the broker-portal service credential) is the live breadcrumb into `level2@cloud`; row 3 was already rotated (a decoy).",
+    ],
 
     // v1.10.0 BONUS FINDS — surfaces the ttl_expires_at column
     // pattern in migration_artifacts (designed-right, enforcement-
@@ -1936,12 +1949,13 @@ position that the breach response was procedurally sound.
     DE.CM  Continuous Monitoring — the missing detection
       capability for the 2026-05-20 query.
 
-  CIS AWS Foundations Benchmark v5.0.0
-    §1.14  Ensure access keys are rotated every 90 days or
+  CIS AWS Foundations Benchmark v7.0.0
+    §2.12  Ensure access keys are rotated every 90 days or
       less — credentials in database rows have effectively
-      infinite rotation cadence.
-    §2.1.4 / §2.1.5  S3 Block Public Access (the level0
-      remediation that's already complete).
+      infinite rotation cadence. (Was §1.13/§1.14 in v5.0.0,
+      the numbering AWS Security Hub still reports.)
+    §3.1.4  S3 Block Public Access (the level0 remediation
+      that's already complete).
 
   CIS PostgreSQL Benchmark v15 / v16
     §3.x   Audit logging configuration including pgaudit

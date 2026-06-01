@@ -94,9 +94,11 @@
   <meta name="twitter:description" content="A browser-based terminal CTF for DevOps engineers, SREs, and SysAdmins learning cybersecurity. Play a new hire at Driftwood Systems and find what got left exposed.">
   <meta name="twitter:image" content="https://www.d3cyph3r.com/og-image.png">
 
-  <!-- ?v=<version> cache-busts the stylesheet on each release so
-       returning visitors don't see up-to-4-hours of stale styling
-       after a deploy. Bump this string when bumping version.js. -->
+  <!-- ?v=<version> cache-busts the stylesheet so returning visitors
+       don't see up-to-4-hours of stale styling after a deploy. Bump
+       this string ONLY when style.css actually changes (CSS is
+       otherwise cache-stable across releases) — see version.js step
+       2b. That's why it can lag the app version. -->
   <link rel="stylesheet" href="style.css?v=1.21.0">
 </head>
 <body>
