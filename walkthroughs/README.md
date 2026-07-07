@@ -52,17 +52,17 @@ section dividers when starting a new file.
 
 | § | Section                       | Purpose                                                                  |
 |---|-------------------------------|--------------------------------------------------------------------------|
-| 1 | Spoiler warning               | A blockquote starting with `⚠` — auto-styled as a red callout            |
-| 2 | The setup (in-world)          | Driftwood + client + character context. Sets the stage                   |
-| 3 | The solve (mechanical)        | Step-by-step commands with outputs. Include "If you got stuck" sub-note  |
-| 4 | The vulnerability             | Name the stacked failures. Why each is independently a finding           |
-| 5 | Real-world parallels          | 2–3 named, well-documented incidents. Include the *response* angle       |
-| 6 | Frameworks, deep dive         | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
-| 7 | Cert exam relevance           | Equal-depth treatment of every cert cited. Sample exam-question framings |
-| 8 | What a defender does          | Concrete tools, sample detection rules, audit evidence                   |
-| 8.5 | Optional exploration (§7.5) | Bonus finds + any optional content (pivot hosts, verification commands). Spoiler-tolerant section; see template below |
-| 9 | Key takeaways                 | 3–5 bullet study-guide summary                                           |
-| 10 | Further reading              | Primary sources, vendor docs, books — links only, no commentary needed   |
+| — | Spoiler warning               | An unnumbered blockquote starting with `⚠`, above §1 — auto-styled as a red callout |
+| 1 | The setup (in-world)          | Driftwood + client + character context. Sets the stage                   |
+| 2 | The solve (mechanical)        | Step-by-step commands with outputs. Include "If you got stuck" sub-note  |
+| 3 | The vulnerability             | Name the stacked failures. Why each is independently a finding           |
+| 4 | Real-world parallels          | 2–3 named, well-documented incidents. Include the *response* angle       |
+| 5 | Frameworks, deep dive         | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
+| 6 | Cert exam relevance           | Equal-depth treatment of every cert cited. Sample exam-question framings |
+| 7 | What a defender does          | Concrete tools, sample detection rules, audit evidence                   |
+| 7.5 | Optional exploration        | Bonus finds + any optional content (pivot hosts, verification commands). Spoiler-tolerant section; see template below |
+| 8 | Key takeaways                 | 3–5 bullet study-guide summary                                           |
+| 9 | Further reading              | Primary sources, vendor docs, books — links only, no commentary needed   |
 
 ### §7.5 Optional exploration — author guide (v1.10.0)
 

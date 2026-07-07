@@ -517,4 +517,62 @@ test.describe.serial("stateless save/restore (v1.20.0)", () => {
     );
     expect(onboardingAfterRestore).toBe("true");
   });
+
+  test("save→restore round-trips across every timestamp (base64 '+' vs '-' separator collision)", async ({ page }) => {
+    // Regression guard for the codec bug fixed in the v2.1.x line: the
+    // wire format embeds a timestamp (payload bytes 1-4), so a code's
+    // base64 armor VARIES second-to-second. The old armor used standard
+    // base64url (`+`→`-`), but `-` is also the decorative group
+    // separator that the decoder strips — so whenever a payload's base64
+    // happened to contain a `+`, the resulting `-` was stripped, the
+    // bytes were corrupted, and the code failed its own CRC. It bit
+    // ~1 save in 18 for a mid-game state and surfaced only as a
+    // load-dependent flake in the `restore --preview` test above.
+    //
+    // Rather than lean on timing, drive encodeProgress/decodeProgress
+    // directly and sweep the timestamp across thousands of consecutive
+    // seconds — deterministically covering every `+`-producing value for
+    // the staged state. Every code must decode cleanly, and the sweep
+    // must actually reach the `+`→`.` path (else the guard would pass
+    // vacuously without exercising the fix).
+    const result = await page.evaluate(async () => {
+      const mod = await import("/js/engine/savecode.js");
+      const realNow = Date.now;
+      let total = 0, failures = 0, exercisedPlusPath = 0;
+      const firstFailures = [];
+      try {
+        // Fixed base second (Nov 2023) keeps the run deterministic;
+        // 4000 consecutive seconds is far more than one full cycle of
+        // the timestamp's low bytes, so it hits every armor variant.
+        const base = 1_700_000_000;
+        for (let s = 0; s < 4000; s++) {
+          const t = (base + s) * 1000;
+          Date.now = () => t;
+          const code = mod.encodeProgress(null);
+          // Armor sits between the "D3C2-" prefix and the "-CCCCCCCC"
+          // CRC tail; a "." there means this code took the +→. path.
+          const armor = code.slice(5, -9);
+          if (armor.includes(".")) exercisedPlusPath++;
+          const dec = mod.decodeProgress(code);
+          total++;
+          if (!dec.ok) {
+            failures++;
+            if (firstFailures.length < 3) firstFailures.push({ code, error: dec.error });
+          }
+        }
+      } finally {
+        Date.now = realNow;
+      }
+      return { total, failures, exercisedPlusPath, firstFailures };
+    });
+
+    expect(result.total).toBe(4000);
+    expect(
+      result.failures,
+      `codes that failed their own checksum: ${JSON.stringify(result.firstFailures)}`,
+    ).toBe(0);
+    // The armor must have carried a "." on some codes, or the sweep
+    // never touched the character class the fix is about.
+    expect(result.exercisedPlusPath).toBeGreaterThan(0);
+  });
 });

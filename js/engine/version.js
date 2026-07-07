@@ -166,6 +166,32 @@
 //       yet? Apply both edits in the release PR — not a follow-up.
 //
 //       Common scenarios to look for:
+//         - New LEVEL shipped (the MOST common release type — read
+//           this one first). A new level is an ENTRY in several
+//           enumerations, not just a number. Bumping "N levels" is
+//           NOT sufficient; you must ADD THE LEVEL to each list it
+//           belongs in. Concretely, in README.md:
+//             (a) the per-track LEVEL TABLE — add the `levelN@track`
+//                 cell (with its Title-Case walkthrough title) to the
+//                 track's row;
+//             (b) the level-count sentence in the intro paragraph;
+//             (c) the file-tree comment for `levels/<track>.js`
+//                 ("Linux track (level0 + level1 + ...)");
+//             (d) the Roadmap paragraph;
+//             (e) the "N total" walkthrough count in the file tree.
+//           And in CONTRIBUTING.md: the shipped-level count / "through
+//           levelN" phrasing. (The walkthrough MANIFEST + savecode
+//           registries are separate build steps, not this sweep.)
+//           RULE OF THUMB: grep every doc for the track's PREVIOUS top
+//           level (e.g. `level2@linux`) and make sure the NEW level
+//           appears everywhere the old one does. The recurring miss
+//           — caught again at v2.1.0, when the README level-table row
+//           was left at level2 even though the count read 22 — is
+//           bumping the COUNT but forgetting the TABLE ROW. Treat the
+//           count and the enumeration as TWO SEPARATE edits; a changed
+//           number is not a changed list. Prefer count-free phrasings
+//           ("every level's ...") in rhetorical sentences so they
+//           can't go stale at all.
 //         - New module under js/engine/ or js/commands/ → mention
 //           in README's file tree AND CONTRIBUTING's
 //           architecture-in-one-screen AND CLAUDE.md.
@@ -234,6 +260,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "2.1.0";
+export const VERSION = "2.1.1";
 
 export const VERSION_DISPLAY = "v" + VERSION;

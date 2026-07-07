@@ -15,15 +15,21 @@
 //                shipped with v1.20.0). A future "D3C3" decoder would
 //                refuse v2 codes and migrate them; the v2 decoder
 //                refuses anything that isn't "D3C2".
-//   - Payload  : base64url-encoded BINARY payload (see WIRE FORMAT
+//   - Payload  : base64-encoded BINARY payload (see WIRE FORMAT
 //                below), grouped into 8-char blocks with hyphens
 //                between for visual readability. Hyphens are
 //                decorative — the decoder strips them along with
 //                whitespace before parsing, so codes can be wrapped
-//                or line-broken freely when copy-pasting.
-//   - Checksum : 8-char hex CRC32 over the base64url payload,
-//                appended after a final hyphen. Catches typos,
-//                truncation, and accidental concatenation.
+//                or line-broken freely when copy-pasting. Because "-"
+//                is a decoration char, the payload armor deliberately
+//                does NOT use standard base64url (which would put "-"
+//                in the alphabet): it maps `+`→`.` and `/`→`_`, so no
+//                payload character collides with the separator. See
+//                b64urlEncodeBytes for the full rationale.
+//   - Checksum : 8-char hex CRC32 over the armored payload (the
+//                grouped, hyphen-free base64), appended after a final
+//                hyphen. Catches typos, truncation, and accidental
+//                concatenation.
 //
 // WIRE FORMAT (binary, big-endian)
 // --------------------------------
@@ -377,14 +383,35 @@ function crc32(str) {
   return (c ^ 0xFFFFFFFF) >>> 0;
 }
 
-// ── base64url ──────────────────────────────────────────────────────
+// ── base64 armor ───────────────────────────────────────────────────
+// The payload is base64-encoded, then `formatGroups` inserts a "-"
+// every 8 chars for readability and the decoder's `stripDecoration`
+// removes all "-"/whitespace before parsing. That makes "-" a
+// DECORATION character owned by the framing layer — so the payload
+// alphabet MUST NOT contain "-", or a data "-" would be indistinguish-
+// able from a separator and silently stripped (corrupting the bytes
+// AND breaking the CRC over them).
+//
+// Standard base64url maps `+`→`-` and `/`→`_`, which puts "-" INTO the
+// payload alphabet and collides with the separator. We keep `/`→`_`
+// (safe — "_" is never stripped) but map `+`→`.` instead of `-`. "." is
+// outside [A-Za-z0-9_-], so it survives stripDecoration and can never
+// be confused with a group separator.
+//
+// Backward compatibility: any previously-shipped D3C2 code that
+// actually round-tripped had NO `+` in its base64 (a `+`→`-` would have
+// been stripped and failed its checksum — the bug this fixes), so its
+// armor contains only [A-Za-z0-9_] and decodes identically here. Codes
+// that used to fail were never restorable, so there is nothing to
+// preserve for them. The binary wire format (and thus the "D3C2" magic)
+// is unchanged — only the ASCII armor's `+` substitution moved.
 function b64urlEncodeBytes(bytes) {
   let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  return btoa(bin).replace(/=/g, "").replace(/\+/g, ".").replace(/\//g, "_");
 }
 function b64urlDecodeBytes(b64) {
-  let std = b64.replace(/-/g, "+").replace(/_/g, "/");
+  let std = b64.replace(/\./g, "+").replace(/_/g, "/");
   while (std.length % 4 !== 0) std += "=";
   const bin = atob(std);
   const out = new Uint8Array(bin.length);
