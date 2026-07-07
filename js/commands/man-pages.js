@@ -1713,19 +1713,40 @@ EXAMPLES
     ln -s notes.txt shortcut`,
 
   sudo: `NAME
-    sudo — execute a command as another user (NO REAL ESCALATION)
+    sudo — execute a command as another user, per the sudoers policy
 
 SYNOPSIS
+    sudo -l
     sudo COMMAND [ARGS ...]
 
 DESCRIPTION
-    The sandbox has no privilege model. \`sudo <anything>\` prints
-    the "incorrect password" error pattern. The terminal exists
-    inside an audit context; players who think a level needs root
-    have likely misread the puzzle.
+    Runs a command as another user (root by default) IF the sudoers
+    policy permits it.
+
+    On most levels the sandbox has no privilege model, so
+    \`sudo <anything>\` just prints the canonical "incorrect password"
+    line — those levels don't need root.
+
+    On levels that DO model a sudoers policy, sudo is functional:
+
+    -l    List the grants the current account holds — including
+          whether any are NOPASSWD (no password prompt). This is the
+          first move in any privilege-escalation check: you usually
+          can't read /etc/sudoers directly, so \`sudo -l\` is how you
+          enumerate what your own account is allowed to run as root.
+
+    A permitted \`sudo cat <file>\` reads the file as root, ignoring
+    its permission bits — so a wildcard grant like
+    \`(root) NOPASSWD: /usr/bin/cat /var/backups/*\` reads any
+    root-owned file that ever lands under /var/backups. A grant that
+    reaches further than intended IS the finding (CWE-250 / CWE-732).
 
 EXAMPLES
-    sudo cat /etc/shadow`,
+    sudo -l
+    sudo cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env
+
+SEE ALSO
+    what-is PRIVESC   — the sudo -l enumeration pattern + GTFOBins`,
 
   su: `NAME
     su — switch user (NO REAL ESCALATION)

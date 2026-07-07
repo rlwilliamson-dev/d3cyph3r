@@ -434,4 +434,128 @@ test.describe("linux track", () => {
       });
     });
   });
+
+  // ── Level 3 — "Daniel's Forgotten Sudo" ─────────────────────────
+  // Gated by `H@lton-Snapshot-2024-Q4` (the SSH-key passphrase leaked
+  // from level2's cron trace). FIRST level to use `level.sudo`: the
+  // player lands AS daniel on halton-build-runner and escalates via a
+  // leftover NOPASSWD sudoers grant (CWE-250 / CWE-732, MITRE
+  // T1548.003). `sudo -l` reveals `(root) NOPASSWD: /usr/bin/cat
+  // /var/backups/halton-prod/*`; a permitted `sudo cat` reads the
+  // root-owned prod Vault token the weekly backup swept up — the
+  // level4@linux breadcrumb. A path outside the grant is denied.
+  test.describe("level3@linux — Daniel's forgotten sudo", () => {
+    test("wrong password is rejected at the gate", async ({ page }) => {
+      await dispatchCmd(page, "ssh level3@linux");
+      await dispatchCmd(page, "wrong-password");
+      const t = await terminalText(page);
+      expect(t).toContain("Permission denied, please try again.");
+    });
+
+    test.describe("inside level3", () => {
+      test.beforeEach(async ({ page }) => {
+        await dispatchCmd(page, "ssh level3@linux");
+        await dispatchCmd(page, "H@lton-Snapshot-2024-Q4");
+        await waitForOutput(page, "Connected: level3@linux");
+        // v1.11.0 persistence opt-in prompt fires on first non-lobby
+        // connect of a fresh session.
+        await waitForOutput(page, "Save your progress across browser sessions?");
+        await dispatchCmd(page, "n");
+        await waitForOutput(page, "Progress stays in this tab only");
+      });
+
+      test("connection banner + prompt identity (daniel@halton-build-runner)", async ({ page }) => {
+        const t = await terminalText(page);
+        expect(t).toContain("Connected: level3@linux");
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@halton-build-runner:");
+        expect(prompt.startsWith("daniel@")).toBeTruthy();
+      });
+
+      test("whoami prints in-world identity 'daniel' (you are NOT root)", async ({ page }) => {
+        await dispatchCmd(page, "whoami");
+        const t = await terminalText(page);
+        expect(t).toMatch(/\bdaniel\b/);
+      });
+
+      test("sudo -l enumerates the leftover NOPASSWD cat grant", async ({ page }) => {
+        await dispatchCmd(page, "sudo -l");
+        const t = await terminalText(page);
+        expect(t, "lists daniel's grants").toContain(
+          "User daniel may run the following commands",
+        );
+        expect(t, "grant is NOPASSWD").toContain("NOPASSWD");
+        expect(t, "grant is a wildcard cat over the backup dir").toContain(
+          "/usr/bin/cat /var/backups/halton-prod/*",
+        );
+      });
+
+      test("plain cat on the root-owned vault secret is Permission denied", async ({ page }) => {
+        await dispatchCmd(
+          page,
+          "cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env",
+        );
+        const t = await terminalText(page);
+        expect(t).toContain("Permission denied");
+      });
+
+      test("sudo cat reads the vault secret as root — the level4 breadcrumb", async ({ page }) => {
+        await dispatchCmd(
+          page,
+          "sudo cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env",
+        );
+        const t = await terminalText(page);
+        expect(t, "sudo cat bypasses the root:root 0600 perms").toContain(
+          "VAULT_TOKEN=hvs.HALTONr00tPr0dVault2024Q4Kp7mNq",
+        );
+      });
+
+      test("sudo on a path outside the grant is denied", async ({ page }) => {
+        await dispatchCmd(page, "sudo cat /etc/passwd");
+        const t = await terminalText(page);
+        expect(t, "the grant only covers /var/backups/halton-prod/*").toMatch(
+          /is not allowed to execute/,
+        );
+      });
+
+      test("cat /etc/passwd fires the daniel-outlived-again bonus find", async ({ page }) => {
+        await dispatchCmd(page, "cat /etc/passwd");
+        const t = await terminalText(page);
+        expect(t, "/etc/passwd still carries daniel with /bin/bash").toContain(
+          "daniel:x:1042:1042:Daniel Vance (rolled off Halton 2025-01-31):/home/daniel:/bin/bash",
+        );
+        expect(t, "bonus-find banner fires").toContain(
+          "Bonus find unlocked: Daniel's account outlived him here too",
+        );
+      });
+
+      test("sudo cat on the captured DB profile fires the backup-swept-secrets bonus find", async ({ page }) => {
+        await dispatchCmd(
+          page,
+          "sudo cat /var/backups/halton-prod/etc-halton/db/connections.yaml",
+        );
+        const t = await terminalText(page);
+        expect(t, "captured DB profile carries the reused prod password").toContain(
+          "Halton-2024-Q3!",
+        );
+        expect(t, "bonus-find banner fires").toContain(
+          "Bonus find unlocked: The backup swept up live secrets",
+        );
+      });
+
+      test("exit from level3 returns to the lobby", async ({ page }) => {
+        await dispatchCmd(page, "exit");
+        await page.waitForFunction(
+          () =>
+            document
+              .getElementById("prompt-label")
+              ?.innerText.includes("@d3cyph3r:"),
+          null,
+          { timeout: 5000 },
+        );
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@d3cyph3r:");
+      });
+    });
+  });
 });

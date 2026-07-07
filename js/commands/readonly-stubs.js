@@ -54,15 +54,17 @@ export const readonlyStubCommands = {
   touch(_l, _a, _s, argv) { return readonly("touch", firstPositional(argv)); },
   ln(_l, _a, _s, argv)    { return readonly("ln",    firstPositional(argv)); },
 
-  // sudo / su — print the canonical "incorrect password" line and
-  // exit. The sandbox has no real privilege model; the goal is just
-  // that `sudo -i`, `sudo cat /etc/shadow`, etc. don't trigger
-  // "command not found". A player who needs root sees that the gate
-  // exists; the lesson is in the level content, not in actually
-  // bypassing the gate.
-  sudo() {
-    return { text: "[sudo] password for user:\nSorry, try again.\nsudo: 1 incorrect password attempt", cls: "err" };
-  },
+  // su — print the canonical "authentication failure" line. The sandbox
+  // has no real privilege model, so `su` / `su -` just fail believably
+  // rather than triggering "command not found".
+  //
+  // NOTE: `sudo` USED to live here as a matching always-deny stub. As of
+  // v2.1.0 it moved to linux.js and became level-aware — a level that
+  // declares `level.sudo` (sudoers-misconfig levels) gets a functional
+  // `sudo -l` + NOPASSWD execution, while levels without it fall through
+  // to the same canonical deny this stub produced. Don't re-add `sudo`
+  // here: readonlyStubCommands is spread AFTER linuxCommands in
+  // index.js, so a stub in this map would OVERRIDE the real handler.
   su() {
     return { text: "Password:\nsu: Authentication failure", cls: "err" };
   },

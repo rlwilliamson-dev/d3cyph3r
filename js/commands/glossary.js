@@ -625,6 +625,27 @@ Google Cloud IAM, Azure Entra ID).
 Modern IAM mantras: least privilege, just-in-time access, no
 long-lived access keys, federate over assume-role.`,
 
+  PRIVESC: `PRIVESC — Privilege Escalation
+
+Turning limited access into more access — most commonly a normal
+user account into root (Linux) or SYSTEM / Administrator (Windows).
+
+On Linux the first three checks are almost always:
+  - sudo -l                 what may this account run as root?
+  - find / -perm -4000      SUID binaries owned by root
+  - cron / systemd timers   root-run jobs on writable scripts
+
+A permissive sudoers grant is the most common finding: a NOPASSWD
+entry, a wildcard path, or an allowed binary that can be "escaped"
+to a shell. GTFOBins (gtfobins.github.io) catalogs which allowed
+binaries hand you a root shell. The defensive mirror is least
+privilege (NIST AC-6): grant the narrowest command on the narrowest
+path, never NOPASSWD on anything that touches secrets, and revoke
+grants when the person they were written for leaves.
+
+MITRE ATT&CK: T1548.003 (Abuse Elevation Control Mechanism: Sudo
+and Sudo Caching). CWE-250 / CWE-269 / CWE-732.`,
+
   RBAC: `RBAC — Role-Based Access Control
 
 An authorization model where permissions are attached to roles,

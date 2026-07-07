@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end, and now all seven ship through level2 as well (v1.23.0 + v1.25.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0 + v1.30.0). 21 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end, and all seven ship through level2 as well (v1.23.0 + v1.25.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0 + v1.30.0). The level3 sweep is now under way — `level3@linux` landed in v2.1.0. 22 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -169,7 +169,7 @@ d3cyph3r/
 │   ├── walkthrough.css      Docs-reader theme (distinct from main terminal)
 │   ├── walkthrough.js       Hash router + markdown renderer (vendored marked.js)
 │   ├── vendor/marked.esm.min.js  Markdown → HTML library (CC-BY-3.0 attribution in vendor/)
-│   ├── linux/level0.md      One walkthrough per shipped level — 21 total as of v2.0.0
+│   ├── linux/level0.md      One walkthrough per shipped level — 22 total as of v2.1.0
 │   └── (etc., one per level)
 ├── tests/                   @playwright/test suite + OG-image generator
 │   ├── playwright.config.cjs Per-spec parallelism config (v1.24.0+)
@@ -188,7 +188,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 ## Roadmap
 
-All seven tracks ship level0, level1, AND level2 — and as of **v2.0.0 "Apprentice"**, every level also carries an in-game `hint` ladder. The level2 sweep that built toward this milestone landed across v1.23.0–v1.30.0; v2.0.0 itself is the coronation — a polish + consistency pass (hint coverage on all 21 levels, a framework-citation refresh, docs accuracy) with no new gameplay, mirroring how v1.0.0 "Foundation" crowned the level0 + level1 work. Every shipped level2 in turn leaks a breadcrumb credential staged for its level3, so the per-track credential chain stays consistent as level3 content gets built one track at a time. New levels land one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
+All seven tracks ship level0, level1, AND level2, and every level carries an in-game `hint` ladder (the **v2.0.0 "Apprentice"** milestone crowned that work — a polish pass with no new gameplay, mirroring how v1.0.0 "Foundation" crowned the level0 + level1 chains). As of **v2.1.0**, the level3 sweep is under way: `level3@linux` ("Daniel's forgotten sudo") is the first, taking the Linux track from credential discovery into privilege escalation and building toward the eventual **v3.0.0 "Practitioner"** milestone (level3 across every track). Each shipped level leaks a breadcrumb credential staged for the next in its track, so the per-track chain stays consistent as level3 content lands one track at a time. New levels ship one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 
