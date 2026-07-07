@@ -551,8 +551,8 @@ This is a deliberate decision (committed v1.22.0), not an oversight:
   taxonomy, and CWE reference the levels cite. Translating those would
   defeat the post-mortems' point.
 - A hobby project can't sustain the maintenance burden of N translated
-  copies of 21+ levels' worth of welcome.md / lessons-learned.md, plus
-  the walkthroughs (currently ~110k words), plus drift management as
+  copies of every level's welcome.md / lessons-learned.md, plus the
+  walkthroughs (well over 100k words), plus drift management as
   citations get updated.
 - The engine has no string-extraction conventions. Player-facing
   strings live inline in command handlers, level data, and UI modules

@@ -12,7 +12,7 @@ All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship lev
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
-| Linux | `level0@linux` ("Daniel's Last Day"), `level1@linux` ("The Backup Daniel Forgot"), `level2@linux` ("Daniel's Forgotten Cron") | Halton Bank | GLBA |
+| Linux | `level0@linux` ("Daniel's Last Day"), `level1@linux` ("The Backup Daniel Forgot"), `level2@linux` ("Daniel's Forgotten Cron"), `level3@linux` ("Daniel's Forgotten Sudo") | Halton Bank | GLBA |
 | Network | `level0@network` ("Atlas Health Perimeter Check"), `level1@network` ("The Map Marcus Didn't Mean to Share"), `level2@network` ("What the Cert Knew") | Atlas Health | HIPAA |
 | Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't"), `level2@crypto` ("Theo's Quick Hash") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall"), `level2@web` ("The Search Bar That Talks") | Meridian State University | FERPA |
@@ -47,7 +47,7 @@ guest@d3cyph3r:~$ ssh level0@osint        # Breach-corpus credential reuse
 guest@d3cyph3r:~$ ssh level0@cloud        # S3 misconfiguration / SOC 2 audit
 ```
 
-Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. The level1 in each track is gated by a credential the player recovers during level0 (Daniel's `creds.txt`, Marcus's unrotated default, the decoded base64 API key, Meridian's leaked DB password, Sgt. Chen's handoff archive password, Aaron's reused breach-corpus password, and Coverline's hardcoded RDS master). Every level1 in turn leaks a credential staged for the eventual level2 — the per-track credential chain is the through-line.
+Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. The level1 in each track is gated by a credential the player recovers during level0 (Daniel's `creds.txt`, Marcus's unrotated default, the decoded base64 API key, Meridian's leaked DB password, Sgt. Chen's handoff archive password, Aaron's reused breach-corpus password, and Coverline's hardcoded RDS master). Every level in turn leaks a credential staged for the next level in its track — the per-track credential chain is the through-line (now running through level2 on every track, and level3 on Linux).
 
 The lobby (`guest@d3cyph3r`) renders the engagement list as a collapsible tree (v1.10.0): each track is one line by default; `tracks <name>` expands a track to show its level lineup with titles, computed difficulty tier (Routine / Live / Escalated / Critical / Crisis — type `tiers` for definitions), and estimated time. Tracks with any visited level auto-expand on the next lobby render. First-time visitors see a guided FIRST STEPS block and can run `tutorial start` for a hand-held walk-through (v1.12.0); returning visitors see a welcome-back summary with a "Continue: ssh level<N+1>@<track>" recommendation (v1.18.0). Other player surfaces: `progress --detail` lists discovered bonus finds + per-level times, `achievements` lists the 20-achievement layer (v1.14.0), `themes` switches between 11 palettes (v1.13.0), `save` emits a portable progress code (v1.20.0). Type `help` inside any level for the full command reference.
 
@@ -157,7 +157,7 @@ d3cyph3r/
 │       └── rot13.js         ROT13 cipher
 ├── levels/
 │   ├── index.js             Registers tracks → LEVELS map; flatten init
-│   ├── linux.js             Linux track (level0 + level1 + level2) — Halton Bank / GLBA
+│   ├── linux.js             Linux track (level0 + level1 + level2 + level3) — Halton Bank / GLBA
 │   ├── network.js           Network track (level0 + level1 + level2) — Atlas Health / HIPAA
 │   ├── crypto.js            Crypto track (level0 + level1 + level2) — Vesta Retail / PCI-DSS
 │   ├── web.js               Web track (level0 + level1 + level2) — Meridian State U / FERPA
@@ -188,7 +188,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 ## Roadmap
 
-All seven tracks ship level0, level1, AND level2, and every level carries an in-game `hint` ladder (the **v2.0.0 "Apprentice"** milestone crowned that work — a polish pass with no new gameplay, mirroring how v1.0.0 "Foundation" crowned the level0 + level1 chains). As of **v2.1.0**, the level3 sweep is under way: `level3@linux` ("Daniel's forgotten sudo") is the first, taking the Linux track from credential discovery into privilege escalation and building toward the eventual **v3.0.0 "Practitioner"** milestone (level3 across every track). Each shipped level leaks a breadcrumb credential staged for the next in its track, so the per-track chain stays consistent as level3 content lands one track at a time. New levels ship one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
+All seven tracks ship level0, level1, AND level2, and every level carries an in-game `hint` ladder (the **v2.0.0 "Apprentice"** milestone crowned that work — a polish pass with no new gameplay, mirroring how v1.0.0 "Foundation" crowned the level0 + level1 chains). As of **v2.1.0**, the level3 sweep is under way: `level3@linux` ("Daniel's Forgotten Sudo") is the first, taking the Linux track from credential discovery into privilege escalation and building toward the eventual **v3.0.0 "Practitioner"** milestone (level3 across every track). Each shipped level leaks a breadcrumb credential staged for the next in its track, so the per-track chain stays consistent as level3 content lands one track at a time. New levels ship one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 
