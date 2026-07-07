@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-07-07
+
+**`level3@linux` — "Daniel's forgotten sudo."** The first level3 ships, opening the sweep that builds toward the eventual v3.0.0 "Practitioner" milestone (level3 across every track). This one carries the Linux track's Halton Bank engagement from credential discovery into **privilege escalation** — and makes the `sudo` command functional for the first time.
+
+### Added
+
+- **`level3@linux` — "Daniel's forgotten sudo" (Routine tier, ~12 min).** Daniel's snapshot SSH key — unlocked with the passphrase from level2's cron trace — drops you onto `halton-build-runner` logged in *as* the offboarded consultant, whose account was never disabled here either. `sudo -l` reveals a leftover NOPASSWD sudoers grant that survived his offboarding: a wildcard `cat` over the weekly backup directory. A permitted `sudo cat` reads a production Vault root token the config backup quietly swept up, carrying the engagement to level4. The fourth distinct offboarding-failure vector in the Daniel arc (laptop creds → `.env` backup → cron → sudoers). CWE-250 + CWE-732 + CWE-312. Two bonus finds: Daniel's account surviving on a second host, and the backup that captured live secrets.
+- **Functional `sudo`.** The `sudo` command is now level-aware via a new `level.sudo` schema field. On levels that declare it, `sudo -l` enumerates the account's sudoers grants and a permitted `sudo cat` reads root-owned files (real root ignores permission bits); levels without it keep the previous always-deny behavior. A new `what-is PRIVESC` glossary entry covers the `sudo -l` enumeration pattern and GTFOBins.
+- **`walkthroughs/linux/level3.md`** — "Daniel's Forgotten Sudo", a full study companion covering privilege escalation via sudoers misconfiguration, least privilege as continuous review, and the secrets-in-backups anti-pattern (NIST SP 800-53 AC-6, CIS Controls v8.1, OWASP A01, GLBA, plus a defender playbook). Baron Samedit (CVE-2021-3156), the sudo `-u#-1` runas bypass (CVE-2019-14287), the Dok/Proton NOPASSWD-sudoers malware pattern, and the 2018 Cisco ex-employee case are cited as real-world parallels.
+
+CWE-250 + CWE-732 + CWE-312; MITRE T1548.003 (Abuse Elevation Control Mechanism: Sudo); NIST SP 800-53 AC-6.
+
 ## [2.0.0] - 2026-06-01
 
 **"Apprentice" — every track playable through level2.** The v2.0.0 milestone: all seven tracks (Linux · Network · Crypto · Web · Forensics · OSINT · Cloud) are now playable level0 → level1 → level2, **21 levels** in total. This release is a polish-and-consistency pass over that body of work — no new levels, the way v1.0.0 "Foundation" crowned the level0 + level1 work rather than adding gameplay.
@@ -3807,7 +3819,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.30.0...v2.0.0
 [1.30.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.1...v1.30.0
 [1.29.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.29.0...v1.29.1

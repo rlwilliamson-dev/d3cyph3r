@@ -184,8 +184,8 @@ mirror the same UX pattern: red error stays, friendly hint
 layers underneath.
 
 **Bonus finds on every level (v1.10.0).** `level.bonusFinds`
-introduced in v1.9.0 is now seeded on all 21 shipped levels
-(all 7 tracks through level2). Each level has at least one
+introduced in v1.9.0 is now seeded on all 22 shipped levels
+(all 7 tracks through level2, plus level3@linux). Each level has at least one
 bonus find, computed against `js/engine/bonus.js#checkBonusFinds`,
 that surfaces an orthogonal lesson distinct from the credential-
 chain solve. Triggers use existing in-level content (file reads,

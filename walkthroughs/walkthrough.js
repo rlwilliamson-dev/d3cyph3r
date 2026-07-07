@@ -152,6 +152,14 @@ const MANIFEST = {
           "weekly under bash `set -x` and writes its SSH-key passphrase " +
           "to a world-readable log. CWE-250 + CWE-532 + CWE-521.",
       },
+      level3: {
+        title: "Daniel's Forgotten Sudo",
+        blurb:
+          "Daniel's snapshot key drops you onto the build-runner as him. " +
+          "`sudo -l` reveals a leftover NOPASSWD grant that survived his " +
+          "offboarding; a wildcard `sudo cat` reads a prod Vault root " +
+          "token the weekly backup swept up. CWE-250 + CWE-732 + CWE-312.",
+      },
     },
   },
   network: {

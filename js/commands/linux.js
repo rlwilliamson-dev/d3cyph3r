@@ -84,6 +84,109 @@ function canReadFile(meta, currentUser, currentGroup) {
   return meta.mode[7] === "r";
 }
 
+// Shared file reader used by both `cat` and `sudo cat`. Walks each
+// requested path (after glob expansion), concatenating file contents in
+// the exact { text, cls } shape `cat` has always returned. The ONLY
+// difference between a normal read and a root read is the `asRoot`
+// flag: real root ignores permission bits, so a *permitted* `sudo cat`
+// reads owner=root / mode=0600 files that the invoking user's own
+// `cat` is denied. Everything else (missing file, is-a-directory,
+// symlink following via getFSNode, empty-file hint, mixed
+// success/error coloring) is identical for both callers.
+function catRead(level, rawArgs, asRoot = false) {
+  const expanded = expandGlobs(level, currentPath, rawArgs);
+  const user  = getCurrentUser(level);
+  const group = getCurrentGroup(level);
+  const out   = [];
+  let hadError = false;
+  let hadContent = false;
+
+  for (const a of expanded) {
+    const target = resolvePath(level, currentPath, a);
+    const node   = getFSNode(level, target);
+    if (!node)               { out.push(`cat: ${a}: No such file or directory`); hadError = true; continue; }
+    if (node.type === "dir") { out.push(`cat: ${a}: Is a directory`);             hadError = true; continue; }
+
+    const basename = target[target.length - 1];
+    const meta     = level.permissions?.[basename];
+    if (!asRoot && meta && !canReadFile(meta, user, group)) {
+      out.push(`cat: ${a}: Permission denied`);
+      hadError = true;
+      continue;
+    }
+
+    if (node.content) {
+      out.push(node.content);
+      hadContent = true;
+    }
+  }
+
+  if (!hadContent && !hadError) return { text: "(empty file)", cls: "dim" };
+  return {
+    text: out.join("\n"),
+    cls: !hadContent && hadError ? "err" : "out",
+  };
+}
+
+// ── sudo / privilege-escalation helpers (level.sudo) ─────────────────
+// A level opts into a functional `sudo` by declaring `level.sudo`:
+//   { host?: "build-runner",
+//     entries: [ { runAs: "root", nopasswd: true,
+//                  commands: ["/usr/bin/cat /opt/halton/snapshots/*"] } ] }
+// Without it, `sudo` stays the canonical always-deny (see the handler).
+
+// Render `sudo -l` output in canonical sudo format: a Defaults block
+// then "User X may run the following commands", one line per grant.
+function renderSudoListing(sudoCfg, user, host) {
+  const lines = [
+    `Matching Defaults entries for ${user} on ${host}:`,
+    `    env_reset, mail_badpass,`,
+    `    secure_path=/usr/local/sbin\\:/usr/local/bin\\:/usr/sbin\\:/usr/bin\\:/sbin\\:/bin`,
+    ``,
+    `User ${user} may run the following commands on ${host}:`,
+  ];
+  for (const entry of (sudoCfg.entries || [])) {
+    const runAs = entry.runAs || "root";
+    const tag   = entry.nopasswd ? "NOPASSWD: " : "";
+    for (const c of (entry.commands || [])) lines.push(`    (${runAs}) ${tag}${c}`);
+  }
+  return lines.join("\n");
+}
+
+// Convert an fnmatch-style sudoers glob to an anchored RegExp. `*` and
+// `?` are wildcards; every other regex metachar is escaped. Note `*`
+// maps to `.*` (matches across `/`) ON PURPOSE — an over-broad wildcard
+// that reaches into subdirectories IS the vulnerability the level
+// teaches (CWE-732 / CWE-250).
+function sudoGlobToRegExp(glob) {
+  const esc = glob.replace(/[.+^${}()|[\]\\]/g, "\\$&")
+                  .replace(/\*/g, ".*")
+                  .replace(/\?/g, ".");
+  return new RegExp("^" + esc + "$");
+}
+
+// Is `sudo <cmd> <args>` permitted by any grant in level.sudo? Matches
+// the requested binary basename against each grant's binary, and — when
+// the grant constrains arguments — the requested path(s) resolved to an
+// absolute fs path (so `sudo cat foo` from inside the target dir still
+// matches an absolute-glob grant). `ALL` and arg-less binary grants
+// permit anything for that binary.
+function isSudoPermitted(sudoCfg, level, cmd, cmdArgs) {
+  for (const entry of (sudoCfg.entries || [])) {
+    for (const spec of (entry.commands || [])) {
+      if (spec === "ALL") return true;
+      const parts   = spec.trim().split(/\s+/);
+      const binBase = parts[0].split("/").pop();
+      if (binBase !== cmd) continue;
+      if (parts.length === 1) return true; // binary permitted, no arg constraint
+      const re  = sudoGlobToRegExp(parts.slice(1).join(" "));
+      const abs = cmdArgs.map(a => "/" + resolvePath(level, currentPath, a).join("/"));
+      if (abs.length && abs.every(p => re.test(p))) return true;
+    }
+  }
+  return false;
+}
+
 export const linuxCommands = {
   // cd: change directory. Routes the arg through the path resolver,
   // which gives us absolute paths (`/home/<user>/foo`), home expansion
@@ -271,46 +374,11 @@ export const linuxCommands = {
       return { text: c, cls: "out" };
     }
 
-    // Modern path: tokenize, expand globs, fetch each, concat outputs.
+    // Modern path: tokenize and delegate to the shared reader. Normal
+    // `cat` enforces read permissions (asRoot = false); `sudo cat`
+    // routes through the same helper with asRoot = true.
     const rawArgs = arg.trim().split(/\s+/).filter(Boolean);
-    const expanded = expandGlobs(level, currentPath, rawArgs);
-
-    const user  = getCurrentUser(level);
-    const group = getCurrentGroup(level);
-    const out   = [];
-    let hadError = false;
-    let hadContent = false;
-
-    for (const a of expanded) {
-      const target = resolvePath(level, currentPath, a);
-      const node   = getFSNode(level, target);
-      if (!node)               { out.push(`cat: ${a}: No such file or directory`); hadError = true; continue; }
-      if (node.type === "dir") { out.push(`cat: ${a}: Is a directory`);             hadError = true; continue; }
-
-      const basename = target[target.length - 1];
-      const meta     = level.permissions?.[basename];
-      if (meta && !canReadFile(meta, user, group)) {
-        out.push(`cat: ${a}: Permission denied`);
-        hadError = true;
-        continue;
-      }
-
-      if (node.content) {
-        out.push(node.content);
-        hadContent = true;
-      }
-    }
-
-    // Single-file empty content → graceful "(empty file)" hint.
-    if (!hadContent && !hadError) return { text: "(empty file)", cls: "dim" };
-    return {
-      text: out.join("\n"),
-      // If everything was an error, use the error color. Mixed
-      // success+error still uses "out" so the body content is
-      // legible — errors are clearly tagged in-text by the
-      // "cat: <name>: ..." prefix.
-      cls: !hadContent && hadError ? "err" : "out",
-    };
+    return catRead(level, rawArgs, /* asRoot */ false);
   },
 
   // pwd / whoami / echo: trivial reflectors over engine state and
@@ -322,6 +390,66 @@ export const linuxCommands = {
 
   whoami(level) {
     return { text: getCurrentUser(level), cls: "out" };
+  },
+
+  // sudo: privilege-escalation surface.
+  //
+  // Default (no `level.sudo`): the canonical always-deny stub — `sudo
+  // <anything>` prints bash's "incorrect password" line without ever
+  // granting root. Levels that don't model sudoers keep the old
+  // behavior verbatim (the stub used to live in readonly-stubs.js).
+  //
+  // Opt-in (`level.sudo` present): the command becomes functional.
+  //   sudo -l            enumerate the invoking user's sudoers grants
+  //   sudo <cmd> <args>  if a NOPASSWD grant permits it, run <cmd> as
+  //                      root; otherwise print the canonical "not
+  //                      allowed to execute" deny
+  // Only `cat` is wired as a root-executable target (the shipped grant
+  // is a wildcard `cat` over a snapshot dir — CWE-250 / CWE-732 /
+  // MITRE T1548.003). Any OTHER permitted binary prints a sandbox note
+  // rather than faking a root shell — the lesson is enumerating and
+  // exploiting a leftover sudoers grant, not general code execution.
+  sudo(level, _arg, _stdin, argv) {
+    // argv is the post-expansion ARGUMENT vector — it does NOT include
+    // the command name "sudo" (argv[0] is already the first arg). So
+    // for `sudo cat /path`, argv === ["cat", "/path"].
+    const rest = (argv || []).filter(Boolean);
+
+    // No sudoers model here → legacy deny (identical to the old stub).
+    if (!level.sudo) {
+      return { text: "[sudo] password for user:\nSorry, try again.\nsudo: 1 incorrect password attempt", cls: "err" };
+    }
+
+    const user = getCurrentUser(level);
+    const host = level.sudo.host || (level.env_vars?.HOSTNAME || "localhost").split(".")[0];
+
+    // sudo -l / sudo -ll : list privileges.
+    if (rest[0] === "-l" || rest[0] === "-ll") {
+      return { text: renderSudoListing(level.sudo, user, host), cls: "out" };
+    }
+
+    // Bare `sudo` (or unsupported flags) → usage, matching real sudo.
+    if (rest.length === 0 || rest[0].startsWith("-")) {
+      return { text: "usage: sudo -h | -K | -k | -V\nusage: sudo -l [command]\nusage: sudo [-u user] command", cls: "err" };
+    }
+
+    // sudo <cmd> <args...>
+    const cmd     = rest[0];
+    const cmdArgs = rest.slice(1);
+
+    if (!isSudoPermitted(level.sudo, level, cmd, cmdArgs)) {
+      const full = `/usr/bin/${cmd}${cmdArgs.length ? " " + cmdArgs.join(" ") : ""}`;
+      return { text: `Sorry, user ${user} is not allowed to execute '${full}' as root on ${host}.`, cls: "err" };
+    }
+
+    // Permitted. Execute the supported reader as root.
+    if (cmd === "cat") {
+      if (cmdArgs.length === 0) return { text: "Usage: cat <file>", cls: "err" };
+      return catRead(level, cmdArgs, /* asRoot */ true);
+    }
+
+    // Permitted but not a wired-in root target in the sandbox.
+    return { text: `(sandbox: sudo would run '${cmd}' as root here; this audit terminal only wires 'cat' for root reads)`, cls: "dim" };
   },
 
   echo(_level, arg) {

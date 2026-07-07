@@ -179,7 +179,9 @@ export const LEVEL_REGISTRY = Object.freeze([
   "level2@web",          // 18  — v1.28.0
   "level2@osint",        // 19  — v1.29.0
   "level2@cloud",        // 20  — v1.30.0
-  // ── future levels append here at index 21, 22, 23, ... ──
+  // ── v2.1.0 — level3 sweep begins (builds toward the v3.0.0 milestone) ──
+  "level3@linux",        // 21  — v2.1.0
+  // ── future levels append here at index 22, 23, 24, ... ──
 ]);
 const LEVEL_INDEX = new Map(LEVEL_REGISTRY.map((k, i) => [k, i]));
 
@@ -321,6 +323,11 @@ export const BONUS_REGISTRY = Object.freeze({
   // never-rotated 2019 ci-deploy-svc key, and the root access key
   // surfaced by get-account-summary.
   "level2@cloud":     Object.freeze(["ghost-terminated-admin", "ancient-access-key", "root-access-key"]),
+  // v2.1.0 — level3@linux ships with two bonus finds: daniel's account
+  // surviving on a second host (fires on cat /etc/passwd), and the
+  // config backup that swept up live secrets (fires on sudo cat of the
+  // captured DB connection profile).
+  "level3@linux":     Object.freeze(["daniel-outlived-again", "backup-swept-secrets"]),
 });
 // Build a reverse-lookup: "<levelKey>:<findId>" → { levelIdx, bitN }.
 // The progress code's stored bonus-finds set lives at the "<key>:<id>"

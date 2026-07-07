@@ -202,6 +202,34 @@
 // to a primary group named by `playerGroup`. `cat` returns "Permission
 // denied" for files the player can't read.
 //
+// Optional: SUDO / PRIVILEGE ESCALATION (v2.1.0). Opts a level into a
+// functional `sudo` (the handler lives in js/commands/linux.js; without
+// this field `sudo` stays the canonical always-deny stub):
+//
+//   level.sudo: {
+//     host?: "build-runner",        // shown in `sudo -l` (defaults to
+//                                   // the short HOSTNAME)
+//     entries: [
+//       { runAs?: "root",           // target user (default "root")
+//         nopasswd?: true,          // true → NOPASSWD tag in `sudo -l`
+//         commands: ["/usr/bin/cat /var/backups/halton-prod/*"] },
+//       ...
+//     ],
+//   }
+//
+// Each `commands` entry is a sudoers command spec: a binary path
+// optionally followed by an fnmatch-style argument pattern (`*`, `?`).
+// `sudo -l` renders the grants in canonical format. `sudo <cmd> <args>`
+// is PERMITTED when the requested binary basename matches a grant's
+// binary AND (if the grant constrains args) every requested path —
+// resolved to an absolute fs path — falls under the grant's glob;
+// `"ALL"` or a bare binary permits anything for that binary. A permitted
+// `sudo cat` reads root-owned files (real root ignores permission bits);
+// any other permitted binary prints a sandbox note rather than faking a
+// root shell. Denied invocations print the canonical "user is not
+// allowed to execute '...' as root" line. Teaches sudoers-misconfig
+// enumeration + exploitation (CWE-250 / CWE-732 / MITRE T1548.003).
+//
 // Continuity: all levels are set at Driftwood Systems, a mid-sized tech
 // consulting firm (~600 consultants, ~80 simultaneous engagements). The
 // player works on Driftwood's internal security team, auditing the
@@ -2122,6 +2150,603 @@ retro — we owe the next track its own set of eyes."
 (Speaking of which: Marcus at Atlas Health flagged a cert
 he can't explain on a host we didn't sweep last quarter.
 Network track when you're ready.)
+
+Return to the lobby:    ssh guest@d3cyph3r
+`
+        },
+
+      },
+    },
+  },
+
+  // ── level3@linux — "Daniel's forgotten sudo" ─────────────────────
+  // Gate: H@lton-Snapshot-2024-Q4 (the SSH-key passphrase leaked from
+  // level2's cron trace). That passphrase unlocked Daniel's snapshot-
+  // rsync key, and that key is exactly what the weekly cron used to
+  // reach `daniel@halton-build-runner`. So the player lands HERE, on
+  // the build-runner, logged in AS daniel — the offboarded consultant
+  // whose account (surprise) was never disabled on this box either.
+  //
+  // NEW CONCEPT: privilege escalation via a leftover NOPASSWD sudoers
+  // grant — the FOURTH distinct offboarding-failure vector in the
+  // Daniel arc: laptop creds (l0) -> .env backup (l1) -> cron (l2) ->
+  // sudoers (l3).
+  //
+  // Solve path:
+  //   1. `sudo -l` enumerates daniel's grants. One survives from the
+  //      2024 migration: (root) NOPASSWD: /usr/bin/cat
+  //      /var/backups/halton-prod/*
+  //   2. The weekly cron rsync'd prod's /etc/halton into
+  //      /var/backups/halton-prod/. The build-runner re-owns delivered
+  //      backups to root:root 0600 on ingest, so daniel can't read his
+  //      own pushed files back without going through the grant.
+  //   3. `ls` the backup tree, find the captured secrets, and
+  //      `sudo cat /var/backups/halton-prod/etc-halton/secrets.d/
+  //      prod-vault.env` — the VAULT_TOKEN line is the level4 gate.
+  //
+  // Engine: FIRST level to use `level.sudo` (see the schema note at the
+  // top of this file). The functional `sudo` handler is in
+  // js/commands/linux.js — `sudo -l` lists the grants; a permitted
+  // `sudo cat` under the wildcard reads root-owned files.
+  //
+  // Lessons: CWE-250 (Execution with Unnecessary Privileges) + CWE-732
+  // (Incorrect Permission Assignment — the never-removed grant) +
+  // CWE-312 (Cleartext Storage — the snapshot swept live secrets into a
+  // backup). NIST 800-53 AC-6 / AC-2(3) + PS-4 (offboarding, AGAIN).
+  // MITRE T1548.003 (Abuse Elevation Control Mechanism: Sudo and Sudo
+  // Caching) + T1078.003 (Valid Accounts: Local Accounts).
+  //
+  // Two bonus finds (don't gate the chain):
+  //   - "Daniel's account outlived him here too" — /etc/passwd on the
+  //     build-runner ALSO still lists daniel with /bin/bash. Systemic,
+  //     not a one-box slip.
+  //   - "The backup swept up live secrets" — the snapshot captured a
+  //     prod DB connection profile (with the reused Halton-2024-Q3!
+  //     password) alongside the vault token. Backups are crown jewels.
+  //
+  // Breadcrumb out: hvs.HALTONr00tPr0dVault2024Q4Kp7mNq — a Halton prod
+  // Vault ROOT token captured in the backup, gating the (future)
+  // level4@linux.
+  "level3@linux": {
+    password: "H@lton-Snapshot-2024-Q4",
+    track: "linux",
+    title: "Daniel's forgotten sudo",
+    estimatedMinutes: 12,
+    playerUser: "daniel",
+    objective: "Escalate from Daniel's offboarded account to root by abusing a NOPASSWD sudoers grant nobody removed after the 2024 migration — and recover the production Vault token the weekly backup should never have contained.",
+    lesson: "Still day three. The passphrase from cron-daniel.log unlocked Daniel's snapshot-rsync key, and that key is exactly what the weekly job used to reach halton-build-runner — so here you are, logged in AS daniel, on yet another Halton box where his account was never disabled. welcome.md covers the one new command: `sudo -l`. Daniel kept a NOPASSWD grant here from the migration. Enumerate it, then use it to read a backup that swept up secrets it was never supposed to hold.",
+    hints: [
+      "You're logged in as an offboarded account. The first question on any box you land on is 'what is this account still allowed to do as root?' — run `sudo -l`.",
+      "The grant lets you run `cat` as root over anything under /var/backups/halton-prod/. The weekly snapshot rsync'd Halton's /etc/halton into there. `ls` around that tree and find where the captured secrets landed (there's a secrets.d/ directory).",
+      "Plain `cat` on the captured secret is Permission denied — it's root-owned. Put sudo in front: `sudo cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env`. The VAULT_TOKEN line is your level4 credential.",
+    ],
+    permissions: {
+      "welcome.md":         { mode: "-rw-r--r--", owner: "daniel", group: "daniel", size: 2712 },
+      "lessons-learned.md": { mode: "-rw-r--r--", owner: "daniel", group: "daniel", size: 6480 },
+      ".bash_history":      { mode: "-rw-------", owner: "daniel", group: "daniel", size:  184 },
+      "etc":                { mode: "drwxr-xr-x", owner: "root",   group: "root",  size: 4096 },
+      "var":                { mode: "drwxr-xr-x", owner: "root",   group: "root",  size: 4096 },
+      // The rsync'd snapshot dirs are re-owned to root:root on ingest so
+      // the pushing account can't tamper with delivered backups — which
+      // is ALSO why daniel can't read them back without the sudo grant.
+      "backups":            { mode: "drwxr-x---", owner: "root",   group: "root",  size: 4096 },
+      "halton-prod":        { mode: "drwxr-x---", owner: "root",   group: "root",  size: 4096 },
+      "etc-halton":         { mode: "drwxr-x---", owner: "root",   group: "root",  size: 4096 },
+      "etc-systemd":        { mode: "drwxr-x---", owner: "root",   group: "root",  size: 4096 },
+      "secrets.d":          { mode: "drwx------", owner: "root",   group: "root",  size: 4096 },
+      "db":                 { mode: "drwx------", owner: "root",   group: "root",  size: 4096 },
+      "halton.conf":        { mode: "-rw-r--r--", owner: "root",   group: "root",  size:  512 },
+      // The captured secrets — root-owned, mode 0600. Plain `cat` is
+      // denied to daniel; the permitted `sudo cat` reads them as root.
+      "prod-vault.env":     { mode: "-rw-------", owner: "root",   group: "root",  size:  486 },
+      "connections.yaml":   { mode: "-rw-------", owner: "root",   group: "root",  size:  612 },
+      // The grant's own sudoers file — root:root 0440, unreadable to
+      // daniel AND outside his cat grant, so `sudo cat` on it is denied
+      // too. You enumerate the grant with `sudo -l`, not by reading it.
+      "halton-daniel-snapshot": { mode: "-r--r-----", owner: "root", group: "root", size: 214 },
+      "passwd":             { mode: "-rw-r--r--", owner: "root",   group: "root",  size:  704 },
+    },
+
+    env_vars: {
+      EDITOR:      "nano",
+      AWS_PROFILE: "halton-prod",
+      HOSTNAME:    "halton-build-runner.driftwood.internal",
+    },
+
+    // FIRST level to use level.sudo. Daniel's leftover NOPASSWD grant:
+    // a wildcard `cat` over the backup dir, installed for the 2024
+    // migration so his snapshot cron could spot-check delivered
+    // backups, never removed when he rolled off. `sudo -l` lists it;
+    // `sudo cat` under the wildcard reads root-owned files. See the
+    // schema note at the top of this file + js/commands/linux.js.
+    sudo: {
+      host: "halton-build-runner",
+      entries: [
+        { runAs: "root", nopasswd: true, commands: ["/usr/bin/cat /var/backups/halton-prod/*"] },
+      ],
+    },
+
+    bonusFinds: [
+      {
+        id:   "daniel-outlived-again",
+        name: "Daniel's account outlived him here too",
+        hint: "It wasn't just the prod-bastion. Daniel's local account survived on the build-runner as well — /bin/bash and all. One missed offboarding is an incident; the same miss on a second box is a systemic identity-lifecycle failure (NIST PS-4 / AC-2(3)).",
+        // Fires on `cat /etc/passwd` or `grep daniel /etc/passwd`.
+        trigger: { argMatches: /passwd/, outputContains: "daniel:x:1042" },
+      },
+      {
+        id:   "backup-swept-secrets",
+        name: "The backup swept up live secrets",
+        hint: "A backup of a config directory should never contain live production credentials. This one carried the prod DB connection profile — password and all (the same unrotated Halton-2024-Q3! string) — into a directory a low-privilege account could reach with one leftover grant. CWE-312. Backups are crown jewels; scope, encrypt, and access-control them accordingly.",
+        // Fires on `sudo cat .../db/connections.yaml`.
+        trigger: { command: "sudo", argMatches: /connections\.yaml/, outputContains: "Halton-2024-Q3!" },
+      },
+    ],
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Driftwood Systems / Halton Bank — Build-Runner Pivot ──────
+  Host:    halton-build-runner.driftwood.internal
+  Acct:    daniel (offboarded consultant — see below)
+  Date:    Thursday 2026-05-28 (engagement day three, still)
+────────────────────────────────────────────────────────────
+
+Priya: "That passphrase you pulled out of the cron trace —
+H@lton-Snapshot-2024-Q4 — wasn't a login password. It was the
+passphrase on Daniel's snapshot-rsync SSH KEY. We loaded the
+key with it and rode Daniel's own weekly-backup path onto the
+build-runner. You're logged in AS daniel now. Yes: his account
+was never disabled HERE either. Same offboarding miss, second
+box. Prove what that account can still do — and whether the
+backups it's been shipping for months are as harmless as
+Halton thinks."
+
+Your in-world identity is \`daniel\` (uid 1042, primary group
+\`daniel\`). Run \`id\` and \`whoami\` to confirm. You are NOT
+root — but Daniel's account may have been left able to become
+root for specific commands. That's today's whole finding.
+
+─── A NOTE ABOUT THE LAYOUT ───────────────────────────────────
+
+Same audit-chroot shell as the bastion: the home dir and the
+read-only system root point at the same node, so \`ls ~\` shows
+the briefing docs (welcome.md, lessons-learned.md) next to the
+system paths — \`etc/\`, \`var/\`. Intentional, not a bug.
+
+  ls  /var/backups/halton-prod/     the delivered snapshots
+  cat /etc/passwd                   the account list
+
+─── NEW COMMAND YOU'LL USE TODAY ──────────────────────────────
+
+  sudo -l    List what the CURRENT account is allowed to run
+             via sudo — and, critically, whether any of it is
+             NOPASSWD (no password prompt). This is the single
+             command the finding needs. You almost never get to
+             read /etc/sudoers directly (it's root-only), so
+             \`sudo -l\` is how you enumerate your own grants.
+
+─── WHAT SUDO IS, AND WHY 'sudo -l' MATTERS ───────────────────
+
+\`sudo\` runs a command as another user — root by default —
+IF the sudoers policy permits it. The policy lives in
+/etc/sudoers and /etc/sudoers.d/. A single line grants a user
+(or group) the right to run specific commands as a target
+user:
+
+    daniel  ALL=(root) NOPASSWD: /usr/bin/cat /var/backups/*
+
+Read that as: "daniel may run \`/usr/bin/cat\` on anything under
+/var/backups as root, without being asked for a password."
+
+Two things make a grant like that dangerous:
+
+  1. NOPASSWD means an attacker who lands on the account needs
+     no secret at all to use it.
+  2. The WILDCARD. \`cat /var/backups/*\` sounds narrow, but
+     \`*\` reaches into every subdirectory. If anything
+     sensitive was ever written under that path — say, a
+     backup that scooped up a secrets file — the grant reads
+     it as root. Least privilege (NIST AC-6) means granting
+     the narrowest command on the narrowest path; a wildcard
+     over a backup tree is the opposite.
+
+Grants like this are supposed to be temporary. When the person
+they were written for leaves, the line is supposed to leave
+with them. Daniel's didn't.
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat welcome.md                 You're already here.
+  2.  id                             Confirm you're daniel, not root.
+  3.  sudo -l                        What can this account run as root?
+  4.  ls /var/backups/halton-prod/   Walk the delivered snapshot tree.
+                                     The weekly cron rsync'd /etc/halton
+                                     in here — find where secrets landed.
+  5.  sudo cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env
+                                     Plain \`cat\` is Permission denied
+                                     (root-owned). \`sudo cat\` reads it.
+                                     The VAULT_TOKEN line is your
+                                     level4 credential.
+  6.  cat lessons-learned.md         Post-mortem (after step 5).
+  7.  exit                            Return to the lobby.
+
+Bonus exploration when you're done:
+
+  - \`cat /etc/passwd\` (or \`grep daniel /etc/passwd\`)
+  - \`sudo cat /var/backups/halton-prod/etc-halton/db/connections.yaml\`
+`
+        },
+
+        ".bash_history": {
+          type: "file",
+          content:
+`id
+sudo -l
+ls -la /var/backups/halton-prod/
+sudo cat /var/backups/halton-prod/etc-halton/halton.conf
+ssh-add -l
+exit
+`
+        },
+
+        // The system tree. Engine treats fs root as the home dir, so
+        // these also appear as ~ siblings of welcome.md (audit-chroot).
+        "etc": {
+          type: "dir",
+          children: {
+
+            // /etc/passwd — bonus trigger. daniel STILL has a login
+            // shell on the build-runner, same as on the bastion. The
+            // GECOS comment records the rollover date; that's the find.
+            "passwd": {
+              type: "file",
+              content:
+`root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+sshd:x:113:65534::/run/sshd:/usr/sbin/nologin
+buildbot:x:1050:1050:Halton CI build agent:/var/lib/buildbot:/bin/bash
+daniel:x:1042:1042:Daniel Vance (rolled off Halton 2025-01-31):/home/daniel:/bin/bash
+`
+            },
+
+            // /etc/sudoers.d/ — the grant lives here. root:root 0440,
+            // so daniel can't read it directly, and it's outside his
+            // cat grant so `sudo cat` on it is denied too. `sudo -l`
+            // is the intended enumeration path. Present so `ls
+            // /etc/sudoers.d/` shows the file exists (realism).
+            "sudoers.d": {
+              type: "dir",
+              children: {
+                "halton-daniel-snapshot": {
+                  type: "file",
+                  content:
+`# TEMP — 2024 us-east migration. Lets daniel's snapshot cron
+# spot-check delivered backups on the runner. REMOVE after Q4
+# 2024 cutover.  -- installed by vikram.shah 2024-10-13
+daniel  halton-build-runner=(root) NOPASSWD: /usr/bin/cat /var/backups/halton-prod/*
+`
+                },
+              },
+            },
+
+          },
+        },
+
+        "var": {
+          type: "dir",
+          children: {
+
+            "backups": {
+              type: "dir",
+              children: {
+
+                "halton-prod": {
+                  type: "dir",
+                  children: {
+
+                    // The rsync'd snapshot of prod's /etc/halton. This
+                    // is where the weekly cron (level2) delivered its
+                    // payload — and where a config backup quietly
+                    // scooped up live production secrets.
+                    "etc-halton": {
+                      type: "dir",
+                      children: {
+
+                        // Harmless config — root:root but world-readable
+                        // (0644), so daniel CAN read it without sudo.
+                        // The contrast with the 0600 secrets is the point.
+                        "halton.conf": {
+                          type: "file",
+                          content:
+`# Halton prod platform config (non-secret)
+# Captured in weekly snapshot from halton-prod-bastion:/etc/halton
+environment   = production
+region        = us-east-2
+audit_retention_days = 2555
+snapshot_target = halton-build-runner:/var/backups/halton-prod/
+# Secrets are kept in secrets.d/ and db/ (should NOT be here).
+`
+                        },
+
+                        // BREADCRUMB. Root-owned 0600 — Permission
+                        // denied to plain cat, readable via `sudo cat`.
+                        // The VAULT_TOKEN is the level4@linux gate.
+                        "secrets.d": {
+                          type: "dir",
+                          children: {
+                            "prod-vault.env": {
+                              type: "file",
+                              content:
+`# Halton production Vault agent environment
+# /etc/halton/secrets.d/prod-vault.env
+# DO NOT BACK UP. DO NOT COMMIT. (both happened anyway.)
+VAULT_ADDR=https://vault.halton.internal:8200
+VAULT_NAMESPACE=halton-prod
+# ROOT token, issued for the 2024-Q4 migration. Ticket
+# HBISO-EX-0042 said "rotate before Q1 2025." Never rotated.
+VAULT_TOKEN=hvs.HALTONr00tPr0dVault2024Q4Kp7mNq
+`
+                            },
+                          },
+                        },
+
+                        // BONUS #2. Another live secret the config
+                        // backup swept up — the prod DB profile, with
+                        // the reused Halton-2024-Q3! password. Root 0600.
+                        "db": {
+                          type: "dir",
+                          children: {
+                            "connections.yaml": {
+                              type: "file",
+                              content:
+`# Halton prod DB connection profiles
+# Captured in the weekly /etc/halton snapshot (it should not
+# have been — this file holds live credentials).
+production:
+  host: halton-prod-db.halton.internal
+  port: 5432
+  database: halton_core
+  user: halton_app
+  password: Halton-2024-Q3!    # still unrotated; same string as the bastion login
+reporting:
+  host: halton-prod-db.halton.internal
+  port: 5432
+  database: halton_reporting
+  user: halton_ro
+  password: Halton-2024-Q3!    # reuse, again
+`
+                            },
+                          },
+                        },
+
+                      },
+                    },
+
+                    // Atmospheric — the other half of the snapshot
+                    // (/etc/systemd), so the backup tree looks real.
+                    "etc-systemd": {
+                      type: "dir",
+                      children: {
+                        "system": {
+                          type: "dir",
+                          children: {
+                            "halton-metrics.timer": {
+                              type: "file",
+                              content:
+`[Unit]
+Description=Halton prod metrics push (captured in snapshot)
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+`
+                            },
+                          },
+                        },
+                      },
+                    },
+
+                  },
+                },
+
+              },
+            },
+
+          },
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+You escalated from an offboarded consultant's account to a
+root-level read with a single leftover sudoers line, and used
+it to lift a production Vault ROOT token out of a backup that
+should never have contained one:
+
+  1. Daniel's account was never disabled on the build-runner —
+     the same offboarding miss you already found on the
+     prod-bastion, repeated on a second box. You logged in as
+     him using his own snapshot-rsync key.
+
+  2. Daniel still held a NOPASSWD sudoers grant here, written
+     for the 2024 migration and flagged "REMOVE after Q4 2024
+     cutover." It was never removed. \`sudo -l\` handed it to
+     you: (root) NOPASSWD: /usr/bin/cat /var/backups/halton-prod/*
+
+  3. The grant's wildcard reached into a backup the weekly
+     cron had been delivering for months — a backup that
+     quietly scooped up /etc/halton's live secrets. \`sudo cat\`
+     read the prod Vault root token straight out of it.
+
+Each failure is mundane. Chained, they turn a dormant account
+into root-equivalent access to production's master secret.
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+CWE-250 (Execution with Unnecessary Privileges) is the sudoers
+line itself: an account that should have zero privileges was
+left able to run a command as root. CWE-732 (Incorrect
+Permission Assignment for Critical Resource) is why it still
+exists — the grant was never revoked, and its wildcard scope
+was never narrowed. CWE-312 (Cleartext Storage of Sensitive
+Information) is the backup: production secrets sitting in
+plaintext in a config snapshot, reachable by a low-privilege
+account.
+
+The wildcard is the part people underestimate. "cat one
+backup directory" feels harmless until you notice the backup
+contains a secrets.d/ folder. \`sudo cat /var/backups/*\` is
+\`sudo cat ANYTHING that ever lands under /var/backups\`, for
+as long as the line exists. Least privilege means the
+narrowest command on the narrowest path — never a wildcard
+over a directory whose contents you don't control.
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+This is the third box on which Daniel's identity outlived his
+engagement, and the failure has now graduated from "dormant
+account" to "dormant account with root-equivalent reach." The
+write-up:
+
+  Finding 1 (Halton):   Offboarded consultant's local account
+                        active on a SECOND production host.
+                        Pattern, not incident. Owner: Halton
+                        Ops + HRBP.
+
+  Finding 2 (Halton):   NOPASSWD sudoers grant, self-labeled
+                        temporary, never removed 18 months
+                        after its stated expiry. Owner: Halton
+                        Ops (whoever owns sudoers policy).
+
+  Finding 3 (Halton):   Production secrets present in
+                        cleartext inside routine config
+                        backups. Owner: Halton platform +
+                        whoever owns the backup pipeline.
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  CWE-250 — Execution with Unnecessary Privileges
+    The grant let a dormant account act as root.
+
+  CWE-732 — Incorrect Permission Assignment for Critical
+    Resource. The sudoers grant was never revoked or scoped.
+
+  CWE-312 — Cleartext Storage of Sensitive Information
+    Live secrets sat in plaintext inside a config backup.
+
+  NIST SP 800-53 Rev. 5
+    AC-6: Least Privilege. A wildcard NOPASSWD grant is the
+      textbook violation. AC-6(1)/(2) push privileged commands
+      onto separate, audited accounts.
+    AC-2(3): Disable Accounts. daniel, again.
+    PS-4: Personnel Termination — revoke access AND
+      authenticators (his SSH key still worked).
+    CM-6 / SC-28: Protect information at rest — the backup
+      should have been encrypted and its secrets excluded.
+
+  CIS Critical Security Controls v8.1
+    5.3 / 5.5: Disable dormant accounts.
+    4.7: Manage default/temporary accounts and grants.
+    3.11: Encrypt sensitive data at rest (the backup).
+
+  OWASP Top 10 (2025) — A01: Broken Access Control
+    The sudoers wildcard is a broken-access-control primitive:
+    a narrow-looking grant that authorizes far more than
+    intended. (Privilege-escalation paths also touch A04:
+    Insecure Design.)
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  OSCP / PEN-200
+    \`sudo -l\` is the FIRST command in the Linux privilege-
+    escalation playbook. GTFOBins (gtfobins.github.io) catalogs
+    which sudo-allowed binaries can be escaped to a root shell;
+    the defensive lesson is to assume any NOPASSWD grant is a
+    priv-esc primitive until proven otherwise.
+
+  CompTIA Security+ (SY0-701) / CySA+ (CS0-003)
+    Least privilege, account deprovisioning, and privilege-
+    escalation detection are all directly tested.
+
+  CISSP
+    Domain 5 (IAM): the deprovisioning lifecycle and privileged-
+    access management. Domain 3: protecting data at rest.
+
+  Linux Foundation LFCS / RHCSA
+    Managing sudoers safely (visudo, scoping, NOPASSWD hygiene)
+    is an exam objective.
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+  T1548.003 — Abuse Elevation Control Mechanism: Sudo and Sudo
+    Caching. The NOPASSWD grant is exactly this technique:
+    adversaries enumerate sudo rights and abuse permissive
+    entries to run commands as root.
+
+  T1078.003 — Valid Accounts: Local Accounts
+    daniel's surviving local account is the foothold.
+
+  T1552.001 — Unsecured Credentials: Credentials In Files
+    The Vault token (and the DB password) sat in files inside
+    the backup.
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. Remove the grant. \`visudo\` the line out of
+     /etc/sudoers.d/halton-daniel-snapshot TODAY, and disable
+     daniel's account on this host and every other one.
+
+  2. Audit ALL sudoers entries for NOPASSWD and wildcards.
+     A quarterly \`sudo -l\` sweep (or a config-management
+     assertion) across the fleet, cross-referenced against the
+     current identity directory, catches leftover grants.
+
+  3. Rotate the exposed Vault token immediately and treat it as
+     compromised. It was root-scoped and in a backup for months.
+
+  4. Get secrets OUT of config backups. Exclude secrets.d/ and
+     db/ from the snapshot, or pull them from Vault at runtime
+     so they never sit on disk in a backup at all.
+
+  5. Encrypt backups at rest and access-control the backup
+     directory so a single wildcard grant can't turn it into a
+     secrets buffet.
+
+  6. Prefer short-lived, auditable privilege: sudo grants
+     scoped to exact commands, logged centrally, with no
+     NOPASSWD on anything that touches sensitive data.
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+Privilege escalation on real systems rarely needs an exploit.
+It needs a grant somebody wrote for a good reason, for a person
+who left, that nobody ever removed — pointed at a directory
+that quietly accumulated things it shouldn't hold. The
+defender's job is to be the person who runs \`sudo -l\` on the
+dormant account before an attacker does.
+
+Priya: "Root-equivalent reach on a production secret store,
+from a consultant who left a year ago. That's the executive-
+summary finding. Rotate that Vault token before you do anything
+else — I'll start the Halton call."
+
+(That token opens more than a build-runner. We'll want fresh
+eyes on what it can actually do when you're ready.)
 
 Return to the lobby:    ssh guest@d3cyph3r
 `

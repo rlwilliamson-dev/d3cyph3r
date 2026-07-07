@@ -149,9 +149,10 @@ This filesystem is read-only. See 'man rmdir' for the sandbox-mode note.`,
 This filesystem is read-only. See 'man touch' for the sandbox-mode note.`,
   ln:       `ln — read-only sandbox stub
 This filesystem is read-only. See 'man ln' for the sandbox-mode note.`,
-  sudo:     `sudo — privilege-escalation stub
-The sandbox runs without a real privilege boundary. See 'man sudo'
-for the lesson-shaped error message.`,
+  sudo:     `sudo — run a command as root, per the sudoers policy
+Use 'sudo -l' to enumerate the current account's grants. On levels
+that model a sudoers policy, a permitted 'sudo cat' reads root-owned
+files; elsewhere sudo just denies. See 'man sudo'.`,
   su:       `su — switch-user stub
 Sandbox has no real user table. See 'man su' for context.`,
   useradd:  `useradd — user-management stub
