@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Save/restore progress codes could spuriously fail their own checksum.** The `save` code's base64 armor used the URL-safe alphabet (`+`→`-`), but `-` is also the character that groups a code into readable 8-char blocks — which `restore` strips back out before decoding. So whenever a code's contents happened to encode a `+`, restoring it (even immediately, on the same device) stripped a real data character and rejected the code with a false "checksum failed — likely mistyped or corrupted" error. It hit roughly one save in eighteen for a mid-game code, and more often the more progress a player had. The armor now maps `+`→`.` — a character the grouping never uses — so no payload character can collide with the separator. The binary format is unchanged, and every code that restored before still restores.
 - **Documentation accuracy for the v2.1.0 level.** The README's per-track level table, the `levels/linux.js` file-tree comment, and the roadmap now all list `level3@linux` ("Daniel's Forgotten Sudo") — the v2.1.0 release had bumped the level *count* to 22 but left those enumerations at level2. Also corrected the walkthrough author-guide's section-numbering table (the spoiler warning is unnumbered; the numbered sections run §1–§9, not §1–§10) and tidied a couple of stale count / phrasing references in the README and CONTRIBUTING so they don't drift again.
 
 ## [2.1.0] - 2026-07-07
