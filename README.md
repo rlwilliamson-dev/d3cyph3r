@@ -8,7 +8,7 @@ The puzzles stay close to what actually happens at consulting firms with rotatin
 
 Recurring characters, recurring clients, recurring technical debt across levels.
 
-All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end, and all seven ship through level2 as well (v1.23.0 + v1.25.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0 + v1.30.0). The level3 sweep is now under way — `level3@linux` landed in v2.1.0 and `level3@crypto` in v2.2.0. 23 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end, and all seven ship through level2 as well (v1.23.0 + v1.25.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0 + v1.30.0). The level3 sweep is now under way — `level3@linux` landed in v2.1.0, `level3@crypto` in v2.2.0, and `level3@forensics` in v2.3.0. 24 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
 
 | Track | Levels shipped | Client | Compliance |
 |---|---|---|---|
@@ -16,7 +16,7 @@ All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship lev
 | Network | `level0@network` ("Atlas Health Perimeter Check"), `level1@network` ("The Map Marcus Didn't Mean to Share"), `level2@network` ("What the Cert Knew") | Atlas Health | HIPAA |
 | Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't"), `level2@crypto` ("Theo's Quick Hash"), `level3@crypto` ("Theo's Encrypted Backup") | Vesta Retail | PCI-DSS |
 | Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall"), `level2@web` ("The Search Bar That Talks") | Meridian State University | FERPA |
-| Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw"), `level2@forensics` ("What Reed's Browser Saw") | Polaris Defense Systems | CMMC / NIST 800-171 |
+| Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw"), `level2@forensics` ("What Reed's Browser Saw"), `level3@forensics` ("What Reed's Mail Proved") | Polaris Defense Systems | CMMC / NIST 800-171 |
 | OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project"), `level2@osint` ("The Internet Never Forgets") | Veridian Analytics | HIPAA / HITRUST CSF |
 | Cloud | `level0@cloud` ("Coverline's Twelfth Bucket"), `level1@cloud` ("The Migration Table Nobody Dropped"), `level2@cloud` ("The Key Nobody Turned Off") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
 
@@ -47,7 +47,7 @@ guest@d3cyph3r:~$ ssh level0@osint        # Breach-corpus credential reuse
 guest@d3cyph3r:~$ ssh level0@cloud        # S3 misconfiguration / SOC 2 audit
 ```
 
-Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. The level1 in each track is gated by a credential the player recovers during level0 (Daniel's `creds.txt`, Marcus's unrotated default, the decoded base64 API key, Meridian's leaked DB password, Sgt. Chen's handoff archive password, Aaron's reused breach-corpus password, and Coverline's hardcoded RDS master). Every level in turn leaks a credential staged for the next level in its track — the per-track credential chain is the through-line (now running through level2 on every track, and level3 on Linux).
+Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. The level1 in each track is gated by a credential the player recovers during level0 (Daniel's `creds.txt`, Marcus's unrotated default, the decoded base64 API key, Meridian's leaked DB password, Sgt. Chen's handoff archive password, Aaron's reused breach-corpus password, and Coverline's hardcoded RDS master). Every level in turn leaks a credential staged for the next level in its track — the per-track credential chain is the through-line, running through level2 on every track and deeper on the tracks where level3 has shipped.
 
 The lobby (`guest@d3cyph3r`) renders the engagement list as a collapsible tree (v1.10.0): each track is one line by default; `tracks <name>` expands a track to show its level lineup with titles, computed difficulty tier (Routine / Live / Escalated / Critical / Crisis — type `tiers` for definitions), and estimated time. Tracks with any visited level auto-expand on the next lobby render. First-time visitors see a guided FIRST STEPS block and can run `tutorial start` for a hand-held walk-through (v1.12.0); returning visitors see a welcome-back summary with a "Continue: ssh level<N+1>@<track>" recommendation (v1.18.0). Other player surfaces: `progress --detail` lists discovered bonus finds + per-level times, `achievements` lists the 20-achievement layer (v1.14.0), `themes` switches between 11 palettes (v1.13.0), `save` emits a portable progress code (v1.20.0). Type `help` inside any level for the full command reference.
 
@@ -161,7 +161,7 @@ d3cyph3r/
 │   ├── network.js           Network track (level0 + level1 + level2) — Atlas Health / HIPAA
 │   ├── crypto.js            Crypto track (level0 + level1 + level2 + level3) — Vesta Retail / PCI-DSS
 │   ├── web.js               Web track (level0 + level1 + level2) — Meridian State U / FERPA
-│   ├── forensics.js         Forensics track (level0 + level1 + level2) — Polaris DS / CMMC
+│   ├── forensics.js         Forensics track (level0 + level1 + level2 + level3) — Polaris DS / CMMC
 │   ├── osint.js             OSINT track (level0 + level1 + level2) — Veridian / HIPAA + HITRUST
 │   └── cloud.js             Cloud track (level0 + level1 + level2) — Coverline / SOC 2 + NAIC
 ├── walkthroughs/            Long-form solve guides (separate subsite)
@@ -169,7 +169,7 @@ d3cyph3r/
 │   ├── walkthrough.css      Docs-reader theme (distinct from main terminal)
 │   ├── walkthrough.js       Hash router + markdown renderer (vendored marked.js)
 │   ├── vendor/marked.esm.min.js  Markdown → HTML library (CC-BY-3.0 attribution in vendor/)
-│   ├── linux/level0.md      One walkthrough per shipped level — 23 total as of v2.2.0
+│   ├── linux/level0.md      One walkthrough per shipped level — 24 total as of v2.3.0
 │   └── (etc., one per level)
 ├── tests/                   @playwright/test suite + OG-image generator
 │   ├── playwright.config.cjs Per-spec parallelism config (v1.24.0+)
@@ -188,7 +188,7 @@ For deeper context on the engine architecture, command-dispatch model, and per-t
 
 ## Roadmap
 
-All seven tracks ship level0, level1, AND level2, and every level carries an in-game `hint` ladder (the **v2.0.0 "Apprentice"** milestone crowned that work — a polish pass with no new gameplay, mirroring how v1.0.0 "Foundation" crowned the level0 + level1 chains). The level3 sweep is now under way, building toward the eventual **v3.0.0 "Practitioner"** milestone (level3 across every track): `level3@linux` ("Daniel's Forgotten Sudo", v2.1.0) took the Linux track from credential discovery into privilege escalation, and `level3@crypto` ("Theo's Encrypted Backup", v2.2.0) capped the crypto arc — after encoding, signing, and hashing each failed to be encryption, the last assumption to fall is that encryption itself is enough when the key is guessable. Each shipped level leaks a breadcrumb credential staged for the next in its track, so the per-track chain stays consistent as level3 content lands one track at a time. New levels ship one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
+All seven tracks ship level0, level1, AND level2, and every level carries an in-game `hint` ladder (the **v2.0.0 "Apprentice"** milestone crowned that work — a polish pass with no new gameplay, mirroring how v1.0.0 "Foundation" crowned the level0 + level1 chains). The level3 sweep is now under way, building toward the eventual **v3.0.0 "Practitioner"** milestone (level3 across every track): `level3@linux` ("Daniel's Forgotten Sudo", v2.1.0) took the Linux track from credential discovery into privilege escalation, and `level3@crypto` ("Theo's Encrypted Backup", v2.2.0) capped the crypto arc — after encoding, signing, and hashing each failed to be encryption, the last assumption to fall is that encryption itself is enough when the key is guessable. `level3@forensics` ("What Reed's Mail Proved", v2.3.0) turns the Reed Connolly case on email-header analysis, where a forged `From:` meets a `Received:` chain the sender couldn't touch. Each shipped level leaks a breadcrumb credential staged for the next in its track, so the per-track chain stays consistent as level3 content lands one track at a time. New levels ship one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## About this project
 

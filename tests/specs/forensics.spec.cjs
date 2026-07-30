@@ -487,4 +487,123 @@ test.describe("forensics track", () => {
       });
     });
   });
+
+  // ── Level 3 — "What Reed's Mail Proved" ─────────────────────────
+  // Gated by the Gmail session cookie recovered in level2. Teaches
+  // email-header forensics: the From: header is free text, the
+  // Received: chain is written by servers after the message leaves
+  // the sender, and the two can be put in opposition.
+  //
+  // The load-bearing assertions are the COMPARISON ones — the forged
+  // message must fail SPF/DKIM/DMARC while the genuine message from
+  // the same claimed sender passes all three. If that contrast ever
+  // breaks, the level stops being provable and becomes a vibe.
+  test.describe("level3@forensics — What Reed's Mail Proved", () => {
+    test("wrong password is rejected at the gate", async ({ page }) => {
+      await dispatchCmd(page, "ssh level3@forensics");
+      await dispatchCmd(page, "wrong-password");
+      const t = await terminalText(page);
+      expect(t).toContain("Permission denied, please try again.");
+    });
+
+    test.describe("inside level3", () => {
+      test.beforeEach(async ({ page }) => {
+        await dispatchCmd(page, "ssh level3@forensics");
+        await dispatchCmd(page, "RC-Gmail-PreDawn-2026-03-14-T0247Z");
+        await waitForOutput(page, "Connected: level3@forensics");
+        await waitForOutput(page, "Save your progress across browser sessions?");
+        await dispatchCmd(page, "n");
+        await waitForOutput(page, "Progress stays in this tab only");
+      });
+
+      test("connection banner + in-world identity (ir-audit)", async ({ page }) => {
+        const t = await terminalText(page);
+        expect(t).toContain("Connected: level3@forensics");
+        await dispatchCmd(page, "whoami");
+        const t2 = await terminalText(page);
+        expect(t2).toMatch(/\bir-audit\b/);
+      });
+
+      test("subpoena-return.txt documents lawful process, not cookie replay", async ({ page }) => {
+        await dispatchCmd(page, "cat subpoena-return.txt");
+        const t = await terminalText(page);
+        expect(t, "production compelled by court order").toContain("2703(d)");
+        // The sentence wraps in the source document, so match the
+        // fragment that lives on a single line.
+        expect(t, "cookie identified the account, did not access it").toContain(
+          "not used to access the account",
+        );
+      });
+
+      test("ls mail/ lists the three produced messages", async ({ page }) => {
+        await dispatchCmd(page, "ls mail/");
+        const t = await terminalText(page);
+        expect(t).toContain("01-authorization-claimed.eml");
+        expect(t).toContain("02-hutchins-genuine-2026-02-11.eml");
+        expect(t).toContain("03-outbound-0253.eml");
+      });
+
+      test("the disputed message fails SPF/DKIM/DMARC and fires the envelope bonus find", async ({ page }) => {
+        await dispatchCmd(page, "cat mail/01-authorization-claimed.eml");
+        const t = await terminalText(page);
+        expect(t, "From: claims Hutchins").toContain('From: "Hutchins, Larry" <l.hutchins@polaris-defense.com>');
+        expect(t, "envelope sender is Reed").toContain("Return-Path: <reed.connolly@gmail.com>");
+        expect(t, "no DKIM signature at all").toContain("dkim=none");
+        expect(t, "SPF fails").toContain("spf=fail");
+        expect(t, "DMARC fails against p=REJECT").toContain("dmarc=fail");
+        expect(t, "consumer Message-ID, not corporate").toContain("@mail.gmail.com");
+        expect(t, "bonus-find banner fires").toContain(
+          "Bonus find unlocked: The envelope disagrees with the letterhead",
+        );
+      });
+
+      test("the genuine message passes all three checks and fires the baseline bonus find", async ({ page }) => {
+        await dispatchCmd(page, "cat mail/02-hutchins-genuine-2026-02-11.eml");
+        const t = await terminalText(page);
+        expect(t, "envelope sender really is Hutchins").toContain("Return-Path: <l.hutchins@polaris-defense.com>");
+        expect(t, "DKIM verifies").toContain("dkim=pass");
+        expect(t, "SPF passes").toContain("spf=pass");
+        expect(t, "DMARC passes").toContain("dmarc=pass");
+        expect(t, "corporate Message-ID domain").toContain("@polaris-defense.com>");
+        expect(t, "relay path runs through Polaris infrastructure").toContain("mx04.polaris-defense.com");
+        expect(t, "bonus-find banner fires").toContain(
+          "Bonus find unlocked: You compared against a known-good",
+        );
+      });
+
+      test("Date: header contradicts the server-stamped Received chain", async ({ page }) => {
+        await dispatchCmd(page, "cat mail/01-authorization-claimed.eml");
+        const t = await terminalText(page);
+        expect(t, "sender's Date: claims Thursday the 12th").toContain("Date: Thu, 12 Mar 2026 16:04:22 -0400");
+        expect(t, "servers stamped Saturday the 14th at 02:51").toContain("Sat, 14 Mar 2026 02:51:06 -0400");
+      });
+
+      test("grep -n walks the Received chain with line numbers", async ({ page }) => {
+        await dispatchCmd(page, "grep -n received mail/01-authorization-claimed.eml");
+        const t = await terminalText(page);
+        expect(t, "matches the Received hops").toMatch(/Received/i);
+        expect(t, "-n emits line numbers rather than searching for '-n'").toMatch(/:\s*\d+:/);
+      });
+
+      test("the 02:53 outbound message carries the level4 breadcrumb", async ({ page }) => {
+        await dispatchCmd(page, "cat mail/03-outbound-0253.eml");
+        const t = await terminalText(page);
+        expect(t, "sent to an external recipient").toContain("m.arroyo@ridgeline-consulting.net");
+        expect(t, "file-drop passphrase is the level4 gate").toContain(
+          "passphrase: RC-FileDrop-2026-03-14-T0253Z",
+        );
+      });
+
+      test("exit from level3@forensics returns to the lobby", async ({ page }) => {
+        await dispatchCmd(page, "exit");
+        await page.waitForFunction(
+          () => document.getElementById("prompt-label")?.innerText.includes("@d3cyph3r:"),
+          null,
+          { timeout: 5000 },
+        );
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@d3cyph3r:");
+      });
+    });
+  });
 });

@@ -2401,4 +2401,706 @@ Return to the lobby:    ssh guest@d3cyph3r`
     },
   },
 
+  // ── level3@forensics — "What Reed's mail proved" ─────────────────
+  // Gate: RC-Gmail-PreDawn-2026-03-14-T0247Z — the Gmail SID cookie
+  // recovered from Reed's seized Cookies.sqlite in level2. In-world
+  // that cookie is not used to log in (that would be unlawful); it is
+  // the ACCESS MECHANISM named in the preservation letter and 2703(d)
+  // order served on Google, and this level opens on what Google
+  // produced in response.
+  //
+  // NEW CONCEPT: email header forensics. Specifically that the From:
+  // header is free text a sender can type anything into, while the
+  // Received: chain is appended by each server the message passes
+  // through AFTER it leaves the sender's control — so the two can be
+  // put in opposition, and the chain wins.
+  //
+  // Solve path:
+  //   1. `cat subpoena-return.txt` — what Google produced, and the
+  //      note that all timestamps were normalized to US/Eastern.
+  //   2. `ls mail/` — three messages.
+  //   3. `cat mail/01-authorization-claimed.eml` — Reed's defense
+  //      exhibit: Hutchins "authorizing" him to take the drive home.
+  //   4. `cat mail/02-hutchins-genuine-2026-02-11.eml` — a real
+  //      Hutchins message, as the known-good baseline to compare
+  //      against. THIS is the analyst move the level teaches.
+  //   5. The comparison collapses the defense: on 01, spf=fail,
+  //      dkim=none, dmarc=fail, Return-Path is Reed's own Gmail, the
+  //      Message-ID is @mail.gmail.com rather than corporate, and the
+  //      Received chain says Sat 14 Mar 02:51 while the Date: header
+  //      claims Thu 12 Mar 16:04. On 02, everything passes.
+  //   6. `cat mail/03-outbound-0253.eml` — two minutes after forging
+  //      his cover story, Reed sent the actual payload out. The
+  //      file-drop passphrase in that message is the level4 gate.
+  //
+  // Engine: NO new command. Headers are plain text; `cat` and `grep`
+  // are the whole toolchain, which is exactly how this is done for
+  // real when a parser isn't handy. (v2.3.0 did add -i/-v/-n/-c to
+  // grep, because `grep -n received` is the natural way to walk a
+  // chain and the flags previously parsed as the search pattern.)
+  //
+  // READ THE CHAIN BOTTOM-UP. Each hop PREPENDS its Received: line,
+  // so the oldest hop is at the bottom and the newest at the top.
+  // Players consistently read it top-down and reach the wrong origin;
+  // welcome.md and the walkthrough both call this out explicitly.
+  //
+  // Lessons: CWE-290 (Authentication Bypass by Spoofing) as the
+  // mechanism, plus the evidentiary angle — a fabricated exculpatory
+  // artifact is itself evidence, and obstruction is a separate
+  // offense from the underlying exfiltration. SPF (RFC 7208), DKIM
+  // (RFC 6376), DMARC (RFC 7489). MITRE T1534 (Internal Spearphishing)
+  // and T1114 (Email Collection) as the adjacent adversary behaviors;
+  // Polaris is CMMC / NIST SP 800-171 scoped.
+  //
+  // Two bonus finds (don't gate the chain):
+  //   - "The envelope disagrees with the letterhead" — Return-Path vs
+  //     From:, the single fastest spoof tell.
+  //   - "You compared against a known-good" — awarded for reading the
+  //     genuine Hutchins message, because comparison IS the skill.
+  //
+  // Breadcrumb out: RC-FileDrop-2026-03-14-T0253Z — the file-drop
+  // passphrase in Reed's outbound message, gating a future
+  // level4@forensics.
+  "level3@forensics": {
+    password: "RC-Gmail-PreDawn-2026-03-14-T0247Z",
+    track: "forensics",
+    title: "What Reed's mail proved (headers)",
+    estimatedMinutes: 18,
+    playerUser: "ir-audit",
+    objective: "Examine the mail Google produced under the 2703(d) order and determine whether the authorization Reed Connolly's counsel is relying on is genuine — then document what he actually sent, and to whom.",
+    lesson: "Day four of the Reed case. The session cookie you pulled out of Cookies.sqlite told Sgt. Chen which account to name in the preservation letter, and Google's production came back overnight. Reed's counsel has meanwhile produced an email they say authorizes everything: Larry Hutchins telling Reed to take the drive home. Maya Voss wants that email checked before Polaris concedes anything. Read welcome.md first — it covers how to read a Received: chain, which is the one skill today needs. Compare the disputed message against a real one from Hutchins. Then read what Reed sent at 02:53.",
+    hints: [
+      "Start with `cat subpoena-return.txt` for what Google produced, then `ls mail/`. Read the disputed message first: `cat mail/01-authorization-claimed.eml`.",
+      "Don't try to judge it in isolation — you need a known-good. `cat mail/02-hutchins-genuine-2026-02-11.eml` is a real message from the same person. Put the two side by side and compare the Authentication-Results, the Return-Path, and the Message-ID domain.",
+      "The Received: chain is added by the servers, not the sender — read it BOTTOM-UP. On the disputed message it says Sat 14 Mar 02:51 while the Date: header claims Thu 12 Mar. Then `cat mail/03-outbound-0253.eml`: the file-drop passphrase in the body is your level4 credential.",
+    ],
+
+    crossTrackHooks: ["osint"],
+
+    bonusFinds: [
+      {
+        id:   "envelope-vs-letterhead",
+        name: "The envelope disagrees with the letterhead",
+        hint: "On the disputed message the Return-Path is reed.connolly@gmail.com while the From: header claims l.hutchins@polaris-defense.com. Return-Path records the SMTP envelope sender — what the sending server actually declared — and From: is display text the composer types. When they disagree, the envelope is the one that had to be true for delivery to work. It is the single fastest spoof tell in a header block, and it costs one line of reading.",
+        trigger: { command: "cat", argMatches: /01-authorization-claimed/, outputContains: "Return-Path: <reed.connolly@gmail.com>" },
+      },
+      {
+        id:   "known-good-baseline",
+        name: "You compared against a known-good",
+        hint: "Reading the genuine Hutchins message is the move that turns an opinion into a finding. On its own, 'spf=fail' invites an argument about misconfigured relays. Next to a real message from the same sender showing dkim=pass, spf=pass, dmarc=pass, a corporate Message-ID and a polaris-defense.com relay in the chain, the disputed message has no innocent explanation left. Always pull a known-good sample from the same claimed sender before you call anything forged.",
+        trigger: { command: "cat", argMatches: /02-hutchins-genuine/, outputContains: "dkim=pass" },
+      },
+    ],
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Polaris Defense Systems — IR Forensic Bench ───────────────
+  Case:    POL-IIS-2026-0007 (Connolly)
+  Acct:    ir-audit (Polaris IR service account)
+  Date:    Tuesday 2026-03-17 (case day four)
+────────────────────────────────────────────────────────────
+
+Maya Voss (Polaris IR lead): "The cookie you recovered from
+Reed's browser profile gave Sgt. Chen the account to name in
+the preservation letter. Google's production came back
+overnight and it's on the bench.
+
+Here's what changed while you slept. Reed's counsel produced an
+email they say authorizes all of it — Larry Hutchins telling
+Reed to take the drive home over the weekend. Larry says he
+never wrote it. Before Polaris concedes a thing, I need that
+message examined properly. Google's production includes what
+was actually in Reed's mailbox, so we can check the claim
+against the record."
+
+You are \`ir-audit\` on the Polaris IR bench. Run \`id\` and
+\`whoami\` to confirm.
+
+─── NO NEW COMMANDS TODAY ─────────────────────────────────────
+
+Email headers are plain text. Everything today is \`cat\` and
+\`grep\`, which is also how it's done for real when you don't
+have a parser handy. Two flags help:
+
+  grep -n received mail/01-authorization-claimed.eml
+        -n numbers the lines, so you can see the ORDER of the
+        hops rather than just their content.
+
+  grep -c received mail/01-authorization-claimed.eml
+        -c counts them. How many servers touched this?
+
+─── HOW TO READ AN EMAIL HEADER ───────────────────────────────
+
+A message is headers, one blank line, then the body. The
+headers a sender controls and the headers servers add are two
+completely different categories of evidence, and the whole
+discipline is knowing which is which.
+
+WHAT THE SENDER TYPES (trivially forgeable — it is just text):
+
+  From:      Display name and address. Anyone can put anything
+             here. It is the letterhead, not the postmark.
+  Subject:   Free text.
+  Date:      The composing client's claim about when it was
+             written. Also just text.
+
+WHAT THE SERVERS ADD (much harder to fake):
+
+  Received:  Every server that handles the message PREPENDS one
+             of these. They accumulate as the message travels.
+  Return-Path:  The SMTP envelope sender — the address the
+             sending server actually declared during delivery.
+             Delivery had to work, so this had to be real.
+  Authentication-Results:  The receiving server's verdict on
+             SPF, DKIM and DMARC. Written by the recipient's
+             own infrastructure.
+  Message-ID:  Assigned by the system that first accepted the
+             message. Its domain tells you which system that was.
+
+─── READ THE CHAIN BOTTOM-UP ──────────────────────────────────
+
+This is the part everyone gets backwards the first time.
+
+Because each hop PREPENDS its line, the chain is in reverse
+chronological order. The BOTTOM Received: is the FIRST hop —
+where the message entered the mail system. The TOP one is the
+last server before delivery.
+
+So when you want to know where a message really came from, you
+read to the bottom of the Received: block. Read it top-down and
+you'll confidently identify the recipient's own mail server as
+the origin, which is how people talk themselves into the wrong
+answer.
+
+─── THE THREE AUTHENTICATION CHECKS ───────────────────────────
+
+  SPF    "Is this server allowed to send for this domain?"
+         The domain publishes a DNS record listing its
+         legitimate senders. Checks the ENVELOPE sender.
+
+  DKIM   "Was this message signed by the domain, and is it
+         unmodified?" A cryptographic signature verified
+         against a public key in DNS. dkim=none means there
+         was no signature at all to check.
+
+  DMARC  "Do SPF/DKIM line up with the From: header the human
+         actually sees, and what should I do if not?" This is
+         the check that ties the other two to the visible
+         From:, which is why it matters here.
+
+All three verdicts are recorded in Authentication-Results by
+the receiving server — for Reed's Gmail account, that's Google.
+
+A failure is not automatically fraud; misconfigured relays and
+forwarded mail produce failures constantly. That is precisely
+why you compare against a known-good message from the same
+sender before drawing a conclusion.
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat welcome.md              You're already here.
+  2.  cat subpoena-return.txt     What Google produced, and why
+                                  the timestamps look the way
+                                  they do.
+  3.  ls mail/                    Three messages.
+  4.  cat mail/01-authorization-claimed.eml
+                                  The disputed exhibit.
+  5.  cat mail/02-hutchins-genuine-2026-02-11.eml
+                                  A REAL message from Hutchins.
+                                  Compare them. This is the job.
+  6.  cat mail/03-outbound-0253.eml
+                                  What Reed sent two minutes
+                                  after the disputed message is
+                                  stamped. The passphrase in the
+                                  body is your level4 credential.
+  7.  cat lessons-learned.md      Post-mortem (after step 6).
+  8.  exit                         Return to the lobby.
+
+Useful while you work:
+
+  grep -n received mail/01-authorization-claimed.eml
+  grep -n received mail/02-hutchins-genuine-2026-02-11.eml
+  grep dmarc mail/01-authorization-claimed.eml
+`
+        },
+
+        ".bash_history": {
+          type: "file",
+          content:
+`id
+ls
+cat subpoena-return.txt
+ls mail/
+exit
+`
+        },
+
+        "subpoena-return.txt": {
+          type: "file",
+          content:
+`POLARIS DEFENSE SYSTEMS — INCIDENT RESPONSE
+Evidence intake record — case POL-IIS-2026-0007 (Connolly)
+
+ITEM:      POL-0007-E14
+RECEIVED:  2026-03-17 06:12 (US/Eastern)
+FROM:      Google LLC, Legal Investigations Support
+VIA:       Sgt. A. Chen, Polaris FSO (chain of custody attached
+           to the physical case file)
+
+LEGAL BASIS
+  Preservation request under 18 U.S.C. 2703(f) served
+  2026-03-15. Production compelled by court order under
+  18 U.S.C. 2703(d), signed 2026-03-16.
+
+  The account was identified from the authenticated session
+  artifact recovered from the seized workstation image
+  (item POL-0007-E09, Chromium Cookies database). The artifact
+  was used to IDENTIFY the account for legal process. It was
+  not used to access the account. Investigator access to the
+  account contents is by production only.
+
+SCOPE OF PRODUCTION
+  Mailbox contents for the account reed.connolly@gmail.com
+  covering 2026-02-01 through 2026-03-15, limited to messages
+  sent or received between 2026-03-13 18:00 and 2026-03-14
+  12:00, plus any earlier message from the domain
+  polaris-defense.com retained in the account.
+
+  Three messages responsive. Full headers included as
+  produced — headers are the point of this request.
+
+TIMESTAMP NORMALIZATION
+  All timestamps in this production have been normalized to
+  US/Eastern per the production request, so they can be read
+  directly against the Polaris badge and VPN logs already in
+  evidence. Note that February messages are EST (UTC-05:00)
+  and March messages are EDT (UTC-04:00); the offset shown on
+  each line is authoritative.
+
+INTEGRITY
+  SHA-256 of the production archive, as provided by Google and
+  as recomputed on receipt (values match):
+    9f2c41ab7d8e05c3b6a19f4d2e7c8051b3ad6e9f4c2b7180d5a3e6c9b8f4712a
+
+RELATED TIMELINE ALREADY IN EVIDENCE
+  2026-03-14 02:47  authenticated session established
+                    (item POL-0007-E09)
+  2026-03-14 09:42  badge-in, Bay 4 (item POL-0007-E02)
+`
+        },
+
+        "mail": {
+          type: "dir",
+          children: {
+
+            // THE DISPUTED EXHIBIT. Every forgery tell lives here:
+            // envelope/header mismatch, spf=fail + dkim=none +
+            // dmarc=fail, a consumer Message-ID domain, and a Date:
+            // header that contradicts the server-stamped chain.
+            "01-authorization-claimed.eml": {
+              type: "file",
+              content:
+`Delivered-To: reed.connolly@gmail.com
+Received: by 2002:a05:6512:3b8a:b0:519:e6a2:1f3c with SMTP id
+        g10csp991204lfv; Sat, 14 Mar 2026 02:51:09 -0400 (EDT)
+Return-Path: <reed.connolly@gmail.com>
+Received: from mail-qk1-f180.google.com (mail-qk1-f180.google.com.
+        [209.85.222.180]) by mx.google.com with ESMTPS id
+        s7-20020a17090a2f8700b002a1c4d81e3fmr9182233pjd.4;
+        Sat, 14 Mar 2026 02:51:08 -0400 (EDT)
+Received: from [100.64.18.203] ([100.64.18.203])
+        by smtp.gmail.com with ESMTPSA id
+        k4-20020a170902c40400b001a3f2e91d77sm2214417plk.88;
+        Sat, 14 Mar 2026 02:51:06 -0400 (EDT)
+Received-SPF: fail (google.com: domain of l.hutchins@polaris-defense.com
+        does not designate 209.85.222.180 as permitted sender)
+        client-ip=209.85.222.180;
+Authentication-Results: mx.google.com;
+        dkim=none;
+        spf=fail (google.com: domain of l.hutchins@polaris-defense.com
+          does not designate 209.85.222.180 as permitted sender)
+          smtp.mailfrom=reed.connolly@gmail.com;
+        dmarc=fail (p=REJECT sp=REJECT dis=NONE)
+          header.from=polaris-defense.com
+Message-ID: <CAJ8v2mQ7kR4_pW3nT9xZ2bH6cLdE8fY1gM0sV5uK@mail.gmail.com>
+Date: Thu, 12 Mar 2026 16:04:22 -0400
+Subject: Re: taking the drive home this weekend
+From: "Hutchins, Larry" <l.hutchins@polaris-defense.com>
+To: reed.connolly@gmail.com
+Content-Type: text/plain; charset="UTF-8"
+
+Reed,
+
+Following up on our conversation. You're cleared to take the
+project drive home this weekend to finish the integration
+notes. I'll square it with the FSO on Monday, don't worry
+about the paperwork.
+
+Appreciate you pushing on this.
+
+Larry Hutchins
+Director, Programs
+Polaris Defense Systems
+`
+            },
+
+            // THE KNOWN-GOOD BASELINE. Same claimed sender, and
+            // everything the disputed message fails, this one passes.
+            // Its existence is what converts "looks odd" into a
+            // defensible finding.
+            "02-hutchins-genuine-2026-02-11.eml": {
+              type: "file",
+              content:
+`Delivered-To: reed.connolly@gmail.com
+Received: by 2002:a05:6512:3b8a:b0:519:e6a2:1f3c with SMTP id
+        g10csp284471lfv; Wed, 11 Feb 2026 17:22:44 -0500 (EST)
+Return-Path: <l.hutchins@polaris-defense.com>
+Received: from mx04.polaris-defense.com (mx04.polaris-defense.com.
+        [198.51.100.24]) by mx.google.com with ESMTPS id
+        b12-20020a656ccc0000b005637f1a2e44mr7712009pgw.9
+        (version=TLS1_3 cipher=TLS_AES_256_GCM_SHA384);
+        Wed, 11 Feb 2026 17:22:43 -0500 (EST)
+Received: from EXCH07.corp.polaris-defense.com (10.30.4.17)
+        by mx04.polaris-defense.com (198.51.100.24) with
+        Microsoft SMTP Server id 15.2.1544.4;
+        Wed, 11 Feb 2026 17:22:41 -0500 (EST)
+Received-SPF: pass (google.com: domain of l.hutchins@polaris-defense.com
+        designates 198.51.100.24 as permitted sender)
+        client-ip=198.51.100.24;
+Authentication-Results: mx.google.com;
+        dkim=pass header.i=@polaris-defense.com header.s=pds2024;
+        spf=pass (google.com: domain of l.hutchins@polaris-defense.com
+          designates 198.51.100.24 as permitted sender)
+          smtp.mailfrom=l.hutchins@polaris-defense.com;
+        dmarc=pass (p=REJECT sp=REJECT dis=NONE)
+          header.from=polaris-defense.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=polaris-defense.com; s=pds2024; t=1770848561;
+        h=from:to:subject:date:message-id;
+        bh=8Kq2mV9xR4tW7nZ1cL6dY0fH3gJ5sB8uP2eA4kQ7iM=;
+        b=Rj7mQ2vK9xT4nW8pL3cZ6dH1fY5gB0sV
+Message-ID: <a4f21e08-3c7b-4d19-9f22-1b8e4c7d0a63@polaris-defense.com>
+Date: Wed, 11 Feb 2026 17:22:38 -0500
+Subject: Re: Friday all-hands slides
+From: "Hutchins, Larry" <l.hutchins@polaris-defense.com>
+To: reed.connolly@gmail.com
+Content-Type: text/plain; charset="UTF-8"
+
+Reed — slides look good. Trim the third section and we're set
+for Friday.
+
+One note: please stop sending work material to your personal
+address. Use the Polaris account. I know the VPN is painful
+from home; raise it with IT rather than routing around it.
+
+Larry Hutchins
+Director, Programs
+Polaris Defense Systems
+`
+            },
+
+            // THE ACTUAL EXFILTRATION, two minutes after the cover
+            // story. Carries the level4 breadcrumb.
+            "03-outbound-0253.eml": {
+              type: "file",
+              content:
+`Return-Path: <reed.connolly@gmail.com>
+Received: from [100.64.18.203] ([100.64.18.203])
+        by smtp.gmail.com with ESMTPSA id
+        p9-20020a63d4090000b005637a1c8e22mr4410872pgh.31;
+        Sat, 14 Mar 2026 02:53:44 -0400 (EDT)
+Authentication-Results: mx.google.com;
+        dkim=pass header.i=@gmail.com header.s=20230601;
+        spf=pass (google.com: domain of reed.connolly@gmail.com
+          designates 209.85.222.180 as permitted sender)
+          smtp.mailfrom=reed.connolly@gmail.com;
+        dmarc=pass (p=NONE sp=QUARANTINE dis=NONE)
+          header.from=gmail.com
+Message-ID: <CAJ8v2mR9tY6_qX4mU1wV7cJ3dK5nP8sB2aL0eG@mail.gmail.com>
+Date: Sat, 14 Mar 2026 02:53:41 -0400
+Subject: files
+From: Reed Connolly <reed.connolly@gmail.com>
+To: m.arroyo@ridgeline-consulting.net
+Content-Type: text/plain; charset="UTF-8"
+
+Marco,
+
+Uploaded. It's the full integration set plus the test
+harness — everything we talked about Thursday.
+
+  https://filedrop.example.net/d/8f21c40e
+  passphrase: RC-FileDrop-2026-03-14-T0253Z
+
+Link is good for 14 days. Don't forward it, download it and
+let me know when it's off the service.
+
+I've got cover on my end for having the drive, so the timing
+shouldn't look strange if anyone asks.
+
+Reed
+`
+            },
+
+          },
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+The authorization Reed's counsel produced was written by Reed.
+
+Four independent indicators say so, and they agree:
+
+  1. ENVELOPE vs LETTERHEAD. Return-Path is
+     reed.connolly@gmail.com; From: claims
+     l.hutchins@polaris-defense.com. The envelope sender is
+     what the sending server actually declared for delivery to
+     work. The From: header is text the composer typed.
+
+  2. AUTHENTICATION. spf=fail, dkim=none, dmarc=fail — against
+     a domain publishing p=REJECT. The genuine message from the
+     same sender passes all three and carries a real
+     DKIM-Signature.
+
+  3. WRONG SYSTEM. The Message-ID is @mail.gmail.com. Genuine
+     Polaris mail gets an @polaris-defense.com Message-ID and a
+     chain that runs EXCH07 -> mx04.polaris-defense.com ->
+     Google. The disputed message never touched Polaris
+     infrastructure at all.
+
+  4. THE CLOCK. The Date: header claims Thursday 12 March
+     16:04. The Received: chain — written by servers, not by
+     the sender — says Saturday 14 March 02:51. A sender can
+     backdate Date:. A sender cannot reach back into the
+     receiving server's log and change when it accepted the
+     message.
+
+And then the timeline closes it. The disputed message is
+stamped 02:51. At 02:53 — two minutes later — Reed sent the
+integration set to an external recipient with a file-drop
+passphrase, and wrote "I've got cover on my end." He composed
+the authorization first, then did the thing it was supposed to
+authorize.
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+Email was designed in an era when every host on the network
+was trusted. The From: header is free text; nothing in the
+original protocol ties it to anything. SPF, DKIM and DMARC were
+bolted on afterward, and they work — but they are checks a
+recipient performs and records, not properties the message
+carries.
+
+That distinction is the whole level. The message Reed produced
+"is from" Larry Hutchins in exactly the sense that a letter is
+from whoever typed the name at the bottom. Everything with
+evidentiary weight was added by machines after the message left
+his control, and all of it disagrees with him.
+
+The practical version of this for defenders: NEVER trust the
+display name. Every business-email-compromise investigation
+starts the same way, with someone certain that a message came
+from the CFO because it said so at the top.
+
+One more thing worth stating plainly, because it changes the
+character of the case. Up to yesterday this was a data-handling
+incident: an employee took material he shouldn't have. Producing
+a fabricated authorization is a different thing. Fabricating
+evidence is generally a separate offense from the underlying
+conduct, and it is frequently the one that does the most damage
+to the person who does it. That determination belongs to
+counsel and to Sgt. Chen, not to us. Our job was to establish
+what the artifacts show, in a way that survives someone
+competent arguing the other side.
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+Write this so it holds up when opposed. Three findings:
+
+  Finding 1 (evidentiary):  The message produced as
+                    authorization did not originate from
+                    Polaris infrastructure and fails SPF, DKIM
+                    and DMARC against a p=REJECT domain. Its
+                    server-stamped receipt time contradicts its
+                    Date: header by approximately 34 hours.
+
+  Finding 2 (evidentiary):  At 02:53 the same account
+                    transmitted project material to an external
+                    recipient with an accompanying access
+                    passphrase. Recipient and service are named
+                    in the message.
+
+  Finding 3 (control):  Polaris publishes DMARC p=REJECT, which
+                    is correct and which is why the forgery is
+                    provable. The gap is that no control
+                    prevented the material from being on a
+                    personal endpoint in the first place — and
+                    Hutchins had flagged personal-address use in
+                    writing a month earlier, with no follow-up.
+
+Finding 3 is the one Polaris can act on. The first two are for
+counsel.
+
+Note what made this case cheap to prove: Polaris had DMARC at
+enforcement. If the domain published p=none, the receiving
+server would still have recorded the failure, but the forgery
+would have been far easier to argue away as a misconfiguration.
+Enforcement is what turns "suspicious" into "provable."
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  CWE-290 — Authentication Bypass by Spoofing
+    The mechanism: asserting an identity in a field that
+    nothing authenticates.
+
+  RFC 7208 — Sender Policy Framework (SPF)
+    Publishes, in DNS, which servers may send for a domain.
+    Checks the ENVELOPE sender, which is why SPF alone does not
+    protect the From: header a human reads.
+
+  RFC 6376 — DomainKeys Identified Mail (DKIM) — Internet Standard
+    Cryptographic signature over selected headers and body,
+    verified against a public key in DNS. dkim=none means no
+    signature existed to verify — an absence, not a failure.
+
+  RFC 9989 — DMARC (obsoletes RFC 7489)
+    Ties SPF and DKIM results to the visible From: domain
+    (alignment) and publishes what the recipient should do on
+    failure: p=none, p=quarantine, or p=REJECT. DMARC was
+    Informational for a decade as RFC 7489; it became Standards
+    Track in May 2026 as RFC 9989, with RFC 9990 and RFC 9991
+    covering aggregate and failure reporting. Deployed policies
+    in the wild — Polaris's included — still overwhelmingly
+    reflect the 7489 era.
+
+  RFC 5322 — Internet Message Format
+    Defines the header block itself, including the rule that
+    each relay PREPENDS its Received: line. That ordering rule
+    is what makes the chain readable as a timeline.
+
+  NIST SP 800-177 Rev. 1 — Trustworthy Email
+    The federal guidance consolidating SPF/DKIM/DMARC
+    deployment. Reasonable reading if you have to argue for
+    enforcement internally.
+
+  NIST SP 800-171 / CMMC
+    Polaris handles Controlled Unclassified Information, so
+    3.1.3 (control CUI flow), 3.1.20 (limit connections to
+    external systems), and 3.3.x (audit and accountability)
+    are the controls in scope for Finding 3.
+
+  NIST SP 800-86 — Integrating Forensic Techniques into
+    Incident Response. The methodology backdrop for this whole
+    track: acquire, examine, analyze, report.
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  CompTIA Security+ (SY0-701)
+    Email security controls — SPF, DKIM, DMARC — are directly
+    tested, usually as "which control would have prevented
+    this?" or "what does this header tell you?"
+
+  CompTIA CySA+ (CS0-003)
+    Header analysis appears as a hands-on analyst skill. Expect
+    to be shown a header block and asked to identify the true
+    origin or the spoof indicator.
+
+  GIAC GCFA / GCIH
+    Email as an evidence source, including chain reconstruction
+    and the legal-process side of obtaining provider records.
+
+  ISC2 CISSP
+    Domain 7 (Security Operations): investigations, evidence
+    handling, and the difference between an internal finding
+    and something that has to survive a courtroom.
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+  T1114 — Email Collection
+    Mail as both the target and the evidence source.
+
+  T1534 — Internal Spearphishing
+    The adversary equivalent of what Reed did: a message
+    crafted to appear internal in order to be believed.
+
+  T1567 — Exfiltration Over Web Service
+    The file-drop service in the 02:53 message.
+
+  T1070 — Indicator Removal / evidence tampering
+    The adjacent behavior. Fabricating an artifact is the
+    inverse of deleting one, and both are attacks on the
+    record rather than on a system.
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. Preserve before you analyze. The production is the
+     evidence; work from a copy, keep the hash, and record who
+     touched what and when. Everything below is worthless if
+     the provenance of the artifact is arguable.
+
+  2. Always pull a known-good. Before calling any message
+     forged, obtain a genuine message from the same claimed
+     sender and compare authentication results, Message-ID
+     domain, and relay path. A single failing message invites
+     an argument about misconfiguration; a matched pair does
+     not.
+
+  3. Read Received: chains bottom-up, and normalize the
+     timestamps. Different hops report different offsets;
+     convert everything to one timezone (UTC is the safe
+     default) before you compare against badge, VPN, or EDR
+     timelines.
+
+  4. Publish DMARC at enforcement. p=none records failures but
+     permits delivery. Polaris being at p=REJECT is the reason
+     this forgery is provable rather than merely suspicious —
+     and it also means the message was never delivered to a
+     Polaris mailbox, which is itself corroborating.
+
+  5. Alert on the header conditions, don't just log them.
+     Inbound mail whose From: domain is your own but which
+     fails DMARC is one of the highest-signal detections
+     available, and it is usually a one-line rule.
+
+  6. Close the actual gap. Finding 3 is the only one Polaris
+     controls. Hutchins put the personal-address concern in
+     writing a month before the incident and nothing followed.
+     A flagged behavior with no owner and no follow-up is a
+     control failure regardless of what the employee later did.
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+The forged message was the strongest evidence in the case, and
+Reed created it himself. He controlled every part of that email
+he could see — the name, the address, the subject, the date —
+and none of the parts he couldn't. Investigations turn on that
+asymmetry more often than on anything technical: people manage
+the story and forget the machines were taking notes the whole
+time.
+
+Maya: "Package the header comparison for Chen exactly as you
+walked it — disputed message, known-good, chain, clock. Don't
+characterize intent anywhere in the document; state what the
+artifacts show and let counsel do the rest."
+
+(There's a file-drop link in the 02:53 message with fourteen
+days on the clock, and it was sent three days ago.)
+
+Return to the lobby:    ssh guest@d3cyph3r
+`
+        },
+
+      },
+    },
+  },
+
 };

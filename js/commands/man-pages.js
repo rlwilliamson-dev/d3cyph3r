@@ -119,20 +119,32 @@ EXAMPLES
     grep — search for a pattern in files
 
 SYNOPSIS
-    grep WORD [FILE ...]
-    <stdin> | grep WORD
+    grep [-invc] WORD [FILE ...]
+    <stdin> | grep [-invc] WORD
 
 DESCRIPTION
-    Case-insensitive substring search. Prints every matching line.
-    With multiple files (or glob expansion), each match is prefixed
-    with the filename. With no FILE args, searches every file in the
-    level (legacy '*' behavior). Piped input is searched without a
-    filename prefix.
+    Substring search. Prints every matching line. With multiple files
+    (or glob expansion), each match is prefixed with the filename.
+    With no FILE args, searches every file in the level (legacy '*'
+    behavior). Piped input is searched without a filename prefix.
+
+OPTIONS
+    -i    Accepted and ignored. Matching in this sandbox is ALWAYS
+          case-insensitive, so -i is already the behavior; the flag
+          exists so muscle memory doesn't cost you a failed search.
+    -v    Invert: print the lines that do NOT match.
+    -n    Prefix each printed line with its 1-based line number.
+    -c    Print only the COUNT of matching lines, not the lines.
+
+    Flags may be bundled (-vn) or separate (-v -n). Any other flag is
+    an error rather than being treated as the search pattern.
 
 EXAMPLES
     grep password creds.txt
-    grep -r TODO *.md
     grep FAIL *.log
+    grep -n received message.eml       (which line is each hop on?)
+    grep -c error syslog               (how many, without the noise)
+    grep -v debug app.log              (everything except the noise)
     cat audit.log | grep ERROR`,
 
   find: `NAME
