@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-07-30
+
+**`level3@forensics` — "What Reed's mail proved."** The third level3, and the point where the Reed Connolly case stops being about what he took and starts being about what he claimed. Teaches email-header forensics: the `From:` header is free text a sender types, the `Received:` chain is written by servers after the message leaves the sender's hands, and the two can be put in opposition.
+
+### Added
+
+- **`level3@forensics` — "What Reed's mail proved (headers)" (Routine tier, ~18 min).** The session artifact recovered in level2 identified the account to name in legal process — it is explicitly not replayed — and the provider's production is what this level examines. Reed's counsel has produced an email authorizing everything; the job is to check it against a genuine message from the same sender. The disputed message fails SPF, DKIM and DMARC against a domain at `p=REJECT`, its envelope sender disagrees with its letterhead, its Message-ID was minted by the wrong system, and the server-stamped receipt time contradicts its own `Date:` header by roughly 34 hours. Two minutes after it, the same account sent the material out — with the passphrase that gates level4. Two bonus finds: the envelope/letterhead mismatch, and the act of pulling a known-good sample to compare against.
+- **`walkthroughs/forensics/level3.md`** — "What Reed's Mail Proved", covering the sender-controlled versus server-written split, why `Received:` chains read bottom-up, why a single `spf=fail` proves very little on its own, and why authentication passing is not a trust signal. RFC 5322 / 7208 / 6376 / 9989, NIST SP 800-177 Rev. 1 and SP 800-86, and the CMMC and NIST SP 800-171 controls in scope. The Rimasauskas invoice fraud against Facebook and Google and the FBI's business-email-compromise loss figures are the real-world parallels.
+
+### Changed
+
+- **`grep` now takes flags.** `-i` (accepted and ignored, since matching here has always been case-insensitive), `-v` to invert, `-n` for line numbers, and `-c` for a count, bundled (`-vn`) or separate. Previously any flag was treated as the search pattern, so the reflexive `grep -i something file` searched for `-i` and quietly found nothing. Unrecognized flags now report an error instead of silently misbehaving, and `man grep` documents all of it.
+
+### Fixed
+
+- **`levels/forensics.js` is searchable again.** The file held nine literal NUL bytes inside the simulated JPEG content in `level0@forensics`, which made tooling classify the whole file as binary — so `grep` and `rg` skipped it silently, with no match and no warning. Any repo-wide search or count quietly missed all four forensics levels. The NULs are now written as `\x00` escapes: the source is plain text, and the runtime string is byte-for-byte identical (verified by hashing the evaluated value before and after), so `file`, `strings`, and `exif` behave exactly as before.
+
+CWE-290; SPF (RFC 7208), DKIM (RFC 6376), DMARC (RFC 9989, obsoleting RFC 7489); MITRE T1114 + T1534 + T1567.
+
 ## [2.2.0] - 2026-07-07
 
 **`level3@crypto` — "Theo's encrypted backup."** The second level3, and the capstone of the crypto track. Levels 0 through 2 took apart three comfortable assumptions in turn — encoding is not encryption, signing is not encryption, hashing is not encryption. This one takes apart the last: encryption is only as strong as its key.
@@ -3843,7 +3862,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.0.0...v2.1.0

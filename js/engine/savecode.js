@@ -188,7 +188,8 @@ export const LEVEL_REGISTRY = Object.freeze([
   // ── v2.1.0 — level3 sweep begins (builds toward the v3.0.0 milestone) ──
   "level3@linux",        // 21  — v2.1.0
   "level3@crypto",       // 22  — v2.2.0
-  // ── future levels append here at index 23, 24, 25, ... ──
+  "level3@forensics",    // 23  — v2.3.0
+  // ── future levels append here at index 24, 25, 26, ... ──
 ]);
 const LEVEL_INDEX = new Map(LEVEL_REGISTRY.map((k, i) => [k, i]));
 
@@ -339,6 +340,10 @@ export const BONUS_REGISTRY = Object.freeze({
   // CVV retention (fires on the successful decrypt) and the passphrase
   // hardcoded in the backup script beside its own ciphertext.
   "level3@crypto":    Object.freeze(["cvv-should-not-exist", "passphrase-beside-ciphertext"]),
+  // v2.3.0 — level3@forensics ships with two bonus finds: the
+  // Return-Path/From mismatch on the forged message, and the act of
+  // pulling a known-good sample to compare it against.
+  "level3@forensics": Object.freeze(["envelope-vs-letterhead", "known-good-baseline"]),
 });
 // Build a reverse-lookup: "<levelKey>:<findId>" → { levelIdx, bitN }.
 // The progress code's stored bonus-finds set lives at the "<key>:<id>"

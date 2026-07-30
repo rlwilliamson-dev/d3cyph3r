@@ -311,6 +311,18 @@ const MANIFEST = {
           "a live Google SID cookie value that gates level3. NIST SP " +
           "800-86 + CMMC Level 2 AU.L2-3.3.x audit-record discipline.",
       },
+      level3: {
+        title: "What Reed's Mail Proved",
+        blurb:
+          "Day four. The session artifact named the account for a " +
+          "2703(d) order, and Google's production is on the bench. " +
+          "Reed's counsel produced an email authorizing everything — " +
+          "so compare it against a genuine message from the same " +
+          "sender. The From: header is free text; the Received: chain " +
+          "is written by servers and read bottom-up, and it says the " +
+          "message was composed 34 hours after its own Date: claims. " +
+          "CWE-290, SPF/DKIM/DMARC (RFC 9989), NIST SP 800-177.",
+      },
     },
   },
   osint: {

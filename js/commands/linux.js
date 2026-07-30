@@ -470,25 +470,66 @@ export const linuxCommands = {
   // there's no meaningful filename to show.
   grep(level, arg, stdin) {
     const parts = (arg || "").trim().split(/\s+/).filter(Boolean);
-    if (parts.length === 0) return { text: "Usage: grep <word> [file ...]", cls: "err" };
+    const USAGE = "Usage: grep [-invc] <word> [file ...]";
+    if (parts.length === 0) return { text: USAGE, cls: "err" };
 
-    const word       = parts[0];
-    const rawTargets = parts.slice(1);
+    // Leading flags, bundled (`-vn`) or separate (`-v -n`), as real
+    // grep accepts. Parsing stops at the first non-flag token so a
+    // pattern that begins with `-` still works after `--`-free usage
+    // like `grep -v -- -foo` isn't supported (out of scope).
+    //
+    //   -i  no-op, accepted for muscle memory (see note below)
+    //   -v  invert: show lines that do NOT match
+    //   -n  prefix each line with its 1-based line number
+    //   -c  print only the count of matching lines
+    //
+    // NOTE ON -i: matching in this sandbox is ALWAYS case-insensitive,
+    // which predates flag support and which existing levels and tests
+    // rely on. `-i` is therefore accepted and ignored rather than
+    // silently changing the default to case-sensitive. Documented as
+    // such in `man grep` so the behavior isn't a surprise.
+    const flags = new Set();
+    let idx = 0;
+    while (idx < parts.length && /^-[a-zA-Z]+$/.test(parts[idx])) {
+      for (const ch of parts[idx].slice(1)) flags.add(ch);
+      idx++;
+    }
+    const unknown = [...flags].find(f => !"ivnc".includes(f));
+    if (unknown) {
+      return { text: `grep: invalid option -- '${unknown}'\n${USAGE}`, cls: "err" };
+    }
+
+    const rest = parts.slice(idx);
+    if (rest.length === 0) return { text: USAGE, cls: "err" };
+
+    const word       = rest[0];
+    const rawTargets = rest.slice(1);
     const lc         = word.toLowerCase();
+    const invert     = flags.has("v");
+    const numbered   = flags.has("n");
+    const countOnly  = flags.has("c");
+
+    // A line "matches" when it contains the pattern, XOR the -v flag.
+    const hits = (line) => (line.toLowerCase().includes(lc) !== invert);
 
     // Stdin path: no explicit file targets + piped input present.
     if (rawTargets.length === 0 && stdin !== undefined) {
-      const matches = String(stdin).split("\n")
-        .filter(l => l.toLowerCase().includes(lc));
+      const lines   = String(stdin).split("\n");
+      const matches = [];
+      lines.forEach((l, i) => { if (hits(l)) matches.push(numbered ? `${i + 1}: ${l}` : l); });
+      if (countOnly) return { text: String(matches.length), cls: "out" };
       if (matches.length === 0) return { text: "(no matches)", cls: "dim" };
       return { text: matches.join("\n"), cls: "warn" };
     }
 
     const searchFile = (name, content) => {
-      if (!content) return [];
-      return String(content).split("\n")
-        .filter(l => l.toLowerCase().includes(lc))
-        .map(l => `${name}: ${l}`);
+      if (!content) return countOnly ? [`${name}: 0`] : [];
+      const lines = String(content).split("\n");
+      const out   = [];
+      lines.forEach((l, i) => {
+        if (hits(l)) out.push(numbered ? `${name}: ${i + 1}: ${l}` : `${name}: ${l}`);
+      });
+      return countOnly ? [`${name}: ${out.length}`] : out;
     };
 
     // Legacy global-search mode: no target or explicit "*" → iterate
