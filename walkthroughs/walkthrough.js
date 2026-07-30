@@ -228,6 +228,18 @@ const MANIFEST = {
           "aes-backup. CWE-916 + CWE-759 + CWE-521 + CWE-262, plus " +
           "PCI-DSS v4.0 §3.5.1 + §8.3.2 + NIST SP 800-63B-4.",
       },
+      level3: {
+        title: "Theo's Encrypted Backup",
+        blurb:
+          "Day four, and the capstone of the track. The password " +
+          "john cracked is the AES passphrase on Vesta's nightly " +
+          "production backup — and the login on the host holding " +
+          "it. AES-256 is never broken here; the key was the whole " +
+          "problem. Inside: full PANs and retained CVV, which no " +
+          "amount of encryption makes permissible. CWE-326 + " +
+          "CWE-522 + CWE-312, PCI-DSS v4.0.1 §3.3.1 + §3.5.1 + " +
+          "§3.7, OWASP A04:2025.",
+      },
     },
   },
   web: {

@@ -646,6 +646,58 @@ grants when the person they were written for leaves.
 MITRE ATT&CK: T1548.003 (Abuse Elevation Control Mechanism: Sudo
 and Sudo Caching). CWE-250 / CWE-269 / CWE-732.`,
 
+  AES: `AES — Advanced Encryption Standard
+
+The symmetric block cipher nearly everything uses: TLS, disk
+encryption, encrypted backups, VPNs. Standardized by NIST as
+FIPS 197 in 2001, after the Rijndael design won a multi-year
+public competition. Key sizes are 128, 192, or 256 bits.
+
+AES itself is not the weak point. There is no practical break of
+full AES; attacks on real systems target the KEY (guessable
+passphrase, key left next to the ciphertext, key never rotated)
+or the MODE, not the cipher's math.
+
+Mode matters more than key size:
+  - GCM   authenticated — detects tampering. Prefer this.
+  - CBC   confidentiality only. No integrity check, so ciphertext
+          can be altered undetected unless a MAC is added.
+  - ECB   never use. Identical plaintext blocks produce identical
+          ciphertext blocks, so structure leaks straight through.
+
+The practical rule: "AES-256" on an architecture diagram tells
+you almost nothing about whether the data is safe. Ask where the
+key lives, how it was derived, and who can reach it.`,
+
+  KDF: `KDF — Key Derivation Function
+
+Turns a human-chosen passphrase into a fixed-size cipher key.
+Humans pick low-entropy strings; ciphers need uniform random
+keys. The KDF bridges that gap — and it is where the security of
+passphrase-based encryption actually lives.
+
+Modern choices, all deliberately SLOW and salted:
+  - Argon2id  current preference (memory-hard, tunable)
+  - scrypt    memory-hard
+  - PBKDF2    older, iteration-count based, still FIPS-friendly
+  - bcrypt    password storage rather than key derivation
+
+The work factor (iterations / memory cost) is the whole defense:
+it multiplies the attacker's cost per guess. A weak or absent
+KDF means each guess is nearly free, so a wordlist attack runs at
+full speed.
+
+Historical gotcha worth knowing: OpenSSL's \`enc\` command
+originally derived keys with EVP_BytesToKey — a single digest
+iteration — which offers essentially no brute-force resistance.
+That's why modern usage passes \`-pbkdf2\` explicitly.
+
+The limit to understand: a KDF raises the cost PER GUESS. It
+cannot rescue a passphrase that sits in a common wordlist. If the
+passphrase is "Summer2024!", a slow KDF buys you a small multiple
+of not-very-long. Strong KDF plus high-entropy passphrase is the
+only combination that works.`,
+
   RBAC: `RBAC — Role-Based Access Control
 
 An authorization model where permissions are attached to roles,

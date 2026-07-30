@@ -334,4 +334,111 @@ test.describe("crypto track", () => {
       });
     });
   });
+
+  // ── Level 3 — "Theo's Encrypted Backup" ─────────────────────────
+  // Gated by `TheoVesta!1` — the plaintext john cracked in level2.
+  // The capstone of the crypto arc: AES-256 keyed from a rockyou-
+  // crackable passphrase. FIRST level to use the v2.2.0 passphrase-
+  // GATED form of level.opensslEnc, so the critical assertions are
+  // the negative ones: decryption must FAIL without the passphrase
+  // and with a wrong one. If those regress, the level's whole lesson
+  // silently evaporates (the plaintext would be readable for free).
+  test.describe("level3@crypto — Theo's Encrypted Backup", () => {
+    test("wrong password is rejected at the gate", async ({ page }) => {
+      await dispatchCmd(page, "ssh level3@crypto");
+      await dispatchCmd(page, "wrong-password");
+      const t = await terminalText(page);
+      expect(t).toContain("Permission denied, please try again.");
+    });
+
+    test.describe("inside level3", () => {
+      test.beforeEach(async ({ page }) => {
+        await dispatchCmd(page, "ssh level3@crypto");
+        await dispatchCmd(page, "TheoVesta!1");
+        await waitForOutput(page, "Connected: level3@crypto");
+        await waitForOutput(page, "Save your progress across browser sessions?");
+        await dispatchCmd(page, "n");
+        await waitForOutput(page, "Progress stays in this tab only");
+      });
+
+      test("connection banner + prompt identity (vesta-admin@backup)", async ({ page }) => {
+        const t = await terminalText(page);
+        expect(t).toContain("Connected: level3@crypto");
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@backup:");
+        expect(prompt.startsWith("vesta-admin@")).toBeTruthy();
+      });
+
+      test("cat on the ciphertext shows openssl's Salted__ header, not plaintext", async ({ page }) => {
+        await dispatchCmd(page, "cat vesta-prod-backup-2026-01-15.enc");
+        const t = await terminalText(page);
+        expect(t, "openssl enc magic header is visible").toContain("Salted__");
+        expect(t, "plaintext must NOT be readable via cat").not.toContain("cvv2");
+      });
+
+      test("openssl enc -d WITHOUT a passphrase does not decrypt", async ({ page }) => {
+        await dispatchCmd(
+          page,
+          "openssl enc -d -aes-256-cbc -pbkdf2 -in vesta-prod-backup-2026-01-15.enc",
+        );
+        const t = await terminalText(page);
+        expect(t, "sandbox explains it cannot prompt and names the flag").toMatch(/-k <passphrase>|can't prompt interactively/);
+        expect(t, "plaintext must NOT leak without the key").not.toContain("cvv2");
+      });
+
+      test("openssl enc -d with the WRONG passphrase returns bad decrypt", async ({ page }) => {
+        await dispatchCmd(
+          page,
+          "openssl enc -d -aes-256-cbc -pbkdf2 -k 'wrong-passphrase' -in vesta-prod-backup-2026-01-15.enc",
+        );
+        const t = await terminalText(page);
+        expect(t).toContain("bad decrypt");
+        expect(t, "plaintext must NOT leak on a wrong key").not.toContain("cvv2");
+      });
+
+      test("openssl enc -d with the cracked passphrase decrypts and reveals the level4 breadcrumb", async ({ page }) => {
+        await dispatchCmd(
+          page,
+          "openssl enc -d -aes-256-cbc -pbkdf2 -k 'TheoVesta!1' -in vesta-prod-backup-2026-01-15.enc",
+        );
+        const t = await terminalText(page);
+        expect(t, "decrypted dump header").toContain("payments.transactions export");
+        expect(t, "level4 breadcrumb in the embedded restore config").toContain(
+          "HSM_UNWRAP_CREDENTIAL=vesta-hsm-mk7-unwrap-2026Q1",
+        );
+      });
+
+      test("the successful decrypt fires the prohibited-CVV bonus find", async ({ page }) => {
+        await dispatchCmd(
+          page,
+          "openssl enc -d -aes-256-cbc -pbkdf2 -k 'TheoVesta!1' -in vesta-prod-backup-2026-01-15.enc",
+        );
+        const t = await terminalText(page);
+        expect(t, "dump retains sensitive authentication data").toContain("cvv2");
+        expect(t, "bonus-find banner fires").toContain(
+          "Bonus find unlocked: The CVV should not be there at all",
+        );
+      });
+
+      test("cat make-backup.sh fires the passphrase-beside-ciphertext bonus find", async ({ page }) => {
+        await dispatchCmd(page, "cat make-backup.sh");
+        const t = await terminalText(page);
+        expect(t, "script passes the passphrase inline").toContain("-k 'TheoVesta!1'");
+        expect(t, "bonus-find banner fires").toContain(
+          "Bonus find unlocked: The passphrase is in the script beside the ciphertext",
+        );
+      });
+
+      test("exit from level3@crypto returns to the lobby", async ({ page }) => {
+        await dispatchCmd(page, "exit");
+        await page.waitForFunction(
+          () => document.getElementById("prompt-label")?.innerText.includes("@d3cyph3r:"),
+          null,
+          { timeout: 5000 },
+        );
+        const prompt = await promptText(page);
+        expect(prompt).toContain("@d3cyph3r:");
+      });
+    });
+  });
 });

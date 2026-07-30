@@ -68,7 +68,7 @@ usage: openssl <subcommand> [args]
   x509    inspect a certificate     (openssl x509 -text -in FILE)
   rand    random bytes              (openssl rand -hex N)
   dgst    hash a file               (openssl dgst -sha256 FILE)
-  enc -d  symmetric decrypt         (openssl enc -d -aes-256-cbc -in FILE)
+  enc -d  symmetric decrypt         (openssl enc -d -aes-256-cbc -k PASS -in FILE)
 See 'man openssl' for full details.`,
 
   theme: `theme — switch / cycle the terminal palette (v1.13.0)

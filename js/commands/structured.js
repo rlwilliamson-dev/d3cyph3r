@@ -18,7 +18,24 @@
 //     verify:  { [filename]: { status: "good"|"bad", signer, date } },
 //   }
 //
-//   level.opensslEnc = { [filename]: "decrypted content" }
+//   level.opensslEnc = { [filename]: <entry> }
+//     Ciphertext files readable via `openssl enc -d`. Each entry takes
+//     one of two shapes:
+//
+//       "file.enc": "decrypted content"
+//         Ungated — any `openssl enc -d -in file.enc` returns the
+//         plaintext. Fine for scene-setting props.
+//
+//       "file.enc": { passphrase: "s3cret", content: "plaintext" }
+//         PASSPHRASE-GATED (v2.2.0). The player must supply the exact
+//         passphrase via `-k <pass>` or `-pass pass:<pass>`; anything
+//         else returns openssl's canonical `bad decrypt`, and omitting
+//         it entirely explains that the sandbox can't prompt. Use this
+//         whenever recovering the key IS the puzzle — otherwise the
+//         plaintext is readable without solving anything.
+//
+//     Note the gate is `openssl enc`-specific; `level.gpg.decrypt`
+//     below remains the ungated string form.
 //   level.opensslSClient = { "<host:port>": {
 //     protocol, cipher, cert: { subject, issuer, validity },
 //     verification: "OK" | "self-signed" | "expired",
@@ -177,19 +194,67 @@ function opensslDgst(level, args) {
   return { text: `${alg.toUpperCase()}(${file})= ${fileHash[alg]}`, cls: "out" };
 }
 
+// Extract the passphrase from an `openssl enc` argv, supporting the two
+// non-interactive forms real openssl accepts:
+//   -k <pass>            legacy shorthand
+//   -pass pass:<pass>    the modern -pass source syntax
+// Returns null when neither is present (real openssl would prompt on the
+// tty; the sandbox has no interactive prompt, so callers surface a hint).
+function extractEncPassphrase(args) {
+  const kIdx = args.indexOf("-k");
+  if (kIdx !== -1 && args[kIdx + 1] !== undefined) return args[kIdx + 1];
+  const pIdx = args.indexOf("-pass");
+  if (pIdx !== -1 && args[pIdx + 1] !== undefined) {
+    const src = args[pIdx + 1];
+    if (src.startsWith("pass:")) return src.slice(5);
+  }
+  return null;
+}
+
 function opensslEnc(level, args) {
-  // `openssl enc -d -aes-256-cbc -in <file> [-out <out>]` (sandbox: decrypt only)
+  // `openssl enc -d -aes-256-cbc [-pbkdf2] [-k PASS] -in <file>`
+  // (sandbox: decrypt only — the fs is read-only, so there's nothing
+  // to encrypt TO.)
+  //
+  // Two level.opensslEnc entry shapes are supported:
+  //   "file.enc": "plaintext"                        → no passphrase gate
+  //   "file.enc": { passphrase, content }            → passphrase REQUIRED
+  // The gated form is what makes a decryption puzzle a puzzle: without
+  // it the player could read the ciphertext's plaintext without ever
+  // recovering the key, which defeats the lesson.
   if (!args.includes("-d")) {
     return { text: "openssl enc: read-only sandbox supports -d (decrypt) only", cls: "err" };
   }
   const inIdx = args.indexOf("-in");
   const file  = inIdx !== -1 ? args[inIdx + 1] : null;
-  if (!file) return { text: "Usage: openssl enc -d -<cipher> -in <file>", cls: "err" };
-  const dec = level?.opensslEnc?.[file];
-  if (dec === undefined) {
+  if (!file) return { text: "Usage: openssl enc -d -<cipher> [-pbkdf2] -k <pass> -in <file>", cls: "err" };
+
+  const entry = level?.opensslEnc?.[file];
+  if (entry === undefined) {
+    // No such ciphertext configured — openssl's shape for "this isn't
+    // decryptable with what you gave me."
     return { text: `bad decrypt\n140000000000000:error:0606506D:digital envelope routines:EVP_DecryptFinal_ex:wrong final block length:`, cls: "err" };
   }
-  return { text: String(dec), cls: "out" };
+
+  // Legacy string form: no passphrase gate.
+  if (typeof entry === "string") return { text: entry, cls: "out" };
+
+  const supplied = extractEncPassphrase(args);
+  if (supplied === null) {
+    // Real openssl prompts here. The sandbox can't, so say so and name
+    // the flag rather than silently failing.
+    return {
+      text: "enter aes-256-cbc decryption password:\nopenssl: this sandbox can't prompt interactively — supply the passphrase inline with `-k <passphrase>` (or `-pass pass:<passphrase>`).",
+      cls: "err",
+    };
+  }
+  if (supplied !== entry.passphrase) {
+    // Canonical wrong-passphrase failure. Note it looks IDENTICAL to a
+    // corrupt-file failure — openssl can't distinguish "wrong key" from
+    // "not valid ciphertext", which is itself worth teaching.
+    return { text: `bad decrypt\n140000000000000:error:1C800064:Provider routines:ossl_cipher_unpadblock:bad decrypt:`, cls: "err" };
+  }
+  return { text: String(entry.content ?? ""), cls: "out" };
 }
 
 function opensslSClient(level, args) {

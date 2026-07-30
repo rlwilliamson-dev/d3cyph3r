@@ -1149,21 +1149,57 @@ EXAMPLES
 
   // ─── Format inspection ────────────────────────────────────────────
   openssl: `NAME
-    openssl — cryptography toolkit (x509 subset)
+    openssl — cryptography toolkit (curated subset)
 
 SYNOPSIS
     openssl x509 -text -noout -in FILE
+    openssl rand [-hex] N
+    openssl dgst -sha256|-sha1|-md5 FILE
+    openssl enc -d -<cipher> [-pbkdf2] [-k PASS] -in FILE
+    openssl s_client -connect HOST:PORT
 
 DESCRIPTION
     Real openssl supports dozens of subcommands; the sandbox
-    implements one common form: parsing a certificate file and
-    printing its fields in human-readable form. Useful for
-    inspecting validity dates, subject / issuer DNs, Subject
-    Alternative Names (SAN), and X.509v3 extensions.
+    implements the five you reach for most often in an audit.
+
+    x509      Parse a certificate and print its fields in human-
+              readable form — validity dates, subject / issuer DNs,
+              Subject Alternative Names (SAN), X.509v3 extensions.
+
+    rand      Emit N random bytes, -hex for hex output.
+
+    dgst      Hash a file with the named digest.
+
+    enc -d    Symmetric DECRYPTION. The sandbox fs is read-only, so
+              encryption (-e) isn't supported — there's nothing to
+              write to. Ciphers are accepted as written
+              (-aes-256-cbc etc.), as are -pbkdf2 and -salt.
+
+              Supply the passphrase inline; the sandbox has no
+              interactive prompt:
+
+                -k PASS              legacy shorthand
+                -pass pass:PASS      modern -pass source syntax
+
+              A wrong passphrase returns "bad decrypt" — the SAME
+              error a corrupt file returns, because openssl can't
+              tell the two apart. It decrypts, then discovers the
+              padding is nonsense; it cannot know whether the key
+              was wrong or the bytes were.
+
+    s_client  Open a TLS connection and print the negotiated
+              protocol / cipher and the server's certificate.
 
 EXAMPLES
     openssl x509 -text -noout -in portal.crt
-    openssl x509 -text -noout -in /etc/ssl/certs/server.pem`,
+    openssl rand -hex 16
+    openssl dgst -sha256 payload.bin
+    openssl enc -d -aes-256-cbc -pbkdf2 -k 'hunter2' -in backup.enc
+    openssl s_client -connect api.example.com:443
+
+SEE ALSO
+    what-is AES, what-is KDF — why the passphrase, not the cipher,
+    is usually the weak point`,
 
   tar: `NAME
     tar — archive listing / extraction
