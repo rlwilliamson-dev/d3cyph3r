@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`grep` now takes flags.** `-i` (accepted and ignored, since matching here has always been case-insensitive), `-v` to invert, `-n` for line numbers, and `-c` for a count, bundled (`-vn`) or separate. Previously any flag was treated as the search pattern, so the reflexive `grep -i something file` searched for `-i` and quietly found nothing. Unrecognized flags now report an error instead of silently misbehaving, and `man grep` documents all of it.
 
+### Fixed
+
+- **`levels/forensics.js` is searchable again.** The file held nine literal NUL bytes inside the simulated JPEG content in `level0@forensics`, which made tooling classify the whole file as binary — so `grep` and `rg` skipped it silently, with no match and no warning. Any repo-wide search or count quietly missed all four forensics levels. The NULs are now written as `\x00` escapes: the source is plain text, and the runtime string is byte-for-byte identical (verified by hashing the evaluated value before and after), so `file`, `strings`, and `exif` behave exactly as before.
+
 CWE-290; SPF (RFC 7208), DKIM (RFC 6376), DMARC (RFC 9989, obsoleting RFC 7489); MITRE T1114 + T1534 + T1567.
 
 ## [2.2.0] - 2026-07-07

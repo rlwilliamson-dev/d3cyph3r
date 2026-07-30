@@ -378,10 +378,20 @@ PENDING — FOLLOW-UP ARTIFACT (next engagement)
   follow-up.`
         },
 
+        // The \x00 escapes below are DELIBERATE and must stay escaped.
+        // This string simulates a JPEG's leading bytes (JFIF + Exif
+        // magic), and those bytes genuinely include NULs — `strings`
+        // and `file` read this content, so the runtime value has to
+        // keep them. Writing them as RAW 0x00 bytes in the source is
+        // what we must avoid: it makes this whole file classify as
+        // binary, after which `grep`/`rg` skip it SILENTLY (no match,
+        // no warning) and any repo-wide search quietly misses every
+        // forensics level. `\x00` evaluates to the identical
+        // character while keeping the source plain text.
         "soccer-field.jpg": {
           type: "file",
           content:
-`ÿØÿà..JFIF.....      Exif  II* 
+`ÿØÿà..JFIF.....\x00\x00\x00\x00\x00\x00Exif\x00\x00II*\x00
 [binary JPEG content — 2.4 MB on disk — omitted from terminal display.
  Use \`file\` to identify the artifact type, or \`exif\` to read
  embedded metadata. \`cat\` on a JPEG will not be useful here.]
