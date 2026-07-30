@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-07-07
+
+**`level3@crypto` — "Theo's encrypted backup."** The second level3, and the capstone of the crypto track. Levels 0 through 2 took apart three comfortable assumptions in turn — encoding is not encryption, signing is not encryption, hashing is not encryption. This one takes apart the last: encryption is only as strong as its key.
+
+### Added
+
+- **`level3@crypto` — "Theo's encrypted backup (openssl enc)" (Routine tier, ~14 min).** The password cracked in level2 turns out to be two things at once: the login on Vesta's backup host and the AES passphrase on the nightly production backup, so the player types the same weak string twice for different purposes. Decrypting it with `openssl enc -d` reveals a database export that should never have existed in that form — and an embedded restore configuration carrying the credential for level4. AES-256-CBC is never broken; the cipher is the one part of the design that works. Two bonus finds: card verification values retained after authorization (which no amount of encryption makes permissible), and the encryption passphrase hardcoded in the backup script sitting beside its own ciphertext.
+- **Passphrase-gated decryption.** `openssl enc -d` now accepts a passphrase inline via `-k <pass>` or `-pass pass:<pass>`, and a level can require it: the `level.opensslEnc` schema gained a `{ passphrase, content }` form alongside the existing plain-string form. A wrong passphrase returns openssl's canonical `bad decrypt` — the same error a corrupt file returns, because openssl genuinely cannot tell the two apart. Without the gate, a decryption puzzle could be solved without recovering the key.
+- **`what-is AES` and `what-is KDF`** glossary entries covering block-cipher mode selection and why key derivation, not cipher choice, is where passphrase-based encryption usually fails.
+- **`walkthroughs/crypto/level3.md`** — "Theo's Encrypted Backup", a full study companion on key management as the real subject of encryption, the difference between protecting data and being permitted to hold it, and PCI-DSS scope for encrypted cardholder data (PCI-DSS v4.0.1 §3.3.1 / §3.5.1 / §3.6.1 / §3.7, NIST SP 800-57 and SP 800-132, OWASP A04:2025). The 2022 LastPass vault-backup breach and Adobe's 2013 ECB-encrypted password dump are the real-world parallels.
+
+### Changed
+
+- **`man openssl` now documents the whole implemented surface.** The page still described an x509-only subset even though `rand`, `dgst`, `enc`, and `s_client` shipped in v1.7.0–v1.8.0; it now covers all five subcommands, the passphrase flags, and why a wrong key and a corrupt file produce identical errors.
+
+CWE-326 + CWE-522 + CWE-312; PCI-DSS v4.0.1 §3.3.1; OWASP Top 10:2025 A04 Cryptographic Failures.
+
 ## [2.1.1] - 2026-07-07
 
 ### Fixed
@@ -3826,7 +3843,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v1.30.0...v2.0.0

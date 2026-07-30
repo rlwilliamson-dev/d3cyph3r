@@ -187,7 +187,8 @@ export const LEVEL_REGISTRY = Object.freeze([
   "level2@cloud",        // 20  — v1.30.0
   // ── v2.1.0 — level3 sweep begins (builds toward the v3.0.0 milestone) ──
   "level3@linux",        // 21  — v2.1.0
-  // ── future levels append here at index 22, 23, 24, ... ──
+  "level3@crypto",       // 22  — v2.2.0
+  // ── future levels append here at index 23, 24, 25, ... ──
 ]);
 const LEVEL_INDEX = new Map(LEVEL_REGISTRY.map((k, i) => [k, i]));
 
@@ -334,6 +335,10 @@ export const BONUS_REGISTRY = Object.freeze({
   // config backup that swept up live secrets (fires on sudo cat of the
   // captured DB connection profile).
   "level3@linux":     Object.freeze(["daniel-outlived-again", "backup-swept-secrets"]),
+  // v2.2.0 — level3@crypto ships with two bonus finds: the prohibited
+  // CVV retention (fires on the successful decrypt) and the passphrase
+  // hardcoded in the backup script beside its own ciphertext.
+  "level3@crypto":    Object.freeze(["cvv-should-not-exist", "passphrase-beside-ciphertext"]),
 });
 // Build a reverse-lookup: "<levelKey>:<findId>" → { levelIdx, bitN }.
 // The progress code's stored bonus-finds set lives at the "<key>:<id>"

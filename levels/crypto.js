@@ -1680,4 +1680,640 @@ References:
     },
   },
 
+  // ── level3@crypto — "Theo's encrypted backup" ────────────────────
+  // Gate: TheoVesta!1 — the plaintext john cracked out of Theo's
+  // committed MD5 file in level2. Level2's bonus find established
+  // that Theo reused that ONE string across four systems: the admin
+  // login, the prod-DB account, the AES backup encryption, and an S3
+  // credential. This level cashes in two of those four: it's the
+  // login on the backup host AND the passphrase on the backup itself.
+  // The player types the same weak password twice, ten minutes apart,
+  // which is the reuse lesson landing harder than any paragraph.
+  //
+  // THE CAPSTONE OF THE CRYPTO ARC. Each level killed one comfortable
+  // assumption:
+  //   level0  encoding  is not encryption  (base64)
+  //   level1  signing   is not encryption  (alg:none JWT)
+  //   level2  hashing   is not encryption  (unsalted MD5 + john)
+  //   level3  encryption is only as strong as its KEY  (AES-256 with
+  //           a rockyou-crackable passphrase)
+  // AES-256-CBC is not broken and never gets broken here. The cipher
+  // is the one part of Theo's design that works. That's the point:
+  // "we encrypt our backups" is a statement about a cipher, and the
+  // question that matters is where the key came from.
+  //
+  // Solve path:
+  //   1. `ls` — a .enc file, Theo's backup notes, and the script that
+  //      makes it.
+  //   2. `cat` the .enc → binary noise starting with `Salted__`
+  //      (openssl's real magic header). Ciphertext is not readable.
+  //   3. `cat backup-notes.md` → names the cipher (aes-256-cbc) and
+  //      admits the passphrase is "the usual one."
+  //   4. `openssl enc -d -aes-256-cbc -pbkdf2 -k 'TheoVesta!1' -in
+  //      vesta-prod-backup-2026-01-15.enc` → the plaintext dump.
+  //   5. The dump is a PCI-DSS crime scene (full PANs AND cvv2), and
+  //      its embedded restore config carries the level4 credential.
+  //
+  // Engine: FIRST level to use the passphrase-gated form of
+  // `level.opensslEnc` (v2.2.0 — see the schema note at the top of
+  // js/commands/structured.js). Without the gate the player could
+  // read the plaintext without ever recovering the key, which would
+  // defeat the entire lesson.
+  //
+  // PAN SAFETY NOTE FOR FORKERS: every card number below is a
+  // published, non-functional TEST number from the payment-processor
+  // documentation sets (4111111111111111, 5555555555554444,
+  // 378282246310005, 6011111111111117, 4012888888881881). They are
+  // recognizable on sight to anyone who works in payments and cannot
+  // authorize a transaction. Never put real or real-shaped PANs in a
+  // training level.
+  //
+  // Lessons: CWE-326 (Inadequate Encryption Strength — via the key,
+  // not the cipher) + CWE-522 (Insufficiently Protected Credentials —
+  // the passphrase hardcoded in the script beside the ciphertext) +
+  // CWE-311/312 on the retained cardholder data. PCI-DSS 4.0: 3.3.1
+  // (never retain sensitive authentication data after authorization —
+  // CVV storage is prohibited outright, encrypted or not), 3.5.1
+  // (render PAN unreadable), 8.3.6 / 8.6.3 (password strength).
+  //
+  // Two bonus finds (don't gate the chain):
+  //   - "The CVV should not be there at all" — the regulatory beat:
+  //     encryption does not make prohibited retention permissible.
+  //   - "The passphrase is in the script beside the ciphertext" — the
+  //     key-management beat: the lock and its key in one directory.
+  //
+  // Breadcrumb out: vesta-hsm-mk7-unwrap-2026Q1 — an HSM key-unwrap
+  // credential in the dump's embedded restore config, gating a future
+  // level4@crypto (envelope encryption / key hierarchy).
+  "level3@crypto": {
+    password: "TheoVesta!1",
+    track: "crypto",
+    title: "Theo's encrypted backup (openssl enc)",
+    estimatedMinutes: 14,
+    playerUser: "vesta-admin",
+    // Cross-track seed: the "one weak string, many systems" shape is
+    // the same failure Halton Bank institutionalized in the linux
+    // track. Different industry, identical blast radius.
+    crossTrackHooks: ["linux"],
+    objective: "Decrypt the production backup Theo has been calling 'encrypted at rest' — using the password you cracked yesterday — and document what Vesta has been retaining inside it.",
+    lesson: "Day four of Vesta's pre-QSA audit. Saanvi read your hash report and asked the obvious follow-up: if Theo reused that one password four times, what did it unlock? One of the four was labeled `aes-backup`. It's the passphrase on the nightly production backup — and the same string is the login on the backup host, which is how you're reading this. Welcome.md covers `openssl enc -d`. Decrypt the backup, then read what's actually inside it. The QSA call is in an hour and Saanvi needs to know whether this is a finding or a breach notification.",
+    hints: [
+      "The `.enc` file is Theo's backup. `cat` it and you'll get noise — ciphertext isn't readable. You need `openssl enc -d`, and you already know the passphrase: it's the one you typed to get onto this host.",
+      "Real openssl prompts for the passphrase; this sandbox can't prompt, so pass it inline with `-k '<passphrase>'`. `cat backup-notes.md` — Theo wrote down which cipher he used.",
+      "Run: openssl enc -d -aes-256-cbc -pbkdf2 -k 'TheoVesta!1' -in vesta-prod-backup-2026-01-15.enc — then read to the bottom of the dump. The HSM_UNWRAP_CREDENTIAL line in the embedded restore config is your level4 credential.",
+    ],
+
+    permissions: {
+      "welcome.md":                        { mode: "-rw-r--r--", owner: "vesta-admin", group: "vesta-admin", size: 2684 },
+      "lessons-learned.md":                { mode: "-rw-r--r--", owner: "vesta-admin", group: "vesta-admin", size: 6912 },
+      ".bash_history":                     { mode: "-rw-------", owner: "vesta-admin", group: "vesta-admin", size:  196 },
+      "backup-notes.md":                   { mode: "-rw-r--r--", owner: "theo",        group: "vesta-dev",   size:  874 },
+      "make-backup.sh":                    { mode: "-rwxr-xr-x", owner: "theo",        group: "vesta-dev",   size: 1180 },
+      // World-readable ciphertext. Theo reasoned the encryption made
+      // the file mode irrelevant — which is exactly the reasoning the
+      // level exists to dismantle.
+      "vesta-prod-backup-2026-01-15.enc":  { mode: "-rw-r--r--", owner: "theo",        group: "vesta-dev",   size: 4180224 },
+      "retention-policy.md":               { mode: "-rw-r--r--", owner: "root",        group: "root",        size:  742 },
+    },
+
+    env_vars: {
+      EDITOR:   "vim",
+      HOSTNAME: "backup.vesta.internal",
+    },
+
+    // PASSPHRASE-GATED decryption (v2.2.0). Supplying the wrong
+    // passphrase — or none — must NOT reveal the plaintext, or the
+    // level teaches nothing. See js/commands/structured.js.
+    opensslEnc: {
+      "vesta-prod-backup-2026-01-15.enc": {
+        passphrase: "TheoVesta!1",
+        content:
+`-- Vesta Retail — payments.transactions export
+-- Generated 2026-01-15T03:14:22Z by /opt/vesta/make-backup.sh
+-- Source:  prod-db-01.vesta.internal   database: vesta_payments
+-- Rows:    48,219   (archive header shows the first 6)
+
+txn_id,captured_at,cardholder_name,pan,expiry,cvv2,auth_code,amount_usd
+TXN-88412907,2026-01-14T18:22:04Z,A REYES,4111111111111111,09/28,412,A7X21K,84.15
+TXN-88412908,2026-01-14T18:22:51Z,M OKONKWO,5555555555554444,03/27,908,B3M77P,219.40
+TXN-88412909,2026-01-14T18:23:16Z,J FERRARO,378282246310005,11/26,3319,C1Q04D,1204.99
+TXN-88412910,2026-01-14T18:24:02Z,S NAKAMURA,6011111111111117,07/29,551,D8Z13R,46.80
+TXN-88412911,2026-01-14T18:24:44Z,L HAMMOND,4012888888881881,01/28,270,E5W88T,312.65
+TXN-88412912,2026-01-14T18:25:09Z,K ADEBAYO,4111111111111111,09/28,412,F2Y46N,84.15
+... 48,213 further rows elided in this archive header ...
+
+-- ─── embedded restore configuration ──────────────────────────
+-- make-backup.sh appends this block so the restore job is
+-- self-contained and can run unattended. The restore job has
+-- never actually been run.
+
+RESTORE_TARGET=prod-db-01.vesta.internal
+RESTORE_DB=vesta_payments
+HSM_ENDPOINT=hsm-01.vesta.internal:9000
+HSM_KEY_LABEL=vesta-master-key-7
+HSM_UNWRAP_CREDENTIAL=vesta-hsm-mk7-unwrap-2026Q1
+
+-- NOTE(theo, 2025-08): the HSM is the "real" key store per the
+-- architecture doc. We never finished wiring the backup job to
+-- it, so the nightly export still uses the passphrase in
+-- make-backup.sh. Ticket VES-2291. Reprioritized twice.
+`,
+      },
+    },
+
+    bonusFinds: [
+      {
+        id:   "cvv-should-not-exist",
+        name: "The CVV should not be there at all",
+        hint: "The dump carries a `cvv2` column. Card verification values are Sensitive Authentication Data, and PCI-DSS prohibits retaining SAD after authorization completes — not 'store it carefully', not 'store it encrypted', but do not store it. Encryption is a control for data you are permitted to keep. It does not create permission. A backup containing post-auth CVV is a finding no amount of AES makes go away.",
+        trigger: { command: "openssl", argMatches: /\.enc/, outputContains: "cvv2" },
+      },
+      {
+        id:   "passphrase-beside-ciphertext",
+        name: "The passphrase is in the script beside the ciphertext",
+        hint: "make-backup.sh passes the passphrase inline with `-k`, and the script sits in the same directory as the file it encrypts, on the same host, world-readable. Anyone who can read the backup can read its key. That isn't encryption at rest, it's a lock with its key taped to the door — CWE-522. It's also why the HSM in the restore config exists (and why VES-2291 never getting done is the actual root cause).",
+        trigger: { command: "cat", argMatches: /make-backup\.sh/, outputContains: "-k '" },
+      },
+    ],
+
+    fs: {
+      type: "dir",
+      children: {
+
+        "welcome.md": {
+          type: "file",
+          content:
+`─── Driftwood Systems / Vesta Retail — Backup Host Review ─────
+  Host:    backup.vesta.internal
+  Acct:    vesta-admin (Driftwood audit role on Vesta hosts)
+  Date:    Friday 2026-01-16 (pre-QSA audit, day four)
+────────────────────────────────────────────────────────────
+
+Priya: "Saanvi read your hash write-up overnight. Her question
+was the right one: you proved Theo reused one password four
+times — so what does it actually open? One of those four
+hashes was labeled \`aes-backup\`. It's the passphrase on the
+nightly production backup. It's ALSO the login on this box,
+which is how you're reading this file. Decrypt the backup and
+tell us what Vesta has been keeping in it. The QSA call is at
+14:00 and Saanvi needs to know whether she's reporting a
+finding or starting a breach notification."
+
+You are \`vesta-admin\` on Vesta's backup host. Run \`id\` and
+\`whoami\` to confirm.
+
+─── NEW COMMAND YOU'LL USE TODAY ──────────────────────────────
+
+  openssl enc -d      Symmetric DECRYPTION. The workhorse for
+                      "this file is encrypted at rest" claims.
+
+    openssl enc -d -aes-256-cbc -pbkdf2 -k 'PASSPHRASE' -in FILE
+
+    -d          decrypt (as opposed to -e, encrypt)
+    -aes-256-cbc  the cipher the file was encrypted with. You
+                  have to know this; it isn't stored in the file.
+    -pbkdf2     use the modern key-derivation function
+    -k PASS     the passphrase, inline. Real openssl prompts for
+                it on the terminal; this sandbox can't prompt, so
+                you pass it with -k (or -pass pass:PASS).
+    -in FILE    the ciphertext to read
+
+  Get the passphrase wrong and openssl says \`bad decrypt\`. It
+  says exactly the same thing if the file is corrupt — it has no
+  way to tell the difference. It decrypts with whatever key you
+  gave it, then finds the padding is nonsense, and reports that.
+
+─── WHAT "ENCRYPTED AT REST" ACTUALLY MEANS ───────────────────
+
+Encryption turns readable data into ciphertext using a KEY. The
+security of the result is the security of the KEY — not the
+security of the cipher.
+
+AES-256 is not broken. Nobody in this engagement is going to
+break AES. Every real-world compromise of encrypted data is a
+compromise of key handling:
+
+  - the passphrase was guessable (a wordlist finds it)
+  - the key was stored next to the ciphertext
+  - the key was never rotated after the person who knew it left
+  - the key was derived from a passphrase with a weak KDF, so
+    guessing was cheap
+
+That last one is what \`-pbkdf2\` is about. A Key Derivation
+Function turns a human passphrase into a cipher key, and a good
+one is deliberately SLOW so each guess costs the attacker real
+time. openssl's original derivation was a single digest pass —
+effectively free to brute-force. But note the limit: a slow KDF
+multiplies the cost of each guess. It cannot save a passphrase
+that appears in a wordlist. If the guess is the first one tried,
+"expensive per guess" doesn't matter.
+
+Which is the whole story of this level. The cipher Theo chose is
+fine. The passphrase you cracked yesterday in under a second is
+the key to it.
+
+  \`what-is AES\` and \`what-is KDF\` go deeper.
+
+─── HOW TO PLAY ───────────────────────────────────────────────
+
+  1.  cat welcome.md            You're already here.
+  2.  ls -la                    See what's on the box.
+  3.  cat vesta-prod-backup-2026-01-15.enc
+                                Ciphertext. Unreadable on purpose —
+                                note the \`Salted__\` header.
+  4.  cat backup-notes.md       Theo's own notes. Which cipher?
+  5.  openssl enc -d -aes-256-cbc -pbkdf2 -k 'PASSPHRASE' \\
+        -in vesta-prod-backup-2026-01-15.enc
+                                Decrypt it. Read to the BOTTOM —
+                                the restore config carries your
+                                level4 credential.
+  6.  cat lessons-learned.md    Post-mortem (after step 5).
+  7.  exit                       Return to the lobby.
+
+Bonus exploration when you're done:
+
+  - \`cat make-backup.sh\`      Where does the passphrase live?
+  - \`cat retention-policy.md\` What was Vesta supposed to keep?
+`
+        },
+
+        ".bash_history": {
+          type: "file",
+          content:
+`id
+ls -la
+file vesta-prod-backup-2026-01-15.enc
+cat backup-notes.md
+exit
+`
+        },
+
+        // Theo's notes. Names the cipher (the player needs it — the
+        // algorithm is NOT recoverable from the ciphertext) and
+        // cheerfully documents the reuse without recognizing it.
+        "backup-notes.md": {
+          type: "file",
+          content:
+`# Backup notes — Theo
+# (kept next to the job so whoever is on call can restore)
+
+Nightly export of vesta_payments -> encrypted -> this host.
+
+  Cipher:  aes-256-cbc
+  KDF:     pbkdf2 (added 2025-11 after the openssl upgrade
+           warned about the old derivation)
+  Passphrase: the usual one. Same as the admin login here, so
+           you don't need to look it up. If you don't know it,
+           ask me.
+
+Restore: run make-backup.sh --restore, it reads the embedded
+config block at the end of the dump. Never tested end to end.
+
+TODO(VES-2291): move this to the HSM like the architecture doc
+says. Bumped from the Q3 and Q4 sprints. Not urgent — the file
+is encrypted, so even if the box were exposed the data's safe.
+`
+        },
+
+        // BONUS-FIND TRIGGER #2. The passphrase inline in the script,
+        // in the same directory as the ciphertext it protects.
+        "make-backup.sh": {
+          type: "file",
+          content:
+`#!/bin/bash
+# Vesta nightly payments backup.  cron: 0 3 * * *  (theo)
+#
+# Dumps vesta_payments, encrypts the dump, drops it here.
+# The encryption is why this host doesn't need special handling
+# (per VES-1180 discussion).
+
+set -euo pipefail
+
+STAMP="$(date +%F)"
+OUT="/home/vesta-admin/vesta-prod-backup-$STAMP.enc"
+
+pg_dump -h prod-db-01.vesta.internal -U vesta_app vesta_payments \\
+  | openssl enc -aes-256-cbc -pbkdf2 -k 'TheoVesta!1' -out "$OUT"
+
+# Append the restore config so the job is self-contained.
+cat /opt/vesta/restore-config.fragment >> "$OUT"
+
+echo "backup complete: $OUT"
+`
+        },
+
+        // The ciphertext. \`cat\` shows openssl's real magic header
+        // (Salted__ + 8 salt bytes) followed by noise — the teaching
+        // beat that ciphertext is not readable, and the hint that
+        // this is openssl-enc output specifically.
+        "vesta-prod-backup-2026-01-15.enc": {
+          type: "file",
+          content:
+`Salted__Ñ¶Cù.Ä{â5ªÐh
+ò¼]ç1«Ïré´XÓ
+d®ñ'Å;àŶ¸ÖJì!
+»PÙ7¢äÍõ+i±ÜC
+... 4,180,160 further bytes of ciphertext ...
+`
+        },
+
+        // Vesta's own retention policy — which the backup violates.
+        // Not a bonus trigger; it's the "they knew" document that
+        // makes the finding a governance finding, not just a bug.
+        "retention-policy.md": {
+          type: "file",
+          content:
+`# Vesta Retail — Cardholder Data Retention Standard
+# VES-SEC-004 rev 2 (approved 2024-03-11)
+# Owner: Saanvi Rao, CISO
+
+## Scope
+
+All systems that store, process, or transmit cardholder data.
+
+## Retention
+
+  Primary Account Number (PAN)
+      Retain ONLY where a documented business need exists.
+      Must be rendered unreadable wherever stored (truncation,
+      tokenization, or strong cryptography with associated key
+      management).
+
+  Sensitive Authentication Data (SAD)
+      Full track data, card verification values (CVV / CVC2 /
+      CAV2 / CID), and PINs MUST NOT be retained after
+      authorization completes. This applies even if the data is
+      encrypted. There is no approved business justification.
+
+  Backups
+      Inherit the classification of their source data. An
+      encrypted backup of cardholder data is still cardholder
+      data for scope purposes.
+
+## Key management
+
+Encryption keys protecting cardholder data must be stored
+separately from the data they protect, with access restricted
+to the fewest possible custodians. Passphrases embedded in
+scripts do not satisfy this standard.
+
+## Review
+
+Annual. Next review: 2025-03-11. (Overdue.)
+`
+        },
+
+        "lessons-learned.md": {
+          type: "file",
+          content:
+`══════════════════════════════════════════════════════════════
+  POST-MORTEM — what you just found, and why it matters
+══════════════════════════════════════════════════════════════
+
+You decrypted a production backup using a password that a
+dictionary attack recovered in under a second, and found inside
+it something Vesta was never permitted to keep:
+
+  1. The backup is encrypted with AES-256-CBC — a cipher with
+     no practical break — using a passphrase Theo reused across
+     four systems and which appears in rockyou.txt.
+
+  2. That passphrase is hardcoded in make-backup.sh, which sits
+     in the same directory as the file it encrypts, on the same
+     host, world-readable.
+
+  3. The plaintext contains full PANs AND cvv2 values for 48,219
+     transactions. Card verification values must never be
+     retained after authorization — encrypted or not.
+
+The cipher did its job. Everything around the cipher failed.
+
+─── THE BLUNT VERSION ────────────────────────────────────────
+
+"We encrypt our backups" is a statement about an algorithm. It
+answers none of the questions that determine whether the data is
+actually protected: where does the key live, how was it derived,
+who can reach it, when was it last rotated.
+
+Theo's answers were: in the script next to the file; from a
+reused human password; anyone with a shell on this host; never.
+
+This is the fourth and final assumption this track exists to
+take apart:
+
+  level0  encoding is not encryption      (base64 is reversible
+          by anyone, no secret involved)
+  level1  signing is not encryption       (a JWT payload is
+          readable; alg:none means unverified too)
+  level2  hashing is not encryption       (unsalted MD5 falls to
+          a wordlist in under a second)
+  level3  encryption is only as strong as its key
+
+Note what did NOT happen in any of the four: nobody broke any
+cryptography. Every single failure was in how the primitive was
+chosen, configured, or keyed. That is what real cryptographic
+failure looks like in production. The math is almost never the
+problem.
+
+There's a second, sharper finding stacked on the first. Even if
+Theo's key management had been perfect — HSM-held key, rotated
+quarterly, no passphrase anywhere — the backup would STILL be a
+finding, because it retains CVV. Encryption is a control you
+apply to data you are permitted to hold. It does not create
+permission. That distinction is the one auditors find people
+get wrong most often.
+
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
+
+Saanvi asked whether this is a finding or a breach notification.
+The honest answer at this point in the engagement is: it depends
+on evidence you do not have yet, and the responsible next step
+is to go get it rather than guess in either direction.
+
+  Finding 1 (Vesta):  Prohibited retention of Sensitive
+                      Authentication Data (CVV) in production
+                      backups. Owner: Vesta engineering + CISO.
+                      This is not remediable by adding controls;
+                      the data must stop being written and the
+                      existing copies destroyed.
+
+  Finding 2 (Vesta):  Encryption key for cardholder-data backups
+                      is a reused human password, embedded in a
+                      script beside the ciphertext. Owner: Vesta
+                      platform. VES-2291 is the pre-existing
+                      ticket; it has been deferred twice.
+
+  Finding 3 (Vesta):  Vesta's own retention standard
+                      (VES-SEC-004) prohibits both of the above
+                      explicitly. This is a governance failure,
+                      not a knowledge gap — the policy is
+                      correct and was not followed. Its annual
+                      review is also overdue.
+
+The third finding is the one that changes the conversation with
+a QSA. A control gap is a gap; a documented control that the
+organization did not follow is a program problem.
+
+Scoping note worth writing down: the backup host was treated as
+out of scope for cardholder-data handling BECAUSE the file was
+encrypted. Encrypted cardholder data is still cardholder data
+for scope purposes. This host has been in scope the whole time
+and has not been assessed as such.
+
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+
+  CWE-326 — Inadequate Encryption Strength
+    Not the cipher — the effective strength of AES-256 keyed
+    from a wordlist password is the strength of the password.
+
+  CWE-522 — Insufficiently Protected Credentials
+    The passphrase hardcoded in make-backup.sh, world-readable,
+    beside the ciphertext.
+
+  CWE-311 / CWE-312 — Missing Encryption / Cleartext Storage
+    The decrypted contents, and the plaintext restore config
+    appended to the dump.
+
+  CWE-916 — Use of Password Hash With Insufficient
+    Computational Effort. Carried over from level2 and directly
+    relevant here: the same weakness that let john crack the
+    password in a second is what makes this key worthless.
+
+  PCI-DSS v4.0.1 (Vesta is a merchant; this is the governing
+  standard for the engagement)
+    3.3.1  Sensitive Authentication Data must not be retained
+           after authorization, even if encrypted. CVV storage
+           is prohibited outright.
+    3.5.1  PAN must be rendered unreadable wherever stored.
+    3.6.1  Cryptographic keys protecting stored account data
+           must be protected against disclosure and misuse.
+    3.7.x  Key-management lifecycle: generation, distribution,
+           storage, rotation, retirement.
+    8.3.6 / 8.6.3  Password strength requirements, including
+           for credentials used by systems and applications.
+    12.x   Governing policy must exist AND be followed.
+
+  NIST SP 800-57 Part 1 — Recommendation for Key Management
+    The canonical reference for the lifecycle Theo skipped. Key
+    storage separate from protected data is foundational.
+
+  NIST SP 800-132 — Password-Based Key Derivation
+    Specifies PBKDF2 and, critically, that password-based keys
+    inherit the entropy of the password. A KDF raises per-guess
+    cost; it does not add entropy that was never there.
+
+  OWASP Top 10:2025 — A04: Cryptographic Failures
+    The category exists for exactly this shape of finding:
+    correct primitive, failed key management.
+
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
+
+  CompTIA Security+ (SY0-701)
+    Domain 1.4: cryptographic solutions — symmetric vs.
+    asymmetric, key exchange, KDFs, and the recurring exam
+    theme that key management, not algorithm choice, is where
+    implementations fail.
+
+  ISC2 CISSP
+    Domain 3 (Security Architecture and Engineering): the
+    cryptographic lifecycle, key management, and the principle
+    that keys must be protected at least as strongly as the
+    data. Domain 2 covers data retention and destruction —
+    the CVV finding.
+
+  PCI Professional (PCIP) / QSA training
+    SAD retention is the single most-tested rule in the
+    curriculum, precisely because merchants get it wrong.
+
+  CompTIA CySA+ (CS0-003)
+    Data-protection controls and the analyst's job of
+    identifying prohibited data in unexpected locations —
+    backups, logs, exports, test environments.
+
+  Offensive Security OSCP / PEN-200
+    Post-exploitation credential reuse: recovered passwords
+    are tried everywhere, and encrypted archives are a
+    standard target once a wordlist-crackable password is in
+    hand.
+
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
+
+  T1552.001 — Unsecured Credentials: Credentials In Files
+    The passphrase in make-backup.sh.
+
+  T1078 — Valid Accounts
+    The reused password as the login on this host.
+
+  T1005 — Data from Local System
+    The backup file itself is the collection target.
+
+  T1560.001 — Archive Collected Data: Archive via Utility
+    The defensive mirror: adversaries encrypt data they are
+    exfiltrating using the same utilities. An encrypted archive
+    on a backup host is not inherently benign.
+
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
+
+  1. Stop writing CVV immediately. This is the only item that
+     cannot wait for a sprint. Change the export query to omit
+     the column, then locate and securely destroy every existing
+     copy — backups, snapshots, replicas, and any downstream
+     analytics store the export feeds.
+
+  2. Treat the passphrase as compromised and rotate everything
+     it touched. It was in a committed hash file, cracked in a
+     second, and reused four ways. Rotate the admin login, the
+     prod-DB account, the backup encryption, and the S3
+     credential — and audit access logs on each for the window
+     since the hashes were committed.
+
+  3. Finish VES-2291. The HSM referenced in the restore config
+     is the correct design; the backup job should request a data
+     encryption key from it (envelope encryption) so no
+     long-lived passphrase exists on disk at all.
+
+  4. Never pass secrets on a command line. Even with a strong
+     passphrase, \`-k\` puts it in the process table and shell
+     history. Use \`-pass file:\` / \`-pass fd:\` or a secrets
+     manager. This is a small fix that removes a whole class of
+     exposure.
+
+  5. Re-scope the backup host. It stores cardholder data;
+     encryption does not remove it from PCI scope. Bring it into
+     the assessed environment with the corresponding logging,
+     access control, and review requirements.
+
+  6. Fix the governance loop. VES-SEC-004 already prohibits
+     everything found here. Add a control that verifies the
+     policy rather than merely publishing it — a periodic
+     automated scan of backups and exports for PAN and SAD
+     patterns will catch the next instance without waiting for
+     an auditor.
+
+─── CLOSING THOUGHT ──────────────────────────────────────────
+
+The most expensive word in this engagement was "encrypted." It
+ended every conversation that should have continued — about
+where the key lived, about whether the host was in scope, about
+whether the data should have been there at all. A cipher is a
+tool for protecting data you are allowed to have, keyed by a
+secret you can actually keep secret. Theo had neither, and the
+word "encrypted" hid both problems for a year and a half.
+
+Priya: "Send Saanvi the CVV finding now, before the call — she
+needs it in her opening, not her follow-ups. The key management
+can wait for the written report. And note the scoping issue
+explicitly; that's the one their QSA will chase hardest."
+
+(That HSM in the restore config is the design nobody finished
+wiring up. Worth a look at what it's actually holding.)
+
+Return to the lobby:    ssh guest@d3cyph3r
+`
+        },
+
+      },
+    },
+  },
+
 };
