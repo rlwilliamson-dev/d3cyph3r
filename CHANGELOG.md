@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-07-30
+
+### Changed
+
+- **README rewritten around the engineering, not the game.** It now opens with what the project is, who it is for, and the problem it solves; describes the system in four layers (dispatch, command layer, virtual filesystem, scenario data) rather than listing features; states measured control-framework coverage instead of asserting it; and includes a worked example tracing one level's finding through CWE, NIST 800-53, MITRE ATT&CK, and the governing regulation. Design decisions are stated with their reasoning and their trade-offs, including the one third-party origin the application actually contacts.
+- **Credential storage is documented explicitly.** Level gates are plaintext strings compared client-side and are readable from source. The README says so plainly, explains why hashing them would be security theater when the same credential appears by design in the level content the player is told to read, and records what would actually be required if the project ever added scored play.
+
+### Fixed
+
+- **Framework citation consistency.** `level2@forensics` now cites CWE-539 and CWE-200 for the persistent session token its investigation recovers, bringing CWE coverage to every shipped level. `level3@linux` now carries the GLBA Safeguards Rule citation its three sibling Linux levels already had.
+
 ## [2.3.0] - 2026-07-30
 
 **`level3@forensics` — "What Reed's mail proved."** The third level3, and the point where the Reed Connolly case stops being about what he took and starts being about what he claimed. Teaches email-header forensics: the `From:` header is free text a sender types, the `Received:` chain is written by servers after the message leaves the sender's hands, and the two can be put in opposition.
@@ -3862,7 +3873,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.1...HEAD
+[2.3.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.0...v2.1.1

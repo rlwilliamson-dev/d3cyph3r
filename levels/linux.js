@@ -2670,6 +2670,15 @@ write-up:
     intended. (Privilege-escalation paths also touch A04:
     Insecure Design.)
 
+  GLBA Safeguards Rule (16 CFR Part 314)
+    314.4(c)(1): access controls on systems holding customer
+    information. A NOPASSWD root grant on a dormant account
+    is an access-control failure at the system level.
+    314.4(c)(3): "Limit and monitor who can access systems
+    containing customer information." The grant survived
+    offboarding and reaches production secrets, so it is a
+    monitoring failure as well as an access one.
+
 ─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   OSCP / PEN-200
