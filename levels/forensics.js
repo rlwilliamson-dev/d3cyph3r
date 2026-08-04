@@ -2284,6 +2284,21 @@ shops looks like this:
 
 ─── FRAMEWORKS ────────────────────────────────────────────────
 
+  CWE-539 — Use of Persistent Cookies Containing Sensitive
+    Information. The session token you recovered is still
+    valid in a database on disk, long after Reed would say
+    he had "logged out." Persistence is the defender's gift
+    here and the attacker's on any machine they reach; the
+    same artifact that makes this investigation possible is
+    what makes a stolen browser profile worth stealing.
+
+  CWE-200 — Exposure of Sensitive Information to an
+    Unauthorized Actor. The browser profile stores
+    authentication material in a location readable by
+    anything running as that user. Full-disk encryption
+    protects it at rest and nothing protects it once the
+    session is unlocked.
+
   NIST SP 800-86 — Guide to Integrating Forensic Techniques
     into Incident Response. Browser artifacts are listed as
     one of the canonical endpoint-forensics data sources

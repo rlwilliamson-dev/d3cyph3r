@@ -1,272 +1,234 @@
 # D3CYPH3R
 
-> **Play it live: https://www.d3cyph3r.com**
+**Live: https://www.d3cyph3r.com**
 
-A browser-based terminal CTF for DevOps engineers, SREs, and SysAdmins learning cybersecurity. You play a new hire at **Driftwood Systems**, a mid-sized tech consulting firm with roughly 600 consultants spread across ~80 client engagements at any given time. Each level drops you on a real-feeling box you've inherited — a rolled-off consultant's laptop, a stale client engagement environment, a forgotten audit artifact, an alibi photograph submitted to in-house counsel — and asks you to find what got left exposed.
+A browser-based terminal that teaches infrastructure engineers to find security exposure in systems they have inherited, and to write up what they find in the language of control frameworks.
 
-The puzzles stay close to what actually happens at consulting firms with rotating engagements and shared client access. The post-mortem at the end of each level pulls the thread out to the controls (NIST 800-53, NIST 800-171, CIS Controls v8, CIS AWS Foundations Benchmark, CWE), the techniques (MITRE ATT&CK), the regs that bite (GLBA, PCI-DSS, HIPAA, FERPA, CMMC, SOC 2, NAIC, NYDFS), and the certs (Security+, CySA+, PenTest+, CISSP, OSCP, CHFI, GCFE / GCFA, AWS Security Specialty, CCSP, CCSK) that cover this territory in the real world.
+**Who it is for.** DevOps engineers, SREs, and sysadmins who already run production systems and need the security half of the job: recognising a misconfiguration, tracing its blast radius, and mapping it to a control that an auditor, a customer questionnaire, or a regulator will recognise.
 
-Recurring characters, recurring clients, recurring technical debt across levels.
+**The problem it solves.** Most security training splits badly. Capture-the-flag platforms teach exploitation against artificial targets and stop at the flag. Compliance training teaches control language with no technical substance behind it. Neither produces the thing the job actually needs, which is the ability to look at a real system, find the defect, and say precisely which control failed and what the exposure is worth.
 
-All seven tracks (Linux, Network, Crypto, Web, Forensics, OSINT, Cloud) ship level0 + level1 chains playable end-to-end, and all seven ship through level2 as well (v1.23.0 + v1.25.0 + v1.26.0 + v1.27.0 + v1.28.0 + v1.29.0 + v1.30.0). The level3 sweep is now under way — `level3@linux` landed in v2.1.0, `level3@crypto` in v2.2.0, and `level3@forensics` in v2.3.0. 24 levels across all 7 tracks. Each level introduces one new concept and drops the player into a different client engagement with a different compliance regime in scope:
+D3CYPH3R closes that gap. Every level is a realistic inherited system: an offboarded consultant's laptop, a production bastion, a seized workstation image, a cloud account mid-migration. You investigate with faithful simulations of the real tools. Each level then ends with a written post-mortem that traces the finding to specific CWE weaknesses, NIST 800-53 controls, MITRE ATT&CK techniques, and the regulatory regime governing that client.
 
-| Track | Levels shipped | Client | Compliance |
-|---|---|---|---|
-| Linux | `level0@linux` ("Daniel's Last Day"), `level1@linux` ("The Backup Daniel Forgot"), `level2@linux` ("Daniel's Forgotten Cron"), `level3@linux` ("Daniel's Forgotten Sudo") | Halton Bank | GLBA |
-| Network | `level0@network` ("Atlas Health Perimeter Check"), `level1@network` ("The Map Marcus Didn't Mean to Share"), `level2@network` ("What the Cert Knew") | Atlas Health | HIPAA |
-| Crypto | `level0@crypto` ("Theo's Safer API Key"), `level1@crypto` ("Theo's Signature That Wasn't"), `level2@crypto` ("Theo's Quick Hash"), `level3@crypto` ("Theo's Encrypted Backup") | Vesta Retail | PCI-DSS |
-| Web | `level0@web` ("Meridian's Forgotten Backup Folder"), `level1@web` ("Carlos's Login Wall"), `level2@web` ("The Search Bar That Talks") | Meridian State University | FERPA |
-| Forensics | `level0@forensics` ("Reed's Soccer Alibi"), `level1@forensics` ("What the Logs Saw"), `level2@forensics` ("What Reed's Browser Saw"), `level3@forensics` ("What Reed's Mail Proved") | Polaris Defense Systems | CMMC / NIST 800-171 |
-| OSINT | `level0@osint` ("Veridian's Open Letter"), `level1@osint` ("Aaron's Weekend Project"), `level2@osint` ("The Internet Never Forgets") | Veridian Analytics | HIPAA / HITRUST CSF |
-| Cloud | `level0@cloud` ("Coverline's Twelfth Bucket"), `level1@cloud` ("The Migration Table Nobody Dropped"), `level2@cloud` ("The Key Nobody Turned Off") | Coverline Insurance | SOC 2 / NAIC / NYDFS / GLBA |
+24 levels across 7 tracks. 135 player-callable commands. No backend, no accounts, no telemetry.
 
-## Running it locally
+---
 
-ES modules need an HTTP origin, so opening `index.html` via `file://` won't work. From the project root:
+## Architecture
+
+The system is four layers with a strict dependency direction: scenario data knows nothing about the engine, commands know nothing about each other, and the engine knows nothing about any individual level.
+
+### Terminal and dispatch
+
+`js/engine/execute.js` is the single dispatcher, invoked once per Enter press. The pipeline is deliberate and ordered:
+
+```
+echo input -> password-gate check -> ssh special case -> parseLine into a
+statement chain -> per-statement: brace expansion -> variable expansion ->
+quote stripping -> leading NAME=value assignments -> COMMANDS lookup -> print
+```
+
+`js/engine/parse.js` is a real quote-aware tokenizer producing a statement chain with `&&`, `||`, `;`, and background `&`, each carrying exit-code semantics. `js/engine/expand.js` implements `$VAR`, `${VAR}`, `$?`, and `$(...)` command substitution over a three-layer environment: live built-ins, static per-level `env_vars`, and a writable `processEnv` the player mutates with `export`. Pipelines thread stdout into the next command's `stdin` parameter.
+
+Every command handler has one signature, `(level, arg, stdin?, argv?)`, returning `{ text, cls }` or `null`. That uniformity is what makes 135 commands tractable: there is no per-command wiring in the engine.
+
+### Command layer
+
+30 modules under `js/commands/`, composed into a single `COMMANDS` map by spread order in `index.js`. Later spreads intentionally override earlier ones, which is how the multi-subcommand `openssl` supersedes the X.509-only version.
+
+Commands divide into two classes, and the distinction is the honest description of what "simulated" means here:
+
+**Evaluators** parse and execute player input rather than matching it against expected answers. `js/commands/sqli.js` is 721 lines implementing a tokenizer, `UNION` handling, `WHERE` with `LIKE` and boolean tautologies, the `information_schema` virtual tables, and quote-aware comment stripping. It runs the injected query for real, which is why an arbitrary correct payload works and a malformed one returns the genuine MySQL 1064 error. `sqlite3` projects, filters, sorts, and limits over in-memory tables. `jq`, `awk`, `grep`, the `openssl enc` passphrase gate, and the `sudo` sudoers glob matcher are likewise evaluated, not looked up.
+
+**Renderers** format level-declared data into canonical tool output. `nmap` reads `level.net[host]`, honours `-sV` by changing the column layout, and returns real error strings such as `No route to host`. The data is authored; the presentation and flag behaviour are faithful.
+
+Where a simulation diverges from the real tool, it is documented in `man <command>` rather than hidden. `grep` matching is always case-insensitive and `-i` is an accepted no-op. `openssl enc` is decrypt-only, because the filesystem is read-only. `sqlite3` and `jq` implement documented subsets with no joins and no writes.
+
+### Virtual filesystem
+
+Each level declares a nested `fs` tree of three node types: `dir`, `file`, and `symlink`. At module init, `js/fs/flatten.js` derives a flat `path -> content` map alongside it. Both representations are read-only after boot.
+
+`js/fs/resolve.js` provides `resolvePath` (user input to an absolute parts array, handling `~`, `..`, and `.`) and `getFSNode` (walk the tree, following symlinks with a 16-hop cycle cap). `js/fs/glob.js` expands `*` and `?`. Files carry mode, owner, and group, and `cat` enforces a real Unix read-permission check against the level's `playerUser`, which is what makes permission-based puzzles possible.
+
+### Scenario data
+
+Levels are pure data: one object literal per level in `levels/<track>.js`, keyed `<user>@<host>`. Commands read optional declarative fields, so adding a scenario requires no engine change. The contract spans 78 distinct fields, 72 of them read by command modules, including `fs`, `permissions`, `env_vars`, `net`, `dnsData`, `sqlite_dbs`, `sqli`, `sudo`, `cloud`, `postgres`, `gitRepos`, and `evtxLogs`. A command degrades to a graceful empty state when its field is absent, which is why a level declares only what its scenario needs. `js/engine/validate.js` checks level data at init and warns on schema violations.
+
+Progress is derived state. `sessionStorage` holds visited levels, bonus finds, hint counters, per-level times, and achievements; `js/engine/persistence.js` provides an opt-in `localStorage` mirror through a single `TRACKED_KEYS` registry, with sessionStorage authoritative on conflict so hydration is idempotent. `js/engine/savecode.js` encodes the whole progress set into a portable code using append-only registries and a CRC32 checksum, so progress moves between browsers without an account.
+
+---
+
+## Control framework mapping
+
+Every level ends with a structured post-mortem written as an audit deliverable: the finding, the weakness class, the controls that should have caught it, the ATT&CK technique an adversary would be using, and the regulatory consequence for that client.
+
+Coverage is measured, not asserted:
+
+| Framework | Levels citing it |
+|---|---|
+| MITRE ATT&CK | 24 of 24 |
+| CWE | 24 of 24 |
+| NIST 800-53 | 18 of 24 |
+| CIS Critical Security Controls | 18 of 24 |
+| OWASP Top 10 | 18 of 24 |
+
+Regulatory regime is assigned per track and applied consistently, because the same technical defect carries different consequences depending on the data involved:
+
+| Track | Client | Regime |
+|---|---|---|
+| Linux | Halton Bank | GLBA |
+| Network | Atlas Health | HIPAA |
+| Crypto | Vesta Retail | PCI-DSS |
+| Web | Meridian State University | FERPA |
+| Forensics | Polaris Defense Systems | CMMC, NIST 800-171 |
+| OSINT | Veridian Analytics | HIPAA, HITRUST CSF |
+| Cloud | Coverline Insurance | SOC 2, NAIC, NYDFS |
+
+### Worked example: `level3@linux`
+
+The player lands on a build server as `daniel`, an account belonging to a consultant who rolled off the engagement a year earlier and was never deprovisioned.
+
+**Investigation.** `sudo -l` enumerates the account's rights and returns one surviving grant:
+
+```
+User daniel may run the following commands on halton-build-runner:
+    (root) NOPASSWD: /usr/bin/cat /var/backups/halton-prod/*
+```
+
+The grant was written for a 2024 migration and marked for removal after cutover. A plain `cat` of the backup returns `Permission denied` because ingest re-owns delivered files to `root:root` mode 0600. Prefixing `sudo` reads them as root, and the backup, a routine snapshot of a config directory, contains a production Vault root token in cleartext.
+
+**Mapping produced by the level's post-mortem:**
+
+| Layer | Citation | Why |
+|---|---|---|
+| Weakness | CWE-250, Execution with Unnecessary Privileges | The grant let a dormant account act as root |
+| Weakness | CWE-732, Incorrect Permission Assignment for Critical Resource | The grant was never revoked or scoped; the wildcard reaches anything written under that path |
+| Weakness | CWE-312, Cleartext Storage of Sensitive Information | Live secrets sat in plaintext inside a config backup |
+| Control | NIST 800-53 Rev. 5 AC-6, Least Privilege | A wildcard NOPASSWD grant is the textbook violation; AC-6(1) and AC-6(2) push privileged commands onto separate audited accounts |
+| Control | NIST 800-53 AC-2(3), Disable Accounts | The account survived offboarding on a second host, making it a systemic identity-lifecycle failure rather than a one-host slip |
+| Control | NIST 800-53 PS-4, Personnel Termination | Requires revoking access and authenticators; his SSH key still worked |
+| Control | NIST 800-53 CM-6 and SC-28 | The backup should have been encrypted and its secrets excluded |
+| Technique | MITRE ATT&CK T1548.003, Abuse Elevation Control Mechanism: Sudo and Sudo Caching | Adversaries enumerate sudo rights and abuse permissive entries; the level's solve path is the technique |
+| Technique | MITRE ATT&CK T1078.003, Valid Accounts: Local Accounts | The surviving local account is the foothold |
+| Regime | GLBA Safeguards Rule | Halton Bank is a covered financial institution; access control and monitoring obligations attach |
+
+The corresponding walkthrough carries this further into remediation sequencing, detection engineering, and the distinction between a control gap and a documented control the organisation did not follow.
+
+Each level also ships a long-form walkthrough under `/walkthroughs/`, one per level, all 24 conforming to the same nine-section structure: setup, solve, vulnerability class, real-world parallels, framework deep dive, certification relevance, defender actions, optional exploration, and cited further reading. External citations carry a review date and are verified against primary sources when written.
+
+---
+
+## Design decisions
+
+**No backend.** The application is static files. There is no server to compromise, no database holding player data, no authentication surface, and no session state to hijack. `connect-src 'self'` in the Content-Security-Policy means the running application makes no outbound requests at all. The trade-off is accepted deliberately: no server-side validation, therefore no scored competition and no leaderboard. Given that the product is a training tool, that trade is worth making, and the section below on credential storage follows directly from it.
+
+**Zero runtime JavaScript dependencies.** There is no root `package.json`, no bundler, no build step, and no CDN script tag. `index.html` loads exactly one module, `js/main.js`, and everything else is native ES module imports. `script-src 'self'` enforces it at the browser. The motivation is supply chain: a dependency you do not have cannot be compromised, typosquatted, or abandoned. Playwright is a development-only dependency under `tests/`, and the walkthrough reader vendors `marked.js` locally rather than fetching it from a CDN.
+
+One exception, stated because the claim is otherwise misleading: `style.css` imports three typefaces from Google Fonts, so `fonts.googleapis.com` and `fonts.gstatic.com` are permitted in CSP and are the only third-party origins the application contacts. Self-hosting those files would reduce the application to a single origin and is on the roadmap.
+
+**Security headers as a first-class artifact.** `staticwebapp.config.json` sets Content-Security-Policy, Strict-Transport-Security, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, Referrer-Policy, Permissions-Policy, Cross-Origin-Opener-Policy, Cross-Origin-Embedder-Policy, Cross-Origin-Resource-Policy, and `X-Permitted-Cross-Domain-Policies`. This is a security teaching tool, so its own posture is part of the artifact.
+
+That posture is observably enforced rather than merely declared. Opening DevTools on the live site shows CSP violations blocking `static.cloudflareinsights.com` and Cloudflare's bot-detection script, both injected by the CDN onto the proxied domain. The blocks are the browser proving the no-third-party-scripts claim, and a `console.info` on load points readers at the explanation so the errors are not mistaken for breakage.
+
+**Static hosting on Azure Static Web Apps.** Deployment is a GitHub Actions workflow. Pull requests get an isolated preview environment; the full test suite gates merges to main; production deploys from main only.
+
+**Data as data.** Levels are declarative objects rather than code, which keeps content contributions out of the engine, allows schema validation at init, and means the 17,500 lines of scenario data carry no execution risk.
+
+---
+
+## Credential storage and threat model
+
+Level gates are plaintext strings in the scenario data, compared directly in the browser:
+
+```js
+if (val === password) { /* grant */ }
+```
+
+They are trivially readable. This is verifiable against production in one command:
 
 ```bash
-python3 -m http.server 8000
-# then open http://localhost:8000
+curl -s https://www.d3cyph3r.com/levels/linux.js | grep -oE 'password: "[^"]*"'
 ```
 
-Or use any other static server (`npx serve`, `live-server`, etc.).
+That is stated plainly because it is a deliberate position, not an oversight.
 
-D3CYPH3R is **designed for desktop**. The puzzles assume a real keyboard — Tab autocomplete, Ctrl-shortcuts, long pipelines. Mobile devices see a warning gate by default; tapping **Continue anyway** boots the engine in mobile mode with a soft-key row above the on-screen keyboard for Tab / Esc / Ctrl-C / `|` / `&&` / `$` / `_` / etc. (v1.21.0). The site is also installable as a **Progressive Web App** — Chrome / Edge / Safari 16.4+ show an Install button after a few visits, after which the app gets its own dock icon, opens in a borderless window, and works offline.
+Hashing the comparison would be security theater. The credential that gates each level is also present, by design, in the level content the player is instructed to read: `level0@linux` gates on a string that appears inside `creds.txt` as `pass: please-rotate-me`, because *finding* that credential is the entire puzzle. Hashing the gate field would protect a value sitting in cleartext in the adjacent file. Genuinely concealing it would require encrypting the scenario content, which would destroy the teaching mechanism.
 
-## What you can do today
+The threat model has no adversary. There is no score, no ranking, no reward, and no shared state between players. A recovered credential unlocks the next level of a fictional scenario and has no meaning outside the sandbox. There is nothing to protect, so a control protecting it would add complexity and defeat the teaching purpose while mitigating no risk.
 
-Pick a track from the lobby — all seven are entry-point reachable with no password:
+If the project ever adds scored or competitive play, the correct fix is server-side validation, not client-side hashing, because any client-side check is defeatable by the party who controls the client. Recording that reasoning is the point: identifying that a control is unnecessary, and knowing which control would actually be required if the requirement changed, is the same judgement the rest of this project is built to teach.
 
-```
-guest@d3cyph3r:~$ ssh level0@linux        # File reading / credential hunting
-guest@d3cyph3r:~$ ssh level0@network      # Port scanning / perimeter audit
-guest@d3cyph3r:~$ ssh level0@crypto       # Encoding ≠ encryption
-guest@d3cyph3r:~$ ssh level0@web          # HTTP directory enumeration
-guest@d3cyph3r:~$ ssh level0@forensics    # EXIF metadata / insider-threat
-guest@d3cyph3r:~$ ssh level0@osint        # Breach-corpus credential reuse
-guest@d3cyph3r:~$ ssh level0@cloud        # S3 misconfiguration / SOC 2 audit
-```
+---
 
-Each track's `level0` is an entry point — no password, walks you through one new concept, and ends with a post-mortem citing the relevant CWE / framework / MITRE technique. The level1 in each track is gated by a credential the player recovers during level0 (Daniel's `creds.txt`, Marcus's unrotated default, the decoded base64 API key, Meridian's leaked DB password, Sgt. Chen's handoff archive password, Aaron's reused breach-corpus password, and Coverline's hardcoded RDS master). Every level in turn leaks a credential staged for the next level in its track — the per-track credential chain is the through-line, running through level2 on every track and deeper on the tracks where level3 has shipped.
+## Verification
 
-The lobby (`guest@d3cyph3r`) renders the engagement list as a collapsible tree (v1.10.0): each track is one line by default; `tracks <name>` expands a track to show its level lineup with titles, computed difficulty tier (Routine / Live / Escalated / Critical / Crisis — type `tiers` for definitions), and estimated time. Tracks with any visited level auto-expand on the next lobby render. First-time visitors see a guided FIRST STEPS block and can run `tutorial start` for a hand-held walk-through (v1.12.0); returning visitors see a welcome-back summary with a "Continue: ssh level<N+1>@<track>" recommendation (v1.18.0). Other player surfaces: `progress --detail` lists discovered bonus finds + per-level times, `achievements` lists the 20-achievement layer (v1.14.0), `themes` switches between 11 palettes (v1.13.0), `save` emits a portable progress code (v1.20.0). Type `help` inside any level for the full command reference.
+381 automated tests across 15 Playwright specs drive the real terminal in a browser: real keystrokes, real dispatch, real DOM assertions. They cover every level's solve path, its credential gate, its bonus finds, and the engine surfaces including pipelines, expansion, persistence, save codes, and the lobby.
 
-## Walkthroughs
+Merges to main are gated on the full suite, sharded across four parallel runners. Pull requests deploy a preview environment. CodeQL runs on main.
 
-Each level ships with a long-form companion walkthrough under the `/walkthroughs/` subsite:
-
-```
-https://www.d3cyph3r.com/walkthroughs/
+```bash
+python3 -m http.server 8000          # ES modules require an HTTP origin
+cd tests && npm install && npx playwright install chromium
+npx playwright test
 ```
 
-The walkthroughs (~7,000 words each, nine numbered sections) cover the solve path, the vulnerability class in depth, real-world parallels (Uber 2014 / Optus 2022 / Toyota 2022 / SolarWinds / MOVEit / Snowflake, etc.), framework + cert tie-ins (SOC 2 / NIST / NAIC / NYDFS / GLBA / OWASP / CIS / CWE), MITRE ATT&CK mapping, defender-action recommendations, and curated further reading. They're spoiler-bearing — only read a walkthrough after solving the level.
+---
 
-The subsite is publicly indexable as of v1.0.0 — search-engine traffic finding the walkthroughs is desired behavior, and the spoiler-warning callout at the top of each walkthrough guards against accidental spoilers. Hash-based routing means direct walkthrough URLs are bookmarkable.
+## Status and roadmap
 
-## How it's organized
+Current release is v2.3.0. All seven tracks are playable through level2. Level3 has shipped for linux, crypto, and forensics.
+
+**Level3 across the remaining four tracks** (network, web, osint, cloud). Each already has its breadcrumb credential staged in the shipped level2, so the chain is continuous when the content lands.
+
+**Systematic NIST CSF 2.0 mapping.** CSF references currently appear in the cloud track and in several walkthroughs, but the coverage is ad hoc rather than complete. The work is to map every level to CSF 2.0 Functions and Categories alongside the existing 800-53 control citations, and to publish the crosswalk as a document rather than leaving it distributed across post-mortems.
+
+**ISO/IEC 27001 and 27002 mapping.** ISO is referenced in one track today. The same crosswalk treatment applies, which matters for readers whose organisations certify against ISO rather than operating under a US federal control catalogue.
+
+**Risk quantification.** No level currently expresses a finding in loss-exposure terms. Adding a FAIR-style treatment to the post-mortems, framing frequency and magnitude rather than a severity label, is the largest single improvement available to the teaching model, because "critical" is not a decision input and an expected loss range is.
+
+**Self-hosted typefaces**, removing the last third-party origin.
+
+Release history is in [CHANGELOG.md](CHANGELOG.md). Engine internals and content conventions are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Repository layout
 
 ```
-d3cyph3r/
-├── index.html               Entry point — boots the engine
-├── 404.html                 Themed 404 page (Azure SWA fallback)
-├── style.css                Dark terminal theme (+ 10 alt themes, v1.13.0)
-├── favicon.svg              D3CYPH3R favicon
-├── og-image.png             Open Graph preview image (1200×630)
-├── manifest.webmanifest     PWA manifest — name / icons / display (v1.21.0)
-├── sw.js                    Service worker — runtime caching (v1.21.0)
-├── icon-192.png             PWA icon (Android home screen, v1.21.0)
-├── icon-512.png             PWA icon (high-res, splash, v1.21.0)
-├── icon-maskable.png        PWA icon (Android adaptive shape, v1.21.0)
-├── icon-180.png             PWA icon (iOS apple-touch-icon, v1.21.0)
-├── robots.txt               Crawl policy + sitemap pointer
-├── sitemap.xml              Search-engine site index
-├── staticwebapp.config.json Azure SWA routing + headers + 404 override
-├── README.md                You're here
-├── CHANGELOG.md             Release history (Keep a Changelog format)
-├── CONTRIBUTING.md          Guide for forkers / first-time contributors
-├── SECURITY.md              Vulnerability disclosure policy
-├── LICENSE                  MIT
-├── assets/
-│   └── og-template.html     HTML source used to render og-image.png
-├── js/
-│   ├── main.js              Boots the app, runs mobile gate, registers SW
-│   ├── mobile-gate.js       Mobile warning + "Continue anyway" bypass (v1.21.0)
-│   ├── terminal/            Output, input, cursor, clock, DOM refs
-│   │   ├── clock.js         Top-bar clock tick
-│   │   ├── dom.js           Cached DOM-element references
-│   │   ├── input.js         Keystroke handling + Tab autocomplete + history
-│   │   ├── output.js        Print-to-terminal helpers + CSS classes (+ printRich, v1.19.0)
-│   │   ├── prompt.js        PS1 escape-code rendering (v1.9.0)
-│   │   ├── softkeys.js      Mobile soft-key row above on-screen keyboard (v1.21.0)
-│   │   └── theme.js         11-theme registry + setTheme/cycleTheme (v1.13.0)
-│   ├── engine/              Game state, SSH, lobby, dispatch
-│   │   ├── state.js         Live bindings (currentLevelKey, processEnv, isMobileMode, ...)
-│   │   ├── execute.js       Per-Enter dispatch (echo → ssh → commands)
-│   │   ├── ssh.js           Connect / disconnect / password-prompt / pivot flow
-│   │   ├── lobby.js         Lobby render + first-visit onboarding + welcome-back summary
-│   │   ├── tracks.js        Track metadata (track key → display name, etc.)
-│   │   ├── tiers.js         Computed difficulty tiers (Routine → Crisis) (v1.10.0)
-│   │   ├── progress.js      sessionStorage persistence (visited levels)
-│   │   ├── persistence.js   Opt-in localStorage mirror layer (v1.11.0)
-│   │   ├── leveltimer.js    Per-level time tracking + solve detection (v1.16.0)
-│   │   ├── achievements.js  20-achievement registry + checker (v1.14.0)
-│   │   ├── bonus.js         Bonus-find trigger matcher (v1.9.0)
-│   │   ├── suggest.js       Levenshtein "did you mean" suggestion (v1.15.0)
-│   │   ├── savecode.js      Packed-binary save/restore encode + decode (v1.20.0)
-│   │   ├── pwa.js           Service-worker registration + update detection (v1.21.0)
-│   │   ├── expand.js        Per-token expansion ($VAR / ${VAR} / $? / $(...))
-│   │   ├── parse.js         Tokenizer + statement chain (&&/||/;), quote-aware
-│   │   ├── validate.js      Schema validator (warns on level data bugs at init)
-│   │   └── version.js       Canonical VERSION + release checklist comment
-│   ├── commands/            One file per track + a shell-builtins file
-│   │   ├── index.js         Assembles COMMANDS map from per-track modules
-│   │   ├── linux.js         ls / cd / cat / grep / find / ps / …
-│   │   ├── network.js       nmap / netstat / whois / dig
-│   │   ├── crypto.js        base64 / rot13 / xxd / john / xor / jwt / …
-│   │   ├── web.js           curl / gobuster / cookies
-│   │   ├── forensics.js     file / strings / exif / evtx / sqlite3 / sha256sum / …
-│   │   ├── osint.js         sherlock / hibp / wayback / crtsh / github / …
-│   │   ├── cloud.js         aws (s3/iam/ec2/sts) + psql
-│   │   ├── text.js          wc / sort / uniq / cut / tr / awk (pipe-friendly)
-│   │   ├── system.js        which / type / id / uname / date / uptime / hostname
-│   │   ├── sysinspect.js    crontab / last / who / w / lsof / ss / journalctl / systemctl / dmesg
-│   │   ├── netinspect.js    ip / arp / ping / traceroute / nslookup / host / nc
-│   │   ├── format.js        tar / gunzip / zcat (+ shared X.509 renderer)
-│   │   ├── structured.js    jq / gpg / openssl (multi-subcommand)
-│   │   ├── git.js           git log / show / diff / status / blame / config
-│   │   ├── readonly-stubs.js  chmod / mv / rm / sudo / su (read-only errors)
-│   │   ├── learning.js      hint / man / what-is / walkthrough / progress / search
-│   │   ├── env.js           export / env / unset / set (v1.9.0)
-│   │   ├── jobs.js          jobs / fg / bg / kill / wait / disown (v1.9.0)
-│   │   ├── lobby.js         tracks / tiers (lobby-tree controls, v1.10.0)
-│   │   ├── tutorial.js      tutorial + first-visit guided tour (v1.12.0)
-│   │   ├── themes.js        theme / themes commands (v1.13.0)
-│   │   ├── achievements.js  achievements + --detail (v1.14.0)
-│   │   ├── savecode.js      save / restore commands (v1.20.0)
-│   │   ├── pwa.js           sw / reload commands (v1.21.0)
-│   │   ├── help-strings.js  --help block registry + auto-extractor (v1.17.0)
-│   │   ├── man-pages.js     NAME/SYNOPSIS/DESCRIPTION/EXAMPLES for every command
-│   │   ├── glossary.js      what-is term definitions (frameworks / regs / CWEs)
-│   │   └── shell.js         help / clear / report / exit / logout
-│   ├── fs/                  Per-level filesystem helpers
-│   │   ├── flatten.js       Walks the level.fs tree → level.files flat map
-│   │   ├── glob.js          Wildcard expansion (* and ?) for path-aware commands
-│   │   └── resolve.js       cwd-aware path resolution (cd/cat/ls)
-│   └── util/                Pure helpers
-│       ├── hex.js           Hex encode / decode
-│       └── rot13.js         ROT13 cipher
-├── levels/
-│   ├── index.js             Registers tracks → LEVELS map; flatten init
-│   ├── linux.js             Linux track (level0 + level1 + level2 + level3) — Halton Bank / GLBA
-│   ├── network.js           Network track (level0 + level1 + level2) — Atlas Health / HIPAA
-│   ├── crypto.js            Crypto track (level0 + level1 + level2 + level3) — Vesta Retail / PCI-DSS
-│   ├── web.js               Web track (level0 + level1 + level2) — Meridian State U / FERPA
-│   ├── forensics.js         Forensics track (level0 + level1 + level2 + level3) — Polaris DS / CMMC
-│   ├── osint.js             OSINT track (level0 + level1 + level2) — Veridian / HIPAA + HITRUST
-│   └── cloud.js             Cloud track (level0 + level1 + level2) — Coverline / SOC 2 + NAIC
-├── walkthroughs/            Long-form solve guides (separate subsite)
-│   ├── index.html           Walkthrough reader shell
-│   ├── walkthrough.css      Docs-reader theme (distinct from main terminal)
-│   ├── walkthrough.js       Hash router + markdown renderer (vendored marked.js)
-│   ├── vendor/marked.esm.min.js  Markdown → HTML library (CC-BY-3.0 attribution in vendor/)
-│   ├── linux/level0.md      One walkthrough per shipped level — 24 total as of v2.3.0
-│   └── (etc., one per level)
-├── tests/                   @playwright/test suite + OG-image generator
-│   ├── playwright.config.cjs Per-spec parallelism config (v1.24.0+)
-│   ├── lib/helpers.cjs      Shared dispatchCmd / bootAndWait / waitForOutput
-│   ├── specs/*.spec.cjs     One spec file per track + cross-cutting suites
-│   ├── generate-og-image.cjs Renders assets/og-template.html → og-image.png
-│   ├── package.json         @playwright/test + chromium dependencies
-│   └── package-lock.json
-└── .github/
-    └── workflows/           Azure SWA CI/CD — sharded playtest_job on push to main (v1.24.2+)
+index.html                 Single entry point; loads js/main.js
+staticwebapp.config.json   Routing, security headers, 404
+js/
+  main.js                  Boot sequence: mobile gate, theme, engine, lobby
+  engine/                  Dispatch, parsing, expansion, state, ssh, lobby,
+                           progress, persistence, save codes, validation
+  commands/                30 modules composed into one COMMANDS map
+  fs/                      Path resolution, symlink walking, glob expansion
+  terminal/                DOM refs, input handling, output, prompt, themes
+levels/                    Scenario data, one file per track
+walkthroughs/              Long-form solve guides, one per level
+tests/                     Playwright suite
 ```
 
-Adding a new level is a single object literal under `levels/<track>.js`. The base schema is documented at the top of `levels/linux.js`; per-track extensions (forensics' `evtxLogs`, osint's `github`, cloud's `postgres`, etc.) are documented at the top of each track's level file.
+Adding a level is a single object literal in `levels/<track>.js`. The schema is documented at the top of `levels/linux.js`, with per-track extensions documented in each track file.
 
-For deeper context on the engine architecture, command-dispatch model, and per-track conventions, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Roadmap
-
-All seven tracks ship level0, level1, AND level2, and every level carries an in-game `hint` ladder (the **v2.0.0 "Apprentice"** milestone crowned that work — a polish pass with no new gameplay, mirroring how v1.0.0 "Foundation" crowned the level0 + level1 chains). The level3 sweep is now under way, building toward the eventual **v3.0.0 "Practitioner"** milestone (level3 across every track): `level3@linux` ("Daniel's Forgotten Sudo", v2.1.0) took the Linux track from credential discovery into privilege escalation, and `level3@crypto` ("Theo's Encrypted Backup", v2.2.0) capped the crypto arc — after encoding, signing, and hashing each failed to be encryption, the last assumption to fall is that encryption itself is enough when the key is guessable. `level3@forensics` ("What Reed's Mail Proved", v2.3.0) turns the Reed Connolly case on email-header analysis, where a forged `From:` meets a `Received:` chain the sender couldn't touch. Each shipped level leaks a breadcrumb credential staged for the next in its track, so the per-track chain stays consistent as level3 content lands one track at a time. New levels ship one PR at a time — see [CHANGELOG.md](CHANGELOG.md) for release history.
-
-## About this project
-
-D3CYPH3R is a cybersecurity learning tool. The puzzles teach defensive auditing skills in a safe sandbox — the techniques cited (MITRE ATT&CK, CWE, NIST 800-53, CIS Controls) are the same ones professional security teams use every day to *find* this kind of exposure on their own infrastructure. **Don't apply these techniques against systems you don't own or aren't authorized to test.** Unauthorized access is illegal in most jurisdictions (CFAA in the US, Computer Misuse Act in the UK, similar elsewhere).
-
-**Privacy.** D3CYPH3R uses `sessionStorage` for progress tracking by default — close the tab and progress resets. `localStorage` is used for three items: your theme preference (v1.13.0), your command history (~50 entries for ↑/↓ recall), and — only if you explicitly opt in via the `progress save-on` command (v1.11.0) — a mirrored copy of session progress so it survives across browser sessions on the same device. A short-lived sessionStorage flag (v1.21.0) remembers if you've tapped "Continue anyway" on the mobile gate for the current tab. As of v1.20.0, the `save` command emits a portable progress code you can paste into any other browser via `restore <code>` — no account, no server, no telemetry. As of v1.21.0, a service worker caches static assets for offline play; the cache is namespaced per version and cleared by `sw clear`. No cookies, no analytics, no telemetry, no third-party scripts.
-
-If you open DevTools on the live site you may see CSP errors blocking scripts from `static.cloudflareinsights.com` (a Cloudflare Web Analytics beacon) or `/cdn-cgi/challenge-platform/...` (Cloudflare's bot-detection script). Those are Cloudflare auto-injecting things onto the proxied domain — outside our direct control without changing CDN providers. Our `Content-Security-Policy: script-src 'self'` intentionally blocks them. **The errors are visible proof that the "no third-party scripts" claim is enforced by the browser, not just stated in this README.** A `console.info` line on page load points readers at this paragraph so they don't mistake the blocks for actual breakage.
-
-## Commands implemented
-
-See `help` inside the terminal for the full reference. Track-by-track:
-
-- **Linux:** `ls` / `cd` / `cat` / `head` / `tail` / `stat` / `ps` / `diff` / `pwd` / `whoami` / `echo` / `grep` / `find` / `readlink` / `realpath` / `basename` / `dirname` / `env` / `history`
-- **Network:** `nmap` (+ `-sV`) / `netstat` / `whois` / `dig` (+ `@server` / `-t TYPE` / `-x IP` / `+short` / `+trace` / `AXFR`)
-- **Crypto:** `base64` / `rot13` / `xxd` / `decode-hex` / `hash-id` / `john` / `xor` / `jwt`
-- **Web:** `curl` (+ `-X` / `-d` / `-H` / `-I` / `-L` / `-o` / `-kvs`) / `gobuster` (+ `-u` / `-w` / `-x` / `-t`) / `cookies`
-- **Forensics:** `file` (+ `*`) / `strings` / `exif` / `evtx` (+ `-id`) / `sqlite3` (read-only SQLite queries — `.tables`, `.schema`, SELECT with WHERE/LIKE/ORDER BY/LIMIT/COUNT) / `sha256sum` / `md5sum`
-- **OSINT:** `sherlock` / `hibp` / `wayback` / `crtsh` / `theharvester` / `shodan` / `ipinfo` / `github` (+ `/repo` + `file <path>`)
-- **Cloud:** `aws s3 ls` / `aws s3 cp` / `aws iam list-users` / `aws iam list-attached-user-policies` / `aws iam get-policy` / `aws iam list-access-keys` / `aws iam get-access-key-last-used` / `aws iam get-account-summary` / `aws ec2 describe-instances` / `aws ec2 describe-security-groups` / `aws sts get-caller-identity` / `psql` (+ `-d` / `\l` / `\dt` / `SELECT … FROM … [LIMIT N]`)
-- **Text processing (pipe-friendly):** `wc` / `sort` / `uniq` / `cut` / `tr` / `awk` / `sed` (`s/pat/repl/[g]`, `-n 'Np'`) / `printf` / `jq` (`.path` queries, `-r` / `-c`)
-- **System info:** `which` / `type` / `id` / `uname` / `date` / `uptime` / `hostname`
-- **System inspection:** `crontab -l` / `last` / `who` / `w` / `lsof` / `ss` / `journalctl` / `systemctl status` / `dmesg` / `df` / `du` / `free`
-- **Network inspection:** `ip addr` / `ip route` / `arp -a` / `ping` / `traceroute` / `nslookup` / `host` / `nc -zv`
-- **Format inspection:** `openssl x509` / `openssl rand` / `openssl dgst` / `openssl enc -d` / `openssl s_client` / `tar tvf` / `tar xvf` / `gunzip` / `zcat`
-- **Version control:** `git log` / `git show` / `git diff` / `git status` / `git blame` / `git config` / `git remote` / `git branch`
-- **Crypto inspection:** `gpg --list-keys` / `gpg --verify` / `gpg --decrypt`
-- **Read-only stubs** (sandbox-friendly errors): `chmod` / `chown` / `mv` / `cp` / `rm` / `mkdir` / `rmdir` / `touch` / `ln` / `sudo` / `su` / `useradd` / `passwd`
-- **Learning aids:** `hint` (+ `reset` / `list`) / `man <cmd>` / `what-is <term>` / `walkthrough` / `progress` (+ `--detail` for bonus-find listing, v1.10.0; + `save-on` / `save-off` / `reset` for opt-in localStorage persistence, v1.11.0) / `tutorial` (+ `start` for the interactive walk-through, v1.12.0) / `achievements` (+ `--detail` for progress fractions, 20-achievement layer over bonus finds, v1.14.0) / `search <term>`
-- **Stateless save/restore (v1.20.0):** `save` (emits a portable progress code) / `restore <code>` (validates + diffs + prompts) / `restore --preview <code>` (decodes without mutating)
-- **PWA controls (v1.21.0):** `sw` (+ `status` / `update` / `clear`) inspects and controls the service worker / `reload` refreshes the page, applying any waiting SW update
-- **Shell environment (v1.9.0):** `export` / `env` / `unset` / `set` / `FOO=bar` / `FOO=bar cmd` / `PS1` substitution (`\u`, `\h`, `\H`, `\w`, `\W`, `\$`)
-- **Job control (v1.9.0):** `cmd &` / `jobs` / `fg` / `bg` / `kill` / `wait` / `disown`
-- **Universal `--help` (v1.17.0):** every command responds to `--help` with a 3-5 line usage block + pointer to `man <cmd>` for full details
-- **Shell:** `clear` / `help` / `report` / `ssh` / `exit` / `logout` / `tracks` (lobby tree expand/collapse, v1.10.0) / `tiers` (difficulty-tier legend, v1.10.0) / `themes` + `theme <name>` + `theme next`/`prev` (11-theme picker, v1.13.0)
-
-The terminal supports a real bash-shaped composition layer (v1.8.0 + v1.9.0):
-
-- Pipes: `cmd1 | cmd2 | cmd3`
-- Chaining: `cmd1 && cmd2`, `cmd1 || cmd2`, `cmd1 ; cmd2`
-- Background: `cmd &` (captured to job table; synchronous in this sandbox)
-- Wildcards: `*.txt`, `log?`
-- Brace expansion: `cat file{1,2,3}.txt`
-- Shell variables: `$USER`, `$HOME`, `${VAR}`, `$$` (literal `$`)
-- Writable env vars: `export FOO=bar`, `FOO=bar`, `unset FOO`
-- Customizable prompt: `export PS1='> '` (PS1 escape codes: `\u`/`\h`/`\w`/`\$`)
-- Multi-host pivot: `ssh user@internal-host` from inside a level, `exit` unwinds
-- Last exit code: `$?`
-- Command substitution: `$(cmd)`
-- Quote-aware tokenization: `'single'` is literal, `"double"` expands vars
-- Readline shortcuts: `Ctrl-A` / `Ctrl-E` / `Ctrl-W` / `Ctrl-U` / `Ctrl-K` / `Ctrl-Y` / `Alt-B` / `Alt-F` / `Alt-.`
-- Persistent command history across tab sessions (localStorage)
-- Replay mode: re-entering a solved level skips the password gate
-- Bonus finds: optional discoverable nuggets surfaced in `progress`
-- Typo suggestions: closest-match "Did you mean: `<cmd>`?" on unknown commands (v1.15.0)
-- Per-level time tracking: total time + first-solve elapsed, surfaced in `progress --detail` and the connection banner on revisit (v1.16.0)
-- Standardized `cmd --help` across every command — short usage block + pointer to `man <cmd>` (v1.17.0)
-- Lobby polish for returning players: welcome-back summary, next-up suggestion, completion glyph on fully-cleared tracks, achievements teaser (v1.18.0)
-- Lobby visual polish: chip-styled progress/tier badges in the engagement list, bolder bare-glyph chevrons (▼/▶/✓) replacing the bracketed `[▾]`/`[▸]`/`[✓]` (v1.19.0)
-- Stateless progress codes: `save` generates a portable string encoding visited levels, achievements, bonus finds, per-level times, hint counters, theme, onboarding flag, lobby-expand state — a brand-new player's code is ~35 chars, a completionist's is ~180. `restore <code>` validates + diffs + prompts `[y/N]` before applying; `restore --preview <code>` decodes without changing anything. Same privacy posture as the rest of the engine — no server, no account (v1.20.0)
-- Installable as a Progressive Web App: own dock icon, borderless window, works offline after first visit. `sw` command inspects the service worker; `reload` applies any pending PWA update. Mobile players can tap "Continue anyway" through the gate to play on phones, with a soft-key row above the on-screen keyboard for Tab / Esc / Ctrl-C / `|` / `&&` / `$` / `_` (v1.21.0)
-
-The terminal also supports the shell features players carry in from bash:
-
-- **Pipes** — `cmd1 | cmd2 | cmd3` runs left-to-right, threading stdout into stdin. `grep` / `head` / `tail` / `wc` / `sort` / `uniq` / `cut` / `tr` all read piped input.
-- **Wildcards** — `*` (any chars except `/`) and `?` (single char). Works with `ls`, `cat`, `grep` (`ls *.md`, `cat *.txt`, `grep TODO *.log`).
-- **Path resolution** — absolute paths (`/home/<user>/notes.txt`), home expansion (`~`, `~/foo`), chained parent refs (`../../bin`), all normalized.
-- **Shell variables** — `$USER`, `$HOME`, `$HOSTNAME`, `$PWD`, `$PATH`, `$SHELL`, `${VAR}` bracketed form, `$$` escapes to literal `$`. Per-level `env_vars` extend the set.
-- **Tab autocomplete** — completes command names on the first word; completes filesystem paths after a space (single match fills basename + `/` for dirs; multi-match fills the longest common prefix).
+---
 
 ## Credit
 
-D3CYPH3R's engine architecture is a refactor of, and was inspired by, [Shellscape](https://github.com/5H4RV1L/shellscape) by Sharvil Sagalgile (MIT-licensed). All level content in this repo is original.
+The engine architecture is a refactor of, and was inspired by, [Shellscape](https://github.com/5H4RV1L/shellscape) by Sharvil Sagalgile, MIT-licensed. All level content in this repository is original.
 
 ## AI use disclosure
 
-Claude (Anthropic) was used as a coding and writing assistant across this project — auditing code, running automated test playthroughs before each commit, drafting walkthrough markdown, and writing the technical documentation. **All level design is original to this project** — the Driftwood Systems setting, the recurring characters (Daniel, Priya, Theo, Marcus, Carlos, Marisol, Jordan, Aaron, Sloane, Lara), the per-track client engagements, the puzzle mechanics, and every narrative beat are authored by the project maintainer.
+Claude (Anthropic) was used as a coding and writing assistant: auditing code, running automated test playthroughs before commits, drafting walkthrough markdown, and writing technical documentation. All level design is original to this project, including the Driftwood Systems setting, the recurring characters and clients, the puzzle mechanics, and every narrative beat.
+
+## Authorised use
+
+The techniques taught here are the ones defensive teams use to find exposure on infrastructure they own. Do not apply them against systems you do not own or are not authorised to test. Unauthorised access is illegal in most jurisdictions, including under the CFAA in the United States and the Computer Misuse Act in the United Kingdom.
+
+## Privacy
+
+No account, no server, no telemetry, no analytics, no cookies, no third-party scripts. Progress lives in `sessionStorage` and resets when the tab closes. `localStorage` holds a theme preference, command history, and, only after explicit opt-in via `progress save-on`, a mirror of session progress. The `save` command emits a portable progress code so progress can move between browsers without an account.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
