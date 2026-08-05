@@ -249,7 +249,17 @@ body, #site-header, .footer-link {
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+/* Anchor jumps land instantly rather than animating (v2.4.0).
+ *
+ * This was `smooth`, which suited a page you scrolled by hand. It stops
+ * suiting these once anchors become a primary way in: the documents run
+ * 15 to 33 screens, so a TOC click or an inbound deep link can span
+ * close to 30,000px, and animating that is a long disorienting ride
+ * through content the reader deliberately skipped. A navigation control
+ * should arrive, not travel.
+ *
+ * Measured on cloud/level0: #defender sits 29,563px down. */
+html { scroll-behavior: auto; }
 
 body {
   background: var(--bg);
@@ -993,9 +1003,9 @@ body.light #site-header .theme-toggle .theme-icon-sun  { display: block; }
   .index-title-sub { font-size: 22px; }
 }
 
-/* Readers who ask for reduced motion get instant jumps rather than
- * smooth scrolling on every TOC click. */
+/* Readers who ask for reduced motion also lose the colour and border
+ * transitions. Scroll behaviour is already instant for everyone (see
+ * the note by the `html` rule above), so it is not repeated here. */
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
   * { transition-duration: 0.01ms !important; }
 }
