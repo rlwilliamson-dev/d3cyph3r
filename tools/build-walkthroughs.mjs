@@ -166,13 +166,33 @@ function esc(s) {
 }
 
 /**
- * Strip inline markdown/HTML down to plain text.
- * Used for <title>, meta description, and search-index bodies, where
- * markup would leak into places that render text verbatim.
+ * Flatten inline markdown and stray tags down to plain text.
+ *
+ * NOT A SANITIZER, and nothing downstream treats it as one. Output goes
+ * to <title>, meta description, listing blurbs, and search-index bodies,
+ * every one of which is escaped with esc() at the point of use or
+ * assigned through textContent. Escaping at the sink is the actual
+ * control; this function exists so that markup does not show up as
+ * literal noise in places that render text verbatim.
+ *
+ * The tag strip still loops to a fixed point rather than running once.
+ * A single pass is the classic incomplete-sanitization bug: given
+ * "<<script>script>", removing the inner tag leaves a working
+ * "<script>" behind. That is not reachable through any current caller,
+ * but a one-pass strip that looks like a sanitizer is the kind of thing
+ * this project spends 24 levels teaching people to catch, so it does
+ * not get to ship here. The loop terminates because each iteration
+ * either removes characters or changes nothing.
  */
 function plain(s) {
-  return String(s)
-    .replace(/<[^>]+>/g, "")
+  let out = String(s);
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(/<[^>]*>/g, "");
+  } while (out !== prev);
+
+  return out
     .replace(/`([^`]*)`/g, "$1")
     .replace(/\*\*([^*]*)\*\*/g, "$1")
     .replace(/\*([^*]*)\*/g, "$1")
