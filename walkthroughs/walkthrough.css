@@ -1,8 +1,10 @@
 /* D3CYPH3R Walkthroughs — clean docs reader.
  *
  * Visual goals:
- *   - Long-form reading, generous line-height, a measured ~74-character
- *     column (see --measure), and a sticky TOC rail alongside it.
+ *   - Long-form reading with TWO widths: running text sits at a
+ *     ~79-character measure, while code blocks and tables use the wider
+ *     content column (see --content / --measure). A sticky TOC rail
+ *     runs alongside.
  *   - Share the main-site brand palette (same CSS variables) so it
  *     feels like the same product, but use a proportional sans-serif
  *     body font instead of monospace — reading 6,000 words in
@@ -397,32 +399,71 @@ body {
  */
 
 :root {
-  --measure: 620px;
-  --rail-width: 232px;
-  --rail-gap: 56px;
+  /* Width of the CONTENT COLUMN. Code blocks, tables, and the spoiler
+     callout fill this. */
+  --content: 920px;
+  /* Width of running TEXT inside that column. Narrower on purpose. */
+  --measure: 640px;
+  --rail-width: 256px;
+  --rail-gap: 80px;
 }
+
+/* WHY TWO WIDTHS
+ * --------------
+ * A single width cannot serve both kinds of content here, and picking
+ * one makes the other worse:
+ *
+ *   - Prose wants roughly 50-75 characters per line. At this font that
+ *     is about 640px, measuring ~79 characters, just inside the
+ *     80-character ceiling in WCAG 1.4.8.
+ *   - Code does not wrap. These walkthroughs are full of terminal
+ *     transcripts, email headers, and Sigma rules whose natural width
+ *     is set by the content, not by comfort. Measured on
+ *     forensics/level3: the widest fenced block needs 808px, so a
+ *     620px column left 4 of 15 code blocks scrolling sideways.
+ *
+ * Sizing the column for code and constraining only text-bearing
+ * elements to the measure serves both. It also reclaims the empty page:
+ * a container sized to exactly fit prose plus rail left 45% of a
+ * 1728px viewport unused while simultaneously cramping the code.
+ */
 
 .layout {
   flex: 1;
   width: 100%;
-  /* Exactly fits measure + gap + rail + horizontal padding, so the
-     pair centres as a unit with no dead grid track. */
-  max-width: calc(var(--measure) + var(--rail-gap) + var(--rail-width) + 48px);
+  max-width: calc(var(--content) + var(--rail-gap) + var(--rail-width) + 48px);
   margin: 0 auto;
   padding: 48px 24px 96px;
   display: grid;
-  grid-template-columns: minmax(0, var(--measure)) var(--rail-width);
+  grid-template-columns: minmax(0, var(--content)) var(--rail-width);
   gap: var(--rail-gap);
   align-items: start;
+}
+
+/* Running text is held to the reading measure; everything else (pre,
+ * table, hr, the spoiler callout, the pager) inherits the full column.
+ * Scoped to direct children so text nested INSIDE a table cell or a
+ * callout is not double-constrained. */
+.doc > p,
+.doc > ul,
+.doc > ol,
+.doc > h1,
+.doc > h2,
+.doc > h3,
+.doc > h4,
+.doc > blockquote:not(.spoiler-warning) {
+  max-width: var(--measure);
 }
 
 .doc {
   min-width: 0; /* lets long code blocks scroll instead of widening the grid */
 }
 
-/* Index and track-listing pages have no rail, so they centre normally. */
+/* Index and track-listing pages have no rail, so they centre normally.
+   Slightly wider than the prose measure because the listing cards and
+   search results are card-like blocks, not running text. */
 .doc-narrow {
-  max-width: var(--measure);
+  max-width: 760px;
   width: 100%;
   margin: 0 auto;
   padding: 48px 24px 96px;
@@ -978,10 +1019,29 @@ body.light #site-header .theme-toggle .theme-icon-sun  { display: block; }
  * mobile <details> TOC takes over. The breakpoint is set by content,
  * not by device: 1100px is where the measure plus the rail plus the
  * gutters stop fitting without squeezing the column. */
-@media (max-width: 1100px) {
+/* The rail is kept as long as it can coexist with a full-width reading
+   measure, NOT only when the full --content width fits.
+   `minmax(0, var(--content))` already lets the content column shrink, so
+   between this breakpoint and --content's natural width the code column
+   narrows while the rail survives. 1024px is where the arithmetic runs
+   out: 1024 - 48 padding - 256 rail - 80 gap leaves exactly the 640px
+   measure. Dropping the rail at the wider 1300px mark instead would
+   have cost it on 1280px laptops, which are common, for no reason. */
+@media (max-width: 1024px) {
+  /* Narrow the CONTENT column rather than unconstraining the text.
+     With the rail gone there is nothing beside the prose to occupy the
+     difference between --measure and --content, so a full-width column
+     would leave a wide ragged band of empty page. The tempting fix, to
+     let running text fill the column, is wrong: at 920px this font
+     renders about 110 characters per line, well past the 80-character
+     ceiling in WCAG 1.4.8. The reading measure is the invariant, so the
+     column moves instead. Code wider than this still scrolls, which is
+     the correct trade on a tablet. */
+  :root { --content: 720px; }
+
   .layout {
     grid-template-columns: minmax(0, 1fr);
-    max-width: calc(var(--measure) + 48px);
+    max-width: calc(var(--content) + 48px);
     gap: 0;
   }
   .rail { display: none; }
