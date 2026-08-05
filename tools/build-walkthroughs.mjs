@@ -34,7 +34,7 @@
 // ZERO DEPENDENCIES
 // -----------------
 // This script imports only Node builtins plus the marked bundle already
-// vendored at walkthroughs/vendor/marked.esm.min.js — the exact same
+// vendored at walkthroughs/vendor/marked.esm.min.js, the exact same
 // renderer the browser used before, so output matches what readers saw.
 // There is no tools/package.json and nothing to npm install. Run it with:
 //
@@ -542,7 +542,7 @@ const CSS_VERSION = "2.4.0";
  * Render the sticky "On this page" rail.
  *
  * H2s are always listed. H3s are nested but hidden by default and
- * revealed only for the section the reader is currently in — the
+ * revealed only for the section the reader is currently in: the
  * progressive-disclosure pattern. Without it the rail would be
  * unusable on the densest walkthroughs (cloud/level1 has 40 H3s).
  *

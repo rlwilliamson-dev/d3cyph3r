@@ -88,7 +88,7 @@ const main = document.getElementById("main");
 if (toc && main) {
   // Only the 10 canonical H2 sections drive the spy. H3s are revealed
   // as a group when their parent section is active, rather than each
-  // competing to be "current" — with up to 40 H3s on the densest
+  // competing to be "current". With up to 40 H3s on the densest
   // walkthroughs, per-H3 tracking makes the rail flicker constantly
   // and tells the reader nothing useful.
   const sections = [...main.querySelectorAll("h2[id]")];
