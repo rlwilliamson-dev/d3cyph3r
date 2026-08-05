@@ -204,6 +204,24 @@ if (toc && main) {
       document.fonts.ready.then(remeasure).catch(() => {});
     }
 
+    // Fragment navigation, which needs handling separately from scroll.
+    //
+    // Arriving on /walkthroughs/cloud/level0.html#defender scrolls the
+    // page ~29,500px, but the browser performs that jump WITHOUT firing
+    // a scroll event, and it happens after this module has already run
+    // its first update() against a scroll position of 0. The result was
+    // a reader sitting in §7 while the rail insisted they were in §1,
+    // on exactly the deep links this release exists to enable.
+    //
+    // hashchange covers later in-page jumps (a heading's own anchor
+    // link, or Back between two anchors). The deferred pass covers the
+    // initial load, where the jump can land after `load` has fired;
+    // update() is cheap and idempotent, so running it twice costs
+    // nothing and removes the ordering assumption entirely.
+    window.addEventListener("hashchange", update);
+    setTimeout(update, 0);
+    setTimeout(update, 250);
+
     remeasure();
 
     // Clicking a rail link should activate it immediately rather than
