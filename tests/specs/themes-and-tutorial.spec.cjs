@@ -107,6 +107,37 @@ test.describe("themes (v1.13.0)", () => {
     expect(afterPrev).toBe("solarized-light");
   });
 
+  // v2.4.2 — regression guard for the achievement gate in theme.js.
+  //
+  // setTheme() records the themesSeen milestone through a dynamic
+  // import of achievements.js. That import is now gated on #terminal
+  // being present, because achievements.js statically pulls in every
+  // level-data file and the walkthroughs subsite shares this module
+  // purely to apply a palette: ungated, each walkthrough page fetched
+  // 906 KB of JavaScript, 831 KB of it scenario data it never uses.
+  //
+  // The gate is easy to break silently in either direction, so assert
+  // the main-app side explicitly: in the game, cycling themes must
+  // still record the milestone and earn Style Points. The subsite side
+  // is covered by the absence of #terminal in generated pages.
+  test("cycling themes still records the milestone and earns Style Points", async ({ page }) => {
+    await dispatchCmd(page, "theme nord");
+    await dispatchCmd(page, "theme gruvbox");
+    await dispatchCmd(page, "theme dracula");
+
+    const seen = await page.evaluate(() => {
+      try {
+        return JSON.parse(sessionStorage.getItem("d3cyph3r:milestones") || "{}").themesSeen || [];
+      } catch (_) { return []; }
+    });
+    expect(Array.isArray(seen)).toBe(true);
+    expect(seen.length).toBeGreaterThanOrEqual(3);
+
+    await dispatchCmd(page, "achievements");
+    const t = await terminalText(page);
+    expect(t).toContain("Style Points");
+  });
+
   test("theme choice survives reload (localStorage round-trip)", async ({ page }) => {
     await dispatchCmd(page, "theme dracula");
     const lsBefore = await page.evaluate(() => localStorage.getItem("d3cyph3r-theme"));
