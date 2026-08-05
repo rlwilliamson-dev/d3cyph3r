@@ -28,7 +28,19 @@
 // and revealed only once the index has loaded. A reader whose fetch
 // fails sees the normal track listing rather than a dead search box.
 
-import { MANIFEST } from "./manifest.mjs";
+// NO IMPORTS ON PURPOSE.
+//
+// This module briefly imported MANIFEST for result labels, then stopped
+// needing it once the generator started baking the level id, title, and
+// section heading into each index entry. The import stayed behind as
+// dead weight, and it was not harmless: an ES module import is a hard
+// dependency, so any failure fetching manifest.mjs took search.js down
+// with it and the search box silently never appeared. A transient 502
+// on that file in production is exactly what surfaced it.
+//
+// Everything this module needs is in search-index.json. Keep it that
+// way: one fetch, one failure mode, and that failure already degrades
+// gracefully (the control stays hidden rather than sitting there inert).
 
 const input = document.getElementById("search-input");
 const results = document.getElementById("search-results");

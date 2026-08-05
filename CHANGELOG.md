@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.2] - 2026-08-05
+
+### Fixed
+
+- **Walkthrough pages no longer download the entire game.** Every page was pulling 906 KB of JavaScript, 831 KB of it the seven level-data files, onto a documentation page that has no use for any of it. The cause was a shared module: applying a theme records a "themes tried" achievement through a dynamic import, and the achievements module statically imports every level. The walkthroughs subsite uses the theme module purely to paint a palette, so it was dragging the whole engine along behind it to record an achievement that cannot be earned there. Achievement recording is now gated on the game actually being present. Theme switching, sharing, and persistence are unchanged on both sites, and the main app still earns the achievement, which is now covered by a test.
+- **Search no longer depends on a file it does not use.** The search module imported the walkthrough manifest and never referenced it. Because an ES module import is a hard dependency, any hiccup fetching that file took search down with it and the search box silently never appeared. Everything search needs is already in its own index.
+
 ## [2.4.1] - 2026-08-05
 
 ### Changed

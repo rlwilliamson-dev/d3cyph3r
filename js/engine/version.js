@@ -278,6 +278,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "2.4.1";
+export const VERSION = "2.4.2";
 
 export const VERSION_DISPLAY = "v" + VERSION;

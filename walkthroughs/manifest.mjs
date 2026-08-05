@@ -1,11 +1,15 @@
 // D3CYPH3R Walkthroughs — the manifest of tracks and levels.
 //
 // Single source of truth for what walkthroughs exist, their titles,
-// and their blurbs. Imported by BOTH:
+// and their blurbs.
 //
-//   - tools/build-walkthroughs.mjs (Node, at generation time) to emit
-//     the static pages, sitemap, and search index.
-//   - walkthroughs/search.js (browser, at runtime) for result labels.
+// BUILD-TIME ONLY. The sole importer is tools/build-walkthroughs.mjs,
+// which reads this to emit the static pages, sitemap, llms.txt, and
+// search index. Nothing fetches it from a browser, and nothing should:
+// everything a page needs is already baked into the generated HTML or
+// into search-index.json, so shipping this to readers would add a
+// network dependency that buys nothing. search.js imported it briefly
+// and the import was removed once that became clear.
 //
 // Track order matches the lobby's track order in js/engine/tracks.js.
 // Level order within a track is the play order, which the generator

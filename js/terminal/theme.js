@@ -89,9 +89,26 @@ export function setTheme(name) {
   // where the module hasn't loaded yet (e.g. during the very
   // first initTheme() call before achievements.js's module init
   // completes).
-  import("../engine/achievements.js")
-    .then(m => m.recordMilestone("themesSeen", theme.name))
-    .catch(() => { /* silent — non-critical, milestone will record on next setTheme */ });
+  //
+  // v2.4.2: gated on the game actually being present.
+  //
+  // This module is shared with the walkthroughs subsite, which uses it
+  // purely to apply a palette. There, the import above was pulling the
+  // whole engine in behind it: achievements.js statically imports
+  // LEVELS from levels/index.js, so every walkthrough page downloaded
+  // all seven level-data files. Measured at 906 KB of JavaScript per
+  // page, 831 KB of it scenario data that a documentation page has no
+  // use for, to record a game achievement that cannot be earned there.
+  //
+  // #terminal exists only in the main app's index.html, never in a
+  // generated walkthrough page, which makes it a reliable and cheap
+  // signal. Checked at call time rather than module load so it stays
+  // correct regardless of when the DOM is ready.
+  if (document.getElementById("terminal")) {
+    import("../engine/achievements.js")
+      .then(m => m.recordMilestone("themesSeen", theme.name))
+      .catch(() => { /* silent — non-critical, milestone will record on next setTheme */ });
+  }
   return theme;
 }
 
