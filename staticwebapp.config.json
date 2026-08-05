@@ -21,14 +21,6 @@
       "headers": { "Cache-Control": "no-cache, must-revalidate" }
     },
     {
-      "route": "/walkthroughs/",
-      "headers": { "Cache-Control": "no-cache, must-revalidate" }
-    },
-    {
-      "route": "/walkthroughs/index.html",
-      "headers": { "Cache-Control": "no-cache, must-revalidate" }
-    },
-    {
       "route": "/js/*",
       "headers": { "Cache-Control": "no-cache, must-revalidate" }
     },
@@ -37,7 +29,13 @@
       "headers": { "Cache-Control": "no-cache, must-revalidate" }
     },
     {
-      "route": "/walkthroughs/walkthrough.js",
+      "_comment": "Routes match in ORDER, first match wins. The vendored marked bundle is version-pinned and never changes in place, so it must be matched BEFORE the /walkthroughs/* catch-all below or it would lose its immutable caching.",
+      "route": "/walkthroughs/vendor/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    },
+    {
+      "_comment": "Catch-all for the 32 generated walkthrough pages plus reader.js, search.js, manifest.mjs, and search-index.json. These are regenerated on every release, so returning readers must revalidate rather than serve a stale page.",
+      "route": "/walkthroughs/*",
       "headers": { "Cache-Control": "no-cache, must-revalidate" }
     },
     {

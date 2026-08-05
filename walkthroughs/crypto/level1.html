@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>level1@crypto — Theo's Signature That Wasn't — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="Day two. Same engineer shipped a homegrown JWT auth for Vesta's internal admin API — verify-middleware calls jwt.verify without an algorithms whitelist. Tokens with alg:none get accepted. CWE-347 + CWE-532 for the secrets in the debug log.">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/crypto/level1.html">
+  <meta property="og:title" content="level1@crypto — Theo's Signature That Wasn't — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="Day two. Same engineer shipped a homegrown JWT auth for Vesta's internal admin API — verify-middleware calls jwt.verify without an algorithms whitelist. Tokens with alg:none get accepted. CWE-347 + CWE-532 for the secrets in the debug log.">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/crypto/level1.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="D3CYPH3R">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.0">
+</head>
+<body class="page-doc">
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header id="site-header">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" aria-label="Back to d3cyph3r.com">
+        <span class="brand-mark"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span>
+      </a>
+      <a href="/walkthroughs/" class="brand-sub-link">
+        <span class="brand-sub">walkthroughs</span>
+      </a>
+    </div>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><a href="/walkthroughs/crypto/">crypto</a><span class="sep" aria-hidden="true">/</span><span class="current">level1</span></nav>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
+      <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
+      </svg>
+      <svg class="theme-icon theme-icon-sun" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="layout">
+    <main id="main" class="doc">
+<h1 id="level1crypto-theos-signature-that-wasnt">level1@crypto — Theo&#39;s Signature That Wasn&#39;t<a class="anchor" href="#level1crypto-theos-signature-that-wasnt" aria-label="Link to this section">#</a></h1>
+<p class="doc-meta"><span class="doc-meta-item">43 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">8,522 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Crypto track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Crypto · <strong>Client:</strong> Vesta Retail · <strong>Compliance regime:</strong> PCI-DSS v4.0.1 · <strong>Builds on:</strong> <a href="/walkthroughs/#/crypto/level0"><code>level0@crypto</code></a></p>
+<blockquote class="spoiler-warning">
+<p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for <code>level2@crypto</code>. If you haven&#39;t solved <code>level1@crypto</code> yet, close this tab and come back after. The puzzle is much more satisfying without spoilers, and the post-mortem below makes considerably more sense once you&#39;ve felt the moment yourself.</p>
+</blockquote>
+<hr>
+<h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<p>When you left the lobby at the end of <code>level0@crypto</code>, Vesta Retail had a tidy little incident on its hands. You&#39;d filed the finding: Theo&#39;s commit moved the production payment-card-processor API key into a base64-encoded file and called it protection. Saanvi, Vesta&#39;s CTO, took the report, scheduled the rotation for the next change window (Friday), and Theo had a friendly, well-handled pre-meeting with Priya — Driftwood&#39;s senior consultant on the Vesta engagement. Theo, to his credit, took the news the way you want junior engineers to take this kind of news: he asked questions, wrote down the answers, and started reading RFC 4648 the same afternoon.</p>
+<p>It was at the end of that conversation that he mentioned, almost in passing, a second project.</p>
+<p>He&#39;d been working on Vesta&#39;s internal admin API. The endpoints were the back-office tools — secret rotation, audit-log queries, a one-off &quot;rotate this credential without paging the on-call&quot; workflow — used by a small set of engineers and one or two scheduled jobs. Three weeks ago he&#39;d shipped a new auth model for it: stateless JWTs. The previous auth was a session cookie backed by Redis; the new auth was &quot;a quick token-based thing&quot; using &quot;the most-downloaded JWT library on npm.&quot; Theo&#39;s words. He thought Priya would like it because it was more modern.</p>
+<p>Priya did not respond with the enthusiasm Theo expected. Instead she asked him to send her the verify middleware and a recent sample of the admin-API access log. The &quot;you and I are going to look at this together tomorrow&quot; tone wasn&#39;t lost on Theo, but he sent the artifacts over before end of day and went home to reread the JWT specs. Both artifacts are in the audit directory.</p>
+<p>The legal frame for what you&#39;re about to do is the same as yesterday&#39;s. Saanvi authorized a controlled use of the live API key (the one Theo base64-encoded — still unrotated until Friday) for a one-time blast-radius check. Today&#39;s check uses that authorization to ssh into the payment-deploy service host, where the admin-API access logs are mirrored for observability. Your prompt reads <code>vesta-deploy@crypto:~$</code>. The same rules of engagement apply: read what&#39;s there, document what you find, don&#39;t pivot, don&#39;t forge anything, get out.</p>
+<p>Vesta Retail&#39;s compliance regime is PCI-DSS v4.0.1. They&#39;re a Level 2 merchant (1M–6M transactions/year, scaled up from Level 3 in 2024), which means an annual self-attested SAQ D and a Qualified Security Assessor on-site review every other year. The next QSA review is six weeks out. The admin API in question is in scope for that review because it calls the secret-rotation machinery for the cardholder-data environment — anything that authenticates a caller into actions on the CDE is, by definition, in scope for the authentication requirements (Req 8) and the secure-coding requirements (Req 6.2).</p>
+<p>What you don&#39;t know yet, walking in, is that Theo&#39;s &quot;quick token-based auth&quot; rejects almost nothing. Any caller — authenticated or not, employee or attacker — can craft a JWT that says <code>role: admin</code>, set the algorithm header to <code>none</code>, and Theo&#39;s verification middleware will accept it as if it were properly signed and authorized.</p>
+<h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
+<p>The puzzle path is short. Two files to read, one command to run on one extracted token.</p>
+<h3 id="step-1-confirm-the-credential-and-what-it-bought-you">Step 1: Confirm the credential and what it bought you<a class="anchor" href="#step-1-confirm-the-credential-and-what-it-bought-you" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@crypto
+level1@crypto&#39;s password: vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3
+Connected: level1@crypto
+vesta-deploy@crypto:~$ whoami
+vesta-deploy
+vesta-deploy@crypto:~$ pwd
+/home/vesta-deploy
+</code></pre>
+<p>You used the still-live API key from <code>level0@crypto</code> — the value <code>vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3</code> recovered by <code>base64 api-key.b64</code> in level 0. The same access an attacker pulling the same key from Vesta&#39;s repo would have. The same access that prompted Saanvi to schedule the Friday rotation. You&#39;re sitting on <code>payment-deploy.vesta.internal</code>, where the admin-API logs are mirrored for observability.</p>
+<h3 id="step-2-read-the-day-two-context">Step 2: Read the day-two context<a class="anchor" href="#step-2-read-the-day-two-context" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-deploy@crypto:~$ ls
+admin-access.log     priya-note.md         verify-middleware.js
+lessons-learned.md   welcome.md
+</code></pre>
+<p>Five files. Read them in order.</p>
+<p><code>welcome.md</code> is the mechanics introduction — it covers what a JWT is, what its three segments do, and what the <code>jwt</code> command does when you run it against a token. <code>priya-note.md</code> is the in-character handoff: the day-two context, what Theo said about the new auth model, what Priya wants you to check, the rules of engagement, and the PCI-DSS hooks. <code>verify-middleware.js</code> is the verification code Theo wrote — fifteen lines, including imports. <code>admin-access.log</code> is the recent admin-API access log Theo sent over for review. <code>lessons-learned.md</code> is what you&#39;ll read after you find what&#39;s there.</p>
+<p>The critical pieces to extract before you do anything else:</p>
+<ul>
+<li><strong>The new tool</strong>: <code>jwt &lt;token&gt;</code> decodes a JSON Web Token, prints the header and payload (both base64url-encoded inside the token), and surfaces common red flags — algorithm confusion (<code>alg: none</code>), empty signatures, expired tokens.</li>
+<li><strong>The legal frame</strong>: same as yesterday. Reconnaissance only; don&#39;t forge a new token; don&#39;t call any admin endpoints.</li>
+<li><strong>The shape of the suspicion</strong>: Priya doesn&#39;t say &quot;Theo&#39;s auth is broken.&quot; She says &quot;the same class of mistake as yesterday — confusing one cryptographic primitive for another, or applying one with the wrong parameters — shows up everywhere in junior engineers&#39; first crypto-adjacent code.&quot; That framing is the prep — you&#39;re walking in expecting to find a mistake of that shape.</li>
+</ul>
+<h3 id="step-3-read-theos-verify-middleware">Step 3: Read Theo&#39;s verify middleware<a class="anchor" href="#step-3-read-theos-verify-middleware" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-deploy@crypto:~$ cat verify-middleware.js
+</code></pre>
+<p>Fifteen lines of code. The relevant snippet:</p>
+<pre><code class="language-javascript">import jwt from &quot;jsonwebtoken&quot;;
+import { SIGNING_SECRET } from &quot;./config.js&quot;;
+
+export function requireAdmin(req, res, next) {
+  const auth = req.headers.authorization || &quot;&quot;;
+  const token = auth.startsWith(&quot;Bearer &quot;) ? auth.slice(7) : null;
+  if (!token) return res.status(401).json({ error: &quot;missing token&quot; });
+
+  try {
+    // Verify with our signing secret. The library reads the
+    // alg from the token header so we can rotate signing
+    // algorithms later without touching client code.
+    const claims = jwt.verify(token, SIGNING_SECRET);
+    if (claims.role !== &quot;admin&quot;) {
+      return res.status(403).json({ error: &quot;not admin&quot; });
+    }
+    req.adminClaims = claims;
+    return next();
+  } catch (err) {
+    return res.status(401).json({ error: &quot;invalid token&quot; });
+  }
+}
+</code></pre>
+<p>The vulnerability lives on the line where Theo calls <code>jwt.verify(token, SIGNING_SECRET)</code> with exactly two arguments. The <code>jsonwebtoken</code> library&#39;s <code>verify()</code> function accepts a third <code>options</code> object where you can tell it which algorithms are acceptable: <code>jwt.verify(token, secret, { algorithms: [&#39;HS256&#39;] })</code>. When you omit that options argument, what happens depends on the library version, but historically — and still on enough deployed code to matter — the library reads the <code>alg</code> field from the token&#39;s header and dispatches to whichever verification routine that algorithm names.</p>
+<p>A token claiming <code>alg: none</code> asks for verification to be skipped. The library obliges. The verifier accepts the token.</p>
+<p>Theo&#39;s code comment reads: <em>&quot;The library reads the alg from the token header so we can rotate signing algorithms later without touching client code.&quot;</em> That sentence is the textbook description of what NOT to want. The convenience that allows server-side algorithm rotation without client coordination is the exact mechanism that allows an attacker to send a token with <code>alg: none</code> and have the server honor it.</p>
+<h3 id="step-4-read-the-access-log">Step 4: Read the access log<a class="anchor" href="#step-4-read-the-access-log" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-deploy@crypto:~$ cat admin-access.log
+</code></pre>
+<pre><code>[2026-04-09T07:14:23Z] admin-svc startup on :8443 (config: secrets v3.2)
+[2026-04-09T07:14:23Z] verify-middleware loaded (jsonwebtoken @ default options)
+[2026-04-09T07:42:01Z] req=req_4K2J9 GET /admin/health → 200 (no auth — public endpoint)
+[2026-04-09T08:14:23Z] req=req_8H7K4 POST /admin/rotate-secret → 200
+[2026-04-09T08:14:23Z] req=req_8H7K4 DEBUG Authorization: Bearer eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJ2ZXN0YS1hZG1pbi1zdmMiLCJzdWIiOiJhZG1pbi1zdmMtZGVwbG95IiwiYXVkIjoidmVzdGEtYWRtaW4tYXBpIiwiaWF0IjoxNzc1NzIyNDQwLCJleHAiOjIwOTEzNDE2NDAsInJvbGUiOiJhZG1pbiIsInNjb3BlIjoiKiIsImFjdG9yIjoidGhlb0B2ZXN0YS5leGFtcGxlIiwiaGFuZG9mZl90b2tlbiI6InZlc3RhLWFkbWluLWhhbmRvZmYtMjAyNiJ9.
+[2026-04-09T08:14:23Z] req=req_8H7K4 DEBUG jwt.verify returned: claims with role=admin
+[2026-04-09T08:14:24Z] req=req_8H7K4 rotateSecret(target=payment-api-key) succeeded
+[2026-04-09T08:17:42Z] req=req_M5R2X GET /admin/audit-bypass-tokens → 200 (same caller, same token replayed)
+[2026-04-09T08:17:42Z] req=req_M5R2X audit-bypass-tokens query returned 1 active token
+</code></pre>
+<p>Three things to notice before you decode anything.</p>
+<p><strong>First</strong>: the log is debug-level verbose. It records the full <code>Authorization</code> header value, including the JWT itself. This is its own finding — debug logging that captures auth headers means anyone with read access to the log can replay any token in it. The fact that this log exists in this form, accessible from a payment-deploy host, is CWE-532 (Insertion of Sensitive Information into Log File) and a violation of PCI-DSS Requirement 10.3.1 (read access to audit logs is limited to those with a job-related need) and 10.3.2 (audit logs are protected from modification).</p>
+<p><strong>Second</strong>: the <code>verify-middleware loaded (jsonwebtoken @ default options)</code> line at startup is a tell. The library was loaded with no global options object. If the application code also calls <code>jwt.verify()</code> without an options object — and it does, you just read it — then nothing is constraining which algorithms will be accepted.</p>
+<p><strong>Third</strong>: the token is reused. The same caller hits two endpoints with the same JWT. JWTs are stateless precisely so they can be reused this way, but the reuse pattern means a single token disclosure has the blast radius of every request that token can authorize, not just the request the attacker observed.</p>
+<h3 id="step-5-decode-the-token">Step 5: Decode the token<a class="anchor" href="#step-5-decode-the-token" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-deploy@crypto:~$ jwt eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJ2ZXN0YS1hZG1pbi1zdmMiLCJzdWIiOiJhZG1pbi1zdmMtZGVwbG95IiwiYXVkIjoidmVzdGEtYWRtaW4tYXBpIiwiaWF0IjoxNzc1NzIyNDQwLCJleHAiOjIwOTEzNDE2NDAsInJvbGUiOiJhZG1pbiIsInNjb3BlIjoiKiIsImFjdG9yIjoidGhlb0B2ZXN0YS5leGFtcGxlIiwiaGFuZG9mZl90b2tlbiI6InZlc3RhLWFkbWluLWhhbmRvZmYtMjAyNiJ9.
+</code></pre>
+<p>The decoder output:</p>
+<pre><code>Decoded JWT
+──────────────────────────────────────────
+
+Header:
+  {
+    &quot;alg&quot;: &quot;none&quot;,
+    &quot;typ&quot;: &quot;JWT&quot;
+  }
+
+Payload:
+  {
+    &quot;iss&quot;: &quot;vesta-admin-svc&quot;,
+    &quot;sub&quot;: &quot;admin-svc-deploy&quot;,
+    &quot;aud&quot;: &quot;vesta-admin-api&quot;,
+    &quot;iat&quot;: 1775722440,
+    &quot;exp&quot;: 2091341640,
+    &quot;role&quot;: &quot;admin&quot;,
+    &quot;scope&quot;: &quot;*&quot;,
+    &quot;actor&quot;: &quot;theo@vesta.example&quot;,
+    &quot;handoff_token&quot;: &quot;vesta-admin-handoff-2026&quot;
+  }
+
+Signature (raw, 0 bytes):
+  (empty)
+
+Notes:
+  [!] alg: &#39;none&#39; — server-side acceptance of an unsigned token is a known CVE class (alg=none confusion). Anyone can forge claims.
+  [!] Signature is empty. Verify the server is actually checking it.
+  [*] exp: 2036-04-09T08:14:00.000Z (valid)
+</code></pre>
+<p>Read the output carefully.</p>
+<p>The <strong>header</strong> announces <code>alg: none</code>. This is a token that asks not to be verified. The fact that the access log shows the application accepted it and dispatched to <code>rotateSecret()</code> confirms the verification was indeed skipped. The vulnerability is not theoretical; you&#39;re reading evidence that it has been exercised.</p>
+<p>The <strong>payload</strong> is the claim set. It carries <code>role: admin</code>, <code>scope: &quot;*&quot;</code>, and <code>actor: theo@vesta.example</code> — the access controls the application is supposed to enforce on the basis of this verification it didn&#39;t perform. It also carries a <code>handoff_token</code> field with the value <code>vesta-admin-handoff-2026</code>. That&#39;s a credential. It&#39;s in a JWT payload because, apparently, someone needed to pass the value along inside a token and decided the JWT envelope was a convenient place to put it. JWT payloads are base64url-encoded, not encrypted; anyone who reads the token can read the field. This is the level2 breadcrumb, and it&#39;s there because the JWT format invites this anti-pattern — payloads look opaque to humans skimming a log, but they&#39;re trivially decoded.</p>
+<p>The <strong>signature segment</strong> is empty. The decoder flags it; the access log records the application accepting it; the middleware code makes both observations consistent.</p>
+<p>The <strong>expiration</strong> is ten years out (2036-04-09). Long-lived service tokens are themselves a finding under modern token-management guidance (NIST SP 800-63B-4 §5 <em>Session Management</em> covers session-token lifecycle and refresh patterns), but the primary finding here is the missing signature verification.</p>
+<h3 id="step-6-document-and-stop">Step 6: Document and stop<a class="anchor" href="#step-6-document-and-stop" aria-label="Link to this section">#</a></h3>
+<p>Per Priya&#39;s rules of engagement, you do not now construct a new alg:none token of your own to test what other actions the admin API will accept. You do not query the <code>/admin/audit-bypass-tokens</code> endpoint to enumerate other tokens. What you do is write up exactly what the audit found.</p>
+<p>The minimum report content:</p>
+<ol>
+<li><strong>The admin-API JWT verifier accepts unsigned tokens.</strong> <code>verify-middleware.js</code> calls <code>jwt.verify(token, SIGNING_SECRET)</code> without an algorithms whitelist. Tokens with <code>alg: none</code> in the header are accepted and their claims trusted.</li>
+<li><strong>The vulnerability is being exercised in current traffic.</strong> The access log shows a token with <code>alg: none</code> driving a <code>rotateSecret(target=payment-api-key)</code> action. Whether that traffic is legitimate (Theo&#39;s own service calling its own API with a poorly-configured client) or unauthorized cannot be determined from the log alone.</li>
+<li><strong>The admin-API access log records Authorization headers.</strong> Any party with read access to the log can recover and replay live JWTs. This is independent of the verification finding and would be a CWE-532 / PCI-DSS Req 10.3.1 + 10.3.2 finding even if the verification were correct.</li>
+<li><strong>A live credential is published in a JWT payload.</strong> The <code>handoff_token</code> claim contains <code>vesta-admin-handoff-2026</code>. Anyone who decoded the JWT — from the log, from a captured request, from a leaked client SDK — has the credential.</li>
+<li><strong>The signing secret should be considered compromised.</strong> Independent of whether anyone has actually exfiltrated it, the threat model now includes &quot;any historical admin action could have been driven by a forged token, not just authenticated ones.&quot; Rotation is required as part of the incident response.</li>
+</ol>
+<p>Send the report to Priya. She&#39;ll route it to Saanvi with yesterday&#39;s report attached. Exit the level.</p>
+<pre><code class="language-bash">vesta-deploy@crypto:~$ exit
+</code></pre>
+<h3 id="step-7-game-world-only-use-the-breadcrumb">Step 7 (game-world only): Use the breadcrumb<a class="anchor" href="#step-7-game-world-only-use-the-breadcrumb" aria-label="Link to this section">#</a></h3>
+<p>In a real engagement, today ends here. In D3CYPH3R the credential chain continues into the eventual <code>level2@crypto</code>, where the <code>handoff_token</code> you extracted becomes the entry point.</p>
+<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@crypto
+level2@crypto&#39;s password: vesta-admin-handoff-2026
+</code></pre>
+<p>(At time of writing, <code>level2@crypto</code> hasn&#39;t shipped yet. The credential chain is staged for it.)</p>
+<h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
+<p>Today&#39;s finding looks like a single missing argument on a single function call. It&#39;s actually three failures stacked.</p>
+<h3 id="failure-1-the-verifier-accepts-alg-none-cwe-347">Failure 1: The verifier accepts <code>alg: none</code> (CWE-347)<a class="anchor" href="#failure-1-the-verifier-accepts-alg-none-cwe-347" aria-label="Link to this section">#</a></h3>
+<p><code>jwt.verify(token, secret)</code> without an algorithms whitelist allows the JWT&#39;s own <code>alg</code> header to dictate what verification means. A token with <code>alg: HS256</code> is verified against the shared secret as HMAC-SHA256. A token with <code>alg: RS256</code> is verified against a public key as RSA-SHA256. A token with <code>alg: none</code> is &quot;verified&quot; by skipping the signature check entirely — the verifier reads the payload, trusts the claims, and returns success.</p>
+<p>This is CWE-347, <em>Improper Verification of Cryptographic Signature</em>. The catalog entry describes the weakness as &quot;the product does not verify, or incorrectly verifies, the cryptographic signature for data.&quot; The application&#39;s verification step exists; it returns success; the success has no cryptographic meaning. The signature was never checked.</p>
+<p>CWE-347 is the canonical weakness ID for signature-verification failures, with MITRE mapping status ALLOWED. It isn&#39;t currently on the CWE Top 25 list (the Top 25 entries that most often fire on JWT misconfigurations are CWE-287 <em>Improper Authentication</em> and CWE-863 <em>Incorrect Authorization</em>, both Top-25 regulars). The CWE-347 pattern persists at internet scale because JWT-based authentication has spread far faster than the operational knowledge of how to verify JWTs safely. Every framework&#39;s quickstart guide shows the two-argument <code>verify</code> call; the three-argument options pattern is documented but routinely omitted.</p>
+<p>The disclosure that introduced the JWT-library community to the alg:none and RS→HS attack families was Tim McLean&#39;s March 2015 Auth0 blog post, <em>&quot;Critical vulnerabilities in JSON Web Token libraries.&quot;</em> McLean was an independent security researcher at the time; the post was a guest piece. The disclosure was tracked across multiple per-library CVE assignments — <strong>CVE-2015-2951</strong> for the php-jwt alg:none case, <strong>CVE-2015-9235</strong> for the node-jsonwebtoken RS→HS key-confusion case, and similar per-library numbers for the rest. The libraries patched, mostly by changing the default behavior to reject alg:none in the absence of an explicit whitelist. The vulnerability is back the moment any operator passes an empty array as <code>algorithms</code>, manually allows <code>none</code>, uses an older library version, or — most commonly — writes new code that doesn&#39;t pass an options object at all.</p>
+<h3 id="failure-2-the-token-payload-contains-a-live-credential-the-jwt-as-confidential-envelope-mistake">Failure 2: The token payload contains a live credential (the JWT-as-confidential-envelope mistake)<a class="anchor" href="#failure-2-the-token-payload-contains-a-live-credential-the-jwt-as-confidential-envelope-mistake" aria-label="Link to this section">#</a></h3>
+<p>The JWT payload carries <code>handoff_token: &quot;vesta-admin-handoff-2026&quot;</code>. Whoever wrote that claim treated the JWT as a confidential envelope — a place where a credential could be &quot;carried&quot; alongside the role and scope claims, presumably to avoid a separate secret-management workflow for the handoff.</p>
+<p>JWT payloads are not confidential. RFC 7519 is explicit on this: the payload is base64url-encoded, which is reversible by anyone in possession of the token. The signed-token variant (JWS, RFC 7515) provides <em>integrity</em> — you can&#39;t change the claims without invalidating the signature — but not <em>confidentiality</em>. For confidentiality, the spec requires JWE (JSON Web Encryption, RFC 7516), which is a separate, more complex envelope.</p>
+<p>Most production deployments of JWTs use the JWS form. Most JWT tutorials demonstrate the JWS form. Many engineers learn that the JWT is &quot;encoded&quot; and reach the incorrect conclusion that it&#39;s also &quot;encrypted.&quot; It isn&#39;t. Anything in a JWT payload is readable by anyone who holds the token, anyone who can pull the token from a log, anyone who intercepts the network call, and anyone who sees the token in a debug dump.</p>
+<p>This sub-failure maps to <strong>CWE-540</strong> <em>Inclusion of Sensitive Information in Source Code</em> (in spirit; the literal CWE-540 entry is source code, but the principle &quot;sensitive data should not be placed in artifacts whose access control is not credential-grade&quot; carries through). The narrower mapping is to the broader CWE-200 family, with the standard caveat that CWE-200 carries a &quot;Discouraged for mapping&quot; status in the current MITRE catalog.</p>
+<h3 id="failure-3-the-admin-api-log-captures-authorization-headers-cwe-532">Failure 3: The admin-API log captures Authorization headers (CWE-532)<a class="anchor" href="#failure-3-the-admin-api-log-captures-authorization-headers-cwe-532" aria-label="Link to this section">#</a></h3>
+<p>The access log records full <code>Authorization</code> headers at DEBUG level. The application is, in the same line, writing a credential and a record of its acceptance — and storing both in a file that anyone with read access to the deploy host can <code>cat</code>.</p>
+<p>This is <strong>CWE-532</strong> <em>Insertion of Sensitive Information into Log File</em>. The CWE catalog entry is direct: &quot;information written to log files can be of a sensitive nature and give valuable guidance to an attacker or expose sensitive user information.&quot; Authorization headers are the canonical example.</p>
+<p>The fix is mechanical: redact the <code>Authorization</code> header at the proxy or middleware layer (modern WAF and API-gateway products all support header redaction; nginx&#39;s <code>log_format</code> directive supports it; OpenResty and Caddy do too; Splunk Universal Forwarder, Elastic Filebeat, Sentinel Azure Monitor Agent, and Datadog Agent all support log-scrubbing transforms on the pipeline side as a defense-in-depth backstop). The harder discipline is the rule that the application never writes a credential to its own logs in the first place — the redaction is a backstop, not the design.</p>
+<h3 id="the-compound-effect">The compound effect<a class="anchor" href="#the-compound-effect" aria-label="Link to this section">#</a></h3>
+<p>Each failure in isolation is a finding. Compound them, and you get today&#39;s level.</p>
+<pre><code>  Tokens with alg:none accepted (no signature verified)
+    +
+  Live credential placed in token payload
+    +
+  Tokens dumped to logs at DEBUG level
+    =
+  Any reader of the log can forge admin tokens AND
+  recover a separate live credential without forging anything.
+</code></pre>
+<p>The mitigation tracks each failure independently:</p>
+<ul>
+<li>For failure 1: pass <code>{ algorithms: [&#39;HS256&#39;] }</code> to every <code>jwt.verify</code> call. Audit-grep the codebase for the two-argument form; fix every hit.</li>
+<li>For failure 2: move the handoff token to a real secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.). Rotate the current value. The JWT payload contains claims about the session; it does not contain other credentials.</li>
+<li>For failure 3: redact <code>Authorization</code> headers in the log pipeline. The application should never log the header value directly; if debug logging is needed, write only <code>&quot;Authorization: Bearer &lt;REDACTED&gt;&quot;</code>.</li>
+</ul>
+<p>Each fix is mechanical. The discipline that prevents the next instance is the same in all three cases: the engineer writing the code understands what the library actually does when called without the safety arguments. RFC 8725 — JSON Web Token Best Current Practices — is the document you would print and hand to Theo.</p>
+<h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
+<p>JWT verification failures are one of the most consistently exploited classes of authentication vulnerabilities in modern web apps. The history is short — JWT itself is a 2015 standard (RFC 7519 was published in May 2015) — but dense.</p>
+<h3 id="thread-1-the-mclean-auth0-disclosure-2015">Thread 1: The McLean Auth0 disclosure (2015)<a class="anchor" href="#thread-1-the-mclean-auth0-disclosure-2015" aria-label="Link to this section">#</a></h3>
+<p>In late 2014, independent security researcher Tim McLean was reviewing several popular JWT libraries and noticed that they shared a vulnerable pattern: their <code>verify()</code> functions read the algorithm from the token&#39;s header and dispatched to the corresponding verification routine without checking whether the caller had asked them to do so. McLean documented two attacks against this pattern:</p>
+<ol>
+<li><strong>alg:none confusion</strong>: a token with <code>alg: none</code> in the header is dispatched to a &quot;no signature&quot; verification path that returns true. This is the attack you just walked through in <code>level1@crypto</code>.</li>
+<li><strong>RS256→HS256 key confusion</strong>: a token with <code>alg: HS256</code> is dispatched to an HMAC-SHA256 verification path that uses the server&#39;s <em>public key</em> as the HMAC secret. Since RSA public keys are, well, public, the attacker can compute a valid HMAC and produce a token the server will accept as legitimately signed.</li>
+</ol>
+<p>Both attacks were published in McLean&#39;s March 2015 guest post on the Auth0 blog, <em>&quot;Critical vulnerabilities in JSON Web Token libraries.&quot;</em> The disclosure was tracked across multiple per-library CVE assignments rather than a single multi-library CVE — <strong>CVE-2015-2951</strong> for the php-jwt alg:none variant, <strong>CVE-2015-9235</strong> for the node-jsonwebtoken RS→HS confusion, and similar per-library numbers for the rest. The libraries patched, mostly by changing default behavior to reject alg:none when no algorithm is whitelisted. McLean&#39;s blog post is, a decade later, still the canonical reference for the algorithm-confusion family of attacks.</p>
+<p>The lesson from the McLean disclosure is the lesson Theo&#39;s middleware demonstrates: the original sin of JWT verification is letting unauthenticated input (the token header) dictate verification behavior. Every modern best-practice document — RFC 8725, the OWASP JWT cheat sheet, the OAuth 2.0 Security BCP — recommends the same defense: the verifier specifies what algorithms are acceptable; the token&#39;s claim is checked against that list and rejected if it doesn&#39;t match.</p>
+<h3 id="thread-2-key-injection-attacks-cve-2018-0114-and-the-jkux5u-family">Thread 2: Key-injection attacks — CVE-2018-0114 and the jku/x5u family<a class="anchor" href="#thread-2-key-injection-attacks-cve-2018-0114-and-the-jkux5u-family" aria-label="Link to this section">#</a></h3>
+<p>JWTs can carry their verification key in the token itself, or specify it by reference. The JWS header defines several fields for this:</p>
+<ul>
+<li><strong><code>jwk</code></strong> (JSON Web Key): an embedded public key in the header itself.</li>
+<li><strong><code>jku</code></strong> (JWK Set URL): a URL where the verifier can fetch the JSON Web Key Set that signed this token.</li>
+<li><strong><code>x5u</code></strong> (X.509 URL): a URL where the verifier can fetch the X.509 certificate that signed this token.</li>
+</ul>
+<p>The intended use case for the URL-fetching variants: a multi-tenant identity provider issues tokens signed with per-tenant keys; the header includes a URL the verifier can use to fetch the right public key. The intended security model: the verifier restricts fetches to a trusted domain (or doesn&#39;t honor these headers at all and resolves keys from a configured trust store).</p>
+<p>The vulnerability class: a library that trusts the token&#39;s claimed verification key. <strong>CVE-2018-0114</strong> is the canonical disclosure here — Cisco&#39;s <code>node-jose</code> library accepted a <code>jwk</code> header (embedded public key) and verified the signature against the attacker-supplied key. The attack: strip the original signature, embed your own public key in the header, sign with the matching private key, send. The verifier validates against the key the attacker provided.</p>
+<p>The <code>jku</code> / <code>x5u</code> URL-fetching variants are related but distinct attacks tracked under their own per-library CVEs over the years. The shared pattern is the same: any header field that lets the token influence the choice of verification key is a vector unless the verifier strictly constrains it.</p>
+<p>The fix is the same shape as the alg:none fix: the verifier specifies what keys are acceptable from a configured trust store; the token&#39;s claims about its key are matched against that store, not used to fetch new material.</p>
+<h3 id="thread-3-weak-hmac-secrets-and-the-published-cracking-tools">Thread 3: Weak HMAC secrets — and the published cracking tools<a class="anchor" href="#thread-3-weak-hmac-secrets-and-the-published-cracking-tools" aria-label="Link to this section">#</a></h3>
+<p>Even when JWT verification is correctly configured to require HS256, the security of the resulting signature depends entirely on the strength of the HMAC secret. If the secret is short, dictionary-derived, or otherwise guessable, an attacker who captures any one signed token can brute-force the secret offline and then forge arbitrary new tokens.</p>
+<p>The tooling for this is mature and freely available. The most-cited tool is <strong><code>jwt_tool</code></strong> by ticarpi (<a href="https://github.com/ticarpi/jwt_tool" target="_blank" rel="noopener noreferrer">https://github.com/ticarpi/jwt_tool</a>), which supports alg:none confusion, RS→HS key confusion, jku/x5u injection, and HMAC-secret brute-forcing via <code>hashcat</code> mode 16500 or its own dictionary attack. <strong><code>hashcat</code></strong> itself ships with first-class JWT support (<code>-m 16500</code>). On commodity GPU hardware, dictionary attacks against unsalted HMAC-SHA256 with a weak secret complete in seconds.</p>
+<p>The Auth0 security blog has published several writeups over the years tracking weak-secret-driven JWT compromises in customer environments. The pattern is consistent: the application developer picked a &quot;memorable&quot; secret for early development, never replaced it with a high-entropy production value, and shipped to production with the dev secret intact. The fix is well-documented (use a 256-bit cryptographically random secret; rotate periodically; consider RS256 with hardware-backed keys for high-value applications) and the failure rate in industry surveys remains depressingly high.</p>
+<h3 id="thread-4-notable-named-incidents-recent">Thread 4: Notable named incidents (recent)<a class="anchor" href="#thread-4-notable-named-incidents-recent" aria-label="Link to this section">#</a></h3>
+<p>JWT misconfigurations rarely make front-page news on their own — they tend to be one finding among many in a larger breach disclosure. Recent named incidents where JWT-class issues played a documented role include:</p>
+<ul>
+<li><strong>Atlassian Confluence (CVE-2022-26134, June 2022)</strong>: a server-side template injection (technically an OGNL injection) in Confluence Data Center and Server allowed unauthenticated RCE. Volexity discovered and disclosed the vulnerability during a Memorial Day incident response. The disclosure itself isn&#39;t a JWT story (the documented post-exploitation included BEHINDER implants and JSP webshells, not token forgery) — it&#39;s included here to contrast: pre-auth RCE is the catastrophic-but-rare initial-access vector; broken JWT verification is the small-but-routine version of &quot;an attacker can act as an admin without being one.&quot; Both end in the same place; only one requires a discovered RCE.</li>
+<li><strong>Okta support-system breach (October 2023)</strong>: Okta (not Auth0 — Auth0&#39;s own support system was explicitly reported unaffected) disclosed that an attacker had abused a service account in the support-case-management system. The initial-access vector was credentials saved by an Okta employee to a personal Google account. HAR files in support cases contained session tokens which were used to hijack five customer sessions. The shape that maps to today&#39;s level: a service-account credential ended up where it shouldn&#39;t have, and session-token material captured in support-case artifacts was reusable. The general pattern — credentials and tokens in the wrong artifact — is the same shape as Theo&#39;s <code>handoff_token</code> claim in a JWT payload.</li>
+<li><strong>Various HackerOne disclosures</strong>: HackerOne&#39;s public bug-bounty platform has hundreds of disclosed JWT-related vulnerabilities across well-known vendors. Search the platform for <code>alg:none</code> or <code>jwt</code> for the current list. The recurring pattern is &quot;the vendor&#39;s authentication library was correctly configured for the main API but a secondary admin endpoint was using the same library with a different (vulnerable) configuration.&quot; Theo&#39;s pattern.</li>
+</ul>
+<p>The named incidents are useful for setting context, but the more important point is the <em>base rate</em>: JWT misconfigurations are routine findings in penetration tests across industries, with reporting volume that suggests the actual rate of vulnerable deployments is substantially higher than the rate of disclosed incidents.</p>
+<h2 id="frameworks">§5 — Frameworks, deep dive<a class="anchor" href="#frameworks" aria-label="Link to this section">#</a></h2>
+<p>The post-mortem at the bottom of the level (<code>lessons-learned.md</code>) walks through the high-level framework mapping. This section expands each with the specific section / control / paragraph identifiers a compliance auditor would cite, plus the exact remediation language each framework expects.</p>
+<h3 id="cwe-common-weakness-enumeration">CWE — Common Weakness Enumeration<a class="anchor" href="#cwe-common-weakness-enumeration" aria-label="Link to this section">#</a></h3>
+<p><strong>CWE-347: Improper Verification of Cryptographic Signature.</strong> The primary weakness for the alg:none failure. The catalog entry describes the weakness as &quot;the product does not verify, or incorrectly verifies, the cryptographic signature for data.&quot; MITRE mapping status: <strong>ALLOWED</strong> — it&#39;s a valid weakness ID for analytics and reporting. CWE-347 is the canonical ID for JWT signature-verification failures even though it isn&#39;t currently on the CWE Top 25 — the Top 25 weaknesses most often fired on JWT findings are CWE-287 <em>Improper Authentication</em> and CWE-863 <em>Incorrect Authorization</em>.</p>
+<p><strong>CWE-345: Insufficient Verification of Data Authenticity.</strong> The parent weakness in the CWE hierarchy. Use when the specific failure mechanism (signature verification, MAC verification, etc.) isn&#39;t the point being made; CWE-347 is the narrower fit when the failure is specifically about a cryptographic signature.</p>
+<p><strong>CWE-287: Improper Authentication.</strong> The umbrella authentication-bypass weakness. Map this when the question is &quot;the wrong people got authenticated&quot;; map CWE-347 when the question is &quot;the signature verification step is broken.&quot;</p>
+<p><strong>CWE-532: Insertion of Sensitive Information into Log File.</strong> The secondary weakness — the admin-API log records full <code>Authorization</code> headers including JWTs. MITRE mapping status: <strong>ALLOWED</strong>. The catalog entry&#39;s mitigations include &quot;do not write sensitive data to log files&quot; (yes, really, that direct) and &quot;if logging sensitive data is unavoidable, ensure the log files are themselves restricted-access.&quot;</p>
+<p><strong>CWE-540: Inclusion of Sensitive Information in Source Code.</strong> The literal entry is about source code, but the principle — &quot;credentials should not appear in artifacts whose access control is not credential-grade&quot; — applies to the JWT-payload-as-credential-envelope case here. Use as a secondary citation when discussing the <code>handoff_token</code> claim.</p>
+<h3 id="pci-dss-v401">PCI-DSS v4.0.1<a class="anchor" href="#pci-dss-v401" aria-label="Link to this section">#</a></h3>
+<p>The current revision of the Payment Card Industry Data Security Standard (released June 2024, supersedes v4.0 from March 2022). Vesta Retail is a Level 2 merchant subject to the full SAQ D scope.</p>
+<p><strong>Requirement 6.2.4 — Software engineering techniques to prevent or mitigate common software attacks.</strong> The control covers secure coding practices for bespoke and custom software, including authentication-related weaknesses. Algorithm-confusion attacks fit cleanly under the OWASP-Top-10-aligned attack categories the requirement references. Theo&#39;s middleware fails this requirement directly.</p>
+<p><strong>Requirement 6.4.1 — Public-facing web applications addressed for vulnerabilities.</strong> Public-facing applications must be reviewed for vulnerabilities (annual ASV scans plus methodology-driven reviews). Admin APIs that authenticate using JWTs are in scope when reachable from any network the application reaches. A vulnerability scan that misses a JWT verifier accepting alg:none indicates a methodology gap.</p>
+<p><strong>Requirement 8.3.2 — Strong cryptography during transmission and storage of authentication factors.</strong> An unsigned JWT is not &quot;strong cryptography&quot; in any meaningful sense; it is the absence of cryptography in a wrapper that resembles cryptography. When such tokens are used as authentication factors, the control is failed.</p>
+<p><strong>Requirement 10.3.1 — Read access to audit logs is limited to those with a job-related need.</strong> And <strong>Requirement 10.3.2 — Audit log files are protected to prevent modifications by individuals.</strong> (Both requirements live in v4.0.1&#39;s Section 10.3; v3.2.1 used the older 10.5.x numbering, which still appears in legacy documentation.) The admin-API log file containing recoverable JWTs is the artifact in scope. The fact that JWTs in the log can be replayed for live admin actions makes the access-control failure equivalent to giving the same admin actions away to anyone who can read the file.</p>
+<h3 id="nist-sp-800-53-rev-5">NIST SP 800-53 Rev. 5<a class="anchor" href="#nist-sp-800-53-rev-5" aria-label="Link to this section">#</a></h3>
+<p>NIST Special Publication 800-53 Revision 5 (the federal control catalog; widely cited outside federal scope as the most comprehensive controls reference).</p>
+<p><strong>IA-2 — Identification and Authentication (Organizational Users).</strong> The system must uniquely identify and authenticate users. Accepting alg:none tokens defeats this control because the &quot;identity&quot; claimed by the token is not actually verified.</p>
+<p><strong>SC-8 — Transmission Confidentiality and Integrity.</strong> Covers the integrity of authentication-bearing transmissions. A JWT whose signature is not verified provides neither confidentiality nor integrity for the authentication claim it carries.</p>
+<p><strong>AU-9 — Protection of Audit Information.</strong> The secrets-in-logs half. AU-9 requires that the system protect audit information from unauthorized access, modification, and deletion. The admin-API log with full Authorization headers is the audit artifact in scope.</p>
+<p><strong>AC-3 — Access Enforcement.</strong> The system must enforce approved authorizations for logical access. The verification middleware enforces nothing on a token with alg:none; the access is approved by virtue of the unverified <code>role: admin</code> claim. The control is failed.</p>
+<h3 id="owasp">OWASP<a class="anchor" href="#owasp" aria-label="Link to this section">#</a></h3>
+<p><strong>OWASP Top 10 (2025) — A07: Authentication Failures.</strong> The umbrella category for authentication-related vulnerabilities. The 2025 edition retained the A07 slot from the 2021 edition; the category was renamed (from &quot;Identification and Authentication Failures&quot; in 2021 to simply &quot;Authentication Failures&quot; in 2025) but the substance is the same. JWT-specific failures are named in the category description.</p>
+<p><strong>OWASP Top 10 (2025) — A02: Security Misconfiguration.</strong> Applies to the missing algorithms whitelist as a misuse of an otherwise-correctly-implemented JWT library. The 2025 reshuffle moved Security Misconfiguration up from A05 (in the 2021 list) to A02 (in 2025).</p>
+<p><strong>OWASP API Security Top 10 (2023) — API2: Broken Authentication.</strong> OWASP&#39;s API-specific Top 10 (last updated in 2023) covers JWT misuse explicitly. The category description names alg:none confusion, weak HMAC secrets, and missing token-revocation infrastructure as the most common manifestations.</p>
+<p><strong>OWASP JWT Cheat Sheet.</strong> A focused defender-side reference, currently published as the Java-flavored <em>JSON Web Token for Java Cheat Sheet</em> (<a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html</a>). Equivalent Node.js / Python versions have been requested in OWASP&#39;s cheat-sheet backlog (issue #1176) but haven&#39;t been written. Contains the explicit guidance: &quot;Always specify the algorithm to use to verify the signature.&quot; The language-agnostic complement is OWASP&#39;s WSTG chapter on testing JSON Web Tokens (<a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/10-Testing_JSON_Web_Tokens" target="_blank" rel="noopener noreferrer">https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/10-Testing_JSON_Web_Tokens</a>).</p>
+<h3 id="rfcs">RFCs<a class="anchor" href="#rfcs" aria-label="Link to this section">#</a></h3>
+<p><strong>RFC 7519 — JSON Web Token (JWT).</strong> The foundational specification. Section 4.1.1 covers the <code>alg</code> header parameter; Section 6 defines the &quot;Unsecured JWT&quot; form (<code>alg: none</code>); Section 7.2 (Validating a JWT) is where the normative guidance lives: <em>&quot;unless the algorithms used in the JWT are acceptable to the application, it SHOULD reject the JWT.&quot;</em> (The stronger MUST-language for rejection lives in RFC 8725 §3.1; RFC 7519 itself only mandates SHOULD.) Theo&#39;s middleware violates this guidance.</p>
+<p><strong>RFC 7515 — JSON Web Signature (JWS).</strong> The signature-format specification underlying JWT. Section 5.2 covers signature verification; step 8 requires that the JWS Signature be validated &quot;in the manner defined for the algorithm being used, which MUST be accurately represented by the value of the &#39;alg&#39; (algorithm) Header Parameter, which MUST be present.&quot; Section 4.1.1 (the <code>alg</code> header parameter) adds that the algorithm value MUST be one the implementation supports.</p>
+<p><strong>RFC 8725 — JSON Web Token Best Current Practices.</strong> The BCP document specifically dedicated to JWT security, published in February 2020. Section 3.1 (<em>Perform Algorithm Verification</em>) is the most directly applicable: <em>&quot;Libraries MUST enable the caller to specify a supported set of algorithms and MUST NOT use any other algorithms when performing cryptographic operations.&quot;</em> Theo&#39;s caller doesn&#39;t specify; the library doesn&#39;t enforce; the token&#39;s claimed algorithm is honored. RFC 8725 also covers key-injection attacks (Section 3.2), key-identifier (<code>kid</code>) attacks (Section 3.5), and signing-secret management (elsewhere in Section 3).</p>
+<h2 id="certifications">§6 — Cert exam relevance<a class="anchor" href="#certifications" aria-label="Link to this section">#</a></h2>
+<p>The certification industry has been teaching JWT misuse since shortly after the McLean disclosure landed in 2015. If you study any of the certs below, you&#39;ve seen — or will see — alg:none and its cousins.</p>
+<p><strong>CompTIA Security+ (SY0-701).</strong> The current exam (released November 2023). Domain 1 (<em>General Security Concepts</em>) covers cryptographic primitives and their failure modes; JWT-specific examples appear in the secure-coding sub-domain of Domain 2 (<em>Threats, Vulnerabilities, and Mitigations</em>). Expect 1-2 questions touching the algorithm-confusion concept across a full exam attempt.</p>
+<p><strong>CompTIA CySA+ (CS0-003).</strong> The current exam (released June 2023). Domain 2 (<em>Threat Intelligence and Threat Hunting</em>) covers algorithm-confusion attacks in the catalog of techniques. Domain 1 (<em>Security Operations</em>) covers the defender-side detection patterns — SIEM rules for tokens with empty signatures, anomalous <code>alg</code> values, etc.</p>
+<p><strong>CompTIA PenTest+ (PT0-003).</strong> The current exam (released December 2024, replacing PT0-002 which sunset in mid-2025). Domain 3 (<em>Vulnerability Discovery and Analysis</em>) names JWT misconfigurations as a directly-tested vulnerability class. Candidates should be able to identify alg:none and weak-secret cases in a hands-on simulation.</p>
+<p><strong>(ISC)² CISSP.</strong> Domain 3 (<em>Security Architecture and Engineering</em>) covers digital signatures and the verifier&#39;s responsibility to enforce algorithm constraints. The CBK material references RFC 7519 and RFC 8725 as primary references. Domain 4 (<em>Communication and Network Security</em>) touches transport-layer authentication, including bearer-token patterns.</p>
+<p><strong>(ISC)² CSSLP (Certified Secure Software Lifecycle Professional).</strong> The secure-coding cert. The CBK chapters on authentication explicitly cover JWT verification anti-patterns, including alg:none and the missing-whitelist mistake.</p>
+<p><strong>Offensive Security OSWA / OSWE.</strong> OffSec&#39;s web-focused certs. The Web Assessor (OSWA) exam covers JWT attacks in its information-gathering and exploitation modules; the Web Expert (OSWE) exam tests candidates&#39; ability to discover and exploit JWT vulnerabilities in real applications during the 48-hour practical. The PEN-200 (OSCP) curriculum touches JWT briefly but the deep-dive lives in the web-focused certs.</p>
+<p><strong>SANS GIAC GWAPT.</strong> <em>GIAC Web Application Penetration Tester</em> — the SANS web-pentesting cert. The course (SEC542) covers JWT-class vulnerabilities in depth, including the algorithm-confusion family, weak-secret cracking, and the key-injection variants.</p>
+<h2 id="defender">§7 — What a defender does<a class="anchor" href="#defender" aria-label="Link to this section">#</a></h2>
+<p>The bulleted version is in the in-game <code>lessons-learned.md</code>. This section expands each bullet with the specific operational details that get a defender from &quot;I read about this&quot; to &quot;I have shipped the change to production.&quot;</p>
+<h3 id="1-whitelist-algorithms-in-every-jwtverify-call">1. Whitelist algorithms in every JWT.verify() call<a class="anchor" href="#1-whitelist-algorithms-in-every-jwtverify-call" aria-label="Link to this section">#</a></h3>
+<p>The fix is one extra argument on every <code>verify</code> call. The harder work is finding every call.</p>
+<p><strong>Node.js (<code>jsonwebtoken</code>).</strong> The two-argument form is the vulnerability:</p>
+<pre><code class="language-javascript">// VULNERABLE — the token&#39;s alg header decides verification behavior
+const claims = jwt.verify(token, SIGNING_SECRET);
+
+// FIXED — only HS256-signed tokens are accepted
+const claims = jwt.verify(token, SIGNING_SECRET, {
+  algorithms: [&#39;HS256&#39;]
+});
+</code></pre>
+<p><strong>Node.js (<code>jose</code>).</strong> The <code>jose</code> library (a more modern alternative) makes this safer by binding the key to its algorithm:</p>
+<pre><code class="language-javascript">import { jwtVerify, importJWK } from &#39;jose&#39;;
+
+const key = await importJWK({ ... }, &#39;HS256&#39;);
+const { payload } = await jwtVerify(token, key, {
+  // jose still requires you to pass algorithms or it throws
+  algorithms: [&#39;HS256&#39;]
+});
+</code></pre>
+<p><strong>Python (<code>PyJWT</code>).</strong> Same pattern — the <code>algorithms</code> keyword is required when verifying:</p>
+<pre><code class="language-python">import jwt
+
+# PyJWT 2.x raises InvalidAlgorithmError if you omit algorithms
+claims = jwt.decode(token, SIGNING_SECRET, algorithms=[&#39;HS256&#39;])
+</code></pre>
+<p>PyJWT was one of the libraries where, in older versions, omitting <code>algorithms</code> silently accepted any algorithm. Current versions require the parameter — but only since 2.x. If your application pins to PyJWT 1.x, this is a separate finding.</p>
+<p><strong>Go (<code>golang-jwt/jwt</code>).</strong> The Go library requires an explicit keyfunc that can inspect the alg:</p>
+<pre><code class="language-go">token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+  // Verify the alg is what we expect
+  if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+    return nil, fmt.Errorf(&quot;unexpected signing method: %v&quot;, token.Header[&quot;alg&quot;])
+  }
+  return signingSecret, nil
+})
+</code></pre>
+<p><strong>Audit the codebase.</strong> A regex like <code>jwt\.verify\([^,]+,[^,]+\)</code> (Node.js) or <code>jwt\.decode\([^,]+,[^,]+\)</code> without <code>algorithms=</code> (Python) catches the two-argument form. Every hit is a finding. Static-analysis tools like Semgrep and CodeQL have community-maintained rule packs for the JWT-misconfiguration patterns; the Semgrep registry at <a href="https://semgrep.dev/r/" target="_blank" rel="noopener noreferrer">https://semgrep.dev/r/</a> has searchable rules for <code>javascript.jsonwebtoken</code>, <code>python.pyjwt</code>, and others.</p>
+<h3 id="2-reject-algnone-unconditionally">2. Reject alg:none unconditionally<a class="anchor" href="#2-reject-algnone-unconditionally" aria-label="Link to this section">#</a></h3>
+<p>Even if you intend to accept multiple signing algorithms (HS256 for some clients, RS256 for others), <code>none</code> should never be on the whitelist. Document this in your platform&#39;s authentication standard. Modern libraries (jsonwebtoken v9+, PyJWT 2+, jose) reject alg:none by default — but the explicit whitelist remains the defense-in-depth requirement.</p>
+<h3 id="3-rotate-the-jwt-signing-secret">3. Rotate the JWT signing secret<a class="anchor" href="#3-rotate-the-jwt-signing-secret" aria-label="Link to this section">#</a></h3>
+<p>The signing secret may or may not have leaked. The threat model now includes &quot;any past admin token may have been forged with no signature at all&quot; — meaning every action attributed to the admin API during the vulnerable window is potentially attacker-driven, not just the ones from suspicious source IPs.</p>
+<p>The rotation playbook:</p>
+<ol>
+<li>Generate a new 256-bit cryptographically random secret. <code>openssl rand -base64 32</code> is fine for the value; for production use a managed secret store to hold it (AWS Secrets Manager, HashiCorp Vault, Azure Key Vault, Google Secret Manager).</li>
+<li>Update the verifier to accept tokens signed with either the old or new secret during a transition window. (Most JWT libraries support a key-rotation pattern by passing both keys to the verifier.)</li>
+<li>Update the issuer to sign new tokens with the new secret.</li>
+<li>Wait for outstanding old-secret tokens to expire (or, better, force-expire them by short-circuiting all sessions and requiring re-login).</li>
+<li>Remove the old secret from the verifier.</li>
+</ol>
+<p>For Vesta specifically, the rotation should be coordinated with the Friday change window already scheduled for the level-0 API-key rotation. The two findings have related blast radius; rotate together.</p>
+<h3 id="4-stop-logging-authorization-headers">4. Stop logging Authorization headers<a class="anchor" href="#4-stop-logging-authorization-headers" aria-label="Link to this section">#</a></h3>
+<p>The redaction is mechanical:</p>
+<p><strong>nginx access log:</strong></p>
+<pre><code>log_format main_redacted &#39;$remote_addr - $remote_user [$time_local] &#39;
+                        &#39;&quot;$request&quot; $status $body_bytes_sent &#39;
+                        &#39;&quot;$http_referer&quot; &quot;$http_user_agent&quot; &#39;
+                        &#39;&quot;&lt;REDACTED&gt;&quot;&#39;;   # don&#39;t log Authorization
+access_log /var/log/nginx/access.log main_redacted;
+</code></pre>
+<p><strong>Application-level (Node.js example with <code>morgan</code>):</strong></p>
+<pre><code class="language-javascript">morgan.token(&#39;redactedAuth&#39;, (req) =&gt; {
+  return req.headers.authorization ? &#39;&lt;REDACTED&gt;&#39; : &#39;-&#39;;
+});
+app.use(morgan(&#39;:method :url :status :res[content-length] :redactedAuth&#39;));
+</code></pre>
+<p><strong>Log-pipeline scrubbing (Splunk example using <code>transforms.conf</code>):</strong></p>
+<pre><code>[redact_authorization]
+REGEX = (Authorization:\s*Bearer\s+)[A-Za-z0-9-_\.]+
+FORMAT = $1&lt;REDACTED&gt;
+DEST_KEY = _raw
+</code></pre>
+<p>Equivalent transforms exist for Sentinel (ASim parser custom redaction), Elastic (ingest pipeline <code>script</code> processor), Datadog (log processor with <code>replace</code> action). The pipeline-side scrubbing is a defense-in-depth backstop for the cases where application code logs something it shouldn&#39;t.</p>
+<h3 id="5-add-siem-detections-for-jwt-specific-anomalies">5. Add SIEM detections for JWT-specific anomalies<a class="anchor" href="#5-add-siem-detections-for-jwt-specific-anomalies" aria-label="Link to this section">#</a></h3>
+<p>The detections worth running:</p>
+<ul>
+<li><strong>Authorization headers carrying tokens with <code>alg: none</code> in the header segment.</strong> Decoding the header segment of any captured JWT to JSON and matching against <code>&quot;alg&quot;:&quot;none&quot;</code> is a single SIEM correlation rule.</li>
+<li><strong>Tokens with empty signature segments.</strong> A bearer token with a trailing dot and no content after it is, by inspection, an unsigned token.</li>
+<li><strong>Tokens where the application accepted authentication after the verification middleware logged a signature-verification failure.</strong> This catches the case where verification fails but the application bug doesn&#39;t propagate the failure — a more subtle variant.</li>
+<li><strong>Anomalous <code>alg</code> values in token headers</strong> — any algorithm not on your accepted-algorithm list shouldn&#39;t be appearing in production traffic. Alerts here often catch misconfigured clients before they catch attackers.</li>
+</ul>
+<p>The Sigma project publishes community-maintained SIEM detection rules — clone <a href="https://github.com/SigmaHQ/sigma" target="_blank" rel="noopener noreferrer">https://github.com/SigmaHQ/sigma</a> and grep the <code>rules/</code> tree for <code>jwt</code> or <code>alg</code> to find the current published versions. JWT_Tool&#39;s documentation also includes Sigma-compatible rule examples for each of its attack modes.</p>
+<h3 id="6-upgrade-the-jwt-library">6. Upgrade the JWT library<a class="anchor" href="#6-upgrade-the-jwt-library" aria-label="Link to this section">#</a></h3>
+<p>Current <code>jsonwebtoken</code> (v9.x+) rejects alg:none by default even without explicit whitelisting. The library introduced this change in v9.0.0 after a sequence of CVEs in v8.x:</p>
+<ul>
+<li><strong>CVE-2022-23539</strong> — Insecure key-type handling in <code>jwt.verify()</code> (the <code>secretOrPublicKey</code> confusion variant).</li>
+<li><strong>CVE-2022-23540</strong> — Default algorithm handling permitted alg:none acceptance under specific configurations.</li>
+</ul>
+<p>Both were addressed in v9.0.0. (A third CVE, CVE-2022-23529, was initially assigned in the same advisory but was subsequently REJECTED by Mitre in January 2023 — don&#39;t carry it forward as a citation.) If Vesta&#39;s <code>package-lock.json</code> pins to v8.x or earlier, that&#39;s a separate finding requiring an upgrade plus regression testing. Equivalent legacy-version findings exist for PyJWT (pre-2.0), <code>node-jose</code> (CVE-2018-0114), and various other libraries.</p>
+<h3 id="7-authentication-platform-retrofit">7. Authentication-platform retrofit<a class="anchor" href="#7-authentication-platform-retrofit" aria-label="Link to this section">#</a></h3>
+<p>If admin auth is materially important — and for systems that can rotate production credentials, it always is — JWT-as-DIY might not be the right primitive at all. The managed alternatives handle algorithm enforcement, key rotation, session revocation, token-revocation lists, audit logging, and the operational discipline around all of the above:</p>
+<ul>
+<li><strong>Auth0</strong> (Okta-owned): JWT-native, programmable, enterprise-grade.</li>
+<li><strong>Okta Workforce Identity / Customer Identity</strong>: the parent platform.</li>
+<li><strong>Microsoft Entra ID</strong> (formerly Azure AD): the Microsoft-stack default.</li>
+<li><strong>AWS Cognito</strong>: AWS-native, integrates with IAM.</li>
+<li><strong>Stytch</strong>: developer-friendly modern auth-as-a-service.</li>
+<li><strong>WorkOS</strong>: targeted at enterprise B2B identity flows.</li>
+</ul>
+<p>The retrofit is non-trivial but reduces the surface dramatically. For a system that already has a JWT-based auth model, the migration path is usually &quot;swap the verifier middleware for the IdP&#39;s SDK&quot; — one library swap, one redeploy, plus key-rotation coordination.</p>
+<h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
+<p>The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — <code>progress --detail</code> from any prompt lists what you&#39;ve unlocked.</p>
+<h3 id="most-downloaded-npm-package-should-be-safe">&quot;Most-downloaded npm package, should be safe&quot;<a class="anchor" href="#most-downloaded-npm-package-should-be-safe" aria-label="Link to this section">#</a></h3>
+<p><strong>Trigger:</strong> <code>cat priya-note.md</code> (you ran this as step 1 of the solve, so the bonus fires there)</p>
+<p><strong>What it teaches:</strong> Priya&#39;s day-two note quotes Theo&#39;s library-choice rationale verbatim: he picked the most-downloaded JWT package because <em>&quot;everyone uses it, should be safe.&quot;</em> That&#39;s a real-world rationale that engineers use all the time, and it conflates two genuinely separate properties:</p>
+<ul>
+<li><strong>Library popularity is a useful signal for maintenance, security-review attention, and supply-chain risk.</strong> A library with one million weekly downloads has more eyes on it than one with a thousand. CVEs in popular libraries get filed faster, patched faster, and disclosed publicly faster. There&#39;s a real reason to prefer popular libraries on those grounds.</li>
+<li><strong>Library popularity is <em>not</em> a signal that you&#39;ve configured the library correctly.</strong> Theo&#39;s bug isn&#39;t in <code>jsonwebtoken</code>; it&#39;s in his two-argument call to <code>jwt.verify()</code> that omits the algorithms whitelist. The library&#39;s default for the omitted whitelist accepts <code>alg:none</code> for backwards compatibility with old code. Theo would have hit the same bug with any of the popular JWT libraries in 2026 — the configuration-default surface is broadly similar across the ecosystem.</li>
+</ul>
+<p>The pattern in real consulting work: <em>the library is rarely the bug; the integration is</em>. The CWE-1188 (&quot;Insecure Default Initialization of Resource&quot;) and CWE-1188-adjacent insecure-default findings drive a substantial fraction of real-world JWT bypasses, OAuth misconfigurations, S3 bucket leaks, and TLS-context misconfigurations. The fix is rarely &quot;switch libraries&quot;; the fix is usually &quot;audit the integration.&quot;</p>
+<p>For JWT specifically, <strong>always pass the <code>algorithms</code> parameter on every <code>verify()</code> call.</strong> Modern versions of <code>jsonwebtoken</code> (9.x+) have made this stricter, but Theo&#39;s pinned dependency may not be on 9.x, and even on 9.x the configuration discipline is what saves you, not the version. Pin behavior, not version.</p>
+<h2 id="takeaways">§8 — Key takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><p><strong>The original sin of JWT verification is letting unauthenticated input pick the algorithm.</strong> A token&#39;s <code>alg</code> header is data. The verifier must specify the algorithms it accepts; anything else is the alg:none / key-confusion class waiting to happen. RFC 8725 Section 3.1 spells this out explicitly: implementations MUST either pin the expected algorithm or use a whitelist.</p>
+</li>
+<li><p><strong>JWT payloads are not confidential.</strong> They&#39;re base64url, not encrypted. JWS (the signed variant most production systems use) provides integrity but not confidentiality. Anything you put in a JWT payload — including a credential someone &quot;stashed&quot; in a claim — is readable by anyone who holds the token. For confidentiality you need JWE, which is a different envelope.</p>
+</li>
+<li><p><strong>Modern libraries reject alg:none by default — but that&#39;s not enough.</strong> The explicit whitelist remains the defense-in-depth requirement, and the moment your code pins to an older library version, accepts an attacker-controlled algorithms list, or trusts a <code>jku</code> URL it didn&#39;t validate, the attack is back.</p>
+</li>
+<li><p><strong>Audit logs that capture Authorization headers are credential dumps in disguise.</strong> Anyone with read access to the log can replay any token in it. Redact at the proxy, redact at the application, redact at the log pipeline — defense in depth, because the application code that should never have logged the credential will, eventually, do exactly that.</p>
+</li>
+<li><p><strong>For PCI-DSS-scoped admin APIs, JWT-as-DIY is risk you don&#39;t have to take.</strong> Managed identity platforms — Auth0, Okta, Entra, Cognito, Stytch — handle algorithm enforcement, key rotation, session revocation, and audit logging at a level of operational discipline that&#39;s hard to reproduce in-house. The retrofit cost is finite; the long-tail vulnerability surface of self-managed JWT verification is not.</p>
+</li>
+<li><p><strong>Theo&#39;s pattern is not unique to Theo.</strong> Junior engineers writing their first auth middleware reach for the most-downloaded library, copy the two-argument verify example from the README, and ship. The disciplined platform answer is a code-review checklist line (&quot;does this verify call specify algorithms?&quot;) plus a Semgrep rule in CI (&quot;any two-argument jwt.verify is a build failure&quot;). Both are cheap; neither requires the junior engineer to understand the depth of what they got wrong, only to follow the guardrail until they do.</p>
+</li>
+<li><p><strong>The same lesson scales across &quot;junior engineer crypto mistakes.&quot;</strong> Level 0 was &quot;I base64-encoded the secret, so it&#39;s protected.&quot; Level 1 is &quot;I JWT-encoded the auth, so it&#39;s authenticated.&quot; Level 2 of this track (whenever it ships) will pull on a third thread of the same yarn ball. The shared diagnosis: there is a real cryptographic primitive that does what the engineer thought they were doing, and the engineer used something else.</p>
+</li>
+</ul>
+<h2 id="further-reading">§9 — Further reading<a class="anchor" href="#further-reading" aria-label="Link to this section">#</a></h2>
+<p><em>Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you&#39;re reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.</em></p>
+<h3 id="standards-documents">Standards documents<a class="anchor" href="#standards-documents" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>RFC 7519 — JSON Web Token (JWT)</strong>: <a href="https://datatracker.ietf.org/doc/html/rfc7519" target="_blank" rel="noopener noreferrer">https://datatracker.ietf.org/doc/html/rfc7519</a>. The foundational JWT specification. Section 4 covers claims; Section 6 covers unsecured JWTs (alg:none); Section 7 covers creating and validating tokens.</li>
+<li><strong>RFC 7515 — JSON Web Signature (JWS)</strong>: <a href="https://datatracker.ietf.org/doc/html/rfc7515" target="_blank" rel="noopener noreferrer">https://datatracker.ietf.org/doc/html/rfc7515</a>. The signature-format spec underlying JWT. Section 5 covers signing and verification procedures.</li>
+<li><strong>RFC 7516 — JSON Web Encryption (JWE)</strong>: <a href="https://datatracker.ietf.org/doc/html/rfc7516" target="_blank" rel="noopener noreferrer">https://datatracker.ietf.org/doc/html/rfc7516</a>. The encryption variant. Use JWE (not JWS) when you need the payload to be confidential.</li>
+<li><strong>RFC 8725 — JSON Web Token Best Current Practices</strong>: <a href="https://datatracker.ietf.org/doc/html/rfc8725" target="_blank" rel="noopener noreferrer">https://datatracker.ietf.org/doc/html/rfc8725</a>. The BCP document specifically for JWT security. Section 3 is the operational meat — read 3.1 through 3.12 in order.</li>
+<li><strong>OAuth 2.0 Security Best Current Practice (RFC 9700)</strong>: <a href="https://datatracker.ietf.org/doc/html/rfc9700" target="_blank" rel="noopener noreferrer">https://datatracker.ietf.org/doc/html/rfc9700</a>. The 2025 BCP for OAuth 2.0 (replaces the older draft-ietf-oauth-security-topics). Relevant because JWT is the dominant OAuth 2.0 access-token format.</li>
+<li><strong>NIST SP 800-63B Rev. 4 — Digital Identity Guidelines: Authentication and Authenticator Management</strong>: <a href="https://csrc.nist.gov/pubs/sp/800/63/b/4/final" target="_blank" rel="noopener noreferrer">https://csrc.nist.gov/pubs/sp/800/63/b/4/final</a>. Published July 2025; supersedes the 2017 edition. Covers token lifecycle, authenticator selection, AAL tiering.</li>
+</ul>
+<h3 id="cwe-mitre-attck">CWE / MITRE ATT&amp;CK<a class="anchor" href="#cwe-mitre-attck" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>CWE-347: Improper Verification of Cryptographic Signature</strong>: <a href="https://cwe.mitre.org/data/definitions/347.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/347.html</a>. The primary weakness for JWT alg:none and signature-skipping patterns.</li>
+<li><strong>CWE-345: Insufficient Verification of Data Authenticity</strong>: <a href="https://cwe.mitre.org/data/definitions/345.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/345.html</a>. The parent weakness.</li>
+<li><strong>CWE-287: Improper Authentication</strong>: <a href="https://cwe.mitre.org/data/definitions/287.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/287.html</a>. The umbrella authentication-bypass weakness.</li>
+<li><strong>CWE-532: Insertion of Sensitive Information into Log File</strong>: <a href="https://cwe.mitre.org/data/definitions/532.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/532.html</a>. The secrets-in-logs finding.</li>
+<li><strong>CWE-540: Inclusion of Sensitive Information in Source Code</strong>: <a href="https://cwe.mitre.org/data/definitions/540.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/540.html</a>. Useful framing for the JWT-payload-as-credential-envelope sub-pattern.</li>
+<li><strong>MITRE ATT&amp;CK T1550.001 — Use Alternate Authentication Material: Application Access Token</strong>: <a href="https://attack.mitre.org/techniques/T1550/001/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1550/001/</a>.</li>
+<li><strong>MITRE ATT&amp;CK T1078 — Valid Accounts</strong>: <a href="https://attack.mitre.org/techniques/T1078/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1078/</a>.</li>
+<li><strong>MITRE ATT&amp;CK T1212 — Exploitation for Credential Access</strong>: <a href="https://attack.mitre.org/techniques/T1212/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1212/</a>.</li>
+</ul>
+<h3 id="original-disclosures-and-reference-posts">Original disclosures and reference posts<a class="anchor" href="#original-disclosures-and-reference-posts" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Tim McLean, &quot;Critical vulnerabilities in JSON Web Token libraries&quot;</strong> (Auth0 blog guest post, March 2015): <a href="https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/" target="_blank" rel="noopener noreferrer">https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/</a>. The original alg:none and RS→HS disclosure; a decade later still the canonical reference for the algorithm-confusion family. McLean was an independent researcher at the time.</li>
+<li><strong>CVE-2015-2951</strong> (Mitre): <a href="https://www.cve.org/CVERecord?id=CVE-2015-2951" target="_blank" rel="noopener noreferrer">https://www.cve.org/CVERecord?id=CVE-2015-2951</a>. The php-jwt alg:none variant from McLean&#39;s disclosure — <code>jwt_tool</code> and most tooling cite this CVE for alg:none.</li>
+<li><strong>CVE-2015-9235</strong> (Mitre): <a href="https://www.cve.org/CVERecord?id=CVE-2015-9235" target="_blank" rel="noopener noreferrer">https://www.cve.org/CVERecord?id=CVE-2015-9235</a>. The node-jsonwebtoken RS→HS key-confusion variant from the same disclosure.</li>
+<li><strong>CVE-2018-0114</strong> (Mitre): <a href="https://www.cve.org/CVERecord?id=CVE-2018-0114" target="_blank" rel="noopener noreferrer">https://www.cve.org/CVERecord?id=CVE-2018-0114</a>. The node-jose embedded-<code>jwk</code> key-injection disclosure (Cisco).</li>
+</ul>
+<h3 id="compliance-frameworks">Compliance frameworks<a class="anchor" href="#compliance-frameworks" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>PCI-DSS v4.0.1 full text</strong> (PCI Security Standards Council): <a href="https://www.pcisecuritystandards.org/document_library/" target="_blank" rel="noopener noreferrer">https://www.pcisecuritystandards.org/document_library/</a>. Free registration required. The Requirement 6 and 8 sections cover authentication and secure coding directly.</li>
+<li><strong>NIST SP 800-53 Rev. 5</strong>: <a href="https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final" target="_blank" rel="noopener noreferrer">https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final</a>. The IA, SC, AC, and AU control families cover the controls cited above.</li>
+<li><strong>OWASP Top 10 (2025)</strong>: <a href="https://owasp.org/Top10/" target="_blank" rel="noopener noreferrer">https://owasp.org/Top10/</a>. The current edition.</li>
+<li><strong>OWASP API Security Top 10 (2023)</strong>: <a href="https://owasp.org/API-Security/editions/2023/en/0x00-header/" target="_blank" rel="noopener noreferrer">https://owasp.org/API-Security/editions/2023/en/0x00-header/</a>. The API-focused companion. Last updated in 2023; the 2025 cycle is in draft.</li>
+<li><strong>OWASP JWT Cheat Sheet</strong> (Java edition; equivalent versions for other languages): <a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html</a>.</li>
+</ul>
+<h3 id="tools">Tools<a class="anchor" href="#tools" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong><code>jwt_tool</code></strong> (ticarpi): <a href="https://github.com/ticarpi/jwt_tool" target="_blank" rel="noopener noreferrer">https://github.com/ticarpi/jwt_tool</a>. The defacto JWT-attack toolkit. Supports alg:none confusion, RS→HS key confusion, jku/x5u injection, HMAC-secret brute-force, kid injection, and several other patterns.</li>
+<li><strong><code>hashcat</code></strong> mode 16500 (JWT HS256): <a href="https://hashcat.net/wiki/doku.php?id=example_hashes" target="_blank" rel="noopener noreferrer">https://hashcat.net/wiki/doku.php?id=example_hashes</a>. Brute-force JWT HMAC secrets on GPU.</li>
+<li><strong>jwt.io</strong> (Auth0): <a href="https://jwt.io" target="_blank" rel="noopener noreferrer">https://jwt.io</a>. Browser-based JWT decoder. Useful for ad-hoc inspection; do NOT paste tokens from production systems into the public site (the site does not transmit the token off-machine in modern versions, but the discipline is &quot;decode locally&quot;).</li>
+<li><strong>Semgrep registry — JWT rules</strong>: <a href="https://semgrep.dev/r/?q=jwt" target="_blank" rel="noopener noreferrer">https://semgrep.dev/r/?q=jwt</a>. Community-maintained static-analysis rules for the JWT misconfiguration patterns.</li>
+<li><strong>Sigma rules — JWT detections</strong>: <a href="https://github.com/SigmaHQ/sigma" target="_blank" rel="noopener noreferrer">https://github.com/SigmaHQ/sigma</a>. Search the repo for <code>jwt</code> or <code>alg</code>.</li>
+</ul>
+<h3 id="background-depth">Background / depth<a class="anchor" href="#background-depth" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Auth0 — &quot;JWT Handbook&quot;</strong> (free e-book): historically published as a free download; check Auth0&#39;s resources page for the current location. ~100 pages of JWT operational depth.</li>
+</ul>
+<nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/crypto/level0.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level0@crypto</span><span class="pager-title">Theo's Safer API Key</span></a><a class="pager-cell pager-next" href="/walkthroughs/crypto/level2.html"><span class="pager-dir">&rarr; Next</span><span class="pager-label">level2@crypto</span><span class="pager-title">Theo's Quick Hash</span></a></nav>    </main>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-confirm-the-credential-and-what-it-bought-you">Step 1: Confirm the credential and what it bought you</a></li><li><a href="#step-2-read-the-day-two-context">Step 2: Read the day-two context</a></li><li><a href="#step-3-read-theos-verify-middleware">Step 3: Read Theo's verify middleware</a></li><li><a href="#step-4-read-the-access-log">Step 4: Read the access log</a></li><li><a href="#step-5-decode-the-token">Step 5: Decode the token</a></li><li><a href="#step-6-document-and-stop">Step 6: Document and stop</a></li><li><a href="#step-7-game-world-only-use-the-breadcrumb">Step 7 (game-world only): Use the breadcrumb</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a><ul class="toc-sub"><li><a href="#failure-1-the-verifier-accepts-alg-none-cwe-347">Failure 1: The verifier accepts alg: none (CWE-347)</a></li><li><a href="#failure-2-the-token-payload-contains-a-live-credential-the-jwt-as-confidential-envelope-mistake">Failure 2: The token payload contains a live credential (the JWT-as-confidential-envelope mistake)</a></li><li><a href="#failure-3-the-admin-api-log-captures-authorization-headers-cwe-532">Failure 3: The admin-API log captures Authorization headers (CWE-532)</a></li><li><a href="#the-compound-effect">The compound effect</a></li></ul></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a><ul class="toc-sub"><li><a href="#thread-1-the-mclean-auth0-disclosure-2015">Thread 1: The McLean Auth0 disclosure (2015)</a></li><li><a href="#thread-2-key-injection-attacks-cve-2018-0114-and-the-jkux5u-family">Thread 2: Key-injection attacks — CVE-2018-0114 and the jku/x5u family</a></li><li><a href="#thread-3-weak-hmac-secrets-and-the-published-cracking-tools">Thread 3: Weak HMAC secrets — and the published cracking tools</a></li><li><a href="#thread-4-notable-named-incidents-recent">Thread 4: Notable named incidents (recent)</a></li></ul></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a><ul class="toc-sub"><li><a href="#cwe-common-weakness-enumeration">CWE — Common Weakness Enumeration</a></li><li><a href="#pci-dss-v401">PCI-DSS v4.0.1</a></li><li><a href="#nist-sp-800-53-rev-5">NIST SP 800-53 Rev. 5</a></li><li><a href="#owasp">OWASP</a></li><li><a href="#rfcs">RFCs</a></li></ul></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a><ul class="toc-sub"><li><a href="#1-whitelist-algorithms-in-every-jwtverify-call">1. Whitelist algorithms in every JWT.verify() call</a></li><li><a href="#2-reject-algnone-unconditionally">2. Reject alg:none unconditionally</a></li><li><a href="#3-rotate-the-jwt-signing-secret">3. Rotate the JWT signing secret</a></li><li><a href="#4-stop-logging-authorization-headers">4. Stop logging Authorization headers</a></li><li><a href="#5-add-siem-detections-for-jwt-specific-anomalies">5. Add SIEM detections for JWT-specific anomalies</a></li><li><a href="#6-upgrade-the-jwt-library">6. Upgrade the JWT library</a></li><li><a href="#7-authentication-platform-retrofit">7. Authentication-platform retrofit</a></li></ul></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a><ul class="toc-sub"><li><a href="#most-downloaded-npm-package-should-be-safe">Most-downloaded npm package, should be safe</a></li></ul></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a><ul class="toc-sub"><li><a href="#standards-documents">Standards documents</a></li><li><a href="#cwe-mitre-attck">CWE / MITRE ATTCK</a></li><li><a href="#original-disclosures-and-reference-posts">Original disclosures and reference posts</a></li><li><a href="#compliance-frameworks">Compliance frameworks</a></li><li><a href="#tools">Tools</a></li><li><a href="#background-depth">Background / depth</a></li></ul></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+  </div>
+
+  <footer id="site-footer">
+    <p class="footer-disclaimer">
+      For educational use. Don't run these techniques against systems
+      you don't own or aren't authorized to test.
+    </p>
+    <p class="footer-links">
+      <a href="/" class="footer-link">&larr; Back to d3cyph3r.com</a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://github.com/rlwilliamson-dev/d3cyph3r" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="View source on GitHub">
+        <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.62 7.62 0 0 0-2-.27c-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
+        </svg>
+        <span>Source on GitHub</span>
+      </a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://azure.microsoft.com/" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="Hosted on Microsoft Azure">
+        <svg width="13" height="13" viewBox="0 0 18 18" aria-hidden="true">
+          <path d="M10.61 2L4.05 14.4l5.6.04 1.5-2.92 4.9 2.88L10.61 2z" fill="#0078D4"/>
+        </svg>
+        <span>Hosted on Microsoft Azure</span>
+      </a>
+    </p>
+  </footer>
+
+  <script type="module" src="/walkthroughs/reader.js"></script>
+</body>
+</html>

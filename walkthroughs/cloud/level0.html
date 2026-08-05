@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>level0@cloud — Coverline's Twelfth Bucket — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="Mid-SOC-2-audit gap-fill at an insurtech carrier. A six-bucket worksheet walks cleanly until one — claims-uploads-prod — lists publicly with PII + a hardcoded RDS password.">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/cloud/level0.html">
+  <meta property="og:title" content="level0@cloud — Coverline's Twelfth Bucket — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="Mid-SOC-2-audit gap-fill at an insurtech carrier. A six-bucket worksheet walks cleanly until one — claims-uploads-prod — lists publicly with PII + a hardcoded RDS password.">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/cloud/level0.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="D3CYPH3R">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.0">
+</head>
+<body class="page-doc">
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header id="site-header">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" aria-label="Back to d3cyph3r.com">
+        <span class="brand-mark"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span>
+      </a>
+      <a href="/walkthroughs/" class="brand-sub-link">
+        <span class="brand-sub">walkthroughs</span>
+      </a>
+    </div>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><a href="/walkthroughs/cloud/">cloud</a><span class="sep" aria-hidden="true">/</span><span class="current">level0</span></nav>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
+      <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
+      </svg>
+      <svg class="theme-icon theme-icon-sun" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="layout">
+    <main id="main" class="doc">
+<h1 id="level0cloud-coverlines-twelfth-bucket">level0@cloud — Coverline&#39;s Twelfth Bucket<a class="anchor" href="#level0cloud-coverlines-twelfth-bucket" aria-label="Link to this section">#</a></h1>
+<p class="doc-meta"><span class="doc-meta-item">50 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">9,963 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Cloud track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Cloud · <strong>Client:</strong> Coverline Insurance · <strong>Compliance regime:</strong> SOC 2 Type II + NAIC Insurance Data Security Model Law + NYDFS 23 NYCRR 500 + GLBA Safeguards Rule</p>
+<blockquote class="spoiler-warning">
+<p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for <code>level1@cloud</code>. If you haven&#39;t solved <code>level0@cloud</code> yet, close this tab and come back after — the puzzle is much more satisfying without spoilers, and the post-mortem below makes far more sense once you&#39;ve felt the moment yourself.</p>
+</blockquote>
+<hr>
+<h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<p>Coverline Insurance is one of Driftwood&#39;s insurtech clients — a mid-sized property and casualty carrier specializing in small-business policies (general liability, commercial auto, workers&#39; compensation, business-owners&#39; policies). They run roughly 150 engineers, were founded in 2019, and are headquartered in Hartford, Connecticut with a satellite office in Austin. They sell direct <em>and</em> white-label their product to roughly 40 regional insurance carriers — which is the part of their business model that drives the regulatory posture you&#39;re about to encounter. <strong>Every carrier customer contractually requires Coverline&#39;s most recent SOC 2 Type II report before they&#39;ll resell.</strong> No SOC 2 = no carrier-customer renewals = no business.</p>
+<p>State-insurance regs add layers on top of SOC 2. The <strong>NAIC Insurance Data Security Model Law</strong> has been adopted in roughly 25 of the states Coverline operates in — codifying risk assessment, written information security program, third-party service-provider oversight, and incident notification within 72 hours to the state insurance commissioner. <strong>NYDFS 23 NYCRR 500</strong> applies because Coverline is licensed in New York, layering on annual penetration testing, biannual vulnerability assessments, MFA for privileged accounts, encryption requirements, and its own 72-hour breach-notification clock. <strong>GLBA Safeguards Rule</strong> applies because insurance is a Title V financial activity; the FTC&#39;s 2023-effective amendments added MFA, encryption, written incident response plans, and qualified-individual designation requirements. <strong>State-by-state breach-notification laws</strong> make 50 jurisdictions a concern for any incident touching customer NPI.</p>
+<p>Coverline came to Driftwood about eighteen months ago for SOC 2 readiness work — they were preparing for their first formal Type II audit and wanted a security partner who could help through readiness, gap remediation, and the audit fieldwork. They passed the first Type II cleanly. The ongoing engagement has shifted to general security partnership: third-party risk assessments, the annual penetration test, an incident-response retainer, and — when Coverline&#39;s internal team can&#39;t take on a piece without slipping their primary roadmap — audit-cycle gap-filling.</p>
+<p>You&#39;re on Driftwood&#39;s cloud-audit workstation, logged in as <code>cloudsec</code> — the shared service account the cloud-security team uses for external-perspective recon against client AWS / Azure / GCP environments. The host has the AWS CLI installed and the <code>cloudsec</code> IAM role attached (a Driftwood-account read-only role used for client-engagement work). The Driftwood AWS account number (<code>778899012345</code>) is <em>not</em> a Coverline account — you&#39;ll be probing Coverline&#39;s environment from the outside, exactly the way an unauthenticated attacker would.</p>
+<p>Today&#39;s case opened on Thursday. Jordan Nguyen — Coverline&#39;s Senior Director of Cloud Infrastructure &amp; Platform — emailed Priya. The trigger: Coverline is mid-fieldwork on this year&#39;s SOC 2 Type II audit. The auditing firm is in its second week on-site. On Wednesday evening, the audit partner delivered a preliminary finding — flagged as a &quot;potential control gap, not yet a deficiency&quot; — concerning the public-access posture of Coverline&#39;s production S3 buckets.</p>
+<p>The control in question is <strong>SOC 2 CC6.1</strong> (Logical and Physical Access Controls — restrict logical access to information assets). The auditor&#39;s concern: Coverline has a written policy that <em>&quot;production S3 buckets shall not allow anonymous public access unless explicitly designated as a public-access asset,&quot;</em> but there&#39;s no documented evidence trail of the policy being verified in practice. No periodic review, no automated check, no quarterly attestation. The policy exists; the audit artifact does not.</p>
+<p>The auditors offered a path: produce, within the fieldwork window, a documented walk of every production S3 bucket showing its current public-access posture against the expected posture. They produced a six-bucket worksheet — representative samples of the production-bucket inventory, the ones holding claims data, customer exports, deployment artifacts. Coverline&#39;s DevOps team is fully committed on a us-east-1 → us-east-2 region cutover with a hard deadline next week. Jordan asked Driftwood to pick up the worksheet so the DevOps cutover doesn&#39;t slip and the SOC 2 audit doesn&#39;t go into deficient status.</p>
+<p>The engagement scope is signed by Jordan and the audit firm: walk the six buckets named in <code>audit-worksheet.txt</code> with the unauthenticated probe <code>aws s3 ls --no-sign-request</code>, record the response, inspect any bucket that returns a listing rather than <code>AccessDenied</code>, document the result. Out of scope: the other ~80 production buckets, the Azure tenant, the GCP project, any IAM enumeration. The probe is the auditor&#39;s preferred external-perspective method; it is <em>not</em> &quot;active testing&quot; in the SOC 2 / penetration-testing sense.</p>
+<p>What you don&#39;t know yet, walking in, is that one of the six buckets — <code>coverline-claims-uploads-prod</code> — is publicly listable and publicly readable, contains three 2024-Q1 claim files with PII (claimant names, masked SSNs, addresses), a stale 2023 region-cutover migration script with a <strong>hardcoded RDS master password</strong>, and the actual PostgreSQL dump that script uploaded. It is two findings stacked on one bucket: an NPI exposure and a credential-leak primitive.</p>
+<h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
+<p>Six commands. Six rows on the worksheet. The cloud-audit discipline is in noticing the one that doesn&#39;t match and stopping there.</p>
+<h3 id="step-1-read-the-brief">Step 1: Read the brief<a class="anchor" href="#step-1-read-the-brief" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">cloudsec@cloud:~$ cat engagement-notes.md
+cloudsec@cloud:~$ cat audit-worksheet.txt
+</code></pre>
+<p>The engagement notes establish the regulatory frame (SOC 2 + NAIC + NYDFS + GLBA), the client context (Coverline, Jordan, Sloane Becker the CISO referenced in the chain), and the auditor&#39;s preferred procedure (<code>aws s3 ls --no-sign-request</code> from outside the Coverline account). The audit worksheet is the deliverable: six buckets, the expected public-access state for each, and a <code>___</code> column for the verification result.</p>
+<p>The expected state per the worksheet:</p>
+<table>
+<thead>
+<tr>
+<th>Bucket</th>
+<th>Expected</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>coverline-static-assets</code></td>
+<td>Private (Denied)</td>
+</tr>
+<tr>
+<td><code>coverline-backups-prod</code></td>
+<td>Private (Denied)</td>
+</tr>
+<tr>
+<td><code>coverline-marketing-public</code></td>
+<td><strong>PUBLIC (CDN)</strong></td>
+</tr>
+<tr>
+<td><code>coverline-terraform-state</code></td>
+<td>Private (Denied)</td>
+</tr>
+<tr>
+<td><code>coverline-customer-exports</code></td>
+<td>Private (Denied)</td>
+</tr>
+<tr>
+<td><code>coverline-claims-uploads-prod</code></td>
+<td>Private (Denied)</td>
+</tr>
+</tbody></table>
+<p>Read the worksheet before you start probing. The audit deliverable isn&#39;t <em>&quot;what did the buckets do&quot;</em> — it&#39;s <em>&quot;did each bucket match its expected posture, and if not, what did you find inside.&quot;</em> The structure matters because the audit firm uses your output as evidence.</p>
+<h3 id="step-2-confirm-youre-probing-from-outside-coverlines-account">Step 2: Confirm you&#39;re probing from outside Coverline&#39;s account<a class="anchor" href="#step-2-confirm-youre-probing-from-outside-coverlines-account" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">cloudsec@cloud:~$ aws sts get-caller-identity
+UserId:   AIDAEXAMPLE_DRIFTWOOD_CLOUDSEC
+Account:  778899012345
+Arn:      arn:aws:iam::778899012345:user/driftwood-cloudsec-readonly
+</code></pre>
+<p><code>778899012345</code> is the Driftwood AWS account, not a Coverline account. This is the auditor&#39;s &quot;external perspective&quot; exactly — Driftwood is a third party probing Coverline&#39;s public-facing surface. The output of every subsequent <code>aws s3 ls --no-sign-request</code> would behave identically if run from any internet-connected workstation with any AWS credentials (or no AWS credentials at all — the <code>--no-sign-request</code> flag bypasses authentication entirely).</p>
+<p>This step isn&#39;t strictly required for the walk, but the audit firm will appreciate it being in the chain-of-custody record: <em>&quot;the probes were issued from AWS account 778899012345 (Driftwood, not Coverline), with the <code>--no-sign-request</code> flag, on <code>&lt;date&gt;</code>.&quot;</em></p>
+<h3 id="step-3-walk-the-private-buckets">Step 3: Walk the private buckets<a class="anchor" href="#step-3-walk-the-private-buckets" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-static-assets
+An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied
+
+cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-backups-prod
+An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied
+
+cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-terraform-state
+An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied
+
+cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-customer-exports
+An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied
+</code></pre>
+<p>Four buckets, four <code>AccessDenied</code>. This is exactly what the worksheet expected. The plain-English read is: <em>&quot;these buckets exist (the response would be <code>NoSuchBucket</code> otherwise), but anonymous requests can&#39;t list their contents — the Public Access Block + bucket policy + IAM are all enforcing the deny.&quot;</em></p>
+<p><strong><code>AccessDenied</code> is what GOOD looks like for a private bucket probed from outside.</strong> This is the single most important framing in the entire walkthrough: a properly-secured production bucket returns <code>AccessDenied</code>, not silence and not <code>NoSuchBucket</code>. The bucket exists; the access control works. The audit&#39;s job is to confirm that response across the inventory.</p>
+<p>Four buckets verified, two to go.</p>
+<h3 id="step-4-walk-the-intentionally-public-bucket">Step 4: Walk the intentionally-public bucket<a class="anchor" href="#step-4-walk-the-intentionally-public-bucket" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-marketing-public
+2024-09-12 11:42:08  1842317  brochures/coverline-overview-2024.pdf
+2024-09-12 11:43:21   987142  brochures/coverline-small-business-faq.pdf
+2024-06-18 08:22:14    84327  logos/coverline-logo-color.png
+2024-06-18 08:22:14    71248  logos/coverline-logo-white.png
+2024-09-12 11:44:55  3127894  partner-kits/coverline-affiliate-deck-2024.pdf
+</code></pre>
+<p>Five objects, all of them either brochures, logos, or partner-kit decks. The worksheet flagged this bucket as <strong>intentionally public</strong> — the marketing team distributes assets to affiliates via the bucket&#39;s URL — so the listing is expected, not a finding. The cross-reference is the audit&#39;s value: confirm the listing matches the expected contents (marketing materials, no PII, no operational data). It does. <strong>MATCHES EXPECTATION.</strong></p>
+<p>This is the &quot;context matters&quot; beat. A public S3 bucket isn&#39;t categorically bad — for the use case of distributing public marketing assets, it&#39;s the right architecture. The findings live in the <em>gap between expected state and actual state</em>, not in any absolute property of the bucket configuration.</p>
+<h3 id="step-5-walk-the-misconfigured-bucket">Step 5: Walk the misconfigured bucket<a class="anchor" href="#step-5-walk-the-misconfigured-bucket" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-claims-uploads-prod
+2024-03-15 09:23:41   2147   2024-Q1-claims/claim-cl-019823.json
+2024-03-15 09:24:11   2089   2024-Q1-claims/claim-cl-019824.json
+2024-03-15 09:25:33   1934   2024-Q1-claims/claim-cl-019825.json
+2023-11-08 14:18:22    847   legacy-deploy/migrate-rds.sh
+2023-11-08 14:19:01 4827392  legacy-migration-snapshot/coverline_claims.dump
+</code></pre>
+<p>This is the finding.</p>
+<p>The bucket&#39;s worksheet entry said <em>&quot;Private (Denied).&quot;</em> The actual response is a full directory listing. Every object in the bucket is now visible to any unauthenticated requester. The auditor&#39;s gap is no longer a &quot;potential&quot; — it&#39;s a confirmed deficiency.</p>
+<p>The object names alone tell the story before we even look at contents: three claim files in <code>2024-Q1-claims/</code> (almost certainly PII), a script in <code>legacy-deploy/migrate-rds.sh</code> (almost certainly a deploy artifact — and &quot;RDS&quot; is the AWS managed-database service, so the script almost certainly touches a database connection string), and a 4.6 MB <code>legacy-migration-snapshot/coverline_claims.dump</code> (almost certainly the output of a <code>pg_dump</code> of the production claims database).</p>
+<p>Three categories of finding stacked on one bucket: <strong>PII exposure, hardcoded credential leak, and a full database snapshot.</strong> Any one of these would be a critical SOC 2 finding; all three together raise immediate questions about whether the exposure rises to the breach-notification threshold under NAIC, NYDFS, and GLBA.</p>
+<h3 id="step-6-inspect-the-claim-files">Step 6: Inspect the claim files<a class="anchor" href="#step-6-inspect-the-claim-files" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 cp s3://coverline-claims-uploads-prod/2024-Q1-claims/claim-cl-019823.json -
+{
+  &quot;claim_id&quot;: &quot;CL-019823&quot;,
+  &quot;policy_number&quot;: &quot;CV-SB-2023-87432&quot;,
+  &quot;claim_type&quot;: &quot;general_liability&quot;,
+  &quot;claimant&quot;: {
+    &quot;first_name&quot;: &quot;Marcus&quot;,
+    &quot;last_name&quot;: &quot;Reyes&quot;,
+    &quot;ssn&quot;: &quot;XXX-XX-1847&quot;,
+    &quot;date_of_birth&quot;: &quot;1978-03-14&quot;,
+    &quot;address&quot;: {
+      &quot;street&quot;: &quot;1247 Cedar Lane&quot;,
+      &quot;city&quot;: &quot;Bridgeport&quot;,
+      &quot;state&quot;: &quot;CT&quot;,
+      &quot;zip&quot;: &quot;06604&quot;
+    },
+    &quot;phone&quot;: &quot;(203) 555-0142&quot;,
+    &quot;email&quot;: &quot;marcus.reyes.consulting@example.com&quot;
+  },
+  &quot;policy_holder&quot;: &quot;Reyes Consulting LLC&quot;,
+  &quot;incident&quot;: {
+    &quot;date&quot;: &quot;2024-02-08&quot;,
+    &quot;location_city&quot;: &quot;Hartford&quot;,
+    &quot;location_state&quot;: &quot;CT&quot;,
+    &quot;description&quot;: &quot;Slip-and-fall at insured property; claimant alleges hazardous floor condition unaddressed by property staff.&quot;,
+    &quot;estimated_damages_usd&quot;: 42500
+  },
+  &quot;adjuster_assigned&quot;: &quot;kim.chen@coverline-insurance.com&quot;,
+  &quot;status&quot;: &quot;under_review&quot;,
+  &quot;uploaded_at&quot;: &quot;2024-03-15T09:23:41Z&quot;
+}
+</code></pre>
+<p>The schema is exactly the shape of a production claims-processing record. The SSN is masked to the last four digits — Coverline&#39;s claims schema implements the <strong>PCI-DSS-adjacent &quot;show last four&quot; pattern</strong> even though they&#39;re not handling card data, because it&#39;s the same data-minimization principle. But every other field is NPI under GLBA, PII under NAIC, and personal information under every state breach-notification statute that applies to the claimant&#39;s residence (Connecticut, in this case — which means CT General Statutes § 36a-701b applies). The combination of name, date of birth, residential address, phone, email, and policy number is <strong>more than enough</strong> to satisfy the NAIC Model Law&#39;s definition of &quot;nonpublic information&quot; without needing the SSN at all.</p>
+<p>The other two claim files in the bucket follow the same shape with different claimants (Aisha Patel in New Haven CT, Dmitri Volkov in Waterbury CT). Three confirmed exposures of NPI for Connecticut residents — which means even the conservative reading of the regulatory cascade puts Coverline on the clock for state-AG notification, NYDFS notification (because Coverline is NY-licensed), NAIC notification to the Connecticut insurance commissioner, GLBA-rule consideration, and the SOC 2 audit deficiency. Five different regulatory clocks, started by one misconfigured bucket.</p>
+<h3 id="step-7-inspect-the-migration-script">Step 7: Inspect the migration script<a class="anchor" href="#step-7-inspect-the-migration-script" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 cp s3://coverline-claims-uploads-prod/legacy-deploy/migrate-rds.sh -
+#!/usr/bin/env bash
+# RDS bootstrap migration script
+# 2023-Q4 us-east-1 → us-east-2 region cutover
+# Owner: vikram@coverline-insurance.com (Sr. DevOps; rolled off Q1 2024)
+# DO NOT RUN POST-MIGRATION — kept here as reference for the audit trail.
+
+set -euo pipefail
+
+RDS_HOST=&quot;coverline-prod.cluster-xyz.us-east-2.rds.amazonaws.com&quot;
+RDS_USER=&quot;coverline_admin&quot;
+RDS_PASSWORD=&#39;Cl41ms-Pr0d-M4st3r-2024&#39;
+DB_NAME=&quot;coverline_claims&quot;
+DUMP_BUCKET=&quot;coverline-claims-uploads-prod&quot;
+DUMP_PREFIX=&quot;legacy-migration-snapshot/&quot;
+
+echo &quot;[+] Dumping ${DB_NAME} from ${RDS_HOST}...&quot;
+PGPASSWORD=&quot;${RDS_PASSWORD}&quot; pg_dump \
+  -h &quot;${RDS_HOST}&quot; \
+  -U &quot;${RDS_USER}&quot; \
+  -d &quot;${DB_NAME}&quot; \
+  -F custom \
+  -f /tmp/coverline_claims.dump
+
+echo &quot;[+] Uploading dump to s3://${DUMP_BUCKET}/${DUMP_PREFIX}...&quot;
+aws s3 cp /tmp/coverline_claims.dump &quot;s3://${DUMP_BUCKET}/${DUMP_PREFIX}coverline_claims.dump&quot;
+
+echo &quot;[+] Done.&quot;
+</code></pre>
+<p>The credential leak is on the eighth line: <code>RDS_PASSWORD=&#39;Cl41ms-Pr0d-M4st3r-2024&#39;</code>. That&#39;s a live RDS master password for the <code>coverline_claims</code> production database, written into a shell script committed to a publicly-readable S3 bucket. The script was written for the 2023-Q4 us-east-1 → us-east-2 region cutover. The owner (Vikram, a senior DevOps engineer) rolled off in Q1 2024. The script was never deleted. The password was almost certainly never rotated either — <em>&quot;DO NOT RUN POST-MIGRATION — kept here as reference for the audit trail&quot;</em> is the kind of comment people write when they intend to come back and clean up the file and never do.</p>
+<p>The blast radius compounds: the script reveals the RDS endpoint (<code>coverline-prod.cluster-xyz.us-east-2.rds.amazonaws.com</code>), the admin user (<code>coverline_admin</code>), the database name (<code>coverline_claims</code>), and the password. Anyone with the script can authenticate against the production claims database directly from the public internet — provided the RDS instance is reachable, which depends on its security-group configuration (out of today&#39;s scope, but a question the formal investigation will need to answer).</p>
+<h3 id="step-8-stop">Step 8: Stop<a class="anchor" href="#step-8-stop" aria-label="Link to this section">#</a></h3>
+<p>Driftwood&#39;s MSA scope is <strong>walk the buckets, document the responses, surface deviations</strong>. We did not authenticate against the RDS instance with the recovered credential — that would be unauthorized access regardless of the bucket exposure. We did not enumerate the other ~80 production buckets in Coverline&#39;s account — that&#39;s out of scope. We did not touch the Azure or GCP environments. The finding stands on the bucket walk alone.</p>
+<p>The other artifact in the bucket — <code>legacy-migration-snapshot/coverline_claims.dump</code>, a 4.6 MB PostgreSQL custom-format dump — is a third category of finding. The dump is the entire claims-database state as of the 2023-Q4 cutover. Anyone with the bucket listing can download the dump and reconstruct the database offline. We confirm its existence and the file metadata; we don&#39;t download the dump (Driftwood policy: any artifact &gt;1 MB containing client data requires explicit chain-of-custody handling before retrieval, and that gate exceeds today&#39;s engagement scope).</p>
+<p>The worksheet is now five rows of &quot;MATCHES EXPECTATION&quot; and one row of &quot;DEVIATION — see finding memo.&quot; The finding memo goes to Priya, who&#39;ll write the version that goes to Jordan, the audit firm, and Sloane (Coverline&#39;s CISO).</p>
+<h3 id="step-9-the-breadcrumb-game-world-only">Step 9: The breadcrumb (game-world only)<a class="anchor" href="#step-9-the-breadcrumb-game-world-only" aria-label="Link to this section">#</a></h3>
+<p>In a real engagement the work stops at the finding. In D3CYPH3R the breadcrumb pattern continues:</p>
+<pre><code class="language-bash">cloudsec@cloud:~$ ssh level1@cloud
+level1@cloud&#39;s password: Cl41ms-Pr0d-M4st3r-2024
+</code></pre>
+<p>You&#39;re now inside the Coverline production database context (game-world; the real Driftwood engagement would not authenticate against RDS without separate authorization). The lesson of <code>level1@cloud</code> is what an attacker gains from a credential leak of this shape — that walkthrough comes later.</p>
+<h3 id="if-you-got-stuck">If you got stuck<a class="anchor" href="#if-you-got-stuck" aria-label="Link to this section">#</a></h3>
+<ul>
+<li>If <code>aws s3 ls --no-sign-request s3://coverline-claims-uploads-prod</code> returned <code>AccessDenied</code>, you may be running an older D3CYPH3R build — the engine extension that models the <code>AccessDenied</code> response for properly-locked-down buckets was shipped in v0.6.0. Refresh and retry.</li>
+<li>If you tried <code>aws s3 ls s3://coverline-claims-uploads-prod</code> without <code>--no-sign-request</code>, the in-game CLI may or may not respond depending on the simulated identity — but the real point is that <code>--no-sign-request</code> is the auditor&#39;s preferred procedure because it mirrors what an external attacker sees. Always include the flag.</li>
+<li>If you went straight from the bucket listing to <code>ssh level1@cloud</code> without inspecting the claim files and the migration script, the lesson of this level is the <em>evidence chain</em> — the finding memo Marisol/Priya writes for the audit firm requires the inspection step to characterize the exposure (PII categories, credential type, blast radius). Skipping it produces a finding that names the bucket but can&#39;t quantify the breach-notification posture.</li>
+</ul>
+<h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
+<p>Three distinct vulnerabilities stacked on one misconfigured bucket. Remediation needs to address all three or the next cutover will introduce the next bucket-class exposure.</p>
+<p><strong>Failure 1 — Public Access Block not enabled at the account level.</strong> AWS introduced <strong>S3 Block Public Access (BPA)</strong> at the account level in November 2018. Enabling BPA at the account level — via the IAM console, the CLI, or (in production environments) a Service Control Policy from AWS Organizations — overrides every per-bucket setting and makes &quot;accidentally public&quot; structurally impossible. Coverline&#39;s <code>coverline-claims-uploads-prod</code> bucket would not be publicly listable today if account-level BPA had been on; the bucket&#39;s individual configuration would have been irrelevant. The fact that the bucket is public means BPA is not enabled at the account level. That&#39;s the root-cause configuration gap.</p>
+<p><strong>Failure 2 — Working files placed in the same bucket as production claim uploads.</strong> Even if BPA had been on, the bucket&#39;s content composition is a separate failure. The bucket exists to receive uploads from the production claims-processing app (claimants upload incident photos, statements, supporting documents through a portal). It should contain <em>only</em> those upload artifacts. The <code>legacy-deploy/migrate-rds.sh</code> script and the <code>legacy-migration-snapshot/coverline_claims.dump</code> are <em>operational</em> artifacts — they don&#39;t belong in the claims-uploads bucket. They were put there because it was convenient during the 2023 cutover, and they were never moved. This is the cloud-equivalent of the v0.7.3 Meridian/BluePier <code>/backup/</code> directory pattern — operational artifacts left in a data-bearing storage location.</p>
+<p><strong>Failure 3 — Hardcoded credential in source-controlled artifact.</strong> The migration script contains a live RDS master password. The script may not be in any git repo (it was authored for a one-time cutover), but the file system it lives on — S3 — is functionally equivalent to a source-controlled artifact store for forensic purposes. Anyone who could have read the file has the credential. The remediation is the same as level0@crypto&#39;s: move the credential to AWS Secrets Manager (or Parameter Store with KMS encryption, or HashiCorp Vault), fetch at runtime, and never store at rest in flat files. Rotate the existing credential immediately.</p>
+<p>Each failure is independently a finding. Fixing only the bucket configuration (turn on BPA, lock the bucket) without addressing the credential leaves <code>Cl41ms-Pr0d-M4st3r-2024</code> as a still-compromised credential that anyone who downloaded the script before remediation still holds. Fixing only the credential without BPA means the next bucket misconfiguration introduces a new exposure tomorrow.</p>
+<h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
+<p>Three named, well-documented S3-misconfiguration breaches. Each was a major industry event, each is documentable from primary sources, and each lands on the same lesson Coverline&#39;s finding lands on: public S3 buckets are the single most common cloud-data-exposure pattern in real consulting work, and the technical controls that prevent them have existed for years.</p>
+<h3 id="capital-one-march-2019-disclosed-july-2019">Capital One — March 2019 (disclosed July 2019)<a class="anchor" href="#capital-one-march-2019-disclosed-july-2019" aria-label="Link to this section">#</a></h3>
+<p>In March 2019, an attacker — Paige Thompson, a former AWS engineer operating under the handle &quot;erratic&quot; — exploited a misconfigured Web Application Firewall on a Capital One server-side application to perform a Server-Side Request Forgery (SSRF) attack. The SSRF allowed the attacker to query the AWS Instance Metadata Service from the WAF&#39;s perspective, retrieve the EC2 instance&#39;s temporary IAM credentials, and use those credentials to enumerate and download data from Capital One&#39;s S3 buckets. The exfiltrated data covered approximately <strong>106 million credit-card applications</strong> across the US and Canada, including names, addresses, dates of birth, self-reported income, credit scores, payment histories, and approximately 140,000 US Social Security numbers + 80,000 linked bank-account numbers.</p>
+<p>Capital One disclosed the breach publicly on July 29, 2019. Thompson was arrested the same week. She was convicted in 2022 on multiple counts including wire fraud and computer fraud. (The Ninth Circuit vacated her original sentence in March 2025 as substantively unreasonable; resentencing in November 2025 imposed time-served plus five years of supervised release including three years home confinement, 250 hours of community service, with the $40.7M restitution preserved.) The regulatory cascade for Capital One was unprecedented: the Office of the Comptroller of the Currency assessed an <strong>$80 million civil money penalty</strong> in August 2020 — the first major federal-banking-regulator fine for a cloud-misconfiguration incident. The Federal Reserve&#39;s separate 2020 enforcement action against Capital One — concerning the same cloud-migration risk-assessment deficiencies — was terminated in 2023 without additional penalty after Capital One demonstrated remediation. Consumer class-action litigation added approximately <strong>$190 million</strong> in settlement payments in late 2022.</p>
+<p>The Capital One breach is the canonical AWS cloud-security case study in every modern curriculum. The specific technical chain — WAF SSRF → IMDS credential retrieval → S3 enumeration — drove industry-wide changes: AWS shipped <strong>Instance Metadata Service Version 2 (IMDSv2)</strong> with mandatory token-based authentication, multiple cloud-security configuration frameworks added explicit checks for IMDSv1 usage, and IMDS-credential-as-attack-vector training became standard in every cloud-security cert. The lesson Coverline&#39;s situation directly inherits from Capital One: <strong>a single misconfiguration in the cloud-infrastructure layer can produce regulator action measured in tens of millions of dollars.</strong> Coverline&#39;s exposure is smaller in scale but qualitatively identical in shape.</p>
+<h3 id="accenture-september-2017">Accenture — September 2017<a class="anchor" href="#accenture-september-2017" aria-label="Link to this section">#</a></h3>
+<p>In September 2017, security firm UpGuard discovered four publicly-accessible Amazon S3 buckets owned by Accenture, one of the largest IT-consulting firms in the world. The buckets — labeled <code>acp-deployment</code>, <code>acp-software</code>, <code>acp-ssl</code>, and <code>acpcollector</code> — contained Accenture&#39;s internal cloud-platform infrastructure: API authentication credentials, certificates and private keys, plaintext passwords, decryption keys, customer data, and one bucket containing approximately 137 GB of data including offline backups of database snapshots. Anyone who guessed the bucket names (or used an S3-enumeration tool) could download the contents.</p>
+<p>Accenture remediated within hours of UpGuard&#39;s responsible-disclosure notification. The exposure window — by Accenture&#39;s account — was approximately one day; by UpGuard&#39;s analysis, it had likely been multi-week. No specific customer data exfiltration was confirmed publicly. Accenture&#39;s own statement framed the incident as a &quot;test environment&quot; misconfiguration; UpGuard&#39;s analysis disputed that characterization given the production-grade credential material in the buckets. Either reading produces the same conclusion: the misconfiguration was structural, and the remediation required no novel technology — just enabling Block Public Access on the buckets that should have been private from the start.</p>
+<p>The Accenture case is the canonical <em>consulting-firm</em> parallel for Coverline. Both organizations were in the business of selling security and operational discipline to clients. Both had public S3 buckets containing credential material and operational data. Both incidents were discovered by external researchers (UpGuard for Accenture; Driftwood&#39;s audit walk for Coverline) before being exploited at scale. The technical mechanism is identical: a bucket created for an operational purpose with the wrong access-control posture, containing artifacts that should never have been in any cloud-storage location publicly readable.</p>
+<p>For Driftwood specifically, the Accenture parallel is the reputational dimension. Accenture&#39;s brand survived the incident, but the case is cited in every cloud-security training program as the example of <em>&quot;how the consulting firm got it wrong.&quot;</em> Coverline&#39;s incident, handled badly, would put them in a similar position with their carrier customers. The SOC 2 audit finding is the immediate exposure; the longer-arc reputational exposure is what the procedural handling of the finding determines.</p>
+<h3 id="us-voter-records-deep-root-analytics-june-2017">US Voter Records / Deep Root Analytics — June 2017<a class="anchor" href="#us-voter-records-deep-root-analytics-june-2017" aria-label="Link to this section">#</a></h3>
+<p>In June 2017, UpGuard discovered an Amazon S3 bucket owned by Deep Root Analytics — a political-data firm contracted by the Republican National Committee for the 2016 US presidential campaign — containing personal information for approximately <strong>198 million American voters.</strong> The exposed data included voters&#39; names, dates of birth, home and mailing addresses, phone numbers, registered party affiliations, self-reported racial demographics, and modeled voter-preference data assembled from polling and consumer-data sources. The bucket was configured for public read access. No password, no authentication, no restriction by source IP.</p>
+<p>The exposure was estimated to cover approximately 61% of the US population at the time. Multiple class-action lawsuits followed, with the lead case (Tatum v. Deep Root Analytics) settling for an undisclosed amount in 2021. The RNC&#39;s response framed the incident as a contractor failure; Deep Root&#39;s response acknowledged the misconfiguration and described an immediate remediation. The regulatory environment for political-data exposures was — and remains — patchier than for financial or healthcare data, which is part of why the case settled without a large publicized fine. But the scale itself is the lesson: <strong>one misconfigured bucket exposed personal information on more than half the US adult population.</strong></p>
+<p>For Coverline, the parallel is the structural-scale dimension. Coverline&#39;s claims bucket exposed three records visible in the file listing; the database dump in the bucket likely contains thousands or tens of thousands of additional records. Deep Root&#39;s bucket exposed 198 million records. The mechanism is the same; only the data volume in the affected bucket differs. The lesson is that bucket-misconfiguration incidents <em>scale freely</em> — once the bucket is public, the entire bucket is public, regardless of how much data is in it. The remediation has to be the configuration, not the content.</p>
+<h2 id="frameworks">§5 — Frameworks, deep dive<a class="anchor" href="#frameworks" aria-label="Link to this section">#</a></h2>
+<p>The in-game post-mortem cites ten framework controls. Each is expanded below. Cloud is the broadest framework surface of any track because every layer of the modern cloud-security regulatory stack applies simultaneously — SOC 2 for the customer-facing assurance, NIST 800-53 for the federal-control baseline, NIST CSF 2.0 for the cybersecurity-program framing, CIS for the configuration baseline, ISO 27017 for the international cloud-specific standard, OWASP for the application-security frame, CWE for the vulnerability taxonomy, plus the insurance-vertical regulations (NAIC, NYDFS) and the financial-services backstop (GLBA).</p>
+<h3 id="soc-2-trust-services-criteria-cc61-cc66-cc67-cc71">SOC 2 Trust Services Criteria — CC6.1, CC6.6, CC6.7, CC7.1<a class="anchor" href="#soc-2-trust-services-criteria-cc61-cc66-cc67-cc71" aria-label="Link to this section">#</a></h3>
+<p>The American Institute of CPAs (AICPA) maintains the <strong>Trust Services Criteria</strong> (TSC), the framework underlying SOC 2 attestations. The current version is the 2017 framework with revisions published in 2022. The TSC organizes controls into five categories: Security (the &quot;Common Criteria,&quot; abbreviated CC), Availability, Processing Integrity, Confidentiality, and Privacy. The CC controls are mandatory for any SOC 2 engagement; the other four categories are optional based on what the customer engagement requires.</p>
+<p>Four CC controls apply directly to Coverline&#39;s finding:</p>
+<p><strong>CC6.1 — Logical and Physical Access Controls.</strong> The TSC&#39;s plain text: <em>&quot;The entity implements logical access security software, infrastructure, and architectures over protected information assets to protect them from security events to meet the entity&#39;s objectives.&quot;</em> This is the control the audit firm flagged. Anonymous public access to production data — when not explicitly designated as a public-access asset — is a CC6.1 failure on its face. The audit&#39;s request for documented evidence (the worksheet walk) is the standard SOC 2 evidence-collection pattern: the auditor cannot test every bucket, so they sample, and the sampling has to be representative.</p>
+<p><strong>CC6.6 — Logical Access Security Measures for Outside Threats.</strong> <em>&quot;The entity implements logical access security measures to protect against threats from sources outside its system boundaries.&quot;</em> The bucket policy and the Public Access Block are the implementation mechanisms for this control. CC6.6 specifically focuses on <em>external</em> threats — exactly the attack vector the <code>--no-sign-request</code> probe simulates. A bucket that is reachable from outside the Coverline AWS account boundary violates this control even if its contents are not yet known to have been exfiltrated.</p>
+<p><strong>CC6.7 — Transmission and Movement of Information.</strong> <em>&quot;The entity restricts the transmission, movement, and removal of information to authorized internal and external users and processes.&quot;</em> This applies to data movement <em>into</em> and <em>out of</em> the bucket. Bucket policies should restrict the source of incoming uploads (typically to specific application IAM roles) and the destination of outgoing reads (typically to authenticated principals). The <code>coverline-claims-uploads-prod</code> bucket appears to have no such restrictions — the listing succeeds without authentication.</p>
+<p><strong>CC7.1 — Detection of Security Events.</strong> <em>&quot;To meet its objectives, the entity uses detection and monitoring procedures to identify security events...&quot;</em> This is the missing piece in Coverline&#39;s posture. Coverline had the <em>policy</em> (production buckets shall not allow anonymous public access); they didn&#39;t have the <em>detection</em>. AWS Config managed rules (<code>s3-bucket-public-read-prohibited</code>, <code>s3-bucket-public-write-prohibited</code>), AWS Macie, and AWS Trusted Advisor&#39;s &quot;S3 Bucket Permissions&quot; check are the standard detection-layer controls that close the CC7.1 gap.</p>
+<p>Audit evidence for SOC 2 includes the documented policy, the technical control implementation (the bucket policies, the BPA settings, the Config rules), and — crucially — <em>the evidence trail proving the policy is verified in practice over the audit period.</em> The &quot;no documented evidence trail&quot; finding the audit firm delivered is what made this exercise a deliverable rather than an internal task.</p>
+<h3 id="nist-sp-800-53-rev-5-ac-3-ac-6-sc-7-au-12">NIST SP 800-53 Rev. 5 — AC-3, AC-6, SC-7, AU-12<a class="anchor" href="#nist-sp-800-53-rev-5-ac-3-ac-6-sc-7-au-12" aria-label="Link to this section">#</a></h3>
+<p>NIST SP 800-53, currently at <strong>Revision 5 with Release 5.2.0 published August 27, 2025</strong>, is the federal-government control catalog underlying many other frameworks (SOC 2 maps to it indirectly; NIST CSF maps to it directly; CMMC inherits its 800-171 subset). Four controls apply directly to Coverline&#39;s finding:</p>
+<p><strong>AC-3 — Access Enforcement.</strong> The information system must enforce approved authorizations for logical access to information and system resources. The bucket policy is the enforcement mechanism for the asset; an anonymous-public configuration enforces no authorization decision and thus fails AC-3. Notably, the AC-3 control text is broad enough that the violation isn&#39;t about whether <em>any</em> access happened — it&#39;s about whether the enforcement mechanism is in place at all.</p>
+<p><strong>AC-6 — Least Privilege.</strong> The principle that subjects should have only the privileges necessary to perform their authorized tasks. The bucket should grant <em>the minimum access required</em> (no anonymous, named principals only, scoped to specific actions). Even if anonymous access were restricted, AC-6 would still require evaluating whether the authenticated-access policy is appropriately scoped — the claims-app IAM role should have <code>s3:PutObject</code> on the bucket, not <code>s3:*</code>. (Out of scope for today&#39;s walk, but a follow-up for the formal remediation.)</p>
+<p><strong>SC-7 — Boundary Protection.</strong> Public Access Block + bucket policy together form the boundary. The control&#39;s plain reading: monitor and control communications at the external boundary of the system. A public bucket is, by definition, an external interface; the boundary control should be applied to that interface; it is not.</p>
+<p><strong>AU-12 — Audit Generation.</strong> The information system must provide audit-record generation capability for the auditable events specified in AU-2. For S3, the standard implementation is <strong>S3 server-access logging</strong> plus <strong>CloudTrail data events</strong> for the bucket (CloudTrail by default captures management-plane events like bucket creation; data-plane events like object reads require explicit configuration). Coverline&#39;s CC7.1 detection gap is partially an AU-12 gap — without the audit logs, the question &quot;did anyone download the migration script?&quot; has no defensible answer.</p>
+<h3 id="nist-cybersecurity-framework-20-praa-prds-decm">NIST Cybersecurity Framework 2.0 — PR.AA, PR.DS, DE.CM<a class="anchor" href="#nist-cybersecurity-framework-20-praa-prds-decm" aria-label="Link to this section">#</a></h3>
+<p>The <strong>NIST Cybersecurity Framework 2.0</strong> was published in February 2024, replacing the 2018 v1.1. CSF 2.0 is the most-cited cybersecurity-program framework in the US private sector; it provides a common vocabulary for risk-management discussions between security teams, executives, and board members. CSF 2.0 added a new <strong>Govern</strong> function (joining the existing Identify, Protect, Detect, Respond, Recover functions) to explicitly cover organizational governance over cybersecurity.</p>
+<p>Three CSF 2.0 sub-categories apply to Coverline:</p>
+<p><strong>PR.AA — Identity Management, Authentication, and Access Control.</strong> The Protect function&#39;s identity-and-access-control sub-category. Includes the principle that access permissions should be granted on the least-functionality basis — which is the CSF 2.0 framing of the same control surface NIST 800-53 covers under AC-3/AC-6 and that SOC 2 covers under CC6.1/CC6.6.</p>
+<p><strong>PR.DS — Data Security.</strong> Data-in-transit and data-at-rest protection, encryption, and access control. For Coverline&#39;s claims bucket, the data is at rest in S3; the control surface includes encryption (which S3 does by default with SSE-S3 or optionally with SSE-KMS for customer-managed keys) and access control (which is the broken half of the equation for the misconfigured bucket).</p>
+<p><strong>DE.CM — Continuous Monitoring.</strong> The Detect function&#39;s continuous-monitoring sub-category. This is the layer Coverline was missing — the automated, continuous evaluation of bucket configurations against policy. AWS Config, AWS Macie, and AWS Security Hub collectively implement DE.CM for AWS cloud assets at the production-scale Coverline operates.</p>
+<h3 id="cis-aws-foundations-benchmark-v700-s311-through-s314-s3">CIS AWS Foundations Benchmark v7.0.0 — §3.1.1 through §3.1.4 (S3)<a class="anchor" href="#cis-aws-foundations-benchmark-v700-s311-through-s314-s3" aria-label="Link to this section">#</a></h3>
+<p>The Center for Internet Security publishes the <strong>CIS AWS Foundations Benchmark</strong>, a prescriptive configuration baseline for AWS accounts — specific, opinionated recommendations that map to the broader CIS Controls. The current release is <strong>v7.0.0</strong> (April 2026), which reorganized the sections: <strong>Section 3 now covers Storage</strong>, with subsection <strong>3.1 covering S3 specifically</strong> (in v5.0.0 and earlier, S3 lived in §2.1.x). One operational caveat worth knowing: <strong>AWS Security Hub&#39;s managed CIS standard still tops out at v5.0.0</strong>, so the findings you see in the Security Hub console will report the older §2.1.x numbering for these same controls.</p>
+<p>Four sub-controls in §3.1 apply to Coverline&#39;s situation:</p>
+<ul>
+<li><strong>§3.1.1 — Ensure S3 Bucket Policy is set to deny HTTP requests.</strong> Buckets should require TLS for all requests. Tangential to today&#39;s finding but a hygiene item.</li>
+<li><strong>§3.1.2 — Ensure MFA Delete is enabled on S3 buckets.</strong> Prevents accidental or malicious bucket-object deletion by requiring MFA.</li>
+<li><strong>§3.1.3 — Ensure all data in S3 is discovered, classified, and secured.</strong> The v7.0.0 control (Macie-driven data classification) that replaced the older standalone &quot;enable encryption-at-rest with KMS&quot; recommendation, after AWS made SSE-S3 the default for all new objects.</li>
+<li><strong>§3.1.4 — Ensure S3 is configured with &#39;Block Public Access&#39; enabled.</strong> <strong>The headline control that would have prevented Coverline&#39;s finding entirely.</strong> v7.0.0 merged the former account-level and bucket-level BPA controls into this single one; a setting at the AWS account root overrides every per-bucket setting, and turning it on org-wide via SCP makes &quot;accidentally public&quot; structurally impossible.</li>
+</ul>
+<p>Audit evidence for the CIS AWS Foundations Benchmark is typically generated automatically by AWS Security Hub (which has a managed standard for the Benchmark) or by third-party CSPM tools (Prisma Cloud, Wiz, Lacework, Orca Security). The standard pattern is: deploy AWS Security Hub with the CIS Benchmark standard enabled, set finding-noncompliance alerts to page the security team, and review findings during the monthly compliance-review cadence.</p>
+<h3 id="isoiec-270172015-code-of-practice-for-cloud-services">ISO/IEC 27017:2015 — Code of Practice for Cloud Services<a class="anchor" href="#isoiec-270172015-code-of-practice-for-cloud-services" aria-label="Link to this section">#</a></h3>
+<p><strong>ISO/IEC 27017:2015</strong> is the international standard for information-security controls specifically for cloud services. It extends ISO/IEC 27002 (the general information-security controls standard) with cloud-specific guidance. ISO 27017 is often cited in international customer contracts as the cloud-vertical analog of the ISO 27001 information-security-management standard.</p>
+<p>Three controls apply to Coverline&#39;s case:</p>
+<ul>
+<li><strong>CLD.6.3.1 — Shared roles and responsibilities within a cloud environment.</strong> The cloud customer (Coverline) and cloud provider (AWS) share responsibility for security; the customer&#39;s bucket configuration is on the customer side of the shared-responsibility model. AWS provides the BPA tooling; Coverline must enable it.</li>
+<li><strong>CLD.8.1.5 — Removal of cloud service customer assets.</strong> Procedures for the secure removal or destruction of customer assets when no longer needed. The legacy migration script and SQL dump in the bucket — operational artifacts that should have been removed after the 2023 cutover — are exactly this control&#39;s territory.</li>
+<li><strong>CLD.9.5.1 — Segregation in virtual computing environments.</strong> Tangentially relevant; covers VPC-level segregation, which is the network-layer analog of the storage-layer access control we&#39;re examining today.</li>
+</ul>
+<h3 id="owasp-cloud-native-top-10-cnas-1-cnas-2-cnas-5">OWASP Cloud-Native Top 10 — CNAS-1, CNAS-2, CNAS-5<a class="anchor" href="#owasp-cloud-native-top-10-cnas-1-cnas-2-cnas-5" aria-label="Link to this section">#</a></h3>
+<p>The <strong>OWASP Cloud-Native Application Security Top 10</strong> is a separate document from the better-known OWASP Top 10 (which we covered in level0@crypto and level0@web). The Cloud-Native Top 10 was first published in 2022 and addresses the security weaknesses specific to cloud-native application architectures. The project site repo was archived in April 2025 and the main project repo was archived on November 24, 2025; the 2022 edition remains the canonical reference, with no updated edition published as of audit date.</p>
+<p>Three categories apply to Coverline:</p>
+<p><strong>CNAS-1 — Insecure Cloud, Container, or Orchestration Configuration.</strong> Misconfigured cloud resources — S3 buckets, IAM policies, security groups, container runtime configurations. <strong>Coverline&#39;s bucket finding is the canonical example.</strong></p>
+<p><strong>CNAS-2 — Injection Flaws (cloud-native versions).</strong> Adjacent to Coverline&#39;s finding — the hardcoded RDS password in the migration script would enable injection-style lateral movement if the database were reachable. The traditional OWASP Top 10&#39;s injection category (now A03 in the 2025 edition) covers the application-layer surface; CNAS-2 covers the cloud-infrastructure variant.</p>
+<p><strong>CNAS-5 — Insecure Secrets Storage.</strong> The hardcoded RDS master password in <code>migrate-rds.sh</code> is the textbook OWASP CNAS-5 example — credentials stored in a non-secret-management location (here, an S3-hosted shell script readable from outside the account boundary). The remediation is the same as level0@crypto&#39;s: move the credential to AWS Secrets Manager or equivalent, fetch at runtime, never store at rest in flat files.</p>
+<h3 id="cwe-200-cwe-732-cwe-285-cwe-798-cwe-540">CWE-200, CWE-732, CWE-285, CWE-798, CWE-540<a class="anchor" href="#cwe-200-cwe-732-cwe-285-cwe-798-cwe-540" aria-label="Link to this section">#</a></h3>
+<p>The Common Weakness Enumeration catalog has five entries that map to Coverline&#39;s finding:</p>
+<p><strong>CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.</strong> The headline. The claims-bucket exposure of NPI is the textbook CWE-200 instance. Note: CWE-200 is flagged as &quot;Discouraged&quot; by MITRE for direct vulnerability mapping in 2026 — it&#39;s the conceptual umbrella, but for a CVE-mapped finding the more-specific child (here, CWE-732) is the preferred citation. The in-game post-mortem cites CWE-200 for conceptual coverage, which is appropriate for player-facing pedagogy.</p>
+<p><strong>CWE-732 — Incorrect Permission Assignment for Critical Resource.</strong> The bucket-policy / Public Access Block misconfiguration. This is the more-specific CVE-mappable citation for the Coverline finding. The Public Access Block setting being off is exactly the &quot;incorrect permission assignment&quot; CWE-732 captures.</p>
+<p><strong>CWE-285 — Improper Authorization.</strong> The public bucket authorizes the wrong principals (every principal). The control should restrict to a defined set of authorized requesters; it doesn&#39;t.</p>
+<p><strong>CWE-798 — Use of Hard-coded Credentials.</strong> The RDS master password embedded in <code>migrate-rds.sh</code>. Same weakness pattern as level0@crypto&#39;s API key, applied to a database credential.</p>
+<p><strong>CWE-540 — Inclusion of Sensitive Information in Source Code.</strong> The script is the source-controlled artifact. CWE-540 is a more recent CWE (added to the catalog in the 2019-era expansion) that specifically addresses sensitive data committed to source-controlled artifacts; it&#39;s the right citation for the operational-script-with-credential pattern.</p>
+<h3 id="naic-insurance-data-security-model-law-2017">NAIC Insurance Data Security Model Law (2017)<a class="anchor" href="#naic-insurance-data-security-model-law-2017" aria-label="Link to this section">#</a></h3>
+<p>The <strong>National Association of Insurance Commissioners&#39; Insurance Data Security Model Law</strong> (NAIC Model Law #668) was adopted in 2017 and has been enacted into law in approximately 28 US jurisdictions as of early 2026, with adoption continuing. The Model Law codifies minimum cybersecurity requirements for insurance licensees, including risk assessment, written information security program, designation of qualified individuals, third-party service-provider oversight, and incident notification.</p>
+<p>Three sections apply to Coverline&#39;s case:</p>
+<ul>
+<li><strong>§ 4 — Information Security Program.</strong> Requires a written program with documented controls, annual risk assessment, and a designated CISO-equivalent. Coverline&#39;s SOC 2 + HITRUST + the documented program Sloane Becker oversees collectively satisfy this section.</li>
+<li><strong>§ 5 — Investigation of a Cybersecurity Event.</strong> Defines the obligation to investigate suspected incidents — including the determination of whether NPI was acquired by an unauthorized person. The Coverline finding triggers exactly this section&#39;s procedure.</li>
+<li><strong>§ 6 — Notification of a Cybersecurity Event.</strong> <strong>72-hour notification clock to the state insurance commissioner</strong> when the licensee has determined that NPI has been (or is reasonably likely to have been) acquired. The determination clock is Coverline&#39;s, not Driftwood&#39;s — we surface the finding; Coverline&#39;s CISO + GC + outside counsel determine whether the exposure crossed the &quot;reasonably likely acquired&quot; threshold.</li>
+</ul>
+<h3 id="nydfs-23-nycrr-500-2017-amended-2023">NYDFS 23 NYCRR 500 (2017, amended 2023)<a class="anchor" href="#nydfs-23-nycrr-500-2017-amended-2023" aria-label="Link to this section">#</a></h3>
+<p><strong>NYDFS 23 NYCRR 500</strong> — the New York Department of Financial Services Cybersecurity Requirements for Financial Services Companies — applies to any financial-services company licensed by NYDFS. Coverline is NY-licensed and therefore subject. The regulation was originally promulgated in 2017 and substantially amended effective November 2023.</p>
+<p>Six sections apply to Coverline:</p>
+<ul>
+<li><strong>500.03 — Cybersecurity Policy.</strong> Written cybersecurity policy approved by the senior governing body.</li>
+<li><strong>500.05 — Penetration Testing and Vulnerability Assessments.</strong> Annual penetration testing and biannual vulnerability assessments.</li>
+<li><strong>500.09 — Risk Assessment.</strong> Annual risk assessment.</li>
+<li><strong>500.13 — Limitations on Data Retention.</strong> Disposal of NPI no longer necessary for business operations. The 2023 claim files in the bucket — which are now in an active claims-handling state, so they are necessary — are not yet caught by 500.13; the 2023 migration-snapshot dump, however, is exactly the kind of stale operational artifact 500.13 targets.</li>
+<li><strong>500.15 — Encryption of Nonpublic Information.</strong> NPI at rest and in transit must be encrypted. S3&#39;s default encryption satisfies the at-rest portion; the bucket-policy enforcement of TLS satisfies the in-transit portion.</li>
+<li><strong>500.17 — Notices to Superintendent.</strong> <strong>72-hour notification clock to the NYDFS Superintendent</strong> when the licensee has a &quot;reasonable belief that any nonpublic information was accessed or acquired by an unauthorized person.&quot; Parallel to the NAIC Model Law&#39;s § 6 trigger; same determination process.</li>
+</ul>
+<h3 id="glba-safeguards-rule-16-cfr-part-314-ftc-amendments-effective-2023">GLBA Safeguards Rule — 16 CFR Part 314 (FTC amendments effective 2023)<a class="anchor" href="#glba-safeguards-rule-16-cfr-part-314-ftc-amendments-effective-2023" aria-label="Link to this section">#</a></h3>
+<p>The <strong>Gramm-Leach-Bliley Act</strong> governs financial institutions&#39; protection of customer information. The FTC implements GLBA&#39;s information-security requirements via the <strong>Safeguards Rule</strong> (16 CFR Part 314), which was substantially amended in December 2021 with enforcement effective June 2023. The 2023 amendments raised the bar significantly: required MFA for any individual accessing customer information, encryption of customer information at rest and in transit, written incident response plans, designation of a &quot;Qualified Individual&quot; responsible for the information-security program, and breach notification to the FTC for events affecting 500+ consumers.</p>
+<p>Coverline is subject to GLBA because insurance is a Title V financial activity. The Safeguards Rule applies to Coverline directly and to Coverline&#39;s service providers (Driftwood being one).</p>
+<p><strong>16 CFR 314.4</strong> lists the required elements of the information-security program:</p>
+<ul>
+<li>(a) Designation of a Qualified Individual</li>
+<li>(b) Risk assessment</li>
+<li>(c) Specific access-control safeguards: identity management, MFA, encryption of consumer information at rest and in transit, secure development practices, audit logging</li>
+<li>(d) Periodic testing of safeguards</li>
+<li>(e) Employee training</li>
+<li>(f) Service-provider oversight</li>
+<li>(g) Written incident response plan</li>
+<li>(h) Annual report to the board</li>
+</ul>
+<p>The Coverline finding implicates (c) specifically — the bucket exposed NPI without the access controls 314.4(c) requires. The remediation cascade includes (g) — the IR plan triggers — and (h) — the next annual board report will reference the incident.</p>
+<h2 id="certifications">§6 — Cert exam relevance<a class="anchor" href="#certifications" aria-label="Link to this section">#</a></h2>
+<p>Equal-depth coverage for the twelve cert families cited in the in-game post-mortem. Cloud touches more certs than any other track because the cloud-security cert market has fragmented across vendor-specific (AWS, Azure, GCP), vendor-neutral (CCSP, CCSK), pentest-oriented (GCPN, OSCP), and traditional-track (Security+, CySA+, CISSP) lines.</p>
+<h3 id="aws-certified-security-specialty-current-exam-code-scs-c03">AWS Certified Security – Specialty — current exam code SCS-C03<a class="anchor" href="#aws-certified-security-specialty-current-exam-code-scs-c03" aria-label="Link to this section">#</a></h3>
+<p>The AWS Security Specialty cert is the AWS ecosystem&#39;s flagship security certification. AWS released <strong>SCS-C03</strong> on December 2, 2025 as the successor to SCS-C02 (registration opened November 18, 2025; SCS-C02 was decommissioned December 1, 2025; SCS-C02 had been in market since July 2023, itself superseding SCS-C01). The Coverline finding maps directly to two domains.</p>
+<ul>
+<li><strong>Domain 1 — Threat Detection and Incident Response.</strong> Includes the AWS Config / Macie / GuardDuty / Security Hub detection layer that would have caught the bucket misconfiguration before the audit walk.</li>
+<li><strong>Domain 4 — Identity and Access Management.</strong> Bucket policies, the Public Access Block, IAM-based access control to S3.</li>
+</ul>
+<p><strong>Sample question framing:</strong></p>
+<blockquote>
+<p>A SOC 2 audit finding identifies an Amazon S3 bucket in your AWS account that is publicly listable and contains operational artifacts not intended for external access. Which of the following is the BEST PRIMARY remediation?</p>
+<p>A. Update the bucket&#39;s ACL to remove the public-read grant
+B. Enable S3 Block Public Access at both the account level and the bucket level, and remove the inappropriate artifacts from the bucket
+C. Add a Deny-all bucket policy targeting anonymous principals
+D. Enable AWS Macie on the bucket to detect future misconfigurations</p>
+</blockquote>
+<p>The trap is A (legacy ACLs are the old way to control access; modern S3 is policy-based and BPA-overridden). C is half a solution (the policy denial works but BPA is the more durable control). D is detection, not remediation. <strong>B</strong> is the AWS Security Specialty answer — BPA at the account level <em>plus</em> bucket level provides defense-in-depth, and the artifact removal closes the immediate exposure.</p>
+<h3 id="aws-certified-solutions-architect-associate-saa-c03-and-professional-sap-c02">AWS Certified Solutions Architect — Associate (SAA-C03) and Professional (SAP-C02)<a class="anchor" href="#aws-certified-solutions-architect-associate-saa-c03-and-professional-sap-c02" aria-label="Link to this section">#</a></h3>
+<p>The AWS Solutions Architect certs are broader than the Security Specialty. The current versions are <strong>SAA-C03</strong> (Associate) and <strong>SAP-C02</strong> (Professional). Storage and security sub-domains include S3 permission models; the Professional exam expects fluency in multi-account governance (AWS Organizations + Service Control Policies). The Coverline finding would surface in the Professional-exam expectation that the candidate know how to <em>enforce</em> the bucket-public-access policy at the organization level rather than relying on per-account discipline.</p>
+<h3 id="aws-certified-cloud-practitioner-current-exam-code-clf-c02">AWS Certified Cloud Practitioner — current exam code CLF-C02<a class="anchor" href="#aws-certified-cloud-practitioner-current-exam-code-clf-c02" aria-label="Link to this section">#</a></h3>
+<p>The Cloud Practitioner cert is AWS&#39;s entry-level certification. The current exam is <strong>CLF-C02</strong> (in market since September 2023). The exam tests recognition-level understanding of the shared-responsibility model and S3 basics. The framing <em>&quot;S3 is private by default but configurable to public&quot;</em> is on the exam — and is the conceptual foundation for why Coverline&#39;s finding is a finding (the bucket <em>had to be configured</em> to be public; it didn&#39;t drift there by accident).</p>
+<h3 id="comptia-security-current-exam-code-sy0-701">CompTIA Security+ — current exam code SY0-701<a class="anchor" href="#comptia-security-current-exam-code-sy0-701" aria-label="Link to this section">#</a></h3>
+<p>Security+ SY0-701 (current; superseded SY0-601 November 2023, SY0-601 retired July 31, 2024). The cloud track maps to:</p>
+<ul>
+<li><strong>Domain 4 — Security Operations.</strong> Cloud-security baseline including misconfigurations, MFA enforcement, audit logging.</li>
+</ul>
+<h3 id="comptia-cysa-exam-codes-cs0-003-cs0-004">CompTIA CySA+ — exam codes CS0-003 / CS0-004<a class="anchor" href="#comptia-cysa-exam-codes-cs0-003-cs0-004" aria-label="Link to this section">#</a></h3>
+<p>CompTIA CySA+ — CS0-003 is the legacy exam revision (in market since June 2023), and <strong>CS0-004 launched in early 2026 for parallel availability</strong>; CS0-003 retires June 2026, so by the time anyone reads this much past the review date, CS0-004 will be the only sittable version. The cloud track maps to:</p>
+<ul>
+<li><strong>Domain 1 — Security Operations.</strong> Cloud-misconfiguration detection and response.</li>
+</ul>
+<h3 id="isc-ccsp-certified-cloud-security-professional">(ISC)² CCSP — Certified Cloud Security Professional<a class="anchor" href="#isc-ccsp-certified-cloud-security-professional" aria-label="Link to this section">#</a></h3>
+<p>The CCSP is (ISC)²&#39;s flagship cloud-security cert, designed for security professionals working with cloud architectures. The CCSP has six domains; three apply directly to the Coverline finding.</p>
+<ul>
+<li><strong>Domain 2 — Cloud Data Security.</strong> Storage architectures, data-at-rest protections, access controls.</li>
+<li><strong>Domain 3 — Cloud Platform &amp; Infrastructure Security.</strong> Infrastructure-layer security including the storage-layer access controls Coverline&#39;s finding implicates.</li>
+<li><strong>Domain 6 — Legal, Risk, and Compliance.</strong> The regulatory cascade (SOC 2, GLBA, NYDFS, NAIC).</li>
+</ul>
+<h3 id="csa-ccsk-certificate-of-cloud-security-knowledge">CSA CCSK — Certificate of Cloud Security Knowledge<a class="anchor" href="#csa-ccsk-certificate-of-cloud-security-knowledge" aria-label="Link to this section">#</a></h3>
+<p>The Cloud Security Alliance&#39;s <strong>CCSK</strong> is the vendor-neutral cloud-security certification. The CSA also publishes the <strong>Cloud Controls Matrix (CCM)</strong> and the <strong>Consensus Assessments Initiative Questionnaire (CAIQ)</strong> — both have multiple controls explicitly addressing &quot;anonymous public access to cloud storage.&quot; The CCSK exam tests recognition of these controls as part of the broader vendor-neutral cloud-security curriculum.</p>
+<h3 id="sans-gcsa-sec388-sec488-sec510">SANS GCSA / SEC388 / SEC488 / SEC510<a class="anchor" href="#sans-gcsa-sec388-sec488-sec510" aria-label="Link to this section">#</a></h3>
+<p>The SANS cloud-security curriculum spans multiple courses and certifications:</p>
+<ul>
+<li><strong>GCSA — GIAC Cloud Security Automation.</strong> Focus on automating cloud security controls (the AWS Config / Macie / Security Hub layer that would have caught Coverline&#39;s bucket).</li>
+<li><strong>SEC388 — Introduction to Cloud Computing and Security.</strong> Entry-level cloud-security course.</li>
+<li><strong>SEC488 — Cloud Security Essentials.</strong> Mid-level course covering the cross-cloud security baseline.</li>
+<li><strong>SEC510 — Public Cloud Security: AWS, Azure, and GCP.</strong> Advanced multi-cloud course covering the three-major-provider control surfaces.</li>
+</ul>
+<p>Bucket-misconfiguration detection and remediation is fundamental across the SANS cloud-security curriculum. Coverline&#39;s finding is the entry-level case study every one of these courses covers.</p>
+<h3 id="giac-gcpn-cloud-penetration-tester">GIAC GCPN — Cloud Penetration Tester<a class="anchor" href="#giac-gcpn-cloud-penetration-tester" aria-label="Link to this section">#</a></h3>
+<p>The <strong>GCPN</strong> is the offensive-side cloud-security cert from GIAC. The exam tests offensive cloud techniques including <code>--no-sign-request</code> bucket enumeration, IAM enumeration via <code>aws iam list-*</code> calls, EC2 IMDS exploitation (the Capital One technique), and the cross-cloud equivalents.</p>
+<p>For Coverline specifically, the GCPN candidate would have run the same <code>aws s3 ls --no-sign-request</code> probes that Driftwood just ran — except the GCPN context is offensive (find the misconfigured bucket and exfiltrate the data) rather than defensive (find the misconfigured bucket and report to the audit firm). The technical skill is identical; the engagement scope differs.</p>
+<h3 id="cissp">CISSP<a class="anchor" href="#cissp" aria-label="Link to this section">#</a></h3>
+<p>CISSP (2024 CBK refresh, next refresh expected 2027). The cloud track touches:</p>
+<ul>
+<li><strong>Domain 4 — Communication and Network Security.</strong> Cloud network architecture including the boundary between cloud and external internet.</li>
+<li><strong>Domain 7 — Security Operations.</strong> Continuous monitoring and the detection layer.</li>
+</ul>
+<h3 id="cross-cloud-equivalents">Cross-cloud equivalents<a class="anchor" href="#cross-cloud-equivalents" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Microsoft AZ-500 — Azure Security Engineer Associate.</strong> Azure-side equivalent. Azure Blob Storage anonymous-read configuration is the direct Coverline-analog scenario; the AZ-500 exam tests it.</li>
+<li><strong>Google Professional Cloud Security Engineer.</strong> GCP-side equivalent. GCP Cloud Storage bucket-level IAM with <code>allUsers</code> / <code>allAuthenticatedUsers</code> principals is the same misconfiguration pattern.</li>
+</ul>
+<p>The fact that the same misconfiguration pattern exists across all three major clouds — with the same severity, the same remediation, and the same detection tools — is itself the broader lesson. The cloud cert ecosystem has converged on this pattern because the incident reports keep producing it.</p>
+<h2 id="defender">§7 — What a defender does<a class="anchor" href="#defender" aria-label="Link to this section">#</a></h2>
+<p>The Coverline scenario is not theoretical. Every defender working at an organization with non-trivial cloud presence — and especially at organizations handling regulated data — has to navigate this category of finding. Here&#39;s what the work looks like.</p>
+<p><strong>1. For this specific finding, today.</strong> Restrict <code>coverline-claims-uploads-prod</code> to private immediately. Turn on Block Public Access at the bucket level. Update the bucket policy to deny all principals except the claims-app role. Pull the S3 server-access logs and CloudTrail data events for the bucket; identify any non-Coverline source IP that has requested objects since the bucket was created. That access log is the data set that determines the breach-notification math. Rotate the RDS master password immediately. Audit RDS authentication logs (CloudWatch Logs for RDS audit logging, if enabled) for any non-Coverline source IP in the period the script&#39;s password has been in the wild. Delete the migration script and the SQL dump from the bucket once they&#39;ve been preserved to an evidence-retention store. Coverline&#39;s CISO + GC + outside counsel determine the breach-notification posture across NAIC, NYDFS, GLBA, and the state laws of every claimant&#39;s jurisdiction.</p>
+<p><strong>2. For Coverline&#39;s broader S3 posture, this quarter.</strong> Enable <strong>S3 Block Public Access at the ACCOUNT level</strong> on every production AWS account. Single switch, account-wide, overrides every per-bucket setting. This makes &quot;accidentally public&quot; structurally impossible. Enforce account-level BPA via an <strong>AWS Organizations Service Control Policy</strong>; SCPs cannot be overridden by member-account admins. Enable <strong>AWS Config managed rules</strong> <code>s3-bucket-public-read-prohibited</code> and <code>s3-bucket-public-write-prohibited</code> org-wide via AWS Config Aggregator. Set noncompliance alerts to page security on detection. Enable <strong>AWS Macie</strong> on the production accounts — Macie surfaces buckets that contain sensitive data types (PII, PHI, financial, credentials) AND are publicly accessible, exactly the union of conditions that made Coverline&#39;s finding a finding. Enable <strong>AWS Security Hub</strong> with the CIS AWS Foundations Benchmark v5 + AWS Foundational Security Best Practices standards for continuous compliance scoring.</p>
+<p><strong>3. For Coverline&#39;s credential-handling posture, this quarter.</strong> Audit every production codebase, script, container image, and S3 bucket for hardcoded credentials. Tools: <strong>gitleaks</strong>, <strong>TruffleHog</strong>, <strong>GitHub Advanced Security Secret Scanning</strong>, <strong>AWS Secrets Manager&#39;s &quot;find unused secrets&quot; automation</strong>, <strong>Snyk Code</strong>, <strong>Semgrep with the secret-detection ruleset</strong>. Migrate every hardcoded credential to <strong>AWS Secrets Manager</strong> (or Parameter Store with KMS encryption, or HashiCorp Vault). Scripts read from the secret store at runtime; the secret never appears in source. Set up rotation on every Secrets Manager secret — RDS has built-in rotation via Secrets Manager; use it. Enable <strong>IAM Access Analyzer</strong> with the external-access finding type — detects identity-based and resource-based policy paths that grant access to external principals (including <code>Principal: &quot;*&quot;</code>).</p>
+<p><strong>4. For Coverline&#39;s SOC 2 control evidence, going forward.</strong> The audit walk Driftwood just did SHOULD be a quarterly automated review, not an annual manual one. AWS Config + Macie + a custom Lambda that posts the bucket inventory + public-access state to a Slack channel weekly converts <em>&quot;evidence we walked it&quot;</em> into <em>&quot;evidence we monitor it.&quot;</em> The cost of the automation is days; the cost of NOT having the automation is what Coverline just lived through. Add the public-access-posture check to Coverline&#39;s internal control attestation cadence — every quarter, the cloud-platform team certifies in writing that the posture matches the documented inventory. For new buckets: bucket creation goes through Terraform with a module that enforces Block Public Access on creation. Manual creation through the AWS console is disabled via SCP.</p>
+<p><strong>5. Sample detection rule (Sigma, AWS CloudTrail S3 event):</strong></p>
+<pre><code class="language-yaml">title: S3 bucket made publicly accessible
+status: experimental
+description: Detects CloudTrail events indicating an S3 bucket
+  has been configured (or had its configuration changed) to allow
+  anonymous public access. Should never fire in an environment
+  where account-level Public Access Block is enabled via SCP.
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  selection_acl:
+    eventSource: &#39;s3.amazonaws.com&#39;
+    eventName: &#39;PutBucketAcl&#39;
+    requestParameters|contains: &#39;AllUsers&#39;
+  selection_policy:
+    eventSource: &#39;s3.amazonaws.com&#39;
+    eventName: &#39;PutBucketPolicy&#39;
+    requestParameters|contains|all:
+      - &#39;&quot;Principal&quot;: &quot;*&quot;&#39;
+      - &#39;&quot;Effect&quot;: &quot;Allow&quot;&#39;
+  selection_bpa_disable:
+    eventSource: &#39;s3.amazonaws.com&#39;
+    eventName: &#39;DeletePublicAccessBlock&#39;
+  condition: selection_acl or selection_policy or selection_bpa_disable
+level: critical
+falsepositives:
+  - Legitimate creation of an intentionally-public bucket (e.g.,
+    a marketing-CDN bucket — tune per known-public-bucket
+    allowlist)
+</code></pre>
+<p>The rule, fed into Coverline&#39;s SIEM, would alert on the next attempt to create a publicly-accessible bucket — turning the audit cadence into a real-time detection.</p>
+<p><strong>6. The broader OPSEC lesson (defender side).</strong> Public cloud storage is the modern equivalent of an unauthenticated FTP server on the internet, except it happens to companies that wouldn&#39;t dream of running an unauthenticated FTP server. The mental model is wrong; the reality is the same. <em>&quot;Public&quot;</em> is a feature for marketing assets, OSS artifacts, and documented public APIs. It is a defect for anything else, including any byproduct of an operational process — logs, dumps, exports, migrations, backups, snapshots, scratch. The default of <em>&quot;private&quot;</em> is correct; the exceptions should be explicit, named, reviewed, and continuously monitored.</p>
+<h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
+<p>The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run the right command — <code>progress --detail</code> lists what you&#39;ve unlocked.</p>
+<h3 id="probing-from-outside-the-clients-account">Probing from outside the client&#39;s account<a class="anchor" href="#probing-from-outside-the-clients-account" aria-label="Link to this section">#</a></h3>
+<p><strong>Trigger:</strong> <code>aws sts get-caller-identity</code></p>
+<p><strong>What it teaches:</strong> <code>sts get-caller-identity</code> returns Driftwood&#39;s own account (<code>778899012345 / driftwood-cloudsec-readonly</code>), not Coverline&#39;s. For external-audit work, <strong>confirming you are operating from an OUTSIDE account is its own auditable control.</strong></p>
+<p>The bonus fires when you run the command; here&#39;s why a methodical auditor would run it BEFORE the bucket probes start:</p>
+<ul>
+<li>The audit worksheet&#39;s <em>premise</em> is that the auditor is hitting the buckets unauthenticated, using <code>--no-sign-request</code>. That premise is undermined if the auditor <em>also</em> has cached Coverline credentials in their environment — a stray <code>AWS_PROFILE</code> left from a previous engagement, an instance-profile credential leaking through environment-variable precedence, an SSO session that hasn&#39;t expired.</li>
+<li>The auditor probably <em>intends</em> to be unauthenticated. But the AWS CLI&#39;s credential-resolution chain is silent about which credential ended up signing each request unless you explicitly check (<code>aws sts get-caller-identity</code> is the canonical check).</li>
+<li>For SOC 2 evidence specifically, the auditor&#39;s workpaper should record: <em>the identity that performed the test</em> (named external auditor), <em>the timestamp of the test</em>, <em>the response observed</em>. If the response is <code>AccessDenied</code>, that&#39;s only audit-grade evidence if the auditor&#39;s account isn&#39;t Coverline&#39;s account. <code>sts get-caller-identity</code> is what produces the named external auditor row.</li>
+</ul>
+<p>The longer-arc principle: <strong>external auditors should be operating from an account that cannot accidentally be inside the audited environment.</strong> Driftwood maintains <code>driftwood-cloudsec-readonly</code> for exactly this reason — a separate account, with no cross-account-trust relationships to client accounts, with read-only IAM, with no cached client credentials. Confirming identity before every external probe is how you produce audit evidence that the test was genuinely external.</p>
+<p>This is also why <strong>AWS CloudTrail captures <code>sts:GetCallerIdentity</code> as an immutable audit event</strong> — the API call is the kind of operational check that becomes audit evidence retroactively. Run it; CloudTrail records it; the workpaper points to the CloudTrail timestamp; the evidence is reproducible.</p>
+<p>For the broader project lesson: <strong>the test setup matters as much as the test result.</strong> A <code>AccessDenied</code> response from a private bucket probed from an outside account is audit-grade evidence. The same <code>AccessDenied</code> response from the same probe, where the probe was <em>accidentally</em> signed by an internal Coverline credential the auditor&#39;s environment had cached, is not audit-grade evidence — because the access-control under test was the <em>signing credential&#39;s policy</em>, not the <em>bucket&#39;s policy as exposed to unauthenticated requesters</em>.</p>
+<p>The CIS AWS Foundations Benchmark addresses this from the <em>audited</em> side: separation of audit and operational identities at the account level. CIS Benchmark control 1.16 (&quot;Ensure IAM policies are attached only to groups or roles&quot;) and the broader IAM-account-separation guidance speak to it.</p>
+<h2 id="takeaways">§8 — Key takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong><code>AccessDenied</code> is what GOOD looks like for a private S3 bucket probed from outside.</strong> The bucket exists; the access control works. The audit&#39;s job is to confirm that response across the inventory.</li>
+<li><strong>The most damaging cloud security incidents almost never start with a sophisticated technique.</strong> They start with a bucket that someone made public for ten minutes during a 2:00 AM deploy in 2022 and forgot to revert. The script that&#39;s been <em>&quot;I&#39;ll clean that up later&quot;</em> since 2023. The IAM role that has <code>AdministratorAccess</code> because the original developer didn&#39;t know which permissions they needed. The hardcoded password that worked once and got copy-pasted into every subsequent migration.</li>
+<li><strong>S3 Block Public Access at the account level — enforced via SCP — makes &quot;accidentally public&quot; structurally impossible.</strong> The setting has been available since November 2018. Every organization should have it on. The reason it isn&#39;t always on isn&#39;t ignorance; it&#39;s that nobody assigned the rollout and it never reached the top of anyone&#39;s queue.</li>
+<li><strong>The regulatory cascade is the punchline, not the breach itself.</strong> For Coverline, a single misconfigured bucket triggers SOC 2 (audit deficiency), NAIC (state insurance commissioner 72-hour clock), NYDFS (Superintendent 72-hour clock), GLBA (FTC notification at 500+ consumers), and state-by-state breach laws across every claimant&#39;s jurisdiction. The technical fix is a one-line <code>aws s3api put-public-access-block</code> command. The institutional fix is the continuous-monitoring program + the SCP enforcement that prevents the next instance.</li>
+<li><strong>For consulting work, the procedural quality is the deliverable.</strong> Coverline&#39;s audit firm gets a clean documented walk with five &quot;MATCHES EXPECTATION&quot; rows and one &quot;DEVIATION&quot; row with a properly-scoped finding memo. That deliverable is what closes the SOC 2 control-gap finding. A messy or speculative walk would have made the audit-firm finding worse, not better.</li>
+</ul>
+<h2 id="further-reading">§9 — Further reading<a class="anchor" href="#further-reading" aria-label="Link to this section">#</a></h2>
+<p><em>Last reviewed: June 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project&#39;s GitHub issues tracker.</em></p>
+<ul>
+<li><a href="https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services" target="_blank" rel="noopener noreferrer">AICPA SOC 2 Trust Services Criteria — 2017 framework with 2022 revisions</a></li>
+<li><a href="https://csrc.nist.gov/pubs/sp/800/53/r5/final" target="_blank" rel="noopener noreferrer">NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)</a></li>
+<li><a href="https://www.nist.gov/cyberframework" target="_blank" rel="noopener noreferrer">NIST Cybersecurity Framework 2.0</a></li>
+<li><a href="https://www.cisecurity.org/benchmark/amazon_web_services" target="_blank" rel="noopener noreferrer">CIS AWS Foundations Benchmark (current release v7.0.0; AWS Security Hub&#39;s managed standard still implements v5.0.0)</a></li>
+<li><a href="https://www.iso.org/standard/43757.html" target="_blank" rel="noopener noreferrer">ISO/IEC 27017:2015 — Code of practice for cloud services</a></li>
+<li><a href="https://github.com/OWASP/Cloud-Native-Application-Security-Top-10" target="_blank" rel="noopener noreferrer">OWASP Cloud-Native Application Security Top 10 (GitHub canonical — 2022 edition)</a></li>
+<li><a href="https://cwe.mitre.org/data/definitions/200.html" target="_blank" rel="noopener noreferrer">CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (MITRE flags as &quot;Discouraged&quot; for direct vulnerability mapping; CWE-732 is the preferred citation for this scenario)</a></li>
+<li><a href="https://cwe.mitre.org/data/definitions/732.html" target="_blank" rel="noopener noreferrer">CWE-732 — Incorrect Permission Assignment for Critical Resource</a></li>
+<li><a href="https://cwe.mitre.org/data/definitions/285.html" target="_blank" rel="noopener noreferrer">CWE-285 — Improper Authorization</a></li>
+<li><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" rel="noopener noreferrer">CWE-798 — Use of Hard-coded Credentials</a></li>
+<li><a href="https://cwe.mitre.org/data/definitions/540.html" target="_blank" rel="noopener noreferrer">CWE-540 — Inclusion of Sensitive Information in Source Code</a></li>
+<li><a href="https://content.naic.org/sites/default/files/model-law-668.pdf" target="_blank" rel="noopener noreferrer">NAIC Insurance Data Security Model Law (#668)</a></li>
+<li><a href="https://www.dfs.ny.gov/industry_guidance/cybersecurity" target="_blank" rel="noopener noreferrer">NYDFS 23 NYCRR 500 — Cybersecurity Requirements (2017, amended November 2023)</a></li>
+<li><a href="https://www.ftc.gov/legal-library/browse/rules/safeguards-rule" target="_blank" rel="noopener noreferrer">GLBA Safeguards Rule — 16 CFR Part 314</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1530/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1530: Data from Cloud Storage Object</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1602/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1602: Data from Configuration Repository</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1078/004/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1078.004: Valid Accounts: Cloud Accounts</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1213/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1213: Data from Information Repositories</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1580/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1580: Cloud Infrastructure Discovery</a></li>
+<li><a href="https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html" target="_blank" rel="noopener noreferrer">AWS S3 Block Public Access — User Guide</a></li>
+<li><a href="https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-public-read-prohibited.html" target="_blank" rel="noopener noreferrer">AWS Config managed rule — s3-bucket-public-read-prohibited</a></li>
+<li><a href="https://aws.amazon.com/macie/" target="_blank" rel="noopener noreferrer">AWS Macie — Sensitive data discovery</a></li>
+<li><a href="https://aws.amazon.com/security-hub/" target="_blank" rel="noopener noreferrer">AWS Security Hub — Centralized security findings</a></li>
+<li><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html" target="_blank" rel="noopener noreferrer">AWS IAM Access Analyzer</a></li>
+<li><a href="https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html" target="_blank" rel="noopener noreferrer">Capital One 2019 breach — OCC consent order ($80M penalty, August 2020)</a></li>
+<li><a href="https://www.cybersecuritydive.com/news/fed-ends-capital-one-breach-action/686970/" target="_blank" rel="noopener noreferrer">Federal Reserve terminates Capital One enforcement action (2023)</a></li>
+<li><a href="https://www.upguard.com/breaches/cloud-leak-accenture" target="_blank" rel="noopener noreferrer">UpGuard — Accenture S3 buckets exposure (September 2017)</a></li>
+<li><a href="https://www.upguard.com/breaches/the-rnc-files" target="_blank" rel="noopener noreferrer">UpGuard — Deep Root Analytics / RNC voter data exposure (June 2017)</a></li>
+<li><a href="https://www.verizon.com/business/resources/reports/dbir/" target="_blank" rel="noopener noreferrer">Verizon Data Breach Investigations Report (DBIR) — annual</a></li>
+<li><a href="https://www.ibm.com/reports/data-breach" target="_blank" rel="noopener noreferrer">IBM Cost of a Data Breach Report — annual</a></li>
+</ul>
+<hr>
+<p><em>Return to <a href="/walkthroughs/">walkthroughs index</a> — or back to <a href="/">d3cyph3r.com</a></em></p>
+<nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/cloud/"><span class="pager-dir">&larr; Previous</span><span class="pager-label">Cloud track</span><span class="pager-title">All walkthroughs in this track</span></a><a class="pager-cell pager-next" href="/walkthroughs/cloud/level1.html"><span class="pager-dir">&rarr; Next</span><span class="pager-label">level1@cloud</span><span class="pager-title">The Migration Table Nobody Dropped</span></a></nav>    </main>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-read-the-brief">Step 1: Read the brief</a></li><li><a href="#step-2-confirm-youre-probing-from-outside-coverlines-account">Step 2: Confirm you're probing from outside Coverline's account</a></li><li><a href="#step-3-walk-the-private-buckets">Step 3: Walk the private buckets</a></li><li><a href="#step-4-walk-the-intentionally-public-bucket">Step 4: Walk the intentionally-public bucket</a></li><li><a href="#step-5-walk-the-misconfigured-bucket">Step 5: Walk the misconfigured bucket</a></li><li><a href="#step-6-inspect-the-claim-files">Step 6: Inspect the claim files</a></li><li><a href="#step-7-inspect-the-migration-script">Step 7: Inspect the migration script</a></li><li><a href="#step-8-stop">Step 8: Stop</a></li><li><a href="#step-9-the-breadcrumb-game-world-only">Step 9: The breadcrumb (game-world only)</a></li><li><a href="#if-you-got-stuck">If you got stuck</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a><ul class="toc-sub"><li><a href="#capital-one-march-2019-disclosed-july-2019">Capital One — March 2019 (disclosed July 2019)</a></li><li><a href="#accenture-september-2017">Accenture — September 2017</a></li><li><a href="#us-voter-records-deep-root-analytics-june-2017">US Voter Records / Deep Root Analytics — June 2017</a></li></ul></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a><ul class="toc-sub"><li><a href="#soc-2-trust-services-criteria-cc61-cc66-cc67-cc71">SOC 2 Trust Services Criteria — CC6.1, CC6.6, CC6.7, CC7.1</a></li><li><a href="#nist-sp-800-53-rev-5-ac-3-ac-6-sc-7-au-12">NIST SP 800-53 Rev. 5 — AC-3, AC-6, SC-7, AU-12</a></li><li><a href="#nist-cybersecurity-framework-20-praa-prds-decm">NIST Cybersecurity Framework 2.0 — PR.AA, PR.DS, DE.CM</a></li><li><a href="#cis-aws-foundations-benchmark-v700-s311-through-s314-s3">CIS AWS Foundations Benchmark v7.0.0 — §3.1.1 through §3.1.4 (S3)</a></li><li><a href="#isoiec-270172015-code-of-practice-for-cloud-services">ISO/IEC 27017:2015 — Code of Practice for Cloud Services</a></li><li><a href="#owasp-cloud-native-top-10-cnas-1-cnas-2-cnas-5">OWASP Cloud-Native Top 10 — CNAS-1, CNAS-2, CNAS-5</a></li><li><a href="#cwe-200-cwe-732-cwe-285-cwe-798-cwe-540">CWE-200, CWE-732, CWE-285, CWE-798, CWE-540</a></li><li><a href="#naic-insurance-data-security-model-law-2017">NAIC Insurance Data Security Model Law (2017)</a></li><li><a href="#nydfs-23-nycrr-500-2017-amended-2023">NYDFS 23 NYCRR 500 (2017, amended 2023)</a></li><li><a href="#glba-safeguards-rule-16-cfr-part-314-ftc-amendments-effective-2023">GLBA Safeguards Rule — 16 CFR Part 314 (FTC amendments effective 2023)</a></li></ul></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a><ul class="toc-sub"><li><a href="#aws-certified-security-specialty-current-exam-code-scs-c03">AWS Certified Security – Specialty — current exam code SCS-C03</a></li><li><a href="#aws-certified-solutions-architect-associate-saa-c03-and-professional-sap-c02">AWS Certified Solutions Architect — Associate (SAA-C03) and Professional (SAP-C02)</a></li><li><a href="#aws-certified-cloud-practitioner-current-exam-code-clf-c02">AWS Certified Cloud Practitioner — current exam code CLF-C02</a></li><li><a href="#comptia-security-current-exam-code-sy0-701">CompTIA Security+ — current exam code SY0-701</a></li><li><a href="#comptia-cysa-exam-codes-cs0-003-cs0-004">CompTIA CySA+ — exam codes CS0-003 / CS0-004</a></li><li><a href="#isc-ccsp-certified-cloud-security-professional">(ISC)² CCSP — Certified Cloud Security Professional</a></li><li><a href="#csa-ccsk-certificate-of-cloud-security-knowledge">CSA CCSK — Certificate of Cloud Security Knowledge</a></li><li><a href="#sans-gcsa-sec388-sec488-sec510">SANS GCSA / SEC388 / SEC488 / SEC510</a></li><li><a href="#giac-gcpn-cloud-penetration-tester">GIAC GCPN — Cloud Penetration Tester</a></li><li><a href="#cissp">CISSP</a></li><li><a href="#cross-cloud-equivalents">Cross-cloud equivalents</a></li></ul></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a><ul class="toc-sub"><li><a href="#probing-from-outside-the-clients-account">Probing from outside the client's account</a></li></ul></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+  </div>
+
+  <footer id="site-footer">
+    <p class="footer-disclaimer">
+      For educational use. Don't run these techniques against systems
+      you don't own or aren't authorized to test.
+    </p>
+    <p class="footer-links">
+      <a href="/" class="footer-link">&larr; Back to d3cyph3r.com</a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://github.com/rlwilliamson-dev/d3cyph3r" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="View source on GitHub">
+        <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.62 7.62 0 0 0-2-.27c-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
+        </svg>
+        <span>Source on GitHub</span>
+      </a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://azure.microsoft.com/" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="Hosted on Microsoft Azure">
+        <svg width="13" height="13" viewBox="0 0 18 18" aria-hidden="true">
+          <path d="M10.61 2L4.05 14.4l5.6.04 1.5-2.92 4.9 2.88L10.61 2z" fill="#0078D4"/>
+        </svg>
+        <span>Hosted on Microsoft Azure</span>
+      </a>
+    </p>
+  </footer>
+
+  <script type="module" src="/walkthroughs/reader.js"></script>
+</body>
+</html>

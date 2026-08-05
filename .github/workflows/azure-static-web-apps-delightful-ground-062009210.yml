@@ -113,8 +113,53 @@ jobs:
         if: always()
         run: kill "$(cat /tmp/d3_server.pid)" 2>/dev/null || true
 
+  walkthrough_drift_job:
+    # v2.4.0 — Guards the generated walkthrough pages.
+    #
+    # walkthroughs/<track>/<level>.html is generated from the matching
+    # .md by tools/build-walkthroughs.mjs and COMMITTED. That gives us
+    # static pages with no build step on the deploy path, at the cost of
+    # one failure mode: someone edits the markdown, forgets to
+    # regenerate, and the published page silently no longer matches its
+    # source.
+    #
+    # This job closes that gap by re-running the generator and failing
+    # if anything changed. Unlike playtest_job it runs on PRs as well,
+    # because catching the drift BEFORE merge is the entire point. It
+    # needs no npm install (the generator has zero dependencies), so it
+    # costs a few seconds.
+    if: |
+      github.event_name != 'pull_request' || github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    name: Walkthrough generator is up to date
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Regenerate walkthrough pages
+        run: node tools/build-walkthroughs.mjs
+      - name: Fail if generated output differs from what was committed
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::Generated walkthrough files are stale."
+            echo ""
+            echo "A tracked file changed when the generator re-ran, which"
+            echo "means committed output does not match its source."
+            echo ""
+            echo "Fix: run 'node tools/build-walkthroughs.mjs' locally and"
+            echo "commit the result."
+            echo ""
+            echo "Files that differ:"
+            git --no-pager diff --stat
+            exit 1
+          fi
+          echo "Generated walkthrough output matches the committed files."
+
   build_and_deploy_job:
-    needs: playtest_job
+    needs: [playtest_job, walkthrough_drift_job]
     # v1.24.2 — Allow deploys when playtest_job is SKIPPED (PR pushes,
     # where playtest doesn't run by design) OR when ALL shards SUCCEED.
     # Block only on playtest failure or cancellation.
@@ -122,9 +167,15 @@ jobs:
     # The default `needs:` semantics would skip build_and_deploy_job
     # when its dependency is skipped — we override that with
     # `if: !cancelled() && needs.playtest_job.result != 'failure'`.
+    #
+    # v2.4.0 — walkthrough_drift_job is gated the same way. It is NOT
+    # skipped on PRs, so its failure blocks a preview deploy as well as
+    # a production one: publishing a page that disagrees with its own
+    # markdown source is exactly what this check exists to prevent.
     if: |
       !cancelled() &&
       needs.playtest_job.result != 'failure' &&
+      needs.walkthrough_drift_job.result != 'failure' &&
       (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed') || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     name: Build and Deploy Job

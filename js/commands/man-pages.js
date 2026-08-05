@@ -1834,9 +1834,9 @@ SYNOPSIS
     walkthrough
 
 DESCRIPTION
-    Open the matching markdown walkthrough at /walkthroughs/#/track/level
-    in a new tab. Walkthroughs are spoiler-bearing — only read them
-    after solving the level.
+    Open the matching walkthrough at /walkthroughs/track/level in a
+    new tab. Walkthroughs are spoiler-bearing — only read them after
+    solving the level.
 
 EXAMPLES
     walkthrough`,

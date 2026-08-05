@@ -340,7 +340,7 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026.*
+*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 **SQL injection — learn + prevent**
 

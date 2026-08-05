@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>level2@osint — The Internet Never Forgets — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="Day three. Aaron deleted the leaky repo and called it fixed — so the wayback Machine becomes the proof that deletion isn't remediation: the 2023-24 captures still serve the repo while the live URL 404s, and the AWS key was never rotated. An archive sweep of Aaron's scrubbed 2009 personal site recove">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/osint/level2.html">
+  <meta property="og:title" content="level2@osint — The Internet Never Forgets — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="Day three. Aaron deleted the leaky repo and called it fixed — so the wayback Machine becomes the proof that deletion isn't remediation: the 2023-24 captures still serve the repo while the live URL 404s, and the AWS key was never rotated. An archive sweep of Aaron's scrubbed 2009 personal site recove">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/osint/level2.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="D3CYPH3R">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.0">
+</head>
+<body class="page-doc">
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header id="site-header">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" aria-label="Back to d3cyph3r.com">
+        <span class="brand-mark"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span>
+      </a>
+      <a href="/walkthroughs/" class="brand-sub-link">
+        <span class="brand-sub">walkthroughs</span>
+      </a>
+    </div>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><a href="/walkthroughs/osint/">osint</a><span class="sep" aria-hidden="true">/</span><span class="current">level2</span></nav>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
+      <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
+      </svg>
+      <svg class="theme-icon theme-icon-sun" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="layout">
+    <main id="main" class="doc">
+<h1 id="level2osint-the-internet-never-forgets">level2@osint — The Internet Never Forgets<a class="anchor" href="#level2osint-the-internet-never-forgets" aria-label="Link to this section">#</a></h1>
+<p class="doc-meta"><span class="doc-meta-item">26 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">5,185 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">OSINT track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> OSINT · <strong>Client:</strong> Veridian Analytics · <strong>Compliance regime:</strong> HIPAA Security Rule (45 CFR Part 164, Subpart C) + HITRUST CSF v11 + NIST SP 800-66 Rev. 2 · <strong>Builds on:</strong> <a href="/walkthroughs/#/osint/level1"><code>level1@osint</code></a></p>
+<blockquote class="spoiler-warning">
+<p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for <code>level3@osint</code>. If you haven&#39;t solved <code>level2@osint</code> yet, close this tab and come back after. The level&#39;s whole point is the moment you realize the &quot;deleted&quot; repo is still readable and the scrubbed handle is still in the archive — reading the writeup first removes it.</p>
+</blockquote>
+<hr>
+<h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<p>You enter <code>level2@osint</code> by typing <code>AaronHinesMD/Pers0nal+AWS/2024+BrightBlu</code> at the password prompt — the AWS secret access key you pulled out of Aaron&#39;s committed <code>.env</code> in <code>level1@osint</code>. That&#39;s not a coincidence and it&#39;s not just a gate gimmick: the fact that the key still works is the first finding of this level. Aaron&#39;s AWS access key was committed to a public repo in July 2023 and, as of this engagement, has never been rotated. A leaked secret stays valid until it&#39;s revoked at the provider, and nobody revoked this one. Keep that in your head as you work — the password that let you in is itself evidence.</p>
+<p>The engagement clock has moved to Thursday, 2026-05-21. Here&#39;s what happened since <code>level1@osint</code>. Wednesday at close of business you delivered the GitHub finding to Marisol Vega: a live <code>AKIA</code>-prefixed IAM user access key, an OpenFDA personal API key, and a Flask secret, all committed to <code>aaron-hines-md/personal-pgx-tool</code>&#39;s <code>.env</code> at HEAD since 2023-07-14, with a <code>.gitignore</code> added two months later (listing <code>.env</code>) that never retroactively untracked the file. Your recommendation, in order, was the standard one: rotate the AWS key today, review CloudTrail/GuardDuty for misuse, and only <em>then</em> worry about cleaning the git history.</p>
+<p>Aaron — anxious, well-meaning, and not a security person — did the satisfying thing instead of the correct thing. Thursday morning at 07:50 he deleted the entire <code>personal-pgx-tool</code> repository from GitHub and emailed Marisol: &quot;Taken care of, the repo&#39;s gone.&quot; He did not mention rotating the key, because in his mental model deleting the repo <em>is</em> the fix. The repo held the secret; the repo is gone; therefore the secret is gone. That mental model is wrong in two independent ways, and showing Marisol exactly <em>how</em> it&#39;s wrong is the job today.</p>
+<p>Marisol&#39;s note to Priya framed two tasks. First, the remediation check: prove what the Internet Archive still serves for the deleted repo, because if the capture still carries the <code>.env</code>, &quot;I deleted it&quot; demonstrably didn&#39;t make the secret unreadable — and it certainly didn&#39;t make it invalid. Second, a light archive sweep: Aaron has been online since his residency and is exactly the type to have a personal site and half-forgotten side projects from fifteen years ago. Find anything still exposed that he&#39;s stopped thinking about. Same scope discipline as the prior two tasks — public data only, read-only, Aaron alone, no family, no active testing of anything.</p>
+<p>You&#39;re in the same chair: <code>intel</code> on the Driftwood OSINT engagement workstation, same shared service account, same case file (<code>VER-EXP-2026-002</code>). The Veridian legal frame is unchanged (HIPAA Business Associate, BAAs with payer/provider customers, HITRUST CSF v11 overlay, NIST SP 800-66 Rev. 2 reference, MA 201 CMR 17.00). As before, today&#39;s specific findings are about Aaron&#39;s <em>personal</em> footprint rather than Veridian&#39;s systems — but the framing matters for the brief, because the throughline of all three Veridian tasks is one competent person&#39;s personal security model lagging a decade behind his exposure.</p>
+<h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
+<p>The path is a clean archive-recon chain: prove the deletion didn&#39;t remediate, then pivot from an old archived page to a forgotten identity, then read what that identity leaked. The new tool is <code>wayback</code>; you&#39;ll reuse <code>curl</code> to read archived snapshots and <code>sherlock</code> to pivot on a handle.</p>
+<h3 id="step-1-open-the-workspace-with-the-aws-key">Step 1: Open the workspace with the AWS key<a class="anchor" href="#step-1-open-the-workspace-with-the-aws-key" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@osint
+level2@osint&#39;s password: AaronHinesMD/Pers0nal+AWS/2024+BrightBlu
+Connected: level2@osint
+intel@osint:~$ whoami
+intel
+</code></pre>
+<p>The gate password is the secret access key from level1&#39;s <code>.env</code>. It works because the key was never rotated — which is the entire deletion-vs-rotation lesson in a single login.</p>
+<h3 id="step-2-read-the-three-engagement-files">Step 2: Read the three engagement files<a class="anchor" href="#step-2-read-the-three-engagement-files" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">intel@osint:~$ ls
+engagement-notes.md  lessons-learned.md  subject-update.txt  welcome.md
+</code></pre>
+<p><code>welcome.md</code> introduces the <code>wayback</code> command and explains what the Internet Archive does: it decouples &quot;what&#39;s online now&quot; from &quot;what was ever online,&quot; and deleting content at the origin doesn&#39;t remove the captures. <code>engagement-notes.md</code> is Priya&#39;s update — Aaron deleted the repo, didn&#39;t confirm rotation, and Marisol wants the deletion-vs-rotation distinction made unmissable plus a light archive sweep. <code>subject-update.txt</code> is the formal case-file update carrying the two URLs in scope: the deleted repo and Aaron&#39;s old personal site (<code>http://www.aaronhines.net</code>, in the Wayback Machine since 2009 — it&#39;s how level0 dated his Gmail).</p>
+<h3 id="step-3-wayback-the-deleted-repo-the-remediation-check">Step 3: wayback the &quot;deleted&quot; repo — the remediation check<a class="anchor" href="#step-3-wayback-the-deleted-repo-the-remediation-check" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">intel@osint:~$ wayback https://github.com/aaron-hines-md/personal-pgx-tool
+Internet Archive — Wayback Machine
+URL: https://github.com/aaron-hines-md/personal-pgx-tool
+──────────────────────────────────────────
+  Timestamp            Status   Snapshot URL
+  2023-08-02 14:11:50  200      https://web.archive.org/web/20230802141150/https://github.com/aaron-hines-md/personal-pgx-tool
+  2023-11-19 09:42:03  200      https://web.archive.org/web/20231119094203/https://github.com/aaron-hines-md/personal-pgx-tool
+  2024-03-09 22:05:31  200      https://web.archive.org/web/20240309220531/https://github.com/aaron-hines-md/personal-pgx-tool
+  2026-05-21 11:38:02  404      https://web.archive.org/web/20260521113802/https://github.com/aaron-hines-md/personal-pgx-tool
+
+4 snapshots archived.
+</code></pre>
+<p>There it is. The 2026-05-21 row is a <code>404</code> — that&#39;s the archive capturing the now-deleted live page <em>after</em> Aaron&#39;s Thursday-morning delete. But the 2023 and 2024 rows are all <code>200</code>, and they&#39;re still served. <strong>Deleting the live repo did nothing to the existing captures.</strong> Anyone can open the 2024-03-09 snapshot and browse the repo&#39;s file tree — including the <code>.env</code> — exactly as it stood at HEAD. The deletion changed only one thing: it made the <em>current</em> URL 404. It did not unpublish the repo, and it did not touch the only thing that actually matters — rotating the key.</p>
+<p>This fires the <strong>Deletion theatre</strong> bonus find (see §7.5).</p>
+<h3 id="step-4-wayback-the-old-personal-site-start-the-sweep">Step 4: wayback the old personal site — start the sweep<a class="anchor" href="#step-4-wayback-the-old-personal-site-start-the-sweep" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">intel@osint:~$ wayback http://www.aaronhines.net
+Internet Archive — Wayback Machine
+URL: http://www.aaronhines.net
+──────────────────────────────────────────
+  Timestamp            Status   Snapshot URL
+  2009-10-15 08:30:12  200      https://web.archive.org/web/20091015083012/http://www.aaronhines.net/
+  2011-02-10 16:15:00  200      https://web.archive.org/web/20110210161500/http://www.aaronhines.net/robots.txt
+  2011-06-14 09:32:10  200      https://web.archive.org/web/20110614093210/http://www.aaronhines.net/
+  2013-04-22 19:48:55  200      https://web.archive.org/web/20130422194855/http://www.aaronhines.net/
+
+4 snapshots archived.
+</code></pre>
+<p>Aaron&#39;s pre-residency personal site, captured from 2009 to 2013. Two captures are interesting: the 2011 homepage (the version of Aaron that linked his hobby accounts before he went professional) and a <code>robots.txt</code> capture (a map of what he wanted hidden — the bonus path in §7.5).</p>
+<h3 id="step-5-curl-the-2011-homepage-recover-the-scrubbed-handle">Step 5: curl the 2011 homepage — recover the scrubbed handle<a class="anchor" href="#step-5-curl-the-2011-homepage-recover-the-scrubbed-handle" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">intel@osint:~$ curl https://web.archive.org/web/20110614093210/http://www.aaronhines.net/
+[ Wayback Machine — captured 2011-06-14 09:32:10 ]
+[ Archived from: http://www.aaronhines.net/ ]
+
+  Aaron Hines
+  [ About ]  [ Research ]  [ Running ]  [ Sailing ]  [ Links ]
+  ...
+  ── Around the web ──────────────────────────────────────────
+  I try to keep my professional and personal lives separate, so
+  most of these are under a handle rather than my name:
+
+    - Code (GitHub):          github.com/aaron-hines-md
+    - Sailing + homelab blog:  saltyhelm.net   &lt;- that one&#39;s me;
+                               I post as &quot;saltyhelm&quot;
+    - Running log:             on Strava (ask me for the link)
+  ...
+    aaron.hines.md@gmail.com
+</code></pre>
+<p>This is the pivot. The 2011 Aaron, before he had a professional reputation to manage, wrote down the link between his real-name identity and his pseudonymous one: <code>saltyhelm</code>, on <code>saltyhelm.net</code>. His <em>current</em> professional profiles don&#39;t link the blog — he scrubbed it when he became Dr. Aaron Hines, MD. But the 2011 page is in the archive, and the archive kept the version where he told everyone. Note the corroborating selector too: the same <code>aaron.hines.md@gmail.com</code> from level0 ties the page to Aaron without ambiguity. <strong>A pseudonym someone disconnected years ago is usually still sitting in a decade-old snapshot, one hop from their real name.</strong></p>
+<h3 id="step-6-sherlock-the-recovered-handle-map-the-other-life">Step 6: sherlock the recovered handle — map the other life<a class="anchor" href="#step-6-sherlock-the-recovered-handle-map-the-other-life" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">intel@osint:~$ sherlock saltyhelm
+Sherlock 0.14.4
+[*] Checking username &quot;saltyhelm&quot; across social platforms
+──────────────────────────────────────────
+
+[+] Blog:       http://www.saltyhelm.net  (self-hosted; latest post: /posts/self-hosting-the-boat-logs , 2022-03-19)
+[+] GitHub:     https://github.com/saltyhelm  (3 repos — homelab dotfiles + a Nextcloud compose; last push 2022-09)
+[+] Mastodon:   https://mas.to/@saltyhelm  (homelab + sailing; last toot 2023-05-30)
+[+] Reddit:     https://reddit.com/user/saltyhelm  (active in r/selfhosted, r/sailing)
+[-] Twitter:    404
+[-] Instagram:  404
+[-] TikTok:     404
+
+[*] Search complete.
+</code></pre>
+<p>A whole second footprint: a self-hosted blog, a GitHub under the alias, Mastodon, Reddit. This is &quot;Aaron&#39;s other lives&quot; — the hobby identity he kept walled off from his professional one. The blog&#39;s latest post is flagged right there: <code>/posts/self-hosting-the-boat-logs</code>.</p>
+<h3 id="step-7-curl-the-homelab-blog-post-extract-the-level3-breadcrumb">Step 7: curl the homelab blog post — extract the level3 breadcrumb<a class="anchor" href="#step-7-curl-the-homelab-blog-post-extract-the-level3-breadcrumb" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">intel@osint:~$ curl http://www.saltyhelm.net/posts/self-hosting-the-boat-logs
+saltyhelm.net — Self-hosting my boat-maintenance logs on the cabin Pi
+posted 2022-03-19 by saltyhelm
+...
+    version: &quot;3&quot;
+    services:
+      nextcloud:
+        image: nextcloud:24
+        ports:
+          - &quot;8080:80&quot;
+        environment:
+          - NEXTCLOUD_ADMIN_USER=saltyhelm
+          - NEXTCLOUD_ADMIN_PASSWORD=S4ltyHelm-Nextcloud-2022!
+          - NEXTCLOUD_TRUSTED_DOMAINS=helm.saltyhelm.net
+        volumes:
+          - ./nc-data:/var/www/html/data
+
+UPDATE (2022-08): a couple of folks pointed out that setting
+NEXTCLOUD_TRUSTED_DOMAINS=helm.saltyhelm.net plus the dynamic DNS
+means I did, in fact, expose this box to the open internet ...
+</code></pre>
+<p>The homelab post pastes Aaron&#39;s <code>docker-compose</code> to help other people doing the same thing — and the compose includes <code>NEXTCLOUD_ADMIN_PASSWORD=S4ltyHelm-Nextcloud-2022!</code> in cleartext, on a box his own update admits he exposed to the internet. <strong>That value is the <code>level3@osint</code> breadcrumb.</strong> It&#39;s the same failure mode as level1 (a credential in publicly-posted text), wearing a different hat: this time it&#39;s a &quot;personal / hobby&quot; channel rather than a professional repo, which is exactly why Aaron was even more careless with it.</p>
+<p>The chain across the OSINT track is now complete and consistent: <code>BostonStrong#2013</code> (reused password) → <code>AaronHinesMD/Pers0nal+AWS/2024+BrightBlu</code> (committed AWS key) → <code>S4ltyHelm-Nextcloud-2022!</code> (pasted homelab password). Three credentials, three channels, one person whose exposure has been quietly compounding for years.</p>
+<h3 id="step-8-the-hand-off">Step 8: the hand-off<a class="anchor" href="#step-8-the-hand-off" aria-label="Link to this section">#</a></h3>
+<p>Your report for Marisol has two findings:</p>
+<ol>
+<li><strong>The remediation check failed.</strong> The deleted <code>personal-pgx-tool</code> repo is still fully served from its 2023-2024 Wayback captures, including the <code>.env</code>. Deleting the repo reduced casual discoverability but remediated nothing; the AWS key (still valid — it&#39;s the login to this workstation) must be <strong>rotated at AWS</strong>, today, and the account reviewed via CloudTrail/GuardDuty for misuse since 2023-07-14.</li>
+<li><strong>A second, separate exposure.</strong> Aaron&#39;s pseudonymous <code>saltyhelm</code> identity — recovered from his own scrubbed 2011 page in the archive — includes a homelab blog post that pastes a working Nextcloud admin credential on an internet-exposed host. Rotate that credential, take the post down (knowing the archive keeps a copy), patch/retire the exposed box, and fold the alias into the monitoring scope.</li>
+</ol>
+<p>You did not use the AWS key, you did not log into the Nextcloud, you did not connect to the exposed host. Marisol writes the brief; she decides whether any of this becomes a separate active-testing engagement.</p>
+<h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
+<p>There are three distinct weaknesses here, and only one of them is a &quot;credential in a file&quot; in the level1 sense. The more interesting two are conceptual.</p>
+<p><strong>Deletion is not remediation (the core lesson).</strong> When a secret leaks to a public surface, two things are true and both must be addressed. (a) <em>The artifact is effectively permanent.</em> The Internet Archive, archive.today, search-engine caches, GitHub&#39;s fork network and events API, third-party clones, and the GitHub Arctic Code Vault all survive an origin delete. You cannot reliably un-publish. (b) <em>Independent of any artifact, the secret is compromised.</em> The only action that actually shrinks the exposure is rotating/revoking the credential at the provider so the leaked value stops authenticating. Aaron did (a) badly (the archive kept the repo) and skipped (b) entirely (the key still works). This isn&#39;t a CWE so much as an incident-response failure mode, and it&#39;s one of the most common ones there is: the instinct under pressure is to make the visible thing disappear, and the rotation step — the only one that matters — gets skipped.</p>
+<p><strong>Alias attribution via selector reuse (CWE-200 family).</strong> Pseudonymity is not anonymity and neither is privacy. People link their separate identities somewhere — an old bio, an &quot;about/links&quot; page, a reused avatar, a reused contact email, a distinctive writing style — and the link tends to survive in a place they&#39;ve forgotten. Here the link was a page Aaron wrote himself and later scrubbed; the archive preserved the scrubbed version, and the reused <code>aaron.hines.md@gmail.com</code> removed any doubt. Once the alias is attributed, the &quot;personal&quot; content is read with the same eyes as the professional content — and hobby projects are where people are most careless precisely because they believe nobody is looking.</p>
+<p><strong>Cleartext credential in publicly-posted content (CWE-312 / CWE-540).</strong> The Nextcloud admin password is pasted, in cleartext, in a public blog post, inside a <code>docker-compose</code> snippet. <strong>CWE-312 (Cleartext Storage of Sensitive Information)</strong> is the primary mapping; <strong>CWE-540 (Inclusion of Sensitive Information in Source Code)</strong> covers the configuration-as-published angle; <strong>CWE-798 (Use of Hard-Coded Credentials)</strong> carries over from the un-rotated AWS key. <strong>CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)</strong> is the umbrella but is mapping-Discouraged in current MITRE guidance — cite the specific children. The &quot;developer pastes a working config to ask for / offer help&quot; pattern is its own evergreen leak vector: Stack Overflow answers, GitHub issues, Discord pastes, and personal blogs are full of real credentials that the author assumed were either fake, internal, or nobody&#39;s business.</p>
+<p>The robots.txt finding (see §7.5) is a fourth, smaller weakness: using a <em>disclosure-control</em> mechanism (robots.txt tells crawlers what to skip) as if it were an <em>access-control</em> mechanism (it does nothing to stop a human from reading the listed paths).</p>
+<h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
+<p><strong>Deleting a GitHub repo doesn&#39;t delete the data — Truffle Security&#39;s CFOR (July 2024).</strong> Truffle Security documented that data from <em>deleted</em> repositories, <em>deleted</em> forks, and even <em>private</em> repositories on GitHub remains accessible — by design — through the fork network and the public events API. They coined the term <strong>Cross Fork Object Reference (CFOR)</strong> and, reviewing three widely-forked public repos from large AI companies, recovered <strong>40 valid API keys from deleted forks</strong>. GitHub&#39;s response to the disclosure was that this is &quot;an intentional design decision and is working as expected.&quot; This is the exact lesson of this level, on the exact platform: Aaron deleted the repo, but on GitHub specifically, &quot;deleted&quot; is not &quot;gone&quot; — and the only safe assumption for any committed secret is that it is permanently public and must be rotated.</p>
+<p><strong>Selector reuse deanonymized the Silk Road founder — Ross Ulbricht / &quot;altoid&quot; (2013).</strong> The canonical alias-attribution case. In Silk Road&#39;s earliest days, a user named <strong>&quot;altoid&quot;</strong> posted on the Bitcoin Talk and Shroomery forums promoting the new marketplace. Months later, an &quot;altoid&quot; post soliciting an &quot;IT pro&quot; asked interested parties to email <strong><a href="mailto:rossulbricht@gmail.com">rossulbricht@gmail.com</a></strong> — Ulbricht&#39;s real-name personal address. IRS investigator <strong>Gary Alford</strong>, working the case in 2013, found the link by searching the open web for early mentions of the site and pivoting on the reused handle. A reused username plus one reused email collapsed a pseudonymous identity into a real name. Aaron&#39;s <code>saltyhelm</code> → real-name link is the same shape, just lower-stakes and recovered from an archive instead of a live forum.</p>
+<p><strong>The archive landscape is wider than people think — and Google pointed at it.</strong> In <strong>late January / February 2024</strong>, Google removed the &quot;Cached&quot; link from its search results; Search Liaison Danny Sullivan confirmed the retirement and explicitly suggested the <strong>Internet Archive&#39;s</strong> capture as the replacement people should reach for. The practical effect: even as one historical-snapshot source went away, the dominant one (archive.org) got <em>more</em> central, and <code>archive.today</code> remains a fully independent third archive. There is no single &quot;delete&quot; button that reaches all of them. The <strong>Internet Archive</strong> itself has been capturing the web since its founding in <strong>1996</strong>, with the public <strong>Wayback Machine launching in October 2001</strong> — meaning a target&#39;s footprint may be archived across a quarter-century of captures they have no control over.</p>
+<p><strong>Forgotten old accounts and location leaks — the Strava 2018 heatmap.</strong> The recurring &quot;the oldest, most-forgotten account is the most exposed&quot; pattern. In January 2018, Strava&#39;s published global activity heatmap inadvertently revealed the layout and location of military forward-operating bases and intelligence facilities, traced to individual personnel running on-base with public default settings. The mechanism that matters here isn&#39;t fitness data specifically — it&#39;s that durable, low-attention personal accounts accumulate sensitive patterns the owner stops thinking about. For a publicly-named executive in a hostile-attention campaign, the forgotten footprint is the soft target.</p>
+<p>What unites these cases: the web has a long memory and several independent ones. Removal at the source is necessary but never sufficient, and the only durable defenses are <em>rotation</em> (for secrets) and <em>not creating the linkage in the first place</em> (for identity).</p>
+<h2 id="frameworks">§5 — Frameworks, deep dive<a class="anchor" href="#frameworks" aria-label="Link to this section">#</a></h2>
+<h3 id="the-internet-archive-archive-permanence-the-mechanic-not-a-control">The Internet Archive / archive permanence (the mechanic, not a control)<a class="anchor" href="#the-internet-archive-archive-permanence-the-mechanic-not-a-control" aria-label="Link to this section">#</a></h3>
+<p>archive.org (founded 1996; Wayback Machine public since October 2001) is a non-profit digital library. Site owners can request exclusion of their <em>own</em> captures, but it&#39;s opt-in, manual, and reaches neither other archives (archive.today) nor the GitHub fork network nor anyone&#39;s local clone. The correct mental model for OSINT and for incident response alike: <strong>treat anything ever published as permanently captured</strong>, and build remediation on rotation rather than removal.</p>
+<h3 id="robotstxt-robots-exclusion-protocol-rfc-9309-september-2022">robots.txt — Robots Exclusion Protocol (RFC 9309, September 2022)<a class="anchor" href="#robotstxt-robots-exclusion-protocol-rfc-9309-september-2022" aria-label="Link to this section">#</a></h3>
+<p>The Robots Exclusion Protocol — originally Martijn Koster&#39;s 1994 convention — became a formal IETF standard, <strong>RFC 9309</strong>, in September 2022. The critical property for security work: robots.txt is a <em>politeness signal to well-behaved crawlers</em> about what not to index. It is <strong>not an access control</strong>. Every path listed in a <code>Disallow:</code> line is fully reachable by anyone who reads the file, and well-behaved is optional — crawlers can ignore it. OWASP&#39;s testing guide says it directly: robots.txt &quot;should not be considered as a mechanism to enforce restrictions on how web content is accessed.&quot; Listing <code>/backup/</code> or a draft directory in robots.txt advertises exactly where the sensitive material is.</p>
+<h3 id="owasp">OWASP<a class="anchor" href="#owasp" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>WSTG-INFO-03 (Review Webserver Metafiles for Information Leakage)</strong> — the Web Security Testing Guide test that covers robots.txt, sitemap.xml, security.txt, and similar metafiles as information-leakage sources. The defensive takeaway: move private content off the public server entirely; don&#39;t &quot;hide&quot; it with a <code>Disallow</code> line.</li>
+<li><strong>OWASP Top 10 — A07:2025 (Authentication Failures)</strong> — pseudonymous personal accounts with reused or pasted credentials feed the same credential-stuffing and account-takeover threat as anything else; the rename from &quot;Identification and Authentication Failures&quot; (2021) kept the slot.</li>
+</ul>
+<h3 id="secret-rotation-as-the-real-remediation">Secret rotation as the real remediation<a class="anchor" href="#secret-rotation-as-the-real-remediation" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>NIST SP 800-53 Rev. 5, IA-5 (Authenticator Management)</strong> — including IA-5(1). When an authenticator is compromised, it must be revoked/replaced. A credential that has touched a public surface is a compromised authenticator by definition, regardless of whether the page it leaked from still exists.</li>
+<li><strong>NIST SP 800-218 (SSDF v1.1), PW.6 / PS.1</strong> — secrets management and protecting code; the response to an exposed secret is rotation, not just removal from HEAD.</li>
+<li><strong>AWS IAM guidance for an exposed access key</strong> is explicit and ordered: deactivate the key, create a replacement, update applications, delete the exposed key, then review usage. &quot;Delete the repository&quot; appears nowhere on that list.</li>
+</ul>
+<h3 id="mitre-attck">MITRE ATT&amp;CK<a class="anchor" href="#mitre-attck" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>T1593 (Search Open Websites/Domains)</strong> — the parent reconnaissance technique. The Internet Archive is the textbook open-website source for content no longer on the live origin.</li>
+<li><strong>T1593.002 (Search Engines)</strong> — search-engine-style querying of archived/indexed content for leaked or sensitive material maps here.</li>
+<li><strong>T1593.001 (Social Media)</strong> — the <code>sherlock</code> handle pivot across the alias&#39;s platforms.</li>
+<li><strong>T1589.001 (Gather Victim Identity Information: Credentials)</strong> — both the still-archived AWS key and the pasted Nextcloud password are credentials recovered from open sources.</li>
+<li><strong>T1552.001 (Unsecured Credentials: Credentials In Files)</strong> and <strong>T1078 (Valid Accounts)</strong> are the post-recon, attacker-side continuations — and the line our scope does not cross.</li>
+</ul>
+<h3 id="cwe">CWE<a class="anchor" href="#cwe" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>CWE-312 (Cleartext Storage of Sensitive Information)</strong> — the pasted Nextcloud password. Primary mapping for the breadcrumb finding.</li>
+<li><strong>CWE-540 (Inclusion of Sensitive Information in Source Code)</strong> — the published <code>docker-compose</code> snippet.</li>
+<li><strong>CWE-798 (Use of Hard-Coded Credentials)</strong> — carryover: the un-rotated AWS key, still a hard-coded, now-public credential.</li>
+<li><strong>CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)</strong> — the umbrella; mapping-Discouraged in current MITRE guidance, so cite the specific children above.</li>
+</ul>
+<h2 id="certifications">§6 — Cert exam relevance<a class="anchor" href="#certifications" aria-label="Link to this section">#</a></h2>
+<h3 id="sans-sec497-practical-open-source-intelligence-giac-gosi">SANS SEC497 (Practical Open-Source Intelligence) + GIAC GOSI<a class="anchor" href="#sans-sec497-practical-open-source-intelligence-giac-gosi" aria-label="Link to this section">#</a></h3>
+<p>Archive-based recon (Wayback pivoting, deleted-content recovery), username / alias attribution, and identity deconfliction are core OSINT curriculum. &quot;Deleted isn&#39;t gone&quot; and &quot;pivot on a reused selector&quot; are first-week lessons. SEC497 is the flagship SANS OSINT practitioner course (effectively replaced SEC487 in the catalog); GOSI is the matching GIAC credential.</p>
+<h3 id="comptia-pentest-pt0-003">CompTIA PenTest+ (PT0-003)<a class="anchor" href="#comptia-pentest-pt0-003" aria-label="Link to this section">#</a></h3>
+<p>The current exam revision (released 2024). Domain 1 (Engagement Management) covers scoping and OSINT in pre-engagement; Domain 2 (Reconnaissance and Enumeration) covers passive recon and metadata review (robots.txt / sitemap / archived content).</p>
+<h3 id="comptia-cysa-cs0-003-cs0-004">CompTIA CySA+ (CS0-003 / CS0-004)<a class="anchor" href="#comptia-cysa-cs0-003-cs0-004" aria-label="Link to this section">#</a></h3>
+<p>The SOC-analyst credential. CS0-003 was current as of the May 2026 review date; <strong>CompTIA released CS0-004 in early 2026 for parallel availability, with CS0-003 retiring June 2026</strong> — through that window, candidates may sit either. Domain 1 (Security Operations) covers OSINT-driven threat intelligence and exposed-asset discovery.</p>
+<h3 id="comptia-security-sy0-701">CompTIA Security+ (SY0-701)<a class="anchor" href="#comptia-security-sy0-701" aria-label="Link to this section">#</a></h3>
+<p>The entry-level cert. Domain 2 (Threats, Vulnerabilities, and Mitigations) covers reconnaissance and OSINT; Domain 4 (Security Operations) covers identity and credential management, including rotation.</p>
+<h3 id="isc2-cissp">ISC2 CISSP<a class="anchor" href="#isc2-cissp" aria-label="Link to this section">#</a></h3>
+<p>Domain 1 (Security and Risk Management) covers threat intelligence / OSINT; Domain 2 (Asset Security) covers the data lifecycle, retention, and the reality that &quot;delete&quot; rarely means destroyed.</p>
+<h3 id="giac-gcih-certified-incident-handler">GIAC GCIH (Certified Incident Handler)<a class="anchor" href="#giac-gcih-certified-incident-handler" aria-label="Link to this section">#</a></h3>
+<p>The leaked-credential IR pattern is squarely in scope — and so is its classic failure mode: removing the artifact instead of rotating the secret. The &quot;leaked credential → rotate → audit usage&quot; workflow is the canonical case.</p>
+<h2 id="defender">§7 — What a defender does<a class="anchor" href="#defender" aria-label="Link to this section">#</a></h2>
+<p>Three tracks: Aaron specifically, Veridian as employer, and Driftwood for our own practice.</p>
+<h3 id="for-aaron-specifically">For Aaron specifically<a class="anchor" href="#for-aaron-specifically" aria-label="Link to this section">#</a></h3>
+<p><strong>Rotate the AWS access key now.</strong> This is the actual remediation for the level1 finding; the repo deletion was not. Deactivate the exposed key in the IAM console, create a replacement, update his local <code>.env</code> (uncommitted), confirm, delete the old key. The moment it&#39;s deactivated, the historical copies in the Wayback capture become inert.</p>
+<p><strong>Rotate the Nextcloud admin password and the OpenFDA key</strong>, and take the <code>saltyhelm</code> blog post down — accepting that the archive keeps a copy, because rotation (not removal) is what neutralizes it.</p>
+<p><strong>Treat the exposed homelab host as compromised until proven otherwise.</strong> A years-old <code>nextcloud:24</code> container reachable from the internet via dynamic DNS has almost certainly been scanned and probed. Patch or replace the image, put it behind a VPN or take it off the internet, and review it for unauthorized access.</p>
+<p><strong>Audit and close the forgotten footprint.</strong> The <code>saltyhelm</code> GitHub, Mastodon, and Reddit accounts the sweep surfaced are old, low-attention, and likely share weak/reused passwords with no MFA. Inventory them, secure or close them, and stop reusing the handle across the personal/professional wall.</p>
+<h3 id="for-veridian">For Veridian<a class="anchor" href="#for-veridian" aria-label="Link to this section">#</a></h3>
+<p><strong>Add an archive sweep to the new-executive exposure playbook</strong>, alongside the HIBP (task 1) and GitHub (task 2) steps. It&#39;s cheap and it catches the &quot;forgotten old identity&quot; surface that live-web checks miss entirely.</p>
+<p><strong>Build the deletion-vs-rotation distinction into incident-response training.</strong> The instinct to &quot;take it down&quot; is universal; the rotation step is the one that gets skipped under pressure. Make &quot;rotate first, then clean up&quot; the muscle memory.</p>
+<p><strong>For Veridian-org GitHub specifically</strong>, the Truffle Security CFOR finding means &quot;delete the repo/fork&quot; is not a valid response to a committed secret. The valid response is always: rotate the credential, then optionally clean history. Enable Push Protection to stop the leak at <code>git push</code> in the first place.</p>
+<h3 id="for-driftwood-us">For Driftwood (us)<a class="anchor" href="#for-driftwood-us" aria-label="Link to this section">#</a></h3>
+<p><strong>Hold the read-only line.</strong> Attributing the <code>saltyhelm</code> alias from Aaron&#39;s own archived page is in scope. Logging into the Nextcloud to &quot;confirm&quot; the password works, or using the AWS key to &quot;verify&quot; it&#39;s live, is not — each crosses from passive OSINT into active testing, a different authorization and (for the exposed host) potentially a different legal posture. The temptation to &quot;just check&quot; is exactly the line a professional doesn&#39;t cross without paper.</p>
+<p><strong>Document the snapshot URLs and capture dates.</strong> The brief&#39;s persuasive force is the dated archive evidence — a 2024 capture of a repo Aaron deleted in 2026. Cite the snapshot URLs precisely so Aaron can verify them himself; that&#39;s what converts &quot;deletion doesn&#39;t remediate&quot; from an abstract claim into something he can see.</p>
+<p><strong>Stop at the first concrete finding.</strong> Marisol asked for a <em>light</em> sweep. You found a live credential exposure; that&#39;s the deliverable. Enumerating Aaron&#39;s entire pseudonymous life beyond the security finding is scope creep, and (for any third parties who appear in his hobby spaces) an ethics problem.</p>
+<h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
+<p>The credential chain works without this section. <code>level2@osint</code> seeds two bonus finds; <code>progress --detail</code> lists what you&#39;ve unlocked.</p>
+<h3 id="deletion-theatre">Deletion theatre<a class="anchor" href="#deletion-theatre" aria-label="Link to this section">#</a></h3>
+<p><strong>Trigger:</strong> <code>wayback https://github.com/aaron-hines-md/personal-pgx-tool</code> (step 3 of the solve, so you&#39;ve already hit it).</p>
+<p><strong>What it teaches:</strong> the deleted repo is still served from its 2023-2024 captures while the live URL 404s — and, more important than the archive copy, the AWS key was never rotated (which is why it&#39;s the password that let you in). Takedown is not remediation; rotation/revocation at the provider is the only fix for a leaked secret. The real-world anchor is Truffle Security&#39;s <a href="https://trufflesecurity.com/blog/anyone-can-access-deleted-and-private-repo-data-github" target="_blank" rel="noopener noreferrer">CFOR research (July 2024)</a>: on GitHub specifically, data from deleted repos and forks is recoverable forever, by design — they pulled 40 valid API keys from deleted forks. Treat every committed secret as permanently public and rotate it.</p>
+<h3 id="robotstxt-as-a-treasure-map">robots.txt as a treasure map<a class="anchor" href="#robotstxt-as-a-treasure-map" aria-label="Link to this section">#</a></h3>
+<p><strong>Trigger:</strong> <code>curl https://web.archive.org/web/20110210161500/http://www.aaronhines.net/robots.txt</code></p>
+<p><strong>What it teaches:</strong> the archived 2011 <code>robots.txt</code> lists <code>Disallow:</code> paths pointing at exactly what Aaron wanted hidden — an old CV PDF, a <code>/backup/</code> directory, and a draft of the <code>saltyhelm</code> sailing blog (which corroborates the alias pivot independently of the homepage). robots.txt tells crawlers what to skip; it tells a human analyst precisely where to look. It&#39;s a <em>disclosure</em> control, never an <em>access</em> control — formalized in <a href="https://www.rfc-editor.org/rfc/rfc9309.html" target="_blank" rel="noopener noreferrer">RFC 9309</a> and tested under OWASP <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage" target="_blank" rel="noopener noreferrer">WSTG-INFO-03</a>. The defender fix is to move private content off the public server, not to <code>Disallow</code> it.</p>
+<h2 id="takeaways">§8 — Key takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><p><strong>Deletion is not remediation.</strong> For a leaked secret, removing the page it leaked from does nothing about the secret. Two truths: the artifact is effectively permanent (the Wayback Machine, archive.today, GitHub&#39;s fork network, clones, and caches all survive a delete), and the credential is compromised regardless. The only action that shrinks the exposure is <strong>rotation/revocation at the provider</strong>. Aaron deleted the repo and skipped the rotation; the AWS key still works, which is why it was the password to this level.</p>
+</li>
+<li><p><strong>On GitHub specifically, &quot;deleted&quot; provably isn&#39;t gone.</strong> Truffle Security&#39;s 2024 CFOR research showed deleted repos, deleted forks, and even private repos remain accessible by design — they recovered 40 live API keys from deleted forks. The correct response to a committed secret is never &quot;delete the repo&quot;; it&#39;s &quot;rotate the credential, then optionally clean history.&quot;</p>
+</li>
+<li><p><strong>Pseudonymity is not anonymity.</strong> People link their separate identities somewhere — and the link survives in a place they&#39;ve forgotten. Aaron&#39;s <code>saltyhelm</code> handle was recovered from a page he wrote and later scrubbed; the archive kept the scrubbed version, and a reused email removed all doubt. The canonical case is Ross Ulbricht, deanonymized by a reused &quot;altoid&quot; handle and a forum post carrying his real-name Gmail. Reused selectors collapse identities.</p>
+</li>
+<li><p><strong>The oldest, most-forgotten account is the most exposed.</strong> Old accounts carry the weakest passwords, no MFA, and the most personal data — and nobody remembers to close them. For a publicly-named executive in a hostile-attention campaign, that forgotten footprint is the soft target. Inventory it; close the dead accounts; never reuse a handle across the personal/professional wall.</p>
+</li>
+<li><p><strong>robots.txt is a disclosure control, not an access control.</strong> Every path in a <code>Disallow:</code> line is fully readable by anyone who opens the file — and the file is a map of what the owner wanted hidden. Move private content off the public server; don&#39;t advertise it with a <code>Disallow</code> line (RFC 9309 / OWASP WSTG-INFO-03).</p>
+</li>
+<li><p><strong>OSINT scope discipline is the durable differentiator.</strong> Attributing the alias from Aaron&#39;s own archived page is in scope; logging into the Nextcloud or using the AWS key to &quot;verify&quot; is not. The deliverable was two findings and a remediation list, stopped at the first concrete exposure. Holding that line — read, don&#39;t touch — is what makes the client trust you with the next engagement.</p>
+</li>
+<li><p><strong>The three Veridian OSINT tasks compose into one picture.</strong> Reused password → committed AWS key → pasted homelab credential: three channels, one person whose personal security model was built for a quieter career and never updated for his current public-figure exposure. None of the findings is exotic; their accumulation, assembled in the right order, is the story. OSINT done well is mostly that — assembling the ordinary before an adversary does.</p>
+</li>
+</ul>
+<h2 id="further-reading">§9 — Further reading<a class="anchor" href="#further-reading" aria-label="Link to this section">#</a></h2>
+<p><em>Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, RFC/standard IDs, historical-case dates, CWE/MITRE mapping status) verified current as of the review date. Standards drift; if you&#39;re reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.</em></p>
+<h3 id="the-archive-landscape">The archive landscape<a class="anchor" href="#the-archive-landscape" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Internet Archive / Wayback Machine</strong>: <a href="https://web.archive.org/" target="_blank" rel="noopener noreferrer">https://web.archive.org/</a>. Founded 1996; Wayback Machine public since October 2001.</li>
+<li><strong>archive.today</strong> (overview): <a href="https://en.wikipedia.org/wiki/Archive.today" target="_blank" rel="noopener noreferrer">https://en.wikipedia.org/wiki/Archive.today</a>. An independent web archive — reachable at archive.today / archive.ph — whose captures persist separately from the Internet Archive.</li>
+<li><strong>Google retires the &quot;Cached&quot; link (Feb 2024)</strong>: <a href="https://searchengineland.com/google-search-officially-retires-cache-link-437122" target="_blank" rel="noopener noreferrer">https://searchengineland.com/google-search-officially-retires-cache-link-437122</a>. Search Liaison Danny Sullivan confirmed the removal and suggested the Internet Archive as the replacement.</li>
+</ul>
+<h3 id="robotstxt-metafiles">robots.txt + metafiles<a class="anchor" href="#robotstxt-metafiles" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>RFC 9309 — Robots Exclusion Protocol</strong> (September 2022): <a href="https://www.rfc-editor.org/rfc/rfc9309.html" target="_blank" rel="noopener noreferrer">https://www.rfc-editor.org/rfc/rfc9309.html</a>. The IETF standardization of robots.txt.</li>
+<li><strong>OWASP WSTG-INFO-03 — Review Webserver Metafiles for Information Leakage</strong>: <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage" target="_blank" rel="noopener noreferrer">https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage</a>.</li>
+</ul>
+<h3 id="deleted-isnt-gone-alias-attribution-real-cases">Deleted-isn&#39;t-gone + alias attribution (real cases)<a class="anchor" href="#deleted-isnt-gone-alias-attribution-real-cases" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Truffle Security — &quot;Anyone can Access Deleted and Private Repository Data on GitHub&quot; (CFOR, July 2024)</strong>: <a href="https://trufflesecurity.com/blog/anyone-can-access-deleted-and-private-repo-data-github" target="_blank" rel="noopener noreferrer">https://trufflesecurity.com/blog/anyone-can-access-deleted-and-private-repo-data-github</a>.</li>
+<li><strong>The Register coverage of the GitHub deleted-data finding (25 July 2024)</strong>: <a href="https://www.theregister.com/2024/07/25/data_from_deleted_github_repos/" target="_blank" rel="noopener noreferrer">https://www.theregister.com/2024/07/25/data_from_deleted_github_repos/</a>.</li>
+<li><strong>Ross Ulbricht / &quot;altoid&quot; deanonymization</strong> (Wikipedia, with the <code>rossulbricht@gmail.com</code> forum-post detail): <a href="https://en.wikipedia.org/wiki/Ross_Ulbricht" target="_blank" rel="noopener noreferrer">https://en.wikipedia.org/wiki/Ross_Ulbricht</a>.</li>
+<li><strong>Vice — &quot;If You&#39;re Running an Illicit Drug Site, Maybe Don&#39;t Use Your Real Email&quot;</strong>: <a href="https://www.vice.com/en/article/irs-found-accused-silk-road-masterminds-email-by-googling-silk-road/" target="_blank" rel="noopener noreferrer">https://www.vice.com/en/article/irs-found-accused-silk-road-masterminds-email-by-googling-silk-road/</a>. The IRS investigator&#39;s pivot on the reused handle + email.</li>
+<li><strong>Strava global heatmap exposure (January 2018)</strong>: <a href="https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases" target="_blank" rel="noopener noreferrer">https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases</a>. The forgotten-footprint / location-leak pattern.</li>
+</ul>
+<h3 id="secret-rotation-standards">Secret rotation + standards<a class="anchor" href="#secret-rotation-standards" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>NIST SP 800-53 Rev. 5 — IA-5 (Authenticator Management)</strong>: <a href="https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final" target="_blank" rel="noopener noreferrer">https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final</a>. Revoke/replace a compromised authenticator.</li>
+<li><strong>NIST SP 800-218 — SSDF v1.1</strong>: <a href="https://csrc.nist.gov/pubs/sp/800/218/final" target="_blank" rel="noopener noreferrer">https://csrc.nist.gov/pubs/sp/800/218/final</a>. Secrets management (PW.6 / PS.1).</li>
+<li><strong>AWS — What to Do If You Inadvertently Expose an AWS Access Key</strong> (AWS Security Blog): <a href="https://aws.amazon.com/blogs/security/what-to-do-if-you-inadvertently-expose-an-aws-access-key/" target="_blank" rel="noopener noreferrer">https://aws.amazon.com/blogs/security/what-to-do-if-you-inadvertently-expose-an-aws-access-key/</a>. Deactivate → replace → delete → review; deletion of the repo is not on the list.</li>
+</ul>
+<h3 id="cwe-mitre-attck">CWE / MITRE ATT&amp;CK<a class="anchor" href="#cwe-mitre-attck" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>CWE-312: Cleartext Storage of Sensitive Information</strong>: <a href="https://cwe.mitre.org/data/definitions/312.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/312.html</a>.</li>
+<li><strong>CWE-540: Inclusion of Sensitive Information in Source Code</strong>: <a href="https://cwe.mitre.org/data/definitions/540.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/540.html</a>.</li>
+<li><strong>CWE-798: Use of Hard-Coded Credentials</strong>: <a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/798.html</a>.</li>
+<li><strong>CWE-200: Exposure of Sensitive Information</strong> (mapping-Discouraged — cite the specific children): <a href="https://cwe.mitre.org/data/definitions/200.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/200.html</a>.</li>
+<li><strong>MITRE ATT&amp;CK T1593 — Search Open Websites/Domains</strong>: <a href="https://attack.mitre.org/techniques/T1593/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1593/</a>.</li>
+<li><strong>T1593.001 — Social Media</strong>: <a href="https://attack.mitre.org/techniques/T1593/001/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1593/001/</a>.</li>
+<li><strong>T1593.002 — Search Engines</strong>: <a href="https://attack.mitre.org/techniques/T1593/002/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1593/002/</a>.</li>
+<li><strong>T1589.001 — Gather Victim Identity Information: Credentials</strong>: <a href="https://attack.mitre.org/techniques/T1589/001/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1589/001/</a>.</li>
+</ul>
+<h3 id="practitioner-resources">Practitioner resources<a class="anchor" href="#practitioner-resources" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>SANS SEC497 (Practical OSINT)</strong>: <a href="https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/" target="_blank" rel="noopener noreferrer">https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/</a>.</li>
+<li><strong>OSINT Framework (community index)</strong>: <a href="https://osintframework.com/" target="_blank" rel="noopener noreferrer">https://osintframework.com/</a>.</li>
+</ul>
+<nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/osint/level1.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level1@osint</span><span class="pager-title">Aaron's Weekend Project</span></a><div class="pager-cell pager-empty"></div></nav>    </main>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-open-the-workspace-with-the-aws-key">Step 1: Open the workspace with the AWS key</a></li><li><a href="#step-2-read-the-three-engagement-files">Step 2: Read the three engagement files</a></li><li><a href="#step-3-wayback-the-deleted-repo-the-remediation-check">Step 3: wayback the deleted repo — the remediation check</a></li><li><a href="#step-4-wayback-the-old-personal-site-start-the-sweep">Step 4: wayback the old personal site — start the sweep</a></li><li><a href="#step-5-curl-the-2011-homepage-recover-the-scrubbed-handle">Step 5: curl the 2011 homepage — recover the scrubbed handle</a></li><li><a href="#step-6-sherlock-the-recovered-handle-map-the-other-life">Step 6: sherlock the recovered handle — map the other life</a></li><li><a href="#step-7-curl-the-homelab-blog-post-extract-the-level3-breadcrumb">Step 7: curl the homelab blog post — extract the level3 breadcrumb</a></li><li><a href="#step-8-the-hand-off">Step 8: the hand-off</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a><ul class="toc-sub"><li><a href="#the-internet-archive-archive-permanence-the-mechanic-not-a-control">The Internet Archive / archive permanence (the mechanic, not a control)</a></li><li><a href="#robotstxt-robots-exclusion-protocol-rfc-9309-september-2022">robots.txt — Robots Exclusion Protocol (RFC 9309, September 2022)</a></li><li><a href="#owasp">OWASP</a></li><li><a href="#secret-rotation-as-the-real-remediation">Secret rotation as the real remediation</a></li><li><a href="#mitre-attck">MITRE ATTCK</a></li><li><a href="#cwe">CWE</a></li></ul></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a><ul class="toc-sub"><li><a href="#sans-sec497-practical-open-source-intelligence-giac-gosi">SANS SEC497 (Practical Open-Source Intelligence) + GIAC GOSI</a></li><li><a href="#comptia-pentest-pt0-003">CompTIA PenTest+ (PT0-003)</a></li><li><a href="#comptia-cysa-cs0-003-cs0-004">CompTIA CySA+ (CS0-003 / CS0-004)</a></li><li><a href="#comptia-security-sy0-701">CompTIA Security+ (SY0-701)</a></li><li><a href="#isc2-cissp">ISC2 CISSP</a></li><li><a href="#giac-gcih-certified-incident-handler">GIAC GCIH (Certified Incident Handler)</a></li></ul></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a><ul class="toc-sub"><li><a href="#for-aaron-specifically">For Aaron specifically</a></li><li><a href="#for-veridian">For Veridian</a></li><li><a href="#for-driftwood-us">For Driftwood (us)</a></li></ul></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a><ul class="toc-sub"><li><a href="#deletion-theatre">Deletion theatre</a></li><li><a href="#robotstxt-as-a-treasure-map">robots.txt as a treasure map</a></li></ul></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a><ul class="toc-sub"><li><a href="#the-archive-landscape">The archive landscape</a></li><li><a href="#robotstxt-metafiles">robots.txt + metafiles</a></li><li><a href="#deleted-isnt-gone-alias-attribution-real-cases">Deleted-isn't-gone + alias attribution (real cases)</a></li><li><a href="#secret-rotation-standards">Secret rotation + standards</a></li><li><a href="#cwe-mitre-attck">CWE / MITRE ATTCK</a></li><li><a href="#practitioner-resources">Practitioner resources</a></li></ul></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+  </div>
+
+  <footer id="site-footer">
+    <p class="footer-disclaimer">
+      For educational use. Don't run these techniques against systems
+      you don't own or aren't authorized to test.
+    </p>
+    <p class="footer-links">
+      <a href="/" class="footer-link">&larr; Back to d3cyph3r.com</a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://github.com/rlwilliamson-dev/d3cyph3r" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="View source on GitHub">
+        <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.62 7.62 0 0 0-2-.27c-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
+        </svg>
+        <span>Source on GitHub</span>
+      </a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://azure.microsoft.com/" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="Hosted on Microsoft Azure">
+        <svg width="13" height="13" viewBox="0 0 18 18" aria-hidden="true">
+          <path d="M10.61 2L4.05 14.4l5.6.04 1.5-2.92 4.9 2.88L10.61 2z" fill="#0078D4"/>
+        </svg>
+        <span>Hosted on Microsoft Azure</span>
+      </a>
+    </p>
+  </footer>
+
+  <script type="module" src="/walkthroughs/reader.js"></script>
+</body>
+</html>

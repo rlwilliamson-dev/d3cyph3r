@@ -63,7 +63,7 @@ function writeHintIndex(i) {
 function walkthroughHint(level) {
   if (!level || !level.track) return "";
   const slot = currentLevelKey.split("@")[0]; // levelN
-  return `  No more hints — see the full walkthrough at https://www.d3cyph3r.com/walkthroughs/#/${level.track}/${slot}`;
+  return `  No more hints — see the full walkthrough at https://www.d3cyph3r.com/walkthroughs/${level.track}/${slot}.html`;
 }
 
 export const learningCommands = {
@@ -165,7 +165,7 @@ export const learningCommands = {
       return { text: "walkthrough: ssh into a level first to see its walkthrough", cls: "dim" };
     }
     const slot = currentLevelKey.split("@")[0];
-    const url  = `/walkthroughs/#/${level.track}/${slot}`;
+    const url  = `/walkthroughs/${level.track}/${slot}.html`;
     try {
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (_) { /* popup blocked or non-browser env */ }

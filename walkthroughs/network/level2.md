@@ -327,7 +327,7 @@ The level3 credential — `T3mp-DevopsCI-HD8814!q2` — is in `/var/log/exim/aut
 
 ## §9 — Further reading
 
-*Last reviewed: April 2026.*
+*Last reviewed: April 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 **TLS cert hygiene and modern PKI**
 
