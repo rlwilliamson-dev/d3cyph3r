@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-08-05
+
+### Changed
+
+- **Walkthrough pages use the width available to them.** The reading column was sized to fit prose plus the table-of-contents rail and nothing else, which left 45% of a 1728-pixel viewport empty while simultaneously squeezing code: 4 of the 15 fenced blocks on `level3@forensics` were scrolling sideways because their content needed 808 pixels and the column gave them 620.
+
+  Pages now carry two widths. Running text stays at a reading measure of roughly 79 characters, inside the 80-character ceiling in WCAG 1.4.8. Code blocks, tables, and the spoiler callout use the wider content column, which is sized for them. No code block scrolls horizontally on a desktop viewport any more, and the empty page dropped from 45% to 25%.
+
+  The table-of-contents rail also survives further down. It previously disappeared below 1300 pixels, which cost it on 1280-pixel laptops for no reason; the content column now narrows instead, and the rail is kept to 1024 pixels. Below that the column narrows again rather than letting text stretch, because a full-width column at this font renders about 110 characters per line.
+
 ## [2.4.0] - 2026-08-05
 
 **The walkthroughs subsite is now statically generated.** 24 documents averaging 7,000 words each had the navigation of a single blog post: no table of contents, no linkable sections, and no way to search 170,000 words. This release rebuilds the reader around real pages at real URLs, and makes the section template something the build enforces rather than something review is supposed to catch.
