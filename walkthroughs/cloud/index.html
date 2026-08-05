@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>D3CYPH3R Walkthroughs</title>
-  <meta name="description" content="Long-form solve guides for D3CYPH3R levels: solve paths, vulnerability deep-dives, framework and certification mappings, MITRE ATT&amp;CK, and defender remediation.">
-  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/">
-  <meta property="og:title" content="D3CYPH3R Walkthroughs">
-  <meta property="og:description" content="Long-form solve guides for D3CYPH3R levels: solve paths, vulnerability deep-dives, framework and certification mappings, MITRE ATT&amp;CK, and defender remediation.">
-  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/">
+  <title>Cloud — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="AWS S3, IAM, EC2 auditing + RDS-adjacent psql enumeration. Client: Coverline Insurance — SOC 2 / NAIC / NYDFS / GLBA.">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/cloud/">
+  <meta property="og:title" content="Cloud — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="AWS S3, IAM, EC2 auditing + RDS-adjacent psql enumeration. Client: Coverline Insurance — SOC 2 / NAIC / NYDFS / GLBA.">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/cloud/">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="D3CYPH3R">
   <meta name="twitter:card" content="summary">
@@ -29,7 +29,7 @@
         <span class="brand-sub">walkthroughs</span>
       </a>
     </div>
-    <nav id="crumbs" aria-label="Breadcrumb"><span class="current">index</span></nav>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><span class="current">cloud</span></nav>
     <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
       <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
         <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
@@ -41,24 +41,13 @@
   </header>
 
   <main id="main" class="doc doc-narrow">
-<h1 class="index-title"><span class="brand-cascade"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span><span class="index-title-sub">walkthroughs</span></h1>
-<p>Per-level deep dives: full solve paths plus extended post-mortems tying each level back to the certifications, frameworks, real-world incidents, and defender tooling covered in the in-game lessons-learned files.</p>
-<p><em>These pages are spoiler-tolerant by design. Solve the level first; come back here for the study session.</em></p>
-<div class="search-wrap">
-  <label class="search-label" for="search-input">Search all walkthroughs</label>
-  <input type="search" id="search-input" class="search-input" placeholder="Try: CWE-532, PCI-DSS, sudo, DMARC" autocomplete="off" aria-describedby="search-hint">
-  <p id="search-hint" class="search-hint">Searches section headings and body text across all 24 walkthroughs.</p>
-  <div id="search-results" class="search-results" aria-live="polite"></div>
-</div>
-<h2>Tracks</h2>
-<ul class="track-list">
-<li><a href="/walkthroughs/linux/">Linux</a> <span class="count">4 walkthroughs</span><div class="desc">File reading, credential hunting, and the consultant-laptop audit pattern. Client: Halton Bank — GLBA Safeguards Rule.</div></li>
-<li><a href="/walkthroughs/network/">Network</a> <span class="count">3 walkthroughs</span><div class="desc">Port scanning, perimeter audit, and DNS reconnaissance. Client: Atlas Health — HIPAA.</div></li>
-<li><a href="/walkthroughs/crypto/">Crypto</a> <span class="count">4 walkthroughs</span><div class="desc">Encoding ≠ encryption, and signing ≠ verifying. Client: Vesta Retail — PCI-DSS.</div></li>
-<li><a href="/walkthroughs/web/">Web</a> <span class="count">3 walkthroughs</span><div class="desc">HTTP directory enumeration and broken access control. Client: Meridian State University — FERPA.</div></li>
-<li><a href="/walkthroughs/forensics/">Forensics</a> <span class="count">4 walkthroughs</span><div class="desc">EXIF metadata and insider-threat analysis. Client: Polaris Defense Systems — CMMC / NIST 800-171.</div></li>
-<li><a href="/walkthroughs/osint/">OSINT</a> <span class="count">3 walkthroughs</span><div class="desc">Open-source breach corpus and identity reconnaissance. Client: Veridian Analytics — HIPAA / HITRUST CSF.</div></li>
-<li><a href="/walkthroughs/cloud/">Cloud</a> <span class="count">3 walkthroughs</span><div class="desc">AWS S3, IAM, EC2 auditing + RDS-adjacent psql enumeration. Client: Coverline Insurance — SOC 2 / NAIC / NYDFS / GLBA.</div></li>
+<h1>Cloud track</h1>
+<p>AWS S3, IAM, EC2 auditing + RDS-adjacent psql enumeration. Client: Coverline Insurance — SOC 2 / NAIC / NYDFS / GLBA.</p>
+<h2>Walkthroughs</h2>
+<ul class="level-list">
+<li><a href="/walkthroughs/cloud/level0.html">level0@cloud — Coverline's Twelfth Bucket</a><div class="desc">Mid-SOC-2-audit gap-fill at an insurtech carrier. A six-bucket worksheet walks cleanly until one — claims-uploads-prod — lists publicly with PII + a hardcoded RDS password.</div></li>
+<li><a href="/walkthroughs/cloud/level1.html">level1@cloud — The Migration Table Nobody Dropped</a><div class="desc">Day three. With Friday's leaked RDS master credential, Driftwood enumerates the coverline_claims production DB to inform Sloane's breach-notification math. A migration_artifacts table from the 2024 region cutover has explicit TTL columns intending Q2 2024 deletion that never happened — the broker-portal service credential is the level2 breadcrumb. The audit log also has a single anomalous schema-enumeration query from 2026-05-20 02:14 UTC with no captured source IP (pgaudit was never enabled). CWE-798 + CWE-540 + the credentials-in-DB-rows anti-pattern.</div></li>
+<li><a href="/walkthroughs/cloud/level2.html">level2@cloud — The Key Nobody Turned Off</a><div class="desc">Day three. The recovered broker-portal-svc credential turns out to be an over-permissioned IAM user, so Driftwood runs a least-privilege pass across Coverline's account. Among 16 principals, a 2024-migration legacy-deploy-bot still carries AdministratorAccess and a still-Active access key last used in 2024 — a dormant god-mode credential nobody turned off. Its secret, left in a leftover bootstrap-creds file on the bastion, is the level3 breadcrumb. Three bonus finds: an orphaned terminated-employee account, a never-rotated 2019 key, and a root access key. CWE-269 / CWE-250 + CIS AWS 1.4/1.12/1.16 + MITRE T1078.004.</div></li>
 </ul>
   </main>
 
@@ -87,6 +76,5 @@
   </footer>
 
   <script type="module" src="/walkthroughs/reader.js"></script>
-  <script type="module" src="/walkthroughs/search.js"></script>
 </body>
 </html>

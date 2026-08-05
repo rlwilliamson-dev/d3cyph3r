@@ -476,6 +476,30 @@ test.describe("shell realism (v1.3 / v1.4 / v1.9)", () => {
       expect(t).toContain("walkthroughs");
     });
 
+    // v2.4.0 — the walkthroughs subsite moved from hash routing
+    // (/walkthroughs/#/linux/level0) to static pages
+    // (/walkthroughs/linux/level0.html). Both the hint-exhaustion
+    // pointer and the `walkthrough` command build that URL, and both
+    // are shown to the player, so the format is asserted rather than
+    // left to a loose substring match. A regression here sends players
+    // to a 404.
+    test("hint-exhaustion pointer uses the static walkthrough URL", async ({ page }) => {
+      await dispatchCmd(page, "hint reset");
+      await dispatchCmd(page, "hint");
+      await dispatchCmd(page, "hint");
+      await dispatchCmd(page, "hint");
+      const t = await terminalText(page);
+      expect(t).toContain("/walkthroughs/linux/level0.html");
+      expect(t).not.toContain("/walkthroughs/#/");
+    });
+
+    test("`walkthrough` command reports the static URL for the current level", async ({ page }) => {
+      await dispatchCmd(page, "walkthrough");
+      const t = await terminalText(page);
+      expect(t).toContain("/walkthroughs/linux/level0.html");
+      expect(t).not.toContain("/walkthroughs/#/");
+    });
+
     test("hint list reports the available hint count", async ({ page }) => {
       await dispatchCmd(page, "hint list");
       const t = await terminalText(page);

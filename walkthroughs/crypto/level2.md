@@ -297,7 +297,7 @@ The level3 credential — `TheoVesta!1` — is the AES backup encryption passwor
 
 ## §9 — Further reading
 
-*Last reviewed: April 2026.*
+*Last reviewed: April 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 **Modern password hashing**
 

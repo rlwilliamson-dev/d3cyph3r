@@ -428,7 +428,7 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 
 ## §9 — Further reading
 
-Last reviewed: May 2026.
+*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 ### Foundational documents
 

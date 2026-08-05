@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>level3@forensics — What Reed's Mail Proved — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="Day four. The session artifact named the account for a 2703(d) order, and Google's production is on the bench. Reed's counsel produced an email authorizing everything — so compare it against a genuine message from the same sender. The From: header is free text; the Received: chain is written by serv">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/forensics/level3.html">
+  <meta property="og:title" content="level3@forensics — What Reed's Mail Proved — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="Day four. The session artifact named the account for a 2703(d) order, and Google's production is on the bench. Reed's counsel produced an email authorizing everything — so compare it against a genuine message from the same sender. The From: header is free text; the Received: chain is written by serv">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/forensics/level3.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="D3CYPH3R">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.0">
+</head>
+<body class="page-doc">
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header id="site-header">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" aria-label="Back to d3cyph3r.com">
+        <span class="brand-mark"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span>
+      </a>
+      <a href="/walkthroughs/" class="brand-sub-link">
+        <span class="brand-sub">walkthroughs</span>
+      </a>
+    </div>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><a href="/walkthroughs/forensics/">forensics</a><span class="sep" aria-hidden="true">/</span><span class="current">level3</span></nav>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
+      <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
+      </svg>
+      <svg class="theme-icon theme-icon-sun" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="layout">
+    <main id="main" class="doc">
+<h1 id="level3forensics-what-reeds-mail-proved">level3@forensics — What Reed&#39;s Mail Proved<a class="anchor" href="#level3forensics-what-reeds-mail-proved" aria-label="Link to this section">#</a></h1>
+<p class="doc-meta"><span class="doc-meta-item">20 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">3,904 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Forensics track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Forensics · <strong>Client:</strong> Polaris Defense Systems (continued) · <strong>Compliance regime:</strong> CMMC / NIST SP 800-171</p>
+<blockquote class="spoiler-warning">
+<p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for a future <code>level4@forensics</code>. If you haven&#39;t solved <code>level3@forensics</code> yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough assumes you&#39;ve worked through <code>level0@forensics</code> through <code>level2@forensics</code>; this level continues their narrative directly.</p>
+</blockquote>
+<hr>
+<h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<p>Day four of the Reed Connolly case at Polaris Defense Systems. Yesterday you queried the browser artifacts recovered from Reed&#39;s seized workstation and found an authenticated session cookie for his personal Gmail, timestamped 02:47 on Saturday morning — roughly seven hours before the 09:42 badge-in at Bay 4.</p>
+<p>That cookie did <strong>not</strong> get used to log into anything. This matters, and the level says so out loud in <code>subpoena-return.txt</code>. What the artifact did was identify <em>which account</em> to name in legal process. Sgt. Chen served a preservation request under 18 U.S.C. § 2703(f), a court order under § 2703(d) followed, and Google produced the mailbox contents. You are working from that production. An investigator who replays a seized session cookie to browse a suspect&#39;s live mailbox has contaminated the evidence and probably committed an offense; the discipline of going through process is part of the job, not paperwork around it.</p>
+<p>Overnight, the case changed shape. Reed&#39;s counsel produced an email they say authorizes everything — Larry Hutchins, Director of Programs, telling Reed to take the project drive home for the weekend. Hutchins says he never wrote it.</p>
+<p>So today&#39;s question is narrow and answerable: <strong>did Larry Hutchins send that message?</strong></p>
+<p>The skill that answers it is email header analysis, and the whole discipline rests on one asymmetry:</p>
+<blockquote>
+<p>The sender controls the headers a human reads. The servers control the headers that record what actually happened. When those two disagree, the servers win — because the sender could not reach into the receiving infrastructure to change them.</p>
+</blockquote>
+<p>Everything below is <code>cat</code> and <code>grep</code>. Email headers are plain text, and reading them by eye is how this is done when a parser isn&#39;t handy.</p>
+<h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
+<p>Eight steps, but really one move repeated: for every claim the disputed message makes, find the server-written header that either corroborates it or contradicts it.</p>
+<h3 id="step-1-enter-with-the-breadcrumb">Step 1: Enter with the breadcrumb<a class="anchor" href="#step-1-enter-with-the-breadcrumb" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level3@forensics
+level3@forensics&#39;s password: RC-Gmail-PreDawn-2026-03-14-T0247Z
+</code></pre>
+<p>You land as <code>ir-audit</code> on the Polaris IR bench. Read <code>welcome.md</code> — it explains the sender-controlled versus server-written split, the three authentication checks, and the one rule people get backwards on their first header (see step 5).</p>
+<h3 id="step-2-read-the-production-cover-sheet">Step 2: Read the production cover sheet<a class="anchor" href="#step-2-read-the-production-cover-sheet" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">ir-audit@polaris-ir:~$ cat subpoena-return.txt
+</code></pre>
+<p>Three things to take from it.</p>
+<p><strong>The legal basis</strong>, covered above. Note the explicit sentence that the session artifact was used to identify the account and <em>not</em> to access it.</p>
+<p><strong>Timestamp normalization.</strong> Everything in the production has been normalized to US/Eastern so it can be laid directly against the badge and VPN logs already in evidence. February messages show EST (UTC−05:00) and March messages show EDT (UTC−04:00). Real productions often arrive in the provider&#39;s own timezone (Google&#39;s infrastructure typically stamps Pacific), and <strong>normalizing timestamps before comparing timelines is a genuine forensic step</strong> — cross-timezone comparison is one of the most common ways an analyst reaches a confidently wrong conclusion.</p>
+<p><strong>The integrity hash and the existing timeline</strong>: session established 02:47, badge-in 09:42.</p>
+<h3 id="step-3-read-the-disputed-message">Step 3: Read the disputed message<a class="anchor" href="#step-3-read-the-disputed-message" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">ir-audit@polaris-ir:~$ ls mail/
+01-authorization-claimed.eml  02-hutchins-genuine-2026-02-11.eml  03-outbound-0253.eml
+
+ir-audit@polaris-ir:~$ cat mail/01-authorization-claimed.eml
+</code></pre>
+<p>The body reads exactly as counsel described — Hutchins clearing Reed to take the drive home, telling him not to worry about the paperwork. If you stop at the body, the defense holds.</p>
+<p>Now read the header block. Four things are wrong, and each is independently sufficient.</p>
+<p><strong>Return-Path disagrees with From.</strong></p>
+<pre><code>Return-Path: &lt;reed.connolly@gmail.com&gt;
+From: &quot;Hutchins, Larry&quot; &lt;l.hutchins@polaris-defense.com&gt;
+</code></pre>
+<p><code>From:</code> is the letterhead — free text the composer types. <code>Return-Path</code> records the SMTP <em>envelope</em> sender, the address the sending server actually declared during the delivery transaction. Delivery worked, so that value had to be real. The message was sent by Reed&#39;s own Gmail account, and the name at the top says otherwise. This is the fastest spoof check in existence and it costs one line of reading.</p>
+<p><strong>All three authentication checks fail.</strong></p>
+<pre><code>Authentication-Results: mx.google.com;
+        dkim=none;
+        spf=fail (... does not designate 209.85.222.180 as permitted sender)
+        dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=polaris-defense.com
+</code></pre>
+<p><code>spf=fail</code> — the sending server is not authorized to send for polaris-defense.com. <code>dkim=none</code> — note this is an <em>absence</em>, not a failed verification; there was no signature to check at all, and genuine Polaris mail is signed. <code>dmarc=fail</code> against a domain publishing <code>p=REJECT</code>, meaning Polaris explicitly instructs receivers to reject mail that fails alignment.</p>
+<p><strong>The Message-ID is from the wrong system.</strong></p>
+<pre><code>Message-ID: &lt;CAJ8v2mQ...@mail.gmail.com&gt;
+</code></pre>
+<p>Message-IDs are assigned by the system that first accepts a message. A genuine Polaris message gets an <code>@polaris-defense.com</code> ID. This one was minted by Gmail. Whatever composed this message never touched Polaris infrastructure.</p>
+<p><strong>The clock contradicts itself.</strong> This is the strongest one, and step 5 walks it.</p>
+<h3 id="step-4-pull-a-known-good-the-move-that-makes-it-a-finding">Step 4: Pull a known-good — the move that makes it a finding<a class="anchor" href="#step-4-pull-a-known-good-the-move-that-makes-it-a-finding" aria-label="Link to this section">#</a></h3>
+<p>Resist the urge to conclude yet. A single failing message is arguable: forwarded mail breaks SPF constantly, mailing lists break DKIM, misconfigured relays exist. Opposing counsel will make exactly that argument, and on one sample they might win.</p>
+<p>So get a genuine message from the same claimed sender:</p>
+<pre><code class="language-bash">ir-audit@polaris-ir:~$ cat mail/02-hutchins-genuine-2026-02-11.eml
+</code></pre>
+<p>Everything the disputed message fails, this one passes:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Disputed (01)</th>
+<th>Genuine (02)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Return-Path</td>
+<td><code>reed.connolly@gmail.com</code></td>
+<td><code>l.hutchins@polaris-defense.com</code></td>
+</tr>
+<tr>
+<td>SPF</td>
+<td>fail</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>DKIM</td>
+<td>none</td>
+<td>pass (<code>s=pds2024</code>, real signature)</td>
+</tr>
+<tr>
+<td>DMARC</td>
+<td>fail</td>
+<td>pass</td>
+</tr>
+<tr>
+<td>Message-ID domain</td>
+<td><code>@mail.gmail.com</code></td>
+<td><code>@polaris-defense.com</code></td>
+</tr>
+<tr>
+<td>Relay path</td>
+<td>Gmail submission only</td>
+<td><code>EXCH07</code> → <code>mx04.polaris-defense.com</code> → Google</td>
+</tr>
+</tbody></table>
+<p>Now there is no innocent explanation left. Hutchins&#39;s real mail authenticates cleanly and traverses Polaris&#39;s Exchange server and corporate MX on the way out. The disputed message did neither.</p>
+<p><strong>This comparison is the actual skill of the level.</strong> Anyone can read <code>spf=fail</code>. The analyst&#39;s contribution is establishing what <em>normal</em> looks like for this sender, on this infrastructure, so that the anomaly is provable rather than merely suspicious.</p>
+<p>(There&#39;s a second, quieter finding in the genuine message. Hutchins writes: <em>&quot;please stop sending work material to your personal address.&quot;</em> A month before the incident, a director flagged the exact behavior in writing. Nothing followed. Hold that for §7.)</p>
+<h3 id="step-5-read-the-chain-bottom-up">Step 5: Read the chain bottom-up<a class="anchor" href="#step-5-read-the-chain-bottom-up" aria-label="Link to this section">#</a></h3>
+<p>Here is the rule everyone gets backwards the first time.</p>
+<p>Each server that handles a message <strong>prepends</strong> its <code>Received:</code> line. The block is therefore in <em>reverse</em> chronological order: the <strong>bottom</strong> entry is the <strong>first</strong> hop, and the top is the last server before delivery. Read it top-down and you will confidently identify the recipient&#39;s own mail server as the origin.</p>
+<p>Walk the disputed message&#39;s chain with line numbers:</p>
+<pre><code class="language-bash">ir-audit@polaris-ir:~$ grep -n received mail/01-authorization-claimed.eml
+</code></pre>
+<p>Reading bottom-up, the earliest hop is:</p>
+<pre><code>Received: from [100.64.18.203] ([100.64.18.203])
+        by smtp.gmail.com with ESMTPSA id ...
+        Sat, 14 Mar 2026 02:51:06 -0400 (EDT)
+</code></pre>
+<p><code>ESMTPSA</code> is the tell: the <strong>A</strong> is <em>authenticated submission</em>. This is not a relay forwarding someone else&#39;s mail — it is a logged-in user handing Gmail a message to send. The message entered the world through an authenticated session on Reed&#39;s account, from Reed&#39;s address, at 02:51 on Saturday morning.</p>
+<p>Now compare that to what the sender claimed:</p>
+<pre><code>Date: Thu, 12 Mar 2026 16:04:22 -0400
+</code></pre>
+<p>The <code>Date:</code> header says Thursday afternoon. The servers say Saturday at 02:51 — roughly 34 hours later. A sender can put anything in <code>Date:</code>; it is client-supplied text. A sender cannot reach into Google&#39;s infrastructure and change the time it recorded accepting the message. <strong>The backdating is the intent.</strong> An accidental misconfiguration doesn&#39;t set the clock back to a date that would make a story plausible.</p>
+<h3 id="step-6-what-was-actually-sent">Step 6: What was actually sent<a class="anchor" href="#step-6-what-was-actually-sent" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">ir-audit@polaris-ir:~$ cat mail/03-outbound-0253.eml
+</code></pre>
+<p>Two minutes after the forged authorization is stamped, at 02:53:44:</p>
+<pre><code>From: Reed Connolly &lt;reed.connolly@gmail.com&gt;
+To: m.arroyo@ridgeline-consulting.net
+Subject: files
+</code></pre>
+<pre><code>  https://filedrop.example.net/d/8f21c40e
+  passphrase: RC-FileDrop-2026-03-14-T0253Z
+</code></pre>
+<p>…and, in Reed&#39;s own words, <em>&quot;I&#39;ve got cover on my end for having the drive, so the timing shouldn&#39;t look strange if anyone asks.&quot;</em></p>
+<p>Note this message authenticates perfectly — <code>spf=pass</code>, <code>dkim=pass</code>, <code>dmarc=pass</code>. That is not a contradiction. It passes because Reed really is <code>reed.connolly@gmail.com</code> and Gmail really did send it. Authentication proves a message came from the domain it claims; it says nothing about whether the contents are legitimate. Passing SPF/DKIM/DMARC is not a trust signal, and treating it as one is its own category of mistake.</p>
+<p><code>RC-FileDrop-2026-03-14-T0253Z</code> is your <code>level4@forensics</code> credential.</p>
+<h3 id="step-7-the-two-minute-sequence">Step 7: The two-minute sequence<a class="anchor" href="#step-7-the-two-minute-sequence" aria-label="Link to this section">#</a></h3>
+<p>Lay the timeline out and the case tells itself:</p>
+<table>
+<thead>
+<tr>
+<th>Time (US/Eastern)</th>
+<th>Event</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>02:47</td>
+<td>Authenticated Gmail session established</td>
+<td>Cookies.sqlite (level2)</td>
+</tr>
+<tr>
+<td>02:51</td>
+<td>Forged &quot;authorization&quot; composed and sent to himself</td>
+<td>Received chain, msg 01</td>
+</tr>
+<tr>
+<td>02:53</td>
+<td>Project material sent to external recipient</td>
+<td>msg 03</td>
+</tr>
+<tr>
+<td>09:42</td>
+<td>Badge-in, Bay 4</td>
+<td>Badge log</td>
+</tr>
+</tbody></table>
+<p>He built the alibi <em>before</em> doing the thing the alibi was meant to excuse. Ordering is the argument.</p>
+<h3 id="step-8-post-mortem-then-out">Step 8: Post-mortem, then out<a class="anchor" href="#step-8-post-mortem-then-out" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">ir-audit@polaris-ir:~$ cat lessons-learned.md
+ir-audit@polaris-ir:~$ exit
+</code></pre>
+<h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
+<p>The weakness class is <strong>CWE-290: Authentication Bypass by Spoofing</strong> — asserting an identity in a field nothing authenticates.</p>
+<p>SMTP was specified for a network where every host was known and trusted, and it carries that assumption structurally. The <code>From:</code> header has no cryptographic or protocol relationship to the account that submitted the message; it is display text. Anyone with a mail client can put any name and address in it. That is not a bug in an implementation — it is the design, and it is why every countermeasure here is a later addition layered on top.</p>
+<p>The three additions and what each actually covers:</p>
+<p><strong>SPF</strong> (RFC 7208, Proposed Standard) publishes in DNS which servers may send for a domain. Its blind spot is that it validates the <strong>envelope</strong> sender, not the <code>From:</code> header the human reads — so a message can pass SPF while displaying someone else&#39;s name entirely.</p>
+<p><strong>DKIM</strong> (RFC 6376, an Internet Standard — the highest maturity level in the IETF process) attaches a cryptographic signature over selected headers and the body, verified against a public key in DNS. It proves the domain signed the message and that the signed parts weren&#39;t altered. Its blind spot is that an <em>unsigned</em> message doesn&#39;t fail — <code>dkim=none</code> means there was nothing to check.</p>
+<p><strong>DMARC</strong> ties the other two to the visible <code>From:</code> domain (<strong>alignment</strong>) and publishes what a receiver should do on failure. It is the piece that closes both blind spots, which is why <code>dmarc=fail</code> against <code>p=REJECT</code> is the load-bearing header in this level. DMARC was Informational for a decade as RFC 7489; it became Standards Track in May 2026 as <strong>RFC 9989</strong>, with RFC 9990 and RFC 9991 covering aggregate and failure reporting. Deployed policies in the wild — including Polaris&#39;s — still overwhelmingly reflect the 7489 era.</p>
+<p>The <code>Received:</code> ordering rule that makes chain reading possible comes from <strong>RFC 5322</strong> (Internet Message Format): each relay prepends its trace field. That single convention is what turns a header block into a timeline.</p>
+<p>There is also a non-technical dimension here that changes the character of the case. Up through yesterday this was a data-handling incident. Producing a fabricated exculpatory document is a different category of act, and fabricating evidence is generally a separate offense from the underlying conduct. <strong>That determination belongs to counsel, not to the analyst.</strong> Your deliverable states what the artifacts show; it does not characterize intent or recommend charges. Analysts who editorialize in a forensic report hand the other side something to attack that isn&#39;t the evidence.</p>
+<h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
+<p><strong>Business Email Compromise is the industrial-scale version of exactly this.</strong> The FBI&#39;s Internet Crime Complaint Center puts BEC losses at <strong>$2.94B (2023), $2.77B (2024), and $3.05B (2025)</strong> — the most financially destructive enterprise-targeted category, with per-complaint losses averaging over $120,000 and the large majority of funds moving by wire or ACH. Every one of those incidents begins the way this level does: a recipient believes a <code>From:</code> header.</p>
+<p><strong>Facebook and Google, 2013–2015.</strong> Evaldas Rimasauskas, a Lithuanian national, incorporated a company sharing a name with Quanta Computer — a real Taiwanese hardware supplier both companies did business with — then sent fraudulent invoices from spoofed domains. The scheme took in <strong>more than $120 million</strong> (roughly $99M from Facebook, $23M from Google) before it was caught. He pleaded guilty in 2019, was sentenced to five years, and was ordered to forfeit nearly $50M and pay over $26M in restitution; both companies recovered most or all of the funds. Two sophisticated technology companies, with excellent security teams, paid nine figures because the invoices <em>looked</em> like they came from a known supplier. If it can happen there, &quot;our staff would notice&quot; is not a control.</p>
+<p><strong>The forwarding problem.</strong> The most instructive counter-example is mundane: legitimate mail fails SPF all the time. A message forwarded by a mailing list or an auto-forward rule arrives from a server the original domain never authorized, and SPF fails on perfectly genuine mail. This is precisely why the known-good comparison in §2 step 4 isn&#39;t optional ceremony. An analyst who treats every <code>spf=fail</code> as fraud will generate false accusations at a steady clip — and will be correctly torn apart by anyone competent on cross-examination.</p>
+<p><strong>What makes the Polaris case cheap to prove:</strong> DMARC at <code>p=REJECT</code>. Had Polaris published <code>p=none</code>, receivers would still have <em>recorded</em> the failure, but the forgery would have been far easier to argue away as a relay misconfiguration. Enforcement is what converts &quot;suspicious&quot; into &quot;provable&quot; — a point worth making to anyone who has been sitting at <code>p=none</code> for two years &quot;to avoid breaking things.&quot;</p>
+<h2 id="frameworks">§5 — Frameworks, deep dive<a class="anchor" href="#frameworks" aria-label="Link to this section">#</a></h2>
+<p><strong>The email authentication RFCs</strong>, in the order you should read them: <strong>RFC 5322</strong> (Internet Message Format — the header block and the prepend rule), <strong>RFC 7208</strong> (SPF), <strong>RFC 6376</strong> (DKIM), and <strong>RFC 9989</strong> (DMARC, obsoleting RFC 7489, with RFC 9990 and RFC 9991 for reporting).</p>
+<p><strong>NIST SP 800-177 Rev. 1 — Trustworthy Email</strong> is the consolidated federal guidance on deploying all three. It&#39;s the document to cite when you need to argue internally for moving from <code>p=none</code> to enforcement, because it makes the recommendation in a form procurement and compliance functions recognize.</p>
+<p><strong>NIST SP 800-86 — Integrating Forensic Techniques into Incident Response</strong> is the methodology backdrop for the whole forensics track: collection, examination, analysis, reporting. Its central discipline — that conclusions must be reproducible from preserved artifacts by someone who wasn&#39;t there — is exactly what the known-good comparison and the timestamp normalization serve.</p>
+<p><strong>NIST SP 800-171 Rev. 3 / CMMC</strong> governs Polaris because it handles Controlled Unclassified Information. The relevant families for the control-side finding: <strong>3.1.3</strong> (control the flow of CUI), <strong>3.1.20</strong> (limit connection to and use of external systems — the personal Gmail account and the external file-drop service are both this), and the <strong>3.3.x</strong> audit and accountability requirements that made the badge, VPN, and endpoint records available to correlate against. CMMC Level 2 assessment maps to these practices directly, and a defense contractor&#39;s certification status is a contractual, revenue-bearing question — which is why Polaris&#39;s response is not merely an HR matter.</p>
+<p><strong>Stored Communications Act, 18 U.S.C. § 2701 et seq.</strong> is the legal machinery in the background. § 2703(f) preservation requests freeze provider-held data while process is obtained; § 2703(d) orders and warrants compel production. The analyst-relevant point: provider-held content is generally not something an investigator may reach on their own initiative, and possessing a session token does not create authority to use it.</p>
+<h2 id="certifications">§6 — Cert exam relevance<a class="anchor" href="#certifications" aria-label="Link to this section">#</a></h2>
+<p><strong>CompTIA Security+ (SY0-701)</strong> tests SPF, DKIM, and DMARC directly, usually as &quot;which control prevents this?&quot; or by showing a header excerpt and asking what it demonstrates. Know that SPF checks the envelope, DKIM signs, and DMARC aligns them to the visible <code>From:</code> — that triad answers most questions on the topic.</p>
+<p><strong>CompTIA CySA+ (CS0-003)</strong> treats header analysis as a hands-on analyst skill: you&#39;re shown a block and asked to identify the true origin or the spoofing indicator. Practice reading chains bottom-up until it&#39;s automatic, because the exam rewards the correct direction and punishes the intuitive one.</p>
+<p><strong>GIAC GCFA / GCIH</strong> cover email as an evidence source, including chain reconstruction, provider records, and the legal-process side of obtaining them. The distinction between artifacts you may examine and accounts you may access is examinable material, not just professional etiquette.</p>
+<p><strong>ISC2 CISSP</strong> Domain 7 (Security Operations) covers investigations, evidence handling, and admissibility — including the requirement that findings survive adversarial scrutiny. Domain 4 covers the secure communications side.</p>
+<p><strong>EnCE / AccessData ACE</strong> and similar tool certifications assume the underlying header literacy this level teaches; the tools parse the chain for you, but you still have to know what it means when <code>Date:</code> and the trace fields disagree.</p>
+<h2 id="defender">§7 — What a defender does<a class="anchor" href="#defender" aria-label="Link to this section">#</a></h2>
+<p><strong>1. Preserve first, analyze second.</strong> Work from the production copy, keep the provider-supplied hash, and record who touched what and when. Everything downstream is worthless if the provenance of the artifact is arguable. The hash in <code>subpoena-return.txt</code> isn&#39;t decoration — it&#39;s what lets someone else verify you analyzed what Google actually sent.</p>
+<p><strong>2. Never conclude from a single message.</strong> Obtain a genuine message from the same claimed sender and compare authentication results, Message-ID domain, and relay path. One failing message invites an argument about misconfiguration; a matched pair forecloses it.</p>
+<p><strong>3. Read chains bottom-up and normalize timestamps.</strong> Convert everything to a single timezone — UTC is the safe default — before correlating against badge, VPN, or EDR data. Cross-timezone comparison is a leading cause of confidently wrong timelines.</p>
+<p><strong>4. Publish DMARC at enforcement.</strong> <code>p=none</code> observes; <code>p=quarantine</code> and <code>p=REJECT</code> act. Start at <code>p=none</code> with aggregate reporting to find your legitimate senders, fix them, then move to enforcement on a schedule with an owner. Sitting at <code>p=none</code> indefinitely is the common failure — you get the reports and none of the protection.</p>
+<p><strong>5. Alert on the header conditions, don&#39;t just log them.</strong> Inbound mail whose <code>From:</code> domain is your own but which fails DMARC is among the highest-signal detections available and is usually a one-line rule. Add display-name-impersonation detection for executives, and flag external mail visibly in the client so &quot;looks internal&quot; stops being persuasive on its own.</p>
+<p><strong>6. Close the actual control gap.</strong> In this case the only finding Polaris owns is the third one: a director flagged personal-address use in writing a month before the incident, and nothing followed. A flagged behavior with no owner and no follow-up is a control failure independent of what the employee later chose to do. Route those observations into a tracked process — DLP policy, an offboarding-style review, <em>something</em> with a ticket number.</p>
+<p><strong>7. Write the report so it survives opposition.</strong> State what each artifact shows, cite the artifact, avoid characterizing intent, and make every conclusion reproducible by someone working from the same evidence. &quot;The Date header is inconsistent with the receiving server&#39;s trace field by approximately 34 hours&quot; survives cross-examination. &quot;Reed faked it&quot; does not.</p>
+<h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
+<p>Two bonus finds. <code>progress --detail</code> shows your discovered list. Neither changes the breadcrumb chain.</p>
+<p><strong>1. The envelope disagrees with the letterhead</strong> — Trigger: <code>cat mail/01-authorization-claimed.eml</code>. <code>Return-Path: &lt;reed.connolly@gmail.com&gt;</code> against <code>From: &quot;Hutchins, Larry&quot; &lt;l.hutchins@polaris-defense.com&gt;</code>. The envelope sender is what the sending server declared for delivery to actually happen; the <code>From:</code> header is composer-supplied display text. When they disagree, believe the envelope. This is the single fastest spoof check available and it is one line of reading — worth building into muscle memory, because in a real inbox you&#39;ll often have only seconds of attention to spend.</p>
+<p><strong>2. You compared against a known-good</strong> — Trigger: <code>cat mail/02-hutchins-genuine-2026-02-11.eml</code>. The find is awarded for the <em>analyst behavior</em>, not for a fact in the file. Establishing what normal looks like for this sender on this infrastructure is what converts an observation into a finding that holds up. Everything else in the level is reading; this is the part that is judgment.</p>
+<p>Worth doing while you&#39;re here: run the chain-walk on both messages back to back —</p>
+<pre><code class="language-bash">grep -n received mail/01-authorization-claimed.eml
+grep -n received mail/02-hutchins-genuine-2026-02-11.eml
+</code></pre>
+<p>— and notice that the genuine message has an extra hop (<code>EXCH07</code> → <code>mx04.polaris-defense.com</code>) that the forgery has no way to fabricate. Hop <em>count</em> and hop <em>identity</em> are both evidence.</p>
+<h2 id="takeaways">§8 — Key takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>The <code>From:</code> header is a claim; the <code>Received:</code> chain is a record.</strong> The sender controls what a human reads and none of what the servers wrote after the message left their hands. Every email investigation is an exercise in reading the parts the sender couldn&#39;t touch.</li>
+<li><strong>Read <code>Received:</code> chains bottom-up.</strong> Each hop prepends, so the oldest is at the bottom. Reading top-down reliably produces the wrong origin, and it produces it <em>confidently</em>.</li>
+<li><strong>A single failing message proves very little.</strong> Legitimate mail fails SPF constantly through forwarding. Always pull a known-good sample from the same claimed sender before calling anything forged — that comparison is the difference between a finding and an accusation.</li>
+<li><strong>Authentication passing is not a trust signal.</strong> Reed&#39;s exfiltration message passed SPF, DKIM, and DMARC perfectly, because he really was who he claimed to be. The checks prove origin, not legitimacy.</li>
+<li><strong>DMARC enforcement is what makes forgery provable.</strong> <code>p=none</code> records the failure and delivers anyway. <code>p=REJECT</code> is why this case took an afternoon instead of a deposition.</li>
+</ul>
+<h2 id="further-reading">§9 — Further reading<a class="anchor" href="#further-reading" aria-label="Link to this section">#</a></h2>
+<p><em>Last reviewed: July 2026. RFC status, statutory citations, and incident figures verified against current canonical sources as of this date — note in particular that RFC 7489 (DMARC) was obsoleted by RFC 9989/9990/9991 in May 2026. Report stale links via the project&#39;s GitHub issues tracker.</em></p>
+<ul>
+<li><a href="https://cwe.mitre.org/data/definitions/290.html" target="_blank" rel="noopener noreferrer">CWE-290 — Authentication Bypass by Spoofing</a></li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc5322" target="_blank" rel="noopener noreferrer">RFC 5322 — Internet Message Format</a></li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc7208" target="_blank" rel="noopener noreferrer">RFC 7208 — Sender Policy Framework (SPF)</a></li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc6376" target="_blank" rel="noopener noreferrer">RFC 6376 — DomainKeys Identified Mail (DKIM), Internet Standard</a></li>
+<li><a href="https://datatracker.ietf.org/doc/rfc9989/" target="_blank" rel="noopener noreferrer">RFC 9989 — DMARC (obsoletes RFC 7489)</a></li>
+<li><a href="https://datatracker.ietf.org/doc/rfc7489/" target="_blank" rel="noopener noreferrer">RFC 7489 — DMARC (obsoleted; the decade of deployed policy reflects this document)</a></li>
+<li><a href="https://dmarc.org/2025/12/summary-of-changes-in-dmarcbis/" target="_blank" rel="noopener noreferrer">dmarc.org — Summary of Changes in DMARCbis</a></li>
+<li><a href="https://csrc.nist.gov/pubs/sp/800/177/r1/final" target="_blank" rel="noopener noreferrer">NIST SP 800-177 Rev. 1 — Trustworthy Email</a></li>
+<li><a href="https://csrc.nist.gov/pubs/sp/800/86/final" target="_blank" rel="noopener noreferrer">NIST SP 800-86 — Integrating Forensic Techniques into Incident Response</a></li>
+<li><a href="https://csrc.nist.gov/pubs/sp/800/171/r3/final" target="_blank" rel="noopener noreferrer">NIST SP 800-171 Rev. 3 — Protecting CUI in Nonfederal Systems</a></li>
+<li><a href="https://dodcio.defense.gov/CMMC/" target="_blank" rel="noopener noreferrer">CMMC — DoD Chief Information Officer program page</a></li>
+<li><a href="https://www.law.cornell.edu/uscode/text/18/2703" target="_blank" rel="noopener noreferrer">18 U.S.C. § 2703 — Required disclosure of customer communications or records</a></li>
+<li><a href="https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf" target="_blank" rel="noopener noreferrer">FBI IC3 — 2025 Internet Crime Report</a></li>
+<li><a href="https://www.ic3.gov/PSA/2024/PSA240911" target="_blank" rel="noopener noreferrer">FBI IC3 — Business Email Compromise public service announcement</a></li>
+<li><a href="https://www.justice.gov/usao-sdny/pr/lithuanian-man-sentenced-5-years-prison-theft-over-120-million-fraudulent-business" target="_blank" rel="noopener noreferrer">DOJ — Lithuanian man sentenced for $120M business email compromise (Rimasauskas)</a></li>
+<li><a href="https://www.fbi.gov/news/stories/ringleader-of-business-email-compromise-scheme-sentenced-012820" target="_blank" rel="noopener noreferrer">FBI — Ringleader of Business Email Compromise Scheme Sentenced</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1114/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1114: Email Collection</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1534/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1534: Internal Spearphishing</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1567/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1567: Exfiltration Over Web Service</a></li>
+<li><a href="https://attack.mitre.org/techniques/T1070/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK — T1070: Indicator Removal</a></li>
+<li><a href="https://www.m3aawg.org/published-documents" target="_blank" rel="noopener noreferrer">M3AAWG — Sender Best Common Practices</a></li>
+<li><a href="https://support.google.com/a/answer/81126" target="_blank" rel="noopener noreferrer">Google — Email sender guidelines (authentication requirements for bulk senders)</a></li>
+</ul>
+<hr>
+<p><em>Return to <a href="/walkthroughs/">walkthroughs index</a> — or back to <a href="/">d3cyph3r.com</a></em></p>
+<nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/forensics/level2.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level2@forensics</span><span class="pager-title">What Reed's Browser Saw</span></a><div class="pager-cell pager-empty"></div></nav>    </main>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-enter-with-the-breadcrumb">Step 1: Enter with the breadcrumb</a></li><li><a href="#step-2-read-the-production-cover-sheet">Step 2: Read the production cover sheet</a></li><li><a href="#step-3-read-the-disputed-message">Step 3: Read the disputed message</a></li><li><a href="#step-4-pull-a-known-good-the-move-that-makes-it-a-finding">Step 4: Pull a known-good — the move that makes it a finding</a></li><li><a href="#step-5-read-the-chain-bottom-up">Step 5: Read the chain bottom-up</a></li><li><a href="#step-6-what-was-actually-sent">Step 6: What was actually sent</a></li><li><a href="#step-7-the-two-minute-sequence">Step 7: The two-minute sequence</a></li><li><a href="#step-8-post-mortem-then-out">Step 8: Post-mortem, then out</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+  </div>
+
+  <footer id="site-footer">
+    <p class="footer-disclaimer">
+      For educational use. Don't run these techniques against systems
+      you don't own or aren't authorized to test.
+    </p>
+    <p class="footer-links">
+      <a href="/" class="footer-link">&larr; Back to d3cyph3r.com</a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://github.com/rlwilliamson-dev/d3cyph3r" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="View source on GitHub">
+        <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.62 7.62 0 0 0-2-.27c-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
+        </svg>
+        <span>Source on GitHub</span>
+      </a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://azure.microsoft.com/" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="Hosted on Microsoft Azure">
+        <svg width="13" height="13" viewBox="0 0 18 18" aria-hidden="true">
+          <path d="M10.61 2L4.05 14.4l5.6.04 1.5-2.92 4.9 2.88L10.61 2z" fill="#0078D4"/>
+        </svg>
+        <span>Hosted on Microsoft Azure</span>
+      </a>
+    </p>
+  </footer>
+
+  <script type="module" src="/walkthroughs/reader.js"></script>
+</body>
+</html>

@@ -114,7 +114,7 @@ The grant was written for a 2024 migration and marked for removal after cutover.
 
 The corresponding walkthrough carries this further into remediation sequencing, detection engineering, and the distinction between a control gap and a documented control the organisation did not follow.
 
-Each level also ships a long-form walkthrough under `/walkthroughs/`, one per level, all 24 conforming to the same nine-section structure: setup, solve, vulnerability class, real-world parallels, framework deep dive, certification relevance, defender actions, optional exploration, and cited further reading. External citations carry a review date and are verified against primary sources when written.
+Each level also ships a long-form walkthrough under `/walkthroughs/`, one per level, all 24 conforming to the same ten-section structure: setup, solve, vulnerability class, real-world parallels, framework deep dive, certification relevance, defender actions, optional exploration, key takeaways, and cited further reading. Conformance is enforced by the generator rather than by review: a walkthrough missing a section, repeating one, or ordering them differently fails the build. External citations carry a review date and are verified against primary sources when written.
 
 ---
 
@@ -122,7 +122,9 @@ Each level also ships a long-form walkthrough under `/walkthroughs/`, one per le
 
 **No backend.** The application is static files. There is no server to compromise, no database holding player data, no authentication surface, and no session state to hijack. `connect-src 'self'` in the Content-Security-Policy means the running application makes no outbound requests at all. The trade-off is accepted deliberately: no server-side validation, therefore no scored competition and no leaderboard. Given that the product is a training tool, that trade is worth making, and the section below on credential storage follows directly from it.
 
-**Zero runtime JavaScript dependencies.** There is no root `package.json`, no bundler, no build step, and no CDN script tag. `index.html` loads exactly one module, `js/main.js`, and everything else is native ES module imports. `script-src 'self'` enforces it at the browser. The motivation is supply chain: a dependency you do not have cannot be compromised, typosquatted, or abandoned. Playwright is a development-only dependency under `tests/`, and the walkthrough reader vendors `marked.js` locally rather than fetching it from a CDN.
+**Zero runtime JavaScript dependencies.** There is no root `package.json`, no bundler, and no CDN script tag. `index.html` loads exactly one module, `js/main.js`, and everything else is native ES module imports. `script-src 'self'` enforces it at the browser. The motivation is supply chain: a dependency you do not have cannot be compromised, typosquatted, or abandoned. Playwright is a development-only dependency under `tests/`, and the walkthrough reader vendors `marked.js` locally rather than fetching it from a CDN.
+
+Nothing is compiled to serve the site: a clone runs under `python3 -m http.server` with no toolchain. One generator exists, `tools/build-walkthroughs.mjs`, which renders the walkthrough markdown into static pages. It is deliberately kept off the deploy path. Its output is committed, so deployment stays a file copy and cannot fail a build step, and CI re-runs it purely to verify the committed pages still match their sources. It has no dependencies of its own, using Node builtins plus the already-vendored `marked`.
 
 One exception, stated because the claim is otherwise misleading: `style.css` imports three typefaces from Google Fonts, so `fonts.googleapis.com` and `fonts.gstatic.com` are permitted in CSP and are the only third-party origins the application contacts. Self-hosting those files would reduce the application to a single origin and is on the roadmap.
 
@@ -176,7 +178,7 @@ npx playwright test
 
 ## Status and roadmap
 
-Current release is v2.3.0. All seven tracks are playable through level2. Level3 has shipped for linux, crypto, and forensics.
+Current release is v2.4.0. All seven tracks are playable through level2. Level3 has shipped for linux, crypto, and forensics.
 
 **Level3 across the remaining four tracks** (network, web, osint, cloud). Each already has its breadcrumb credential staged in the shipped level2, so the chain is continuous when the content lands.
 
@@ -206,6 +208,10 @@ js/
   terminal/                DOM refs, input handling, output, prompt, themes
 levels/                    Scenario data, one file per track
 walkthroughs/              Long-form solve guides, one per level
+  <track>/<level>.md       Source
+  <track>/<level>.html     Generated, committed, verified by CI
+tools/
+  build-walkthroughs.mjs   Renders walkthroughs to static pages
 tests/                     Playwright suite
 ```
 

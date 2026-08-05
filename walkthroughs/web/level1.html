@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>level1@web — Carlos's Login Wall — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="Day two. Carlos's homegrown transcript-download endpoint is behind SSO but never checks per-student authorization. Any logged-in student can pull any other student's transcript. IDOR via CWE-639 + a BluePier-era demo account whose advisor_notes field carries the level2 breadcrumb.">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/web/level1.html">
+  <meta property="og:title" content="level1@web — Carlos's Login Wall — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="Day two. Carlos's homegrown transcript-download endpoint is behind SSO but never checks per-student authorization. Any logged-in student can pull any other student's transcript. IDOR via CWE-639 + a BluePier-era demo account whose advisor_notes field carries the level2 breadcrumb.">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/web/level1.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="D3CYPH3R">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.0">
+</head>
+<body class="page-doc">
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header id="site-header">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" aria-label="Back to d3cyph3r.com">
+        <span class="brand-mark"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span>
+      </a>
+      <a href="/walkthroughs/" class="brand-sub-link">
+        <span class="brand-sub">walkthroughs</span>
+      </a>
+    </div>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><a href="/walkthroughs/web/">web</a><span class="sep" aria-hidden="true">/</span><span class="current">level1</span></nav>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
+      <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
+      </svg>
+      <svg class="theme-icon theme-icon-sun" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="layout">
+    <main id="main" class="doc">
+<h1 id="level1web-carloss-login-wall">level1@web — Carlos&#39;s Login Wall<a class="anchor" href="#level1web-carloss-login-wall" aria-label="Link to this section">#</a></h1>
+<p class="doc-meta"><span class="doc-meta-item">38 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">7,532 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Web track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Web · <strong>Client:</strong> Meridian State University · <strong>Compliance regime:</strong> FERPA (20 U.S.C. § 1232g; 34 CFR Part 99) · <strong>Builds on:</strong> <a href="/walkthroughs/#/web/level0"><code>level0@web</code></a></p>
+<blockquote class="spoiler-warning">
+<p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for <code>level2@web</code>. If you haven&#39;t solved <code>level1@web</code> yet, close this tab and come back after. The puzzle is much more satisfying without spoilers, and the post-mortem below makes considerably more sense once you&#39;ve felt the moment yourself.</p>
+</blockquote>
+<hr>
+<h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<p>When you left the lobby at the end of <code>level0@web</code>, Meridian State University had a clean kind of incident on its hands. Carlos — Meridian&#39;s in-house web developer, eight months in role, inheritor of the BluePier Digital mess — had taken yesterday&#39;s finding the way you want clients to take findings. The autoindexed <code>/backup/</code> directory was gone within the hour. The DB credential rotation got booked into Friday&#39;s regular change window. Cedarwood Mutual, Meridian&#39;s cyber-insurance carrier, was proactively notified rather than learning about the issue later — and Cedarwood&#39;s renewal-review team now had &quot;Meridian discovered and remediated within audit window&quot; as the lead bullet on the renewal worksheet.</p>
+<p>This is not the version of consulting where the client is the problem. Carlos is the version where the client is the solution; the agency that left the mess is no longer around to be the problem with.</p>
+<p>It was during yesterday&#39;s clean-up conversation that Carlos mentioned, almost in passing, a second project he&#39;d shipped recently. He&#39;d been getting recurring tickets from students who needed unofficial transcripts for graduate-school applications and didn&#39;t want to wait the registrar&#39;s three-business-day turnaround. So three weeks ago he wrote a &quot;quick transcript download&quot; endpoint and bolted it into the student portal. Students log in via Meridian SSO, click a button, and get a PDF (well, a JSON the front-end renders as a PDF). The registrar approved it as a self-service convenience feature; the security review was &quot;it&#39;s behind SSO, so anyone calling it is a logged-in student.&quot;</p>
+<p>Priya did not like the second half of that sentence.</p>
+<p>She asked Carlos to send her the verification middleware and a captured SSO session she could use for testing. He sent both before end of day — the same A-plus client behavior he showed on yesterday&#39;s finding — and went home. The conversation today is the audit on the second project.</p>
+<p>You&#39;re logged in as <code>webapp_admin</code> on <code>portal.meridian.edu</code>. The path that got you here is the same path the credential chain has been running since <code>level0@web</code>: the leaked DB credential <code>M3rid14n!2023-prod</code> from the BluePier-era <code>db-creds.txt</code> is, per the comment in that file, also a shell user on the portal host. The pattern is identical to the network and crypto level1s: a service-account credential that was supposed to be database-scoped grew an interactive login somewhere along the way and nobody reverted it. The shell access itself is its own finding; today&#39;s audit is a different finding entirely.</p>
+<p>The legal frame hasn&#39;t softened. FERPA applies to Meridian — to &quot;education records,&quot; which under 34 CFR §99.3 explicitly include transcripts. The enforcement mechanism is &quot;the federal government can withdraw your funding,&quot; which for a public university is existential. FERPA does not have a HIPAA-style breach-notification clock, but the Department of Education&#39;s Privacy Technical Assistance Center expects &quot;reasonable&quot; notification timing for confirmed disclosures of education records to unauthorized parties, and Meridian&#39;s annual Federal Student Aid attestation will include any documented disclosure that happened during the reporting cycle. Today is part of the reporting cycle.</p>
+<p>What you don&#39;t know yet, walking in, is that Carlos&#39;s verification middleware is doing one job (authentication) correctly and skipping the second job (authorization) entirely. The endpoint trusts whatever <code>student_id</code> it&#39;s asked for and returns whatever transcript matches. Any student with an active Meridian session can pull any other student&#39;s transcript. The blast radius is everything in the database&#39;s <code>transcripts</code> table — every currently-enrolled student, every formerly-enrolled student, and every legacy system account that nobody has gotten around to cleaning up since 2023.</p>
+<h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
+<p>The puzzle path is short. Read fifteen lines of code, decode one cookie, curl four URLs.</p>
+<h3 id="step-1-confirm-the-credential-and-what-it-bought-you">Step 1: Confirm the credential and what it bought you<a class="anchor" href="#step-1-confirm-the-credential-and-what-it-bought-you" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@web
+level1@web&#39;s password: M3rid14n!2023-prod
+Connected: level1@web
+webapp_admin@web:~$ whoami
+webapp_admin
+webapp_admin@web:~$ pwd
+/home/webapp_admin
+</code></pre>
+<p>You used the still-live DB credential from <code>level0@web</code>&#39;s <code>db-creds.txt</code>. Same access an attacker pulling the same credential from the same exposed backup directory would have. Same access that prompted Carlos&#39;s Friday rotation. You&#39;re sitting on <code>portal.meridian.edu</code>, the student-portal webapp host, where Carlos&#39;s transcript endpoint runs and where the access logs are mirrored for observability.</p>
+<h3 id="step-2-read-the-day-two-context">Step 2: Read the day-two context<a class="anchor" href="#step-2-read-the-day-two-context" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">webapp_admin@web:~$ ls
+admin-access.log  is not here.  Try:
+id-conventions.md       priya-note.md         transcript-api.js
+lessons-learned.md      session.txt           welcome.md
+</code></pre>
+<p>Six files. Read them in order.</p>
+<p><code>welcome.md</code> is the mechanics file — it walks through what you already know about <code>curl</code> and <code>cookies</code>, explains the authentication-vs-authorization distinction, and points you at the four files you&#39;ll read next. <code>priya-note.md</code> is the in-character handoff: the day-two context, what Carlos said about the new endpoint, the rules of engagement (no scripted enumeration), the FERPA compliance hooks. <code>transcript-api.js</code> is Carlos&#39;s vulnerable code — fifteen lines including imports. <code>session.txt</code> is the captured SSO session Carlos sent for testing. <code>id-conventions.md</code> is the document Priya put together describing Meridian&#39;s student-ID format, including the BluePier-era M-000xxxx legacy range. <code>lessons-learned.md</code> is what you&#39;ll read after you find what&#39;s there.</p>
+<p>The critical pieces to extract before you do anything else:</p>
+<ul>
+<li><strong>No new commands today</strong>: <code>curl</code> and <code>cookies</code> are the tools. The puzzle is in <em>how</em> you use them.</li>
+<li><strong>The auth model</strong>: the SSO middleware confirms the requester is logged into Meridian. It does not confirm the requester is the <em>student whose transcript is being requested</em>. That&#39;s the lesson.</li>
+<li><strong>The legal frame</strong>: same controlled-exception authorization as <code>level0@web</code> plus an explicit &quot;do not enumerate at scale&quot; constraint — targeted validation only.</li>
+</ul>
+<h3 id="step-3-read-carloss-verify-middleware">Step 3: Read Carlos&#39;s verify middleware<a class="anchor" href="#step-3-read-carloss-verify-middleware" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">webapp_admin@web:~$ cat transcript-api.js
+</code></pre>
+<p>The relevant code:</p>
+<pre><code class="language-javascript">import express from &quot;express&quot;;
+import { requireMeridianSSO } from &quot;./middleware/sso.js&quot;;
+import { db } from &quot;./db.js&quot;;
+
+export const router = express.Router();
+
+// Require an active Meridian SSO session for ALL routes in this router.
+router.use(requireMeridianSSO);
+
+router.get(&quot;/api/transcript&quot;, async (req, res) =&gt; {
+  const studentId = req.query.student_id;
+  if (!studentId) {
+    return res.status(400).json({ error: &quot;missing student_id&quot; });
+  }
+
+  const transcript = await db.transcripts.findOne({ student_id: studentId });
+  if (!transcript) {
+    return res.status(404).json({ error: &quot;not found&quot; });
+  }
+
+  return res.json(transcript);
+});
+</code></pre>
+<p>Read it slowly. The middleware on the router does its job — <code>requireMeridianSSO</code> populates <code>req.session</code> with the authenticated user&#39;s identity (<code>req.session.studentId</code>, <code>req.session.email</code>, etc.) and rejects requests without a valid SSO cookie. That part is correct.</p>
+<p>The handler then reads <code>req.query.student_id</code> (the URL parameter, user-controlled), looks up the matching transcript in the database, and returns it. The handler <strong>never compares <code>req.query.student_id</code> against <code>req.session.studentId</code></strong>. Whatever student_id the caller asks for is the student_id the API responds with — provided the caller is <em>some</em> authenticated Meridian user.</p>
+<p>The fix is one line. The current code:</p>
+<pre><code class="language-javascript">const studentId = req.query.student_id;
+</code></pre>
+<p>would, in a correct implementation, be followed by:</p>
+<pre><code class="language-javascript">if (studentId !== req.session.studentId) {
+  return res.status(403).json({ error: &quot;forbidden&quot; });
+}
+</code></pre>
+<p>(Or, for non-self queries by registrar staff, a role check; or a centralized authz helper that handles both cases.) The check is missing.</p>
+<h3 id="step-4-confirm-youre-authenticated">Step 4: Confirm you&#39;re authenticated<a class="anchor" href="#step-4-confirm-youre-authenticated" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">webapp_admin@web:~$ cookies https://portal.meridian.edu
+</code></pre>
+<pre><code>Cookies for: https://portal.meridian.edu
+──────────────────────────────────────────
+  MeridianSSO          = eyJzaWQiOiJ3ZWJhcHAtc3ZjLW1vbml0b3JpbmctMjAyNiIsImV4cCI6MjA5MTM0MTY0MH0
+  csrf                 = Y2RmYTczNGItOWY4Yi00ZWQwLWFhMzgtZjQ4ZTQyZjZkM2Q0
+
+Tip: base64-looking values can be decoded with: base64 -d &lt;value&gt;
+</code></pre>
+<p>The session cookie is set. The cookie name (<code>MeridianSSO</code>) is the real one — it matches what the middleware reads. The value is base64-encoded JSON; if you decode it you&#39;ll see the session ID and expiration. This is the credential the middleware honors.</p>
+<p>The captured session is for <code>webapp-svc-monitoring</code> — a synthetic account Carlos set up for the nightly health-check job that pings the transcript endpoint to confirm uptime. It&#39;s the same shape as a regular Meridian student session; the middleware doesn&#39;t distinguish.</p>
+<h3 id="step-5-exercise-the-endpoint-against-student-ids-you-already-have">Step 5: Exercise the endpoint against student IDs you already have<a class="anchor" href="#step-5-exercise-the-endpoint-against-student-ids-you-already-have" aria-label="Link to this section">#</a></h3>
+<p>You have eight student IDs from yesterday&#39;s <code>students_export_2023.csv</code> — the BluePier-leaked dataset of 4,217 records. Aisha Patel was <code>M-1872941</code>; Marcus Reyes was <code>M-1872995</code>; Jordan Smith was <code>M-1873041</code>; Linh Tran, Tyler Brooks, Sara Kapoor, Dmitri Volkov, Olivia Chen rounded out the eight. Per Priya&#39;s rules of engagement, you curl <em>a handful</em> (not the whole list, not scripted) and document what comes back.</p>
+<pre><code class="language-bash">webapp_admin@web:~$ curl &#39;https://portal.meridian.edu/api/transcript?student_id=M-1872941&#39;
+</code></pre>
+<pre><code class="language-json">{
+  &quot;student_id&quot;: &quot;M-1872941&quot;,
+  &quot;first_name&quot;: &quot;Aisha&quot;,
+  &quot;last_name&quot;: &quot;Patel&quot;,
+  &quot;email&quot;: &quot;patel.a@meridian.edu&quot;,
+  &quot;major&quot;: &quot;Computer Science&quot;,
+  &quot;gpa&quot;: 3.91,
+  &quot;enrollment_status&quot;: &quot;Active&quot;,
+  &quot;courses_completed&quot;: [
+    {&quot;code&quot;: &quot;CS-301&quot;, &quot;name&quot;: &quot;Algorithms&quot;, &quot;term&quot;: &quot;Fall 2025&quot;, &quot;grade&quot;: &quot;A&quot;},
+    {&quot;code&quot;: &quot;CS-340&quot;, &quot;name&quot;: &quot;Operating Systems&quot;, &quot;term&quot;: &quot;Fall 2025&quot;, &quot;grade&quot;: &quot;A-&quot;},
+    {&quot;code&quot;: &quot;MATH-220&quot;, &quot;name&quot;: &quot;Linear Algebra&quot;, &quot;term&quot;: &quot;Spring 2026&quot;, &quot;grade&quot;: &quot;A&quot;},
+    {&quot;code&quot;: &quot;ENGL-202&quot;, &quot;name&quot;: &quot;Advanced Composition&quot;, &quot;term&quot;: &quot;Spring 2026&quot;, &quot;grade&quot;: &quot;B+&quot;}
+  ],
+  &quot;advisor&quot;: &quot;Dr. Maria Sanchez&quot;,
+  &quot;advisor_notes&quot;: &quot;On track for May 2026 graduation. Strong candidate for graduate study; encouraged to apply to CMU and UWashington.&quot;,
+  &quot;issued_at&quot;: &quot;2026-04-09T14:23:00Z&quot;
+}
+</code></pre>
+<p>Aisha&#39;s full transcript came back. Grades, GPA, advisor notes, the courses she&#39;s taken — all of it. The session that authenticated the request belongs to <code>webapp-svc-monitoring</code>. Aisha&#39;s session doesn&#39;t enter the picture.</p>
+<p>Try another:</p>
+<pre><code class="language-bash">webapp_admin@web:~$ curl &#39;https://portal.meridian.edu/api/transcript?student_id=M-1873041&#39;
+</code></pre>
+<pre><code class="language-json">{
+  &quot;student_id&quot;: &quot;M-1873041&quot;,
+  &quot;first_name&quot;: &quot;Jordan&quot;,
+  &quot;last_name&quot;: &quot;Smith&quot;,
+  &quot;major&quot;: &quot;Mechanical Engineering&quot;,
+  &quot;gpa&quot;: 2.88,
+  &quot;enrollment_status&quot;: &quot;Active — Academic Probation (since Spring 2026)&quot;,
+  &quot;courses_completed&quot;: [
+    {&quot;code&quot;: &quot;ME-301&quot;, &quot;name&quot;: &quot;Thermodynamics&quot;, &quot;term&quot;: &quot;Fall 2025&quot;, &quot;grade&quot;: &quot;C-&quot;},
+    {&quot;code&quot;: &quot;ME-302&quot;, &quot;name&quot;: &quot;Fluid Mechanics&quot;, &quot;term&quot;: &quot;Spring 2026&quot;, &quot;grade&quot;: &quot;D+&quot;}
+  ],
+  &quot;advisor&quot;: &quot;Dr. Henry Park&quot;,
+  &quot;advisor_notes&quot;: &quot;Academic probation as of Spring 2026 (GPA fell below 3.0). Recommend tutoring referral + check-in with student wellness.&quot;,
+  &quot;issued_at&quot;: &quot;2026-04-09T14:23:00Z&quot;
+}
+</code></pre>
+<p>Jordan&#39;s transcript. Including his academic-probation status and his advisor&#39;s notes about referring him to tutoring and student wellness. None of this is information Jordan would consent to sharing with any other student. The advisor&#39;s wellness referral specifically is the kind of detail FERPA treats as sensitive even within the broader education-record category — disability-coded information has additional protections.</p>
+<p>The IDOR is confirmed at this point. You don&#39;t need to enumerate further to prove the bug. But there&#39;s one more class of finding worth surfacing — the legacy ID range.</p>
+<h3 id="step-6-read-the-id-conventions-and-try-a-legacy-id">Step 6: Read the ID conventions and try a legacy ID<a class="anchor" href="#step-6-read-the-id-conventions-and-try-a-legacy-id" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">webapp_admin@web:~$ cat id-conventions.md
+</code></pre>
+<pre><code>Current students:      M-187xxxx   (issued 2018-onward, sequential
+                                    by enrollment date)
+Former students:       M-XXXXXXX   (range varies — 100000-999999
+                                    depending on enrollment year)
+Legacy / system:       M-000xxxx   (BluePier-era, created 2021-2023
+                                    for testing, demo accounts,
+                                    acceptance-QA scripts, etc.)
+</code></pre>
+<p>The legacy range is the interesting one. BluePier left things behind in <code>/backup/</code> — the level0 finding. They also left things behind in the database, per Carlos&#39;s comment: &quot;We never finished migrating off the legacy M-000xxxx range. They&#39;re still in the database. The student-facing UI hides them but the API doesn&#39;t filter.&quot;</p>
+<p>Try the lowest one:</p>
+<pre><code class="language-bash">webapp_admin@web:~$ curl &#39;https://portal.meridian.edu/api/transcript?student_id=M-0000001&#39;
+</code></pre>
+<pre><code class="language-json">{
+  &quot;student_id&quot;: &quot;M-0000001&quot;,
+  &quot;first_name&quot;: &quot;Test&quot;,
+  &quot;last_name&quot;: &quot;Student&quot;,
+  &quot;email&quot;: &quot;test@meridian.edu&quot;,
+  &quot;major&quot;: &quot;[SYSTEM ACCOUNT — NOT A REAL STUDENT]&quot;,
+  &quot;gpa&quot;: 4.00,
+  &quot;enrollment_status&quot;: &quot;Service / QA Account&quot;,
+  &quot;courses_completed&quot;: [],
+  &quot;advisor&quot;: &quot;BluePier Digital (legacy)&quot;,
+  &quot;advisor_notes&quot;: &quot;BLUEPIER DEMO ACCOUNT — DO NOT DELETE. Created 2023-08-12 by James for transcript-portal acceptance testing. Service account for end-to-end QA: portal-svc / pw=meridian-portal-svc-2026 / used by the automated nightly check that validates the registrar integration. Carlos: don&#39;t decommission this yet, the cutover to the new check is scheduled Q4 2024. — James, BluePier 2023-08-12&quot;,
+  &quot;issued_at&quot;: &quot;2026-04-09T14:23:00Z&quot;
+}
+</code></pre>
+<p>The BluePier demo account is still in the database. Its <code>advisor_notes</code> field carries a credential in plain text. The cutover that James referenced was scheduled for Q4 2024 — eighteen months before today&#39;s audit — and clearly didn&#39;t happen. The service-account credential <code>meridian-portal-svc-2026</code> is still live, the demo account is still queryable through the same IDOR vector, and the credential is now in your possession.</p>
+<p>This is the level2 breadcrumb. It&#39;s there because BluePier needed somewhere to stash the credential during 2023 acceptance testing, picked an <code>advisor_notes</code> field on a demo account as &quot;a reasonable place,&quot; and never came back to clean up. The same anti-pattern that put Theo&#39;s audit-bypass credential in a DNS TXT record back in <code>level1@network</code>; the same anti-pattern that put a credential in a JWT payload claim back in <code>level1@crypto</code>; the same anti-pattern, three different &quot;convenient places&quot; engineers chose to &quot;just stash it&quot; because the surface they had didn&#39;t enforce any access control on what got written into it.</p>
+<h3 id="step-7-confirm-the-api-does-return-404-for-invalid-ids">Step 7: Confirm the API does return 404 for invalid IDs<a class="anchor" href="#step-7-confirm-the-api-does-return-404-for-invalid-ids" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">webapp_admin@web:~$ curl &#39;https://portal.meridian.edu/api/transcript?student_id=M-9999999&#39;
+</code></pre>
+<pre><code class="language-json">{&quot;error&quot;:&quot;not found&quot;}
+</code></pre>
+<p>Not a bug confirmation — a sanity check. The API does distinguish &quot;valid ID, here&#39;s the record&quot; from &quot;no such ID.&quot; That means the responses you got for Aisha and Jordan and the BluePier demo weren&#39;t generic stubs or honeypots; they were genuine database hits. Documentation point worth including in the report.</p>
+<h3 id="step-8-document-and-stop">Step 8: Document and stop<a class="anchor" href="#step-8-document-and-stop" aria-label="Link to this section">#</a></h3>
+<p>Per Priya&#39;s rules of engagement, you do not iterate the M-187xxxx range. You don&#39;t enumerate every legacy ID. You don&#39;t try the registrar accounts (M-2xxxxxxx, per the conventions doc — though you didn&#39;t try that range to confirm). What you do is write up exactly what the four queries demonstrated.</p>
+<p>The minimum report content:</p>
+<ol>
+<li><strong>The transcript API performs authentication without authorization.</strong> <code>requireMeridianSSO</code> confirms an active Meridian session; the handler does not check that <code>req.query.student_id</code> matches <code>req.session.studentId</code>. Any logged-in Meridian student (or any party with a valid Meridian session, including service accounts) can request any other student&#39;s transcript.</li>
+<li><strong>The vulnerability is exploitable at any scale.</strong> Authenticated, unprivileged sessions return data for every record in the <code>transcripts</code> table. The validation curl-tests confirmed two real students (Aisha Patel, Jordan Smith) and one legacy demo account (M-0000001).</li>
+<li><strong>The IDOR extends to legacy system accounts.</strong> Meridian&#39;s <code>M-000xxxx</code> ID range still contains BluePier-era demo accounts. The student-facing UI hides them; the API does not filter them out. Their records may contain test data or operational metadata that shouldn&#39;t be reachable through an unauthorized API path.</li>
+<li><strong>A live service-account credential is published in plain text in a record&#39;s <code>advisor_notes</code> field.</strong> The BluePier demo account at M-0000001 carries <code>portal-svc</code> credential <code>meridian-portal-svc-2026</code>. The credential should be rotated and the demo account decommissioned outright.</li>
+<li><strong>The <code>advisor_notes</code> field is a free-form text field with no schema constraint.</strong> Anything anyone has ever written into it is recoverable through an IDOR-style query. The advisor_notes contents of other student records may contain similar leftovers from BluePier-era data.</li>
+<li><strong>Session-token observation</strong>: the captured SSO session&#39;s <code>exp</code> claim decodes to 2036-04-09, ten years out. Long-lived service-account tokens are a separate finding under NIST SP 800-63B-4 §5 <em>Session Management</em> — short-lived tokens with proper refresh are the modern standard.</li>
+</ol>
+<p>Send the report to Carlos with general counsel cc&#39;d. He&#39;ll have the fix shipped before lunch.</p>
+<pre><code class="language-bash">webapp_admin@web:~$ exit
+</code></pre>
+<h3 id="step-9-game-world-only-use-the-breadcrumb">Step 9 (game-world only): Use the breadcrumb<a class="anchor" href="#step-9-game-world-only-use-the-breadcrumb" aria-label="Link to this section">#</a></h3>
+<p>In a real engagement, today ends here. In D3CYPH3R the credential chain continues into the eventual <code>level2@web</code>, where the <code>portal-svc</code> account becomes the entry point.</p>
+<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@web
+level2@web&#39;s password: meridian-portal-svc-2026
+</code></pre>
+<p>(At time of writing, <code>level2@web</code> hasn&#39;t shipped yet. The credential chain is staged for it.)</p>
+<h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
+<p>Today&#39;s finding looks like one missing line of code. It&#39;s actually a couple of failures stacked.</p>
+<h3 id="failure-1-authentication-without-authorization-cwe-639-cwe-862">Failure 1: Authentication without authorization (CWE-639 / CWE-862)<a class="anchor" href="#failure-1-authentication-without-authorization-cwe-639-cwe-862" aria-label="Link to this section">#</a></h3>
+<p>Carlos&#39;s middleware confirms the requester is <em>a</em> logged-in Meridian user. The handler then trusts whatever resource identifier the URL says — and any logged-in user can request any resource ID. The general weakness pattern is <strong>Insecure Direct Object Reference (IDOR)</strong>: an endpoint takes a resource identifier as input, looks the resource up in the data store, and returns it without verifying the caller&#39;s authorization to access that specific resource.</p>
+<p>The most precise CWE mapping is <strong>CWE-639: Authorization Bypass Through User-Controlled Key</strong>. The catalog entry describes the weakness as &quot;the system&#39;s authorization functionality does not prevent one user from gaining access to another user&#39;s data or record by modifying the key value identifying the data&quot; — which is Carlos&#39;s case described as a definition.</p>
+<p>The parent weakness is <strong>CWE-285: Improper Authorization</strong>. CWE-285 is the broad umbrella for any case where the authorization decision is wrong or missing.</p>
+<p>For the specific failure mode where the authorization check is <em>entirely absent</em> (rather than present-but-wrong), <strong>CWE-862: Missing Authorization</strong> is the better fit. Carlos&#39;s handler doesn&#39;t have a broken check; it has no check at all. CWE-862 is a recurring CWE Top 25 entry — it ranked in the upper half on the 2024 edition.</p>
+<p>(For completeness: <strong>CWE-863: Incorrect Authorization</strong> is the sibling pattern where the check exists but produces the wrong answer. Carlos&#39;s case isn&#39;t CWE-863 because there&#39;s nothing to be incorrect — the check isn&#39;t there.)</p>
+<h3 id="failure-2-the-demo-account-that-outlived-its-purpose">Failure 2: The demo account that outlived its purpose<a class="anchor" href="#failure-2-the-demo-account-that-outlived-its-purpose" aria-label="Link to this section">#</a></h3>
+<p>The BluePier <code>M-0000001</code> demo account was created for transcript-portal acceptance testing in 2023, scheduled for decommission in Q4 2024, and is still live in 2026. The advisor_notes field for that account contains a service-account credential that was supposed to be migrated to a real secrets manager when the new monitoring system landed. Neither thing happened.</p>
+<p>This is the sticky-account anti-pattern documented in NIST SP 800-53 Rev. 5 control AC-2(3) <em>Disable Accounts</em> and CIS Critical Security Controls v8.1 sub-control 5.3 <em>Disable Dormant Accounts</em>. Same pattern shape as the <code>audit-bypass.atlas.internal</code> host in <code>level1@network</code> and the <code>audit-svc</code> account in that same scenario. Different surface; same failure mode.</p>
+<h3 id="failure-3-sensitive-data-in-a-free-form-text-field">Failure 3: Sensitive data in a free-form text field<a class="anchor" href="#failure-3-sensitive-data-in-a-free-form-text-field" aria-label="Link to this section">#</a></h3>
+<p>The <code>advisor_notes</code> field exists for human-readable comments — &quot;encouraged to apply to CMU,&quot; &quot;recommend tutoring referral.&quot; It was used during BluePier&#39;s acceptance testing as a place to stash a credential because &quot;it&#39;s just a string field, who&#39;s going to look at it on a system account?&quot; The fact that the IDOR turned the JSON record into a publicly-recoverable artifact means anything stashed in any such field — across any record — is recoverable in the same way.</p>
+<p>This isn&#39;t a single CWE. The pattern shape is <strong>CWE-200: Exposure of Sensitive Information to an Unauthorized Actor</strong> (the broad umbrella, currently DISCOURAGED for mapping per the CWE catalog) layered with <strong>CWE-540: Inclusion of Sensitive Information in Source Code</strong> (the literal CWE-540 entry is about source code, but the spirit — &quot;sensitive data should not appear in artifacts whose access control is not credential-grade&quot; — applies). The narrower modern mapping is <strong>CWE-312: Cleartext Storage of Sensitive Information</strong>.</p>
+<h3 id="the-compound-effect">The compound effect<a class="anchor" href="#the-compound-effect" aria-label="Link to this section">#</a></h3>
+<p>Pull any one thread:</p>
+<ul>
+<li>Add the per-resource authz check → IDOR closes; legacy demo records are still in the database but unreachable via the API; the credential in the advisor_notes is no longer recoverable through the IDOR path.</li>
+<li>Decommission the BluePier demo account → the credential the advisor_notes carries is gone; IDOR still works against current students.</li>
+<li>Move credentials out of free-form fields → IDOR still works, but no credential-class secrets recoverable that way; PII (transcripts) still exposed.</li>
+</ul>
+<p>The full remediation tracks each failure independently because each has a different fix and a different timeline. The IDOR fix is one code change shipped this afternoon. The demo-account decommission is a coordination conversation with Carlos and the BluePier successor (or, more likely, a unilateral decision by Carlos because the BluePier successor doesn&#39;t exist). The free-form-field cleanup is a schema audit plus a one-shot migration that scrubs known credential patterns from existing data.</p>
+<h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
+<p>IDOR is, by several published metrics, the most-disclosed vulnerability class on modern web applications. The pattern keeps appearing because authentication frameworks make it easy to gate access by &quot;logged-in user&quot; and harder to gate by &quot;this specific resource belongs to this specific user.&quot; A few named incidents that illustrate the range:</p>
+<h3 id="thread-1-usps-informed-visibility-november-2018">Thread 1: USPS Informed Visibility (November 2018)<a class="anchor" href="#thread-1-usps-informed-visibility-november-2018" aria-label="Link to this section">#</a></h3>
+<p>The United States Postal Service ran (and runs) a service called <em>Informed Visibility</em>, an API that lets logged-in USPS account holders see mail-tracking data. In November 2018, a security researcher discovered that the API would return mail-tracking data for <strong>any</strong> account holder when an account holder authenticated and asked for someone else&#39;s data — there was no check that the authenticated user owned the data being requested.</p>
+<p>The Krebs on Security report that broke the story estimated <strong>roughly 60 million</strong> USPS user accounts were exposed via the bug. The data accessible per the Krebs writeup included email addresses, usernames, user IDs, account numbers, street addresses, phone numbers, authorized-users metadata, and mailing-campaign data. USPS confirmed the issue and patched, but the underlying technical pattern — authenticated user, missing per-resource authorization check, predictable account identifiers — was exactly the IDOR shape you just walked through with Carlos&#39;s transcript endpoint. The USPS case differs only in scale and in regulated-data category (postal records vs. education records).</p>
+<h3 id="thread-2-optus-september-2022">Thread 2: Optus (September 2022)<a class="anchor" href="#thread-2-optus-september-2022" aria-label="Link to this section">#</a></h3>
+<p>Optus — Australia&#39;s second-largest telecommunications carrier — disclosed in September 2022 that an attacker had exfiltrated personal data on customers via an unauthenticated API endpoint. The technical mechanism was IDOR-adjacent: an API endpoint that returned customer records by ID, with no authentication requirement at all. The attacker incremented through the customer-ID range and pulled records sequentially.</p>
+<p>Public figures evolved as the investigation progressed. Optus&#39;s own early disclosure named &quot;up to 10 million&quot; affected customers; the OAIC&#39;s August 2025 Federal Court civil-penalty filing alleges interference with the privacy of approximately <strong>9.5 million</strong> Australians, with approximately 2.1 million having government-issued ID numbers (driver&#39;s licenses, passports, Medicare numbers) exposed. The Australian Federal Police investigation, the single OAIC civil-penalty proceeding filed in August 2025 (alleging contraventions with potential per-contravention penalties up to AUD $2.22 million), and the <strong>AUD ~$140 million</strong> Optus reserved for breach remediation (Equifax Protect subscriptions for affected customers, the Deloitte external review, replacement-document costs) make this one of the most consequential privacy incidents in Australian history.</p>
+<p>Optus&#39;s case is the <em>unauthenticated</em> variant of IDOR — Carlos&#39;s endpoint is the <em>authenticated</em> variant. The defender&#39;s discipline difference: Optus&#39;s API had no authentication of any kind; Carlos&#39;s has authentication but no authorization. The blast radius shape is the same; the remediation conversation is different.</p>
+<h3 id="thread-3-t-mobile-api-january-2023">Thread 3: T-Mobile API (January 2023)<a class="anchor" href="#thread-3-t-mobile-api-january-2023" aria-label="Link to this section">#</a></h3>
+<p>T-Mobile US disclosed in January 2023 that an attacker had used an API to obtain personal data on approximately <strong>37 million</strong> prepaid and postpaid customers. The exfiltration began in late November 2022 and was detected and stopped in mid-January 2023, an approximately seven-week window. The technical mechanism, per T-Mobile&#39;s SEC 8-K disclosure, was abuse of an API endpoint that returned customer records without adequate access controls on the resource being requested.</p>
+<p>The OWASP API Security Top 10&#39;s framing labels this category <strong>API1:2023 — Broken Object Level Authorization (BOLA)</strong>. T-Mobile&#39;s incident is the canonical recent reminder that BOLA at scale, against a high-value data set, produces immediate breach disclosures and regulatory follow-on (the FCC opened an investigation; T-Mobile had previously paid US$350 million to settle a class action stemming from an earlier 2021 breach, so the pattern repetition mattered).</p>
+<h3 id="the-base-rate">The base rate<a class="anchor" href="#the-base-rate" aria-label="Link to this section">#</a></h3>
+<p>Beyond the named incidents, IDOR / BOLA is consistently one of the highest-frequency vulnerability classes in bug-bounty platform disclosures. HackerOne&#39;s recent <em>Hacker-Powered Security Report</em> editions place Broken Access Control / Improper Access Control among the top vulnerability categories by reported volume; Bugcrowd&#39;s <em>Inside the Mind of a Hacker</em> shows similar patterns. The OWASP Foundation has ranked Broken Access Control at #1 in the OWASP Top 10 (2021 and 2025 editions) because the underlying data — collected from a consortium of contributing organizations&#39; application-security data — keeps showing the category at the top.</p>
+<p>The reason for the persistence is not technical mystery. The reason is that <em>authentication</em> is provided by frameworks and middleware in a roughly turnkey fashion (&quot;add this line, your route is now SSO-gated&quot;), and <em>authorization</em> requires per-route logic that varies by resource type and access model. Carlos used the framework&#39;s authentication middleware correctly. He just stopped there. That stopping point is the pattern.</p>
+<h2 id="frameworks">§5 — Frameworks, deep dive<a class="anchor" href="#frameworks" aria-label="Link to this section">#</a></h2>
+<p>The post-mortem at the bottom of the level (<code>lessons-learned.md</code>) walks through the high-level framework mapping. This section expands each with the specific section / control / paragraph identifiers a compliance auditor would cite.</p>
+<h3 id="cwe-common-weakness-enumeration">CWE — Common Weakness Enumeration<a class="anchor" href="#cwe-common-weakness-enumeration" aria-label="Link to this section">#</a></h3>
+<p><strong>CWE-639: Authorization Bypass Through User-Controlled Key.</strong> The most precise weakness ID. The catalog entry describes the weakness as &quot;the system&#39;s authorization functionality does not prevent one user from gaining access to another user&#39;s data or record by modifying the key value identifying the data.&quot; MITRE mapping status: <strong>ALLOWED</strong>.</p>
+<p><strong>CWE-862: Missing Authorization.</strong> The variant where the authorization check is entirely absent. Carlos&#39;s handler is CWE-862 — the check on <code>student_id</code> ownership is missing entirely, not present-but-wrong. MITRE mapping status: <strong>ALLOWED-WITH-REVIEW</strong> (CWE-862 is a Class-level weakness; the catalog recommends reviewing Base-level children before mapping). CWE-862 has been a recurring CWE Top 25 entry, climbing to #9 on the 2024 edition and #4 on the 2025 edition.</p>
+<p><strong>CWE-863: Incorrect Authorization.</strong> The sibling weakness where the check exists but produces the wrong answer. Not Carlos&#39;s case directly; cited here as the differentiator.</p>
+<p><strong>CWE-285: Improper Authorization.</strong> The broad parent for the authorization-failure family. MITRE mapping status: <strong>DISCOURAGED</strong> — the catalog explicitly recommends mappers use CWE-862 <em>Missing Authorization</em> or CWE-863 <em>Incorrect Authorization</em> (or a narrower variant like CWE-639) instead. CWE-285 is included here as the historical / hierarchy reference only; for surgical analytics, always reach for CWE-862 / CWE-863 / CWE-639.</p>
+<p><strong>CWE-200: Exposure of Sensitive Information to an Unauthorized Actor.</strong> The umbrella for any sensitive-data disclosure. MITRE marks CWE-200 as <strong>DISCOURAGED for mapping</strong> — it&#39;s frequently misused as a catch-all when a more specific weakness applies. Use the more specific weakness (CWE-639 / CWE-862 here) and cite CWE-200 only for framework-mapping reference.</p>
+<p><strong>CWE-312: Cleartext Storage of Sensitive Information.</strong> Maps the BluePier-demo credential stored in plain text in an <code>advisor_notes</code> field. The catalog text covers exactly this case — credential data stored unencrypted in a database field.</p>
+<h3 id="ferpa-20-usc-s-1232g-34-cfr-part-99">FERPA — 20 U.S.C. § 1232g; 34 CFR Part 99<a class="anchor" href="#ferpa-20-usc-s-1232g-34-cfr-part-99" aria-label="Link to this section">#</a></h3>
+<p>The Family Educational Rights and Privacy Act and its implementing regulations.</p>
+<p><strong>34 CFR §99.3 — Definitions.</strong> The &quot;education records&quot; definition explicitly includes records that contain information directly related to a student, maintained by an educational agency receiving federal funding. Transcripts (grades, courses, GPA, advisor notes) are the textbook example.</p>
+<p><strong>34 CFR §99.31 — Conditions under which prior consent is not required to disclose information.</strong> The regulation enumerates the specific categories of disclosure permitted without prior written consent (school officials with legitimate educational interest, other schools, parents of dependent students, etc.). An anonymous IDOR-via-authenticated-student-session disclosure is not among the enumerated categories. Each disclosure made via the vulnerable endpoint is a §99.31 violation.</p>
+<p><strong>34 CFR §99.32 — Recordkeeping requirements.</strong> Disclosures (other than to directory parties, school officials, or pursuant to subpoenas) must be recorded — date, party, basis. The IDOR-driven disclosures have none of this; the exposure created an undocumented, undated, untracked disclosure stream.</p>
+<p><strong>34 CFR §99.7 — Annual notification.</strong> Universities must annually notify students of their FERPA rights, including the right to inspect and challenge records. A confirmed IDOR exposure of transcript data is the kind of incident that needs to be referenced in subsequent annual notifications to enrolled students.</p>
+<p><strong>The enforcement mechanism.</strong> FERPA does not have a federal-level civil-penalty schedule. Enforcement is administrative — the Department of Education can find an institution noncompliant and, in extreme cases, suspend the institution&#39;s eligibility for Federal Student Aid (the Title IV programs). For public universities, FSA eligibility is existential.</p>
+<h3 id="nist-sp-800-171-rev-3">NIST SP 800-171 Rev. 3<a class="anchor" href="#nist-sp-800-171-rev-3" aria-label="Link to this section">#</a></h3>
+<p>NIST Special Publication 800-171 <em>Protecting Controlled Unclassified Information (CUI) in Nonfederal Systems and Organizations</em>, Revision 3 (May 2024 — supersedes Rev. 2). Universities map to this standard for FSA-related CUI handling. The Rev. 3 numbering uses the format 03.xx.xx (three-digit family + two-digit control + optional enhancement).</p>
+<p><strong>03.01.01 — Account Management.</strong> Covers account lifecycle: creation, modification, disabling. The BluePier demo account that outlived its purpose is a direct violation.</p>
+<p><strong>03.01.02 — Access Enforcement.</strong> The system shall enforce approved authorizations for logical access to CUI and system resources in accordance with applicable access-control policies. Carlos&#39;s endpoint enforces nothing on the resource side.</p>
+<p><strong>03.01.05 — Least Privilege.</strong> Authorize access for users that is necessary to accomplish assigned tasks. The SSO middleware&#39;s authorization scope is &quot;logged in&quot; — too broad for what the transcript endpoint should grant.</p>
+<h3 id="nist-sp-800-53-rev-5">NIST SP 800-53 Rev. 5<a class="anchor" href="#nist-sp-800-53-rev-5" aria-label="Link to this section">#</a></h3>
+<p>The federal control catalog. Applies broadly outside federal scope as the most comprehensive controls reference.</p>
+<p><strong>AC-3 — Access Enforcement.</strong> The system must enforce approved authorizations for logical access. Carlos&#39;s endpoint enforces nothing on the resource-ownership dimension; AC-3 is failed.</p>
+<p><strong>AC-6 — Least Privilege.</strong> The SSO-authenticated user has more access than the user&#39;s role justifies for the transcript-download use case. The control envisions per-action authorization decisions, not blanket access-by-authentication.</p>
+<p><strong>AC-4 — Information Flow Enforcement.</strong> Information flows between subjects and objects must be controlled. Student records (the objects) are flowing to subjects (other students, service accounts) who shouldn&#39;t be receiving them.</p>
+<p><strong>AC-2(3) — Disable Accounts.</strong> The BluePier demo account&#39;s continued existence past its scheduled removal date is the violation. AC-2(3) requires disabling accounts no longer needed within an organization-defined time period.</p>
+<h3 id="cis-critical-security-controls-v81">CIS Critical Security Controls v8.1<a class="anchor" href="#cis-critical-security-controls-v81" aria-label="Link to this section">#</a></h3>
+<p>The Center for Internet Security&#39;s <em>Critical Security Controls v8.1</em> (June 2024).</p>
+<p><strong>6.7 — Centralize Access Control.</strong> Manage access control for all enterprise assets through a centralized access management platform. Ad-hoc per-route authorization logic (or no authorization logic, as here) is the opposite of centralized.</p>
+<p><strong>16.10 — Apply Secure Design Principles in Application Architectures.</strong> The control text covers the layered-security model — authentication, authorization, input validation, output encoding, error handling. Carlos&#39;s endpoint applies the first layer correctly and skips the second.</p>
+<p><strong>5.3 — Disable Dormant Accounts.</strong> The BluePier demo at M-0000001 has been dormant past the cutover-Q4-2024 schedule. CIS 5.3 calls for explicit periodic review and disabling.</p>
+<h3 id="owasp">OWASP<a class="anchor" href="#owasp" aria-label="Link to this section">#</a></h3>
+<p><strong>OWASP Top 10 (2025) — A01: Broken Access Control.</strong> Held the #1 slot from 2021 to 2025. IDOR is the most-cited example in the category description. The category covers &quot;violation of the principle of least privilege or deny by default,&quot; &quot;bypassing access control checks by modifying the URL,&quot; and &quot;IDOR (Insecure Direct Object References).&quot; All three apply directly to Carlos&#39;s endpoint.</p>
+<p><strong>OWASP API Security Top 10 (2023) — API1: Broken Object Level Authorization (BOLA).</strong> OWASP&#39;s API-specific Top 10 (last updated in 2023) has had Broken Object Level Authorization as API1 since the list was first published in 2019. The category description names &quot;the most common API attack vector&quot; — IDOR&#39;s API expression. The remediation guidance is the same as OWASP A01: check authorization on every resource access, regardless of the authentication state.</p>
+<h3 id="cloud-native-sdlc-frameworks-worth-knowing">Cloud-native / SDLC frameworks worth knowing<a class="anchor" href="#cloud-native-sdlc-frameworks-worth-knowing" aria-label="Link to this section">#</a></h3>
+<p><strong>OWASP ASVS (Application Security Verification Standard) v5.0.</strong> ASVS publishes a verification checklist for application security at three increasing levels. Section V4 <em>Access Control</em> explicitly requires (Level 1, the minimum) per-request authorization checks against the authenticated principal. Carlos&#39;s endpoint fails V4.1.1 (the trivially obvious one).</p>
+<p><strong>OWASP Cheat Sheet — Authorization.</strong> <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html</a>. Walks through the layered model (authentication vs authorization), the centralization pattern, the per-resource-check pattern, and the audit-the-codebase pattern. Read it as a defender; hand it to Carlos.</p>
+<h2 id="certifications">§6 — Cert exam relevance<a class="anchor" href="#certifications" aria-label="Link to this section">#</a></h2>
+<p>IDOR is taught everywhere. If you study any of the certs below, you&#39;ve seen the pattern.</p>
+<p><strong>CompTIA Security+ (SY0-701).</strong> The current exam (released November 2023). Domain 2 (<em>Threats, Vulnerabilities, and Mitigations</em>) covers application-layer vulnerabilities including IDOR / Broken Access Control. Domain 3 (<em>Security Architecture</em>) covers the authentication-vs-authorization distinction.</p>
+<p><strong>CompTIA PenTest+ (PT0-003).</strong> The current exam (released December 2024, replacing PT0-002 which sunset mid-2025). Domain 3 (<em>Attacks and Exploits</em>) names IDOR in the web-application-attack taxonomy and tests candidates&#39; ability to identify and exploit it in hands-on lab scenarios.</p>
+<p><strong>CompTIA CySA+ (CS0-003).</strong> The current exam (released June 2023). Domain 2 (<em>Threat Intelligence</em>) covers IDOR detection patterns — log-based detection of cross-user access patterns is a named module.</p>
+<p><strong>(ISC)² CISSP.</strong> Domain 3 (<em>Security Architecture and Engineering</em>) — the authentication / authorization distinction is a CISSP fundamental. The CBK chapters on access-control models (DAC, MAC, RBAC, ABAC) all cover the per-resource-check pattern.</p>
+<p><strong>Offensive Security OSWA / OSWE / OSCP.</strong> OffSec&#39;s web-focused certs spend substantial curriculum time on IDOR. The OSWE exam (Web Expert) includes IDOR-style challenges as a recurring test of the candidate&#39;s ability to identify authorization failures in real applications. The OSWA (Web Assessor) covers IDOR exploitation in its initial-attacks module. The OSCP touches IDOR briefly but the deep treatment lives in the web-specific certs.</p>
+<p><strong>SANS GIAC GWAPT (GIAC Web Application Penetration Tester).</strong> Covers IDOR in depth. The associated course (SEC542) maps IDOR to its OWASP categorization and walks through detection in the labs.</p>
+<h2 id="defender">§7 — What a defender does<a class="anchor" href="#defender" aria-label="Link to this section">#</a></h2>
+<p>The bulleted version is in the in-game <code>lessons-learned.md</code>. This section expands each with the specific operational details.</p>
+<h3 id="1-fix-the-endpoint">1. Fix the endpoint<a class="anchor" href="#1-fix-the-endpoint" aria-label="Link to this section">#</a></h3>
+<p>The minimal fix for Carlos&#39;s specific case:</p>
+<pre><code class="language-javascript">router.get(&quot;/api/transcript&quot;, async (req, res) =&gt; {
+  const studentId = req.query.student_id;
+  if (!studentId) {
+    return res.status(400).json({ error: &quot;missing student_id&quot; });
+  }
+
+  // Authorization check: the authenticated student can only request
+  // their own transcript. Non-self queries require the registrar role.
+  if (studentId !== req.session.studentId) {
+    if (!req.session.roles?.includes(&quot;registrar&quot;)) {
+      return res.status(403).json({ error: &quot;forbidden&quot; });
+    }
+  }
+
+  const transcript = await db.transcripts.findOne({ student_id: studentId });
+  if (!transcript) {
+    return res.status(404).json({ error: &quot;not found&quot; });
+  }
+
+  return res.json(transcript);
+});
+</code></pre>
+<p>Three lines added. The check enforces the most basic ownership constraint (student requesting their own transcript) and an explicit role exception for the registrar&#39;s office.</p>
+<h3 id="2-centralize-authorization">2. Centralize authorization<a class="anchor" href="#2-centralize-authorization" aria-label="Link to this section">#</a></h3>
+<p>Per-route ownership checks are fragile because every new route needs the check, and the next junior developer who adds a route will forget. The better long-term answer is to centralize authorization decisions in a policy layer:</p>
+<ul>
+<li><strong>Open Policy Agent (OPA)</strong> + Rego policies (<a href="https://www.openpolicyagent.org/" target="_blank" rel="noopener noreferrer">https://www.openpolicyagent.org/</a>): policies as code, evaluated by a sidecar or library, applied at the application middleware layer.</li>
+<li><strong>Casbin</strong> (<a href="https://casbin.apache.org/" target="_blank" rel="noopener noreferrer">https://casbin.apache.org/</a>): policy library with multiple model support (ACL, RBAC, ABAC), available in many languages. (The project joined the Apache Software Foundation; the older <code>casbin.org</code> URL 301-redirects to the new home.)</li>
+<li><strong>Oso</strong> (<a href="https://www.osohq.com/" target="_blank" rel="noopener noreferrer">https://www.osohq.com/</a>): authorization framework based on the Polar DSL with RBAC, ReBAC, and ABAC support. (Oso&#39;s company positioning shifted toward AI-agent authorization in 2025, but the application-authorization product remains available; the Polar-based library is the relevant piece for IDOR remediation.)</li>
+<li><strong>Framework-native primitives</strong>: Django&#39;s <code>permission_required</code> decorators, Rails&#39; Pundit / CanCanCan, Spring Security&#39;s <code>@PreAuthorize</code>, .NET&#39;s <code>[Authorize]</code> attributes with policy handlers.</li>
+</ul>
+<p>The selection criterion isn&#39;t the tool; it&#39;s the discipline of &quot;every protected resource gets evaluated through the same policy entry point&quot; rather than &quot;every developer remembers to add the check.&quot;</p>
+<h3 id="3-replace-predictable-ids-with-unguessable-ones">3. Replace predictable IDs with unguessable ones<a class="anchor" href="#3-replace-predictable-ids-with-unguessable-ones" aria-label="Link to this section">#</a></h3>
+<p>Meridian&#39;s <code>M-187xxxx</code> sequential format makes enumeration trivial. UUIDs (specifically UUIDv4 random or ULID lexicographically-sortable) eliminate the enumerate-the-keyspace attack vector. <em>This is not a fix for IDOR</em> — the authz check is still the fix — but it&#39;s a meaningful defense-in-depth layer.</p>
+<p>The retrofit pattern: introduce a UUID alongside the existing M-XXXXXXX identifier; update the API to accept either (with a deprecation timeline for the M-XXXXXXX form); update the database schema to make the UUID the primary key; eventually deprecate the M- form for API use.</p>
+<h3 id="4-audit-the-entire-codebase-for-sibling-patterns">4. Audit the entire codebase for sibling patterns<a class="anchor" href="#4-audit-the-entire-codebase-for-sibling-patterns" aria-label="Link to this section">#</a></h3>
+<p>The pattern &quot;endpoint takes ID as input, looks up record, returns record&quot; repeats many times in any application of size. Each instance needs the authz check. Tools that find this fast:</p>
+<ul>
+<li><strong>Semgrep registry</strong> (<a href="https://semgrep.dev/r/" target="_blank" rel="noopener noreferrer">https://semgrep.dev/r/</a>): community-maintained static analysis rules. Search for <code>idor</code>, <code>bola</code>, <code>authorization</code> — multiple rule packs available for Express, FastAPI, Django, Rails, Spring, ASP.NET.</li>
+<li><strong>CodeQL</strong> (<a href="https://codeql.github.com/" target="_blank" rel="noopener noreferrer">https://codeql.github.com/</a>): GitHub&#39;s semantic code analysis. The default query suites for JavaScript / Python / Java include IDOR-class patterns.</li>
+<li><strong>Burp Suite Pro</strong> (commercial): the <em>Authorize</em> extension performs per-request authorization testing during a regular Burp scan. Pairs well with manual testing of newly-discovered endpoints.</li>
+</ul>
+<h3 id="5-decommission-the-bluepier-demo-account">5. Decommission the BluePier demo account<a class="anchor" href="#5-decommission-the-bluepier-demo-account" aria-label="Link to this section">#</a></h3>
+<p>The advisor_notes credential is the immediate fix (rotate the value), but the demo account itself should go away. Migrations strategy:</p>
+<ol>
+<li>Rotate the <code>meridian-portal-svc-2026</code> credential immediately.</li>
+<li>Identify any active consumers of the demo account (the &quot;automated nightly check&quot; James referenced in the notes — does it still run?).</li>
+<li>If consumers exist, replace them with proper service-account infrastructure (a real service account in the SSO provider, not a fake student record).</li>
+<li>Disable the demo account.</li>
+<li>After a 30-day soak window, delete the demo account.</li>
+<li>Audit the schema for any other <code>M-000xxxx</code> system accounts that exist. Each one needs the same treatment.</li>
+</ol>
+<h3 id="6-schema-level-constraints-on-free-form-fields">6. Schema-level constraints on free-form fields<a class="anchor" href="#6-schema-level-constraints-on-free-form-fields" aria-label="Link to this section">#</a></h3>
+<p>The <code>advisor_notes</code> field is a free-form text field. It will, eventually, contain something it shouldn&#39;t. The defensive postures:</p>
+<ul>
+<li><strong>Content scanning</strong>: gitleaks / trufflehog-style regex scanners run against database dumps periodically catch credentials, API keys, and tokens in text fields.</li>
+<li><strong>Field-level access control</strong>: PostgreSQL Row-Level Security (RLS), MySQL views with column-level grants, MongoDB field-level redaction — these enforce that <code>advisor_notes</code> is only readable by callers with the right role.</li>
+<li><strong>DLP (Data Loss Prevention) on the API egress</strong>: scan outgoing API responses for credential patterns. Block or alert. AWS Macie / Microsoft Purview / Google DLP API all do this.</li>
+</ul>
+<h3 id="7-siem-detection-for-cross-user-access-patterns">7. SIEM detection for cross-user access patterns<a class="anchor" href="#7-siem-detection-for-cross-user-access-patterns" aria-label="Link to this section">#</a></h3>
+<p>The detection that would have caught Carlos&#39;s bug in production: &quot;for each request to <code>/api/transcript</code>, log <code>(session.studentId, query.student_id, match)</code>. Alert on any row where <code>match=false</code> from a non-registrar role.&quot; The telemetry needed is trivial; the alert is high-signal because, post-remediation, the only legitimate non-match should be registrar staff. Splunk, Sentinel, Elastic, Datadog — all support this kind of correlation rule.</p>
+<h3 id="8-the-long-term-posture-defense-in-depth">8. The long-term posture: defense in depth<a class="anchor" href="#8-the-long-term-posture-defense-in-depth" aria-label="Link to this section">#</a></h3>
+<p>Assume the application-level authz check will, at some point, be missing. Belt-and-suspenders the back end:</p>
+<ul>
+<li><strong>Row-Level Security at the database</strong>: PostgreSQL&#39;s RLS lets you write policies on the <code>transcripts</code> table that filter <code>SELECT</code> results based on the connected database user. Even if the application skips the check, the database returns zero rows for queries that don&#39;t match the connected role&#39;s identity.</li>
+<li><strong>API Gateway authorization policies</strong>: gateways like Kong, Apigee, AWS API Gateway, Azure API Management let you attach JWT-claim-based policies that fire before the request reaches the application. Per-route policies that compare URL parameters to JWT claims add a layer in front of the application.</li>
+<li><strong>Service mesh authorization</strong>: in a Kubernetes environment, Istio / Linkerd authorization policies can enforce per-route claims-matching at the mesh layer.</li>
+</ul>
+<p>The principle: any single layer that can be bypassed by a missing check (the application authz, the database RLS, the gateway policy) is meaningfully harder to bypass when all three are present.</p>
+<h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
+<p>The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — <code>progress --detail</code> lists what you&#39;ve unlocked.</p>
+<h3 id="the-ten-year-service-account-session">The ten-year service-account session<a class="anchor" href="#the-ten-year-service-account-session" aria-label="Link to this section">#</a></h3>
+<p><strong>Trigger:</strong> <code>cat session.txt</code> (you ran this as step 3 of the solve, so the bonus fires there)</p>
+<p><strong>What it teaches:</strong> session.txt decodes a <code>MeridianSSO</code> cookie with <code>exp:2036-04-09</code> — a <em>ten-year</em> session token, issued for a &quot;nightly health-check job.&quot; Long-lived service-account sessions are themselves a finding, separate from the IDOR finding the level scores on.</p>
+<p>Rotation is the security property. A one-hour session that&#39;s used and renewed by the runtime every hour has a one-hour blast radius if compromised. A one-year session has a one-year blast radius. A ten-year session has <em>effectively no rotation</em> — the next token rotation is scheduled for the second Trump administration, which is to say it&#39;s not a rotation, it&#39;s just a TTL that expires before the engineer who issued it retires.</p>
+<p>What Carlos&#39;s monitoring job <em>should</em> be doing:</p>
+<ul>
+<li><strong>Fetch-on-startup</strong>: the job uses OAuth client-credentials grant or AWS STS AssumeRole to obtain a short-lived (15-minute, one-hour) token at job invocation time. The token is in memory only, never on disk, never in a <code>session.txt</code> file an auditor can read.</li>
+<li><strong>Token-cache with TTL enforcement</strong>: if the job runs frequently enough that fetching a token every invocation is wasteful, cache the token <em>with the actual TTL of the upstream provider</em> — not a synthetic ten-year wrapper around an upstream short-lived token.</li>
+<li><strong>Audit logs that capture token issuance</strong>: every issuance is a logged event with the principal, the requested scope, and the expiration. A ten-year token would have been visible in the issuance audit log the moment it was minted — <em>if</em> anyone was reading the issuance audit log.</li>
+</ul>
+<p>The 2024 <a href="https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion" target="_blank" rel="noopener noreferrer">Snowflake UNC5537 campaign</a> demonstrated the long-TTL service-account session as a real-world primary attack vector at scale: customers whose Snowflake credentials had been exfiltrated years earlier (from compromised personal devices of employees) still had valid sessions in 2024 because nothing had rotated. The MFA-not-enforced surface compounded the problem, but the rotation-not-enforced surface was the root cause.</p>
+<p>Carlos&#39;s ten-year MeridianSSO token is the same shape, smaller blast radius. Still a finding.</p>
+<h2 id="takeaways">§8 — Key takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><p><strong>Authentication asks &quot;who are you?&quot; Authorization asks &quot;are you allowed to do this?&quot;</strong> Frameworks make the first question easy. The second question is yours to answer, every time, on every route, on every resource. Carlos answered the first; he didn&#39;t ask the second.</p>
+</li>
+<li><p><strong>IDOR / BOLA is the most-reported bug class in modern web applications.</strong> Not because the technique is exotic — because per-resource authorization is per-route work, every new route needs the check, and the check gets forgotten. The defensive answer is centralization: a single policy entry point that every route runs through, not scattered per-handler logic.</p>
+</li>
+<li><p><strong>Unguessable IDs help but don&#39;t fix.</strong> UUIDs / ULIDs raise the cost of enumeration; they do not replace the authorization check. The check is the fix; the unguessable ID is the defense-in-depth layer for when the check is, eventually, missing somewhere.</p>
+</li>
+<li><p><strong>Free-form text fields accumulate things they shouldn&#39;t.</strong> Anywhere your schema allows free-form text (advisor notes, ticket descriptions, profile bios, comment fields), assume the contents will eventually include credentials, tokens, and other secrets stashed &quot;temporarily.&quot; Content scanning, schema-level constraints, and DLP on egress are the layered defenses.</p>
+</li>
+<li><p><strong>Sticky accounts created for &quot;temporary&quot; purposes outlive their purpose.</strong> BluePier&#39;s M-0000001 demo account was scheduled for decommission in Q4 2024. It was still live in 2026. Same pattern as the audit-bypass account in <code>level1@network</code>, same pattern as countless real-world incidents. Registry + automated deprovisioning + recertification workflow is the fix.</p>
+</li>
+<li><p><strong>For FERPA-covered environments specifically</strong>, transcript IDOR is a §99.31 and §99.32 violation in one move. The federal-funding mechanism means a confirmed exposure is not just a compliance line item; it&#39;s a budget-line risk. Universities should fold IDOR / BOLA testing into their annual web-audit scope — Cedarwood Mutual&#39;s renewal-driven audit is one model, but it shouldn&#39;t be the only annual review.</p>
+</li>
+<li><p><strong>Carlos&#39;s pattern is the universal junior-developer pattern.</strong> Authentication middleware was easy to add. Authorization is, in Carlos&#39;s mental model, &quot;the SSO already proved who they are; what&#39;s left?&quot; The diagnostic conversation is &quot;what&#39;s left is checking whether THIS user is allowed to access THIS resource&quot; — a fifteen-second whiteboard sketch that converts the lesson from &quot;I shipped a bug&quot; to &quot;I now know what I was missing.&quot; The fix is mundane; the institutional habit of catching this before it ships is the harder thing.</p>
+</li>
+</ul>
+<h2 id="further-reading">§9 — Further reading<a class="anchor" href="#further-reading" aria-label="Link to this section">#</a></h2>
+<p><em>Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you&#39;re reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.</em></p>
+<h3 id="standards-documents">Standards documents<a class="anchor" href="#standards-documents" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>FERPA full text — 20 U.S.C. § 1232g</strong>: <a href="https://www.govinfo.gov/content/pkg/USCODE-2023-title20/html/USCODE-2023-title20-chap31-subchapIII-part4-sec1232g.htm" target="_blank" rel="noopener noreferrer">https://www.govinfo.gov/content/pkg/USCODE-2023-title20/html/USCODE-2023-title20-chap31-subchapIII-part4-sec1232g.htm</a>. The statute itself.</li>
+<li><strong>FERPA implementing regulations — 34 CFR Part 99</strong>: <a href="https://www.ecfr.gov/current/title-34/subtitle-A/part-99" target="_blank" rel="noopener noreferrer">https://www.ecfr.gov/current/title-34/subtitle-A/part-99</a>. The operational compliance text. Sections 99.3, 99.31, 99.32, 99.7 are the most cited for IDOR-style disclosure findings.</li>
+<li><strong>Department of Education Privacy Technical Assistance Center (PTAC)</strong>: <a href="https://studentprivacy.ed.gov/" target="_blank" rel="noopener noreferrer">https://studentprivacy.ed.gov/</a>. Notification templates, breach-response guides, FERPA training materials for university administrators.</li>
+<li><strong>NIST SP 800-171 Rev. 3</strong>: <a href="https://csrc.nist.gov/pubs/sp/800/171/r3/final" target="_blank" rel="noopener noreferrer">https://csrc.nist.gov/pubs/sp/800/171/r3/final</a>. Published May 2024; the current standard for protecting CUI in non-federal systems.</li>
+<li><strong>NIST SP 800-53 Rev. 5</strong>: <a href="https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final" target="_blank" rel="noopener noreferrer">https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final</a>. The federal control catalog. AC family covers access control.</li>
+</ul>
+<h3 id="cwe-mitre-attck">CWE / MITRE ATT&amp;CK<a class="anchor" href="#cwe-mitre-attck" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>CWE-639: Authorization Bypass Through User-Controlled Key</strong>: <a href="https://cwe.mitre.org/data/definitions/639.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/639.html</a>.</li>
+<li><strong>CWE-862: Missing Authorization</strong>: <a href="https://cwe.mitre.org/data/definitions/862.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/862.html</a>.</li>
+<li><strong>CWE-863: Incorrect Authorization</strong>: <a href="https://cwe.mitre.org/data/definitions/863.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/863.html</a>.</li>
+<li><strong>CWE-285: Improper Authorization</strong>: <a href="https://cwe.mitre.org/data/definitions/285.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/285.html</a>.</li>
+<li><strong>CWE-312: Cleartext Storage of Sensitive Information</strong>: <a href="https://cwe.mitre.org/data/definitions/312.html" target="_blank" rel="noopener noreferrer">https://cwe.mitre.org/data/definitions/312.html</a>.</li>
+<li><strong>MITRE ATT&amp;CK T1190 — Exploit Public-Facing Application</strong>: <a href="https://attack.mitre.org/techniques/T1190/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1190/</a>.</li>
+<li><strong>MITRE ATT&amp;CK T1213 — Data from Information Repositories</strong>: <a href="https://attack.mitre.org/techniques/T1213/" target="_blank" rel="noopener noreferrer">https://attack.mitre.org/techniques/T1213/</a>.</li>
+</ul>
+<h3 id="owasp-2">OWASP<a class="anchor" href="#owasp-2" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>OWASP Top 10 (2025) — A01: Broken Access Control</strong>: <a href="https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/" target="_blank" rel="noopener noreferrer">https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/</a>.</li>
+<li><strong>OWASP API Security Top 10 (2023) — API1: Broken Object Level Authorization</strong>: <a href="https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/" target="_blank" rel="noopener noreferrer">https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/</a>.</li>
+<li><strong>OWASP ASVS v5.0 — V4 Access Control</strong>: <a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener noreferrer">https://owasp.org/www-project-application-security-verification-standard/</a>.</li>
+<li><strong>OWASP Authorization Cheat Sheet</strong>: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html</a>.</li>
+<li><strong>OWASP Insecure Direct Object Reference Prevention Cheat Sheet</strong>: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html</a>.</li>
+</ul>
+<h3 id="authorization-tooling">Authorization tooling<a class="anchor" href="#authorization-tooling" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Open Policy Agent (OPA)</strong>: <a href="https://www.openpolicyagent.org/" target="_blank" rel="noopener noreferrer">https://www.openpolicyagent.org/</a>.</li>
+<li><strong>Casbin</strong>: <a href="https://casbin.apache.org/" target="_blank" rel="noopener noreferrer">https://casbin.apache.org/</a>.</li>
+<li><strong>Oso</strong>: <a href="https://www.osohq.com/" target="_blank" rel="noopener noreferrer">https://www.osohq.com/</a>.</li>
+</ul>
+<h3 id="incident-references">Incident references<a class="anchor" href="#incident-references" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Krebs on Security — &quot;USPS Site Exposed Data on 60 Million Users&quot; (Nov 2018)</strong>: <a href="https://krebsonsecurity.com/2018/11/usps-site-exposed-data-on-60-million-users/" target="_blank" rel="noopener noreferrer">https://krebsonsecurity.com/2018/11/usps-site-exposed-data-on-60-million-users/</a>. The original USPS Informed Visibility writeup.</li>
+<li><strong>Optus 2022 — OAIC public statement and updates</strong>: <a href="https://www.oaic.gov.au/" target="_blank" rel="noopener noreferrer">https://www.oaic.gov.au/</a>. The OAIC&#39;s enforcement page tracks the multiple proceedings against Optus across 2022-2025.</li>
+<li><strong>T-Mobile 2023 — SEC 8-K disclosure (January 19, 2023)</strong>: <a href="https://www.sec.gov/Archives/edgar/data/0001283699/000119312523010949/d641142d8k.htm" target="_blank" rel="noopener noreferrer">https://www.sec.gov/Archives/edgar/data/0001283699/000119312523010949/d641142d8k.htm</a>. The official disclosure document.</li>
+<li><strong>HackerOne <em>Hacker-Powered Security Report</em> (evergreen landing)</strong>: <a href="https://www.hackerone.com/report/hacker-powered-security" target="_blank" rel="noopener noreferrer">https://www.hackerone.com/report/hacker-powered-security</a>. Industry-wide vulnerability-class frequencies.</li>
+</ul>
+<h3 id="detection-static-analysis">Detection / static analysis<a class="anchor" href="#detection-static-analysis" aria-label="Link to this section">#</a></h3>
+<ul>
+<li><strong>Semgrep registry</strong>: <a href="https://semgrep.dev/r/" target="_blank" rel="noopener noreferrer">https://semgrep.dev/r/</a>. Search for <code>idor</code>, <code>bola</code>, <code>authorization</code>.</li>
+<li><strong>CodeQL</strong>: <a href="https://codeql.github.com/" target="_blank" rel="noopener noreferrer">https://codeql.github.com/</a>. GitHub-native semantic code analysis with IDOR-aware queries in the default JavaScript, Python, and Java suites.</li>
+<li><strong>Burp Suite Authorize extension</strong>: <a href="https://portswigger.net/bappstore/f9bbac8c4acf4aefa4d7dc92a991af2f" target="_blank" rel="noopener noreferrer">https://portswigger.net/bappstore/f9bbac8c4acf4aefa4d7dc92a991af2f</a>.</li>
+</ul>
+<nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/web/level0.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level0@web</span><span class="pager-title">Meridian's Forgotten Backup Folder</span></a><a class="pager-cell pager-next" href="/walkthroughs/web/level2.html"><span class="pager-dir">&rarr; Next</span><span class="pager-label">level2@web</span><span class="pager-title">The Search Bar That Talks</span></a></nav>    </main>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-confirm-the-credential-and-what-it-bought-you">Step 1: Confirm the credential and what it bought you</a></li><li><a href="#step-2-read-the-day-two-context">Step 2: Read the day-two context</a></li><li><a href="#step-3-read-carloss-verify-middleware">Step 3: Read Carlos's verify middleware</a></li><li><a href="#step-4-confirm-youre-authenticated">Step 4: Confirm you're authenticated</a></li><li><a href="#step-5-exercise-the-endpoint-against-student-ids-you-already-have">Step 5: Exercise the endpoint against student IDs you already have</a></li><li><a href="#step-6-read-the-id-conventions-and-try-a-legacy-id">Step 6: Read the ID conventions and try a legacy ID</a></li><li><a href="#step-7-confirm-the-api-does-return-404-for-invalid-ids">Step 7: Confirm the API does return 404 for invalid IDs</a></li><li><a href="#step-8-document-and-stop">Step 8: Document and stop</a></li><li><a href="#step-9-game-world-only-use-the-breadcrumb">Step 9 (game-world only): Use the breadcrumb</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a><ul class="toc-sub"><li><a href="#failure-1-authentication-without-authorization-cwe-639-cwe-862">Failure 1: Authentication without authorization (CWE-639 / CWE-862)</a></li><li><a href="#failure-2-the-demo-account-that-outlived-its-purpose">Failure 2: The demo account that outlived its purpose</a></li><li><a href="#failure-3-sensitive-data-in-a-free-form-text-field">Failure 3: Sensitive data in a free-form text field</a></li><li><a href="#the-compound-effect">The compound effect</a></li></ul></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a><ul class="toc-sub"><li><a href="#thread-1-usps-informed-visibility-november-2018">Thread 1: USPS Informed Visibility (November 2018)</a></li><li><a href="#thread-2-optus-september-2022">Thread 2: Optus (September 2022)</a></li><li><a href="#thread-3-t-mobile-api-january-2023">Thread 3: T-Mobile API (January 2023)</a></li><li><a href="#the-base-rate">The base rate</a></li></ul></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a><ul class="toc-sub"><li><a href="#cwe-common-weakness-enumeration">CWE — Common Weakness Enumeration</a></li><li><a href="#ferpa-20-usc-s-1232g-34-cfr-part-99">FERPA — 20 U.S.C. § 1232g; 34 CFR Part 99</a></li><li><a href="#nist-sp-800-171-rev-3">NIST SP 800-171 Rev. 3</a></li><li><a href="#nist-sp-800-53-rev-5">NIST SP 800-53 Rev. 5</a></li><li><a href="#cis-critical-security-controls-v81">CIS Critical Security Controls v8.1</a></li><li><a href="#owasp">OWASP</a></li><li><a href="#cloud-native-sdlc-frameworks-worth-knowing">Cloud-native / SDLC frameworks worth knowing</a></li></ul></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a><ul class="toc-sub"><li><a href="#1-fix-the-endpoint">1. Fix the endpoint</a></li><li><a href="#2-centralize-authorization">2. Centralize authorization</a></li><li><a href="#3-replace-predictable-ids-with-unguessable-ones">3. Replace predictable IDs with unguessable ones</a></li><li><a href="#4-audit-the-entire-codebase-for-sibling-patterns">4. Audit the entire codebase for sibling patterns</a></li><li><a href="#5-decommission-the-bluepier-demo-account">5. Decommission the BluePier demo account</a></li><li><a href="#6-schema-level-constraints-on-free-form-fields">6. Schema-level constraints on free-form fields</a></li><li><a href="#7-siem-detection-for-cross-user-access-patterns">7. SIEM detection for cross-user access patterns</a></li><li><a href="#8-the-long-term-posture-defense-in-depth">8. The long-term posture: defense in depth</a></li></ul></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a><ul class="toc-sub"><li><a href="#the-ten-year-service-account-session">The ten-year service-account session</a></li></ul></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a><ul class="toc-sub"><li><a href="#standards-documents">Standards documents</a></li><li><a href="#cwe-mitre-attck">CWE / MITRE ATTCK</a></li><li><a href="#owasp-2">OWASP</a></li><li><a href="#authorization-tooling">Authorization tooling</a></li><li><a href="#incident-references">Incident references</a></li><li><a href="#detection-static-analysis">Detection / static analysis</a></li></ul></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+  </div>
+
+  <footer id="site-footer">
+    <p class="footer-disclaimer">
+      For educational use. Don't run these techniques against systems
+      you don't own or aren't authorized to test.
+    </p>
+    <p class="footer-links">
+      <a href="/" class="footer-link">&larr; Back to d3cyph3r.com</a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://github.com/rlwilliamson-dev/d3cyph3r" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="View source on GitHub">
+        <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.62 7.62 0 0 0-2-.27c-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
+        </svg>
+        <span>Source on GitHub</span>
+      </a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://azure.microsoft.com/" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="Hosted on Microsoft Azure">
+        <svg width="13" height="13" viewBox="0 0 18 18" aria-hidden="true">
+          <path d="M10.61 2L4.05 14.4l5.6.04 1.5-2.92 4.9 2.88L10.61 2z" fill="#0078D4"/>
+        </svg>
+        <span>Hosted on Microsoft Azure</span>
+      </a>
+    </p>
+  </footer>
+
+  <script type="module" src="/walkthroughs/reader.js"></script>
+</body>
+</html>

@@ -365,7 +365,7 @@ The account-level summary reports that the AWS account **root user** has a long-
 
 ## §9 — Further reading
 
-> *Last reviewed: June 2026 — links and version-specific claims (cert exam versions, framework revisions, CIS Benchmark control numbers, regulation citation IDs, breach-case figures and dates) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
+*Last reviewed: June 2026 — links and version-specific claims (cert exam versions, framework revisions, CIS Benchmark control numbers, regulation citation IDs, breach-case figures and dates) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
 
 - AWS — [IAM security best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
 - AWS — [IAM Access Analyzer: review unused access](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-manage-unused.html)

@@ -10,24 +10,72 @@ Read this file before writing a walkthrough.
 
 ## How it's served
 
+As of v2.4.0 the subsite is **statically generated**. Each markdown
+file is rendered to a real HTML page at a real URL:
+
 ```
 walkthroughs/
-├── index.html              Shell page (loads on every URL).
-├── walkthrough.css         Clean docs reader theme.
-├── walkthrough.js          Hash-router + markdown renderer.
+├── index.html              GENERATED — index + search UI.
+├── manifest.mjs            Track/level registry. Hand-edited.
+├── walkthrough.css         Reader theme (measure, TOC rail, pager).
+├── reader.js               Theme bootstrap + TOC scroll-spy.
+├── search.js               Client-side search over the index.
+├── search-index.json       GENERATED — one entry per section.
 ├── vendor/marked.esm.min.js  Vendored markdown parser (CSP-safe).
 ├── README.md               This file (not rendered).
 └── <track>/
-    └── <level>.md          One markdown file per walkthrough.
+    ├── index.html          GENERATED — track listing.
+    ├── <level>.md          SOURCE — one per walkthrough.
+    └── <level>.html        GENERATED from the .md beside it.
 ```
 
-Routing is hash-based — `/walkthroughs/#/<track>/<level>` — so no
-server-side configuration is needed. The shell page parses the hash
-and fetches the matching `.md` file at runtime.
+URLs are `/walkthroughs/<track>/<level>.html`. The `.html` suffix is
+deliberate: Azure SWA serves the extensionless form too, but a plain
+`python3 -m http.server` does not, and the project's promise is that a
+clone runs under any static server.
 
-Whenever a new walkthrough lands, update the `MANIFEST` constant at
-the top of `walkthrough.js` so the index and track-listing pages
-know it exists.
+### Regenerating
+
+```bash
+node tools/build-walkthroughs.mjs
+```
+
+Zero dependencies, nothing to install. It uses Node builtins plus the
+already-vendored `marked`. Run it after editing **any** walkthrough
+markdown or `manifest.mjs`, and commit the generated files alongside
+the source. CI re-runs the generator and fails the build if the output
+differs from what was committed, so stale pages cannot reach main.
+
+The generator also emits `sitemap.xml`, `llms.txt`, and
+`search-index.json` at the repo root or subsite root as appropriate.
+
+Whenever a new walkthrough lands, add it to `MANIFEST` in
+`manifest.mjs` so the index, track listing, prev/next pager, sitemap,
+and search index all pick it up.
+
+### Why not the old hash router
+
+Before v2.4.0 this was a single shell page that read `location.hash`
+and injected markdown with `innerHTML`. Everything after `#` is never
+sent to the server, so all 24 walkthroughs shared one URL and one empty
+6KB shell: none of them were indexable, and `#frameworks` could not
+coexist with `#/linux/level3`, so no section was linkable either.
+Static pages fix both, and remove the `aria-live` region that made
+screen readers announce a whole 7,000-word document on every
+navigation.
+
+### Section anchors
+
+Every walkthrough shares the same 10 section anchors, so the same
+fragment means the same thing on all 24 pages:
+
+`#setup` `#solve` `#vulnerability` `#real-world-parallels`
+`#frameworks` `#certifications` `#defender` `#optional-exploration`
+`#takeaways` `#further-reading`
+
+These are curated in `SECTION_SLUGS` in the generator rather than
+derived from heading text, so retitling a heading does not break
+published links. Subheadings get auto-generated slugs.
 
 ## Anti-spoiler posture
 
@@ -146,13 +194,27 @@ documented destination for spoiling those bonuses:
 
 ## Length expectations
 
-- Total walkthrough: **6,000–8,000 words**.
-- §6 (frameworks) and §7 (certs) are typically the longest sections,
+- Total walkthrough: **4,000–8,000 words**, and shorter is usually
+  better within that band.
+- §5 (frameworks) and §6 (certs) are typically the longest sections,
   each running 1,500–2,500 words depending on how many citations the
   in-game post-mortem made.
 - Writing time: realistically 3–5 hours of focused work per
   walkthrough, including fact-checking real-world parallels and
   verifying exam objective numbers against current cert blueprints.
+
+The band was **6,000–8,000** through v2.3.1, but the corpus had already
+outgrown it: at the v2.4.0 audit only 9 of 24 files complied, with 8
+over and 7 under. The pattern was not sloppiness. The oldest
+walkthroughs run long (`cloud/level0` at 9,963 words, `network/level1`
+at 9,887) while every level3 came in tight (3,904 to 4,675) because
+later writing leaned on tables and stopped restating framework text
+that the linked source already carries. The tighter files read better,
+so the standard was moved to match the practice rather than the
+practice bent back to the standard.
+
+Treat a draft pushing past 8,000 words as a signal to cut, most often
+by replacing a prose enumeration of controls with a table.
 
 ## Pre-merge checklist for a new walkthrough
 
@@ -239,12 +301,38 @@ otherwise embarrass us with a future reader.
 
 ## "Last reviewed" footer convention
 
-Every §9 begins with an italic single-line footer:
+Every §9 begins with a plain italic line, **not** a blockquote:
 
-> *Last reviewed: <Month Year>. External standards versions and
-> incident facts verified against current canonical sources as of
-> this date. Report stale links via the project's GitHub issues
-> tracker.*
+```markdown
+*Last reviewed: <Month Year>. External standards versions and incident
+facts verified against current canonical sources as of this date.
+Report stale links via the project's GitHub issues tracker.*
+```
+
+Write `*Last reviewed: ...*`. Do **not** prefix it with `>`.
+
+This was ambiguous until v2.4.0, because the example above used to be
+shown inside a markdown quote, which read as though the `>` were part
+of the convention. It split the corpus 16 plain to 8 blockquoted, and
+the two render visibly differently: a blockquote picks up a left border
+and muted styling, so the same element looked like two different things
+depending on which file you opened. Plain italic won because it is what
+most files already did and because the footer is a note about the
+section, not a quotation.
+
+Two invariants, both currently 24/24:
+
+1. Plain italic, never a blockquote.
+2. Opens `*Last reviewed: <Month> <Year>`, so the date is greppable
+   across the corpus with a single pattern.
+
+After that opening the wording may vary. Sixteen files continue with a
+period and the standard sentence above; eight continue with an em-dash
+and a caveat specific to that walkthrough (`forensics/level3` flags the
+RFC 7489 obsolescence, `cloud/level2` flags CIS Benchmark control
+numbering). Both are fine and both render identically. Reach for the
+specific form when a reader quoting this file in audit work would be
+misled without the caveat.
 
 The date is bumped at each link-audit pass (i.e., every walkthrough
 PR that touches the file, and on any standalone re-audit PR). When

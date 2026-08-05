@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>level2@crypto — Theo's Quick Hash — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="Day three. Saanvi (CISO) pulled a wider review and Priya found Theo's commit titled &quot;safer than plaintext&quot; — 200 unsalted MD5 hashes in the deploy repo. john --wordlist=rockyou.txt cracks four of them in under a second; all four are the same plaintext (TheoVesta!1), one labeled aes-backup. CWE-916 +">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/crypto/level2.html">
+  <meta property="og:title" content="level2@crypto — Theo's Quick Hash — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="Day three. Saanvi (CISO) pulled a wider review and Priya found Theo's commit titled &quot;safer than plaintext&quot; — 200 unsalted MD5 hashes in the deploy repo. john --wordlist=rockyou.txt cracks four of them in under a second; all four are the same plaintext (TheoVesta!1), one labeled aes-backup. CWE-916 +">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/crypto/level2.html">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="D3CYPH3R">
+  <meta name="twitter:card" content="summary">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.0">
+</head>
+<body class="page-doc">
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header id="site-header">
+    <div class="brand">
+      <a href="/" class="brand-mark-link" aria-label="Back to d3cyph3r.com">
+        <span class="brand-mark"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span>
+      </a>
+      <a href="/walkthroughs/" class="brand-sub-link">
+        <span class="brand-sub">walkthroughs</span>
+      </a>
+    </div>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><a href="/walkthroughs/crypto/">crypto</a><span class="sep" aria-hidden="true">/</span><span class="current">level2</span></nav>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
+      <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
+      </svg>
+      <svg class="theme-icon theme-icon-sun" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+        <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+      </svg>
+    </button>
+  </header>
+
+  <div class="layout">
+    <main id="main" class="doc">
+<h1 id="level2crypto-theos-quick-hash">level2@crypto — Theo&#39;s Quick Hash<a class="anchor" href="#level2crypto-theos-quick-hash" aria-label="Link to this section">#</a></h1>
+<p class="doc-meta"><span class="doc-meta-item">26 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">5,290 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Crypto track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Crypto · <strong>Client:</strong> Vesta Retail (continued) · <strong>Compliance regime:</strong> PCI-DSS v4.0.1 + (post-finding) PCI QSA Phase-2 remediation</p>
+<blockquote class="spoiler-warning">
+<p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for a future <code>level3@crypto</code>. If you haven&#39;t solved <code>level2@crypto</code> yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you&#39;ve worked through <code>level0@crypto</code> and <code>level1@crypto</code>; this level continues their narrative directly.</p>
+</blockquote>
+<hr>
+<h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
+<p>Day three at Vesta Retail. Yesterday&#39;s level1 finding (Theo&#39;s homegrown JWT middleware accepting <code>alg: none</code> tokens) closed clean on the technical side — Theo took the news, his patched verify middleware is in code review, and the rotation is scheduled. But Saanvi (CISO) escalated. After Priya walked her through the JWT decode in the morning, Saanvi pulled the PCI QSA call forward to noon and gave the same instruction she always gives in that situation: <em>&quot;I want to know what else Theo shipped recently that I should be looking at.&quot;</em> Priya spent an hour walking Theo&#39;s recent commits with her. Most are fine. One is not.</p>
+<p>From the deploy repo, six months ago:</p>
+<pre><code>commit a9c1f0e Theo Hassan
+Date:   2024-06-15 14:22
+Subject: backup-passwords: safer than plaintext
+
+Md5&#39;d all the production passwords so they&#39;re not
+plaintext in the repo anymore. Hashes are safer right?
+Don&#39;t share lol.
+</code></pre>
+<p>The file is <code>backup-passwords.txt</code> — 200 lines, two columns. The left column is an MD5 hash. The right column is a label naming the production system the password gates. Theo&#39;s commit comment is the entire engineering rationale.</p>
+<p>You used the <code>vesta-admin-handoff-2026</code> token from yesterday&#39;s JWT decode to ssh into Vesta&#39;s admin host (<code>admin.vesta.internal</code>). The prompt now reads <code>vesta-admin@admin:~$</code>. Saanvi has 15 minutes before the QSA call and wants the exact number of cracked hashes, the exact plaintexts, and the exact label-to-plaintext mapping. The QSA needs to know whether the AES backup encryption Theo did last quarter is, by the control&#39;s definition, encrypted.</p>
+<p>Three failures stack here. Each one alone would be a finding; together they produce an instant-Phase-2-remediation conversation.</p>
+<ol>
+<li><strong>Yesterday&#39;s CWE-347 alg:none JWT</strong> — covered in level1; produced the cred that landed you on this box.</li>
+<li><strong>Theo&#39;s choice of MD5 unsalted</strong> — modern GPUs hash MD5 at ~50 billion/s. Against the 14M-entry rockyou wordlist that&#39;s roughly 300 microseconds of compute. The &quot;hash&quot; provides zero work-factor protection (CWE-916, the canonical CWE for this exact failure mode).</li>
+<li><strong>Theo&#39;s password reuse</strong> — the four hashes that crack all share the same plaintext. One plaintext gates the admin login, the prod-DB account, the AES backup encryption key, and the S3 read-only service. Rotating one means rotating four (CWE-521 + CWE-262, plus PCI-DSS v4.0 §8.3 explicitly).</li>
+</ol>
+<p>Priya, briefing you in chat as you SSH&#39;d in: <em>&quot;hash-id, then john. Read the FULL john output — the QSA call wants the exact number of cracked hashes and the exact plaintexts. Multiple labels with the same plaintext is the finding Saanvi&#39;s going to lead with. The aes-backup label specifically — Theo encrypted last quarter&#39;s payment-card token backup with that password. If the plaintext is in the crackable set, the encrypted backup is functionally plaintext from a PCI standpoint.&quot;</em> That&#39;s your scope.</p>
+<p>Cross-track foreshadowing: Halton Bank&#39;s track produced a structurally identical pattern from the opposite direction. Halton&#39;s password POLICY mandated the same string format across the DB and the bastion login, so one leaked file traversed multiple systems by design (level2@linux). Vesta has the same blast-radius math from a different cause — Theo&#39;s individual choice rather than institutional policy. Both reach the same place. The lobby&#39;s structure where you can walk these tracks in any order is real; the <em>narrative</em> is also real — they&#39;re a shared Driftwood book of business, with shared engineering antipatterns.</p>
+<h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
+<p>Four commands. The crypto-track discipline this level is in reading the john output slowly. The first thing the player wants to do after running <code>john</code> is grab the breadcrumb and pivot — but every cracked line is part of the finding Saanvi has to take to the QSA call.</p>
+<h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@crypto
+level2@crypto&#39;s password: vesta-admin-handoff-2026
+</code></pre>
+<p>The password is the <code>handoff_token</code> claim you decoded from yesterday&#39;s alg:none JWT in <code>admin-access.log</code>. The token&#39;s empty signature didn&#39;t matter; the value was right there in the payload, base64url-encoded. Theo&#39;s homegrown verify middleware passed the token because <code>alg: none</code> told it not to verify. Atlas&#39;s logging caught the issue; Saanvi pulled the wider review. Same chain: every Driftwood crypto-track finding ends up surfacing the next one.</p>
+<p>The connection banner identifies the host (<code>admin.vesta.internal</code>) and the tier (Routine, ~15 min). Read <code>welcome.md</code> first — it introduces <code>hash-id</code> and <code>john</code>, explains why hashes aren&#39;t a safety net, and outlines the order of operations.</p>
+<pre><code class="language-bash">vesta-admin@admin:~$ cat welcome.md
+</code></pre>
+<p><code>welcome.md</code> documents the day-three context, the new commands, and the conceptual frame (&quot;a hash function is not a safety net if the input is in a wordlist somebody already has&quot;). The 5-step HOW TO PLAY block names the exact command sequence.</p>
+<h3 id="step-2-read-priyas-note-the-backup-passwords-file">Step 2: Read Priya&#39;s note + the backup-passwords file<a class="anchor" href="#step-2-read-priyas-note-the-backup-passwords-file" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-admin@admin:~$ cat priya-note.md
+vesta-admin@admin:~$ cat backup-passwords.txt
+</code></pre>
+<p>Priya&#39;s note carries the rules of engagement (don&#39;t ssh anywhere else, don&#39;t authenticate to production with anything you crack — the QSA wants the <em>finding</em>, not the <em>demonstration</em>) and the framing Saanvi will use for the QSA call. The note specifically calls out the <code>aes-backup</code> label as the high-priority item: if the plaintext for that label cracks, the encrypted payment-card token backup is functionally plaintext from a PCI standpoint.</p>
+<p><code>backup-passwords.txt</code> opens with Theo&#39;s commit comment as a header, then 200 hash-and-label rows. The header reads:</p>
+<pre><code># backup-passwords.txt
+# Theo&#39;s safer prod creds file (md5&#39;d) — 2024-06-15 commit
+# (don&#39;t share lol)
+# format: &lt;md5-hex&gt;  &lt;label&gt;
+</code></pre>
+<p>The first few data rows:</p>
+<pre><code>e10adc3949ba59abbe56e057f20f883e  theo@admin
+21232f297a57a5a743894a0e4a801fc3  theo@db-prod
+482c811da5d5b4bc6d497ffa98491e38  aes-backup
+da25e54ef34fb0d8a35a78fcbb8db95f  s3-readonly
+ee11cbb19052e40b07aac0ca060c23ee  monitoring-svc
+...
+</code></pre>
+<p>The label column is the production system the password gates. The MD5 column is what Theo &quot;made safe.&quot;</p>
+<h3 id="step-3-hash-id-confirms-md5">Step 3: hash-id confirms MD5<a class="anchor" href="#step-3-hash-id-confirms-md5" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-admin@admin:~$ hash-id backup-passwords.txt
+Analyzing: e10adc3949ba59abbe56e057f20f883e
+(file contains 38 hashes — analyzing the first)
+
+[+] Possible algorithms:
+    MD5         (most likely — 32 hex chars, very common)
+    MD4
+    NTLM
+
+[!] MD5 is cryptographically broken. Crack with: john backup-passwords.txt
+</code></pre>
+<p>The 32-hex-character pattern matches MD5, MD4, and NTLM. NTLM is Windows-side, MD4 is rare. In a 2024-vintage password file committed by a web developer, MD5 is the overwhelming default. The hint at the bottom is the engine&#39;s prompt — <code>john backup-passwords.txt</code> is the next step.</p>
+<p>(The &quot;38 hashes&quot; line is the engine&#39;s count of visible hash rows in the on-disk file; Theo&#39;s actual file contains 200 — the displayed truncation is for readability. The <code>hash-id</code> extension shipped in v1.27.0 was added specifically so multi-hash files surface this count rather than failing to detect a format from the first non-comment line.)</p>
+<h3 id="step-4-john-cracks-four-hashes-all-the-same-plaintext">Step 4: john cracks four hashes — all the same plaintext<a class="anchor" href="#step-4-john-cracks-four-hashes-all-the-same-plaintext" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-admin@admin:~$ john backup-passwords.txt
+Using default input encoding: UTF-8
+Loaded 200 password hashes (Raw-MD5)
+Using wordlist: /usr/share/wordlists/rockyou.txt
+Press CTRL-C to abort, almost any other key for status
+
+[+] Running dictionary attack...
+[+] Trying top 1000 most common passwords...
+
+TheoVesta!1          (theo@admin)
+TheoVesta!1          (theo@db-prod)
+TheoVesta!1          (aes-backup)
+TheoVesta!1          (s3-readonly)
+
+4g 0:00:00:00 DONE (2024-01-01 12:00) 4/200 cracked
+Session completed.
+
+  ✦ Bonus find unlocked: The same plaintext cracks four of Theo&#39;s hashes
+    john&#39;s session summary shows 4g cracked — four hashes, all the same plaintext (TheoVesta!1). Theo reused one weak password across the admin login, the prod-DB account, the AES backup encryption, and the S3 read-only credential. Same-string-different-system collapses four security boundaries into one credential rotation; CWE-521 + CWE-262 in textbook form. (Halton Bank&#39;s policy in the linux track has the same shape — different industry, same antipattern.)
+</code></pre>
+<p>Four observations.</p>
+<p><strong>Observation one: 4 out of 200 cracked in zero seconds of wall-clock time.</strong> That&#39;s a 2% crack rate against the default rockyou wordlist with no mangling rules applied. With rockyou&#39;s mangling rule set (john&#39;s <code>--rules</code> flag invokes the default Single rule, which produces a few hundred mutations per dictionary word: capitalization, common digit-and-symbol appends like <code>!</code>, <code>1</code>, <code>123</code>, leet-speak substitutions like <code>o→0</code> / <code>a→@</code>), the crack rate against an unsalted-MD5 file like Theo&#39;s would climb into the 15-30% range in another minute. The four hashes that cracked first are the ones whose plaintexts are exact matches for entries in the wordlist&#39;s main body — i.e., common passwords by any definition.</p>
+<p><strong>Observation two: all four cracks are the same plaintext.</strong> <code>TheoVesta!1</code> gates the admin login (<code>theo@admin</code>), the prod-DB account (<code>theo@db-prod</code>), the AES backup encryption (<code>aes-backup</code>), and the S3 read-only service (<code>s3-readonly</code>). Four production systems, one credential string. This is the same-string-different-system antipattern (CWE-521 + CWE-262) and it&#39;s the finding Saanvi promised to lead with at the QSA call. It&#39;s also the textbook example for why CWE-759 (Use of a One-Way Hash without a Salt) matters: per-password salt would have produced four distinct hash outputs for the same plaintext, and john would have cracked one of them — not all four simultaneously.</p>
+<p><strong>Observation three: <code>aes-backup</code> is in the cracked set.</strong> Last quarter&#39;s payment-card token backup was encrypted with <code>TheoVesta!1</code>. PCI-DSS v4.0.1 §3.5.1 requires strong cryptography for stored account data; the working PCI Council definition of &quot;strong cryptography&quot; includes BOTH the cipher AND the key. The cipher Theo used (AES-128) qualifies. The key (<code>TheoVesta!1</code>, recoverable in &lt;1 second from rockyou.txt) does not. The encrypted backup is, by the control&#39;s definition, functionally plaintext.</p>
+<p><strong>Observation four: the bonus banner.</strong> The Theo-password-reuse bonus fires on the <code>4g</code> session-summary string in the john output. The bonus name and hint articulate the four-systems-one-rotation math directly.</p>
+<h3 id="step-5-the-2009-rockyou-provenance-optional-exploration">Step 5: The 2009 RockYou provenance (optional exploration)<a class="anchor" href="#step-5-the-2009-rockyou-provenance-optional-exploration" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-admin@admin:~$ cat /usr/share/wordlists/README.rockyou
+</code></pre>
+<p>The wordlist next to <code>rockyou.txt</code> ships a README documenting where the dictionary came from. The opening paragraph names the 2009 RockYou.com SQL-injection breach (~14.3M plaintext passwords), the technical reason it became the canonical wordlist for offline dictionary attacks (large, plaintext, mangling-rule-friendly, free), and the historical context (RockYou had been storing passwords unhashed; the SQL injection exposed the entire production user database).</p>
+<pre><code>README.rockyou — distribution notes
+
+The rockyou.txt wordlist shipped with this distribution is
+derived from the December 2009 RockYou.com SQL-injection breach,
+which exposed approximately 14,341,564 plaintext passwords from
+the RockYou social-game accounts database.
+...
+
+  ✦ Bonus find unlocked: The rockyou.txt wordlist on disk is the 2009 RockYou.com leak
+</code></pre>
+<p>The point of the bonus isn&#39;t trivia. The argument &quot;we used a unique password&quot; only holds against an attacker whose wordlist is a known fixed set. rockyou.txt has been in the public domain for 15+ years; every modern wordlist-based attack chain still descends from it; &quot;unique&quot; against rockyou requires demonstrating your password is not a near-neighbor of any of the 14 million entries (or any combination produced by standard mangling rules against any of them). That&#39;s a higher bar than most users understand.</p>
+<h3 id="step-6-return-to-the-lobby-with-the-finding">Step 6: Return to the lobby with the finding<a class="anchor" href="#step-6-return-to-the-lobby-with-the-finding" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-bash">vesta-admin@admin:~$ exit
+</code></pre>
+<p>You have the finding. Saanvi has the meeting. The deliverable is short: 4 hashes cracked in zero seconds; 1 plaintext (<code>TheoVesta!1</code>) gates 4 systems including the AES backup; the AES backup is functionally plaintext from a PCI standpoint; coordinated rotation across all four systems is non-negotiable; longer-term remediation is move-to-Argon2id + adopt a secrets manager + repo-credential scanning at the commit gate.</p>
+<h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
+<p>The lesson the level teaches in one sentence: <strong>a hash function is not a safety net if the input domain is enumerable and the function is fast.</strong></p>
+<p>The longer version has three stacked layers.</p>
+<p><strong>Layer one — hash-vs-encryption confusion.</strong> A cryptographic hash function maps an arbitrary-length input to a fixed-length output that&#39;s &quot;one-way&quot; — you can&#39;t invert it cryptographically. That property is useful for integrity checking (the SHA-256 in TLS certificate fingerprints, the BLAKE2 in <code>git</code> object IDs, the SHA-256 in file checksums) because verifying that two values produce the same hash is a cheap operation that proves the values match. The property is also useful for <em>authentication of values you already know</em>: a server stores <code>hash(password+salt)</code> and verifies a login attempt by computing <code>hash(attempt+salt)</code> and comparing. Theo&#39;s confusion — and it&#39;s common — is that the one-way property makes the hash &quot;safe&quot; against an attacker who has the hash file. It doesn&#39;t. The attacker doesn&#39;t need to invert the hash cryptographically; they need to <em>guess plaintexts that hash to the value they have</em>. If the input domain is small (e.g., user-chosen passwords drawn from human-recognizable text), guessing is cheap.</p>
+<p><strong>Layer two — fast hash functions are a force multiplier for the attacker.</strong> MD5 was designed in 1991 for integrity checking, not password storage. On modern GPU hardware it computes at roughly 50 billion hashes/second per top-tier consumer GPU and <del>250 billion/second on dedicated password-cracking hardware. The 14M-entry rockyou wordlist therefore takes about 300 microseconds of compute time to hash end-to-end. With mangling rules (which expand the wordlist by 100-1000x), the attack still completes in seconds. The same math applies to SHA-1 (</del>30 billion/s on GPU), SHA-256 (~10 billion/s), and any other &quot;general-purpose&quot; hash. The mitigation isn&#39;t &quot;use a stronger hash&quot; — it&#39;s &quot;use a function that&#39;s <em>deliberately</em> slow.&quot;</p>
+<p><strong>Layer three — salt + per-password salts + memory-hard cost factors.</strong> The deliberately-slow-function family is called the &quot;Password-Based Key Derivation Functions&quot; (PBKDFs) and the current best-practice members are:</p>
+<ul>
+<li><strong>Argon2id</strong> — winner of the Password Hashing Competition (2013-2015), specified in <a href="https://datatracker.ietf.org/doc/html/rfc9106" target="_blank" rel="noopener noreferrer">RFC 9106</a>. Tunable parameters: iterations, memory cost (Argon2 is memory-hard, meaning the attacker has to allocate significant RAM per guess, which negates GPU parallelism), parallelism. Default 2025-era starting parameters: 2-3 iterations, 64 MiB memory, parallelism 1. The named recommendation in NIST SP 800-63B-4 §5.1.1.2 and OWASP ASVS V2.4.</li>
+<li><strong>scrypt</strong> — older (2009), memory-hard. Parameters: N (CPU/memory cost), r (block size), p (parallelism). Used by Dogecoin, Litecoin, and (historically) some KDF libraries.</li>
+<li><strong>bcrypt</strong> — older still (1999), based on Blowfish. Cost-factor parameter (<code>$2b$12$...</code> is cost 12). Not memory-hard, but the cost factor is well-understood and the function is mature. Widely deployed (Django, Laravel, Spring Security, Ruby&#39;s <code>BCrypt::Password</code>).</li>
+<li><strong>PBKDF2</strong> — oldest (RFC 2898, 2000; updated in <a href="https://datatracker.ietf.org/doc/html/rfc8018" target="_blank" rel="noopener noreferrer">RFC 8018, 2017</a>). Not memory-hard. Used because it&#39;s FIPS-approved and required for some federal compliance contexts (<a href="https://en.wikipedia.org/wiki/PBKDF2" target="_blank" rel="noopener noreferrer">the PBKDF2 Wikipedia entry summarising NIST SP 800-132</a> is the federal recommendation).</li>
+</ul>
+<p>All four use a per-password salt (a random 16-32 byte value stored alongside the hash output) so that identical plaintexts hash to distinct outputs. The salt defeats rainbow-table attacks (which precompute hash→plaintext mappings for common passwords) AND defeats john&#39;s bulk-cracking parallelism (each guess has to be hashed independently against the target&#39;s salt).</p>
+<p>Theo used MD5 with no salt, which combines all three failure modes. The four hashes that share a plaintext all produce the same output, so cracking one cracks four. The function is fast, so cracking is microseconds. The input is in rockyou, so the search space is bounded. Every modern password-storage doctrine exists specifically to make at least one of those three conditions false; Theo&#39;s &quot;I made it safe&quot; commit made none of them false.</p>
+<h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
+<p><strong>LinkedIn 2012 (and 2016).</strong> In June 2012 LinkedIn confirmed a breach exposing ~6.5 million SHA-1 unsalted password hashes. The breach was originally thought to be the full scope until 2016, when a credential broker offered ~117 million LinkedIn hashes from the same incident for sale on the dark web. SHA-1 unsalted has the same operational properties Theo&#39;s MD5 unsalted file does — fast, per-password-distinct-only-if-the-plaintexts-differ, vulnerable to bulk dictionary attacks. The 2016 disclosure led to forced password resets for every LinkedIn user that hadn&#39;t changed their password since 2012. <a href="https://haveibeenpwned.com/PwnedWebsites#LinkedIn" target="_blank" rel="noopener noreferrer">Have I Been Pwned&#39;s LinkedIn page</a> summarizes the breach metadata; LinkedIn&#39;s own <a href="https://blog.linkedin.com/2012/06/09/an-update-on-taking-steps-to-protect-our-members" target="_blank" rel="noopener noreferrer">2012 security advisory</a> is preserved in their blog.</p>
+<p><strong>RockYou 2009 — the wordlist itself.</strong> In December 2009 the social-game company RockYou suffered an SQL injection that exposed approximately 14,341,564 plaintext passwords from its accounts database. The company had been storing passwords unhashed; the SQL injection returned the full table. The fact that the plaintexts were available, large in number, and represented real human password choices made the leaked dataset the canonical wordlist for every offline dictionary attack since. It&#39;s the wordlist john pointed at to crack Theo&#39;s hashes. The <a href="https://techcrunch.com/2009/12/14/rockyou-hacked/" target="_blank" rel="noopener noreferrer">TechCrunch coverage of the disclosure</a> and <a href="https://en.wikipedia.org/wiki/RockYou" target="_blank" rel="noopener noreferrer">the Wikipedia case study</a> carry the consolidated record, including the subsequent FTC settlement covering COPPA violations.</p>
+<p><strong>Adobe 2013.</strong> In October 2013 Adobe disclosed a breach affecting ~153 million accounts. The passwords had been encrypted (not hashed) with 3DES in ECB mode — and ECB-mode encryption with no per-record IV produces identical ciphertext for identical plaintexts (the same structural failure as MD5 unsalted, on a different cipher). The breach also exposed password hints, which combined with the ECB ciphertext patterns made bulk plaintext recovery dramatically easier than the cipher alone would have allowed. <a href="https://nakedsecurity.sophos.com/2013/11/04/anatomy-of-a-password-disaster-adobes-giant-sized-cryptographic-blunder/" target="_blank" rel="noopener noreferrer">Sophos&#39;s analysis</a> and the <a href="https://nakedsecurity.sophos.com/2013/11/04/anatomy-of-a-password-disaster-adobes-giant-sized-cryptographic-blunder/" target="_blank" rel="noopener noreferrer">XKCD-style visualization of ECB on the Adobe data</a> are the most-cited references.</p>
+<p><strong>Yahoo 2013 (3 billion accounts) and 2014 (500M).</strong> Yahoo disclosed two breaches in 2016 affecting respectively all 3 billion Yahoo accounts (the 2013 breach, revised upward in 2017) and 500 million accounts (the 2014 breach). The 2013 breach exposed unsalted MD5 hashes — the same primitive Theo used. The <a href="https://en.wikipedia.org/wiki/Yahoo_data_breaches" target="_blank" rel="noopener noreferrer">Wikipedia consolidated case study</a> documents the scope and the underlying SEC 8-K filings.</p>
+<p><strong>Ashley Madison 2015.</strong> The Ashley Madison breach disclosed in August 2015 exposed ~36M user records. The site had used bcrypt (cost 12) for password storage on the modern auth path — but had ALSO retained a legacy MD5 hash for ~11M users from an earlier auth version that was supposed to be deprecated. The MD5 hashes were cracked at industrial scale within weeks; the bcrypt-only accounts remained mostly uncracked because of bcrypt&#39;s cost factor. The case is the textbook example of why &quot;we switched to bcrypt&quot; without removing legacy weak hashes leaves the weak hashes as the operative security boundary. <a href="https://cynosureprime.blogspot.com/2015/09/how-we-cracked-millions-of-ashley.html" target="_blank" rel="noopener noreferrer">CynoSure Prime&#39;s writeup</a> documents the technical work; <a href="https://en.wikipedia.org/wiki/Ashley_Madison_data_breach" target="_blank" rel="noopener noreferrer">Wikipedia&#39;s article</a> carries the broader case study.</p>
+<p><strong>Have I Been Pwned + the Pwned Passwords API.</strong> Troy Hunt&#39;s <a href="https://haveibeenpwned.com/" target="_blank" rel="noopener noreferrer">Have I Been Pwned</a> service aggregates breach corpora into a queryable database; the <a href="https://haveibeenpwned.com/Passwords" target="_blank" rel="noopener noreferrer">Pwned Passwords API</a> specifically exposes the union of all passwords that have appeared in any breach corpus. As of 2025 the database contains ~850 million unique passwords. Modern auth platforms (Cloudflare Zero Trust, 1Password, Bitwarden, JumpCloud, Okta) integrate Pwned Passwords lookups at registration to block known-bad password choices. NIST SP 800-63B-4 §5.1.1 codifies this approach: the standard requires verifiers to reject passwords found in a &quot;list of values known to be commonly-used, expected, or compromised,&quot; and HIBP is the de-facto implementation. Vesta does not run this check today; if they did, Theo&#39;s password choice would have been rejected at creation.</p>
+<h2 id="frameworks">§5 — Frameworks, deep dive<a class="anchor" href="#frameworks" aria-label="Link to this section">#</a></h2>
+<p><strong>CWE-916: Use of Password Hash With Insufficient Computational Effort.</strong> The surgical CWE for the MD5-on-GPU failure. The catalog entry&#39;s recommended mitigations name Argon2, scrypt, bcrypt, PBKDF2 explicitly. (<a href="https://cwe.mitre.org/data/definitions/916.html" target="_blank" rel="noopener noreferrer">MITRE CWE-916</a>)</p>
+<p><strong>CWE-759: Use of a One-Way Hash without a Salt.</strong> The reason john cracked four hashes simultaneously. The catalog entry mandates per-password random salt. (<a href="https://cwe.mitre.org/data/definitions/759.html" target="_blank" rel="noopener noreferrer">MITRE CWE-759</a>)</p>
+<p><strong>CWE-521: Weak Password Requirements.</strong> <code>TheoVesta!1</code> passes a &quot;8+ chars, contains a symbol&quot; policy and fails any modern entropy-aware policy. The catalog entry references NIST SP 800-63B&#39;s blocklist-based approach. (<a href="https://cwe.mitre.org/data/definitions/521.html" target="_blank" rel="noopener noreferrer">MITRE CWE-521</a>)</p>
+<p><strong>CWE-262: Not Using Password Aging.</strong> Six months on disk for a password committed to source control. The catalog entry&#39;s framing of &quot;credentials that should rotate but don&#39;t&quot; applies. (<a href="https://cwe.mitre.org/data/definitions/262.html" target="_blank" rel="noopener noreferrer">MITRE CWE-262</a>)</p>
+<p><strong>CWE-798: Use of Hard-coded Credentials.</strong> The hash-not-plaintext distinction does not move the mapping. The credentials were in source control with read access for everyone with repo permissions. (<a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" rel="noopener noreferrer">MITRE CWE-798</a>)</p>
+<p><strong>NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Lifecycle Management.</strong> Final document published August 2025 (<a href="https://pages.nist.gov/800-63-4/" target="_blank" rel="noopener noreferrer">NIST CSRC SP 800-63B-4</a>). §5.1.1 (Memorized Secret Verifiers) is the canonical authority for password storage in federal-adjacent contexts. The mandated approach: an approved one-way memory-hard function with a randomly-generated salt at least 32 bits long, an additional secret keyed-hash (HMAC) component stored outside the database. MD5 is explicitly not approved.</p>
+<p><strong>NIST SP 800-132 — Recommendation for Password-Based Key Derivation.</strong> December 2010, the FIPS-approved PBKDF2 specification (covered in <a href="https://en.wikipedia.org/wiki/PBKDF2" target="_blank" rel="noopener noreferrer">the PBKDF2 Wikipedia entry</a> alongside the algorithm itself). Recommended iteration counts are well understood to need periodic adjustment (the original 2010 recommendation of 1,000 iterations is now considered insufficient; OWASP&#39;s current floor is 600,000 iterations for SHA-256-PBKDF2).</p>
+<p><strong>RFC 9106 — Argon2.</strong> September 2021 (<a href="https://datatracker.ietf.org/doc/html/rfc9106" target="_blank" rel="noopener noreferrer">IETF datatracker (RFC 9106)</a>). The Argon2id specification, including parameter selection guidance. The 2025-era starting parameters (2-3 iterations, 64 MiB memory, parallelism 1) are derived from this RFC plus subsequent OWASP guidance.</p>
+<p><strong>PCI-DSS v4.0.1 §3.5.1 — Strong Cryptography for Account Data.</strong> Account data (PAN, cardholder name, expiration, sensitive authentication data) stored at rest requires strong cryptography. The working PCI Council definition of &quot;strong cryptography&quot; requires BOTH cipher AND key strength. AES-128 with a 12-character password recoverable in &lt;1 second does not qualify. The encrypted token backup Theo created is, per the control, functionally plaintext.</p>
+<p><strong>PCI-DSS v4.0.1 §8.3.2 — Strong Cryptography for Password Hashing.</strong> Requires a one-way cryptographic function that includes a salt. Theo&#39;s MD5 unsalted fails both clauses. The PCI QSA&#39;s job on Vesta&#39;s audit includes confirming that authentication credentials are stored per §8.3.2; the file you just found is the negative finding.</p>
+<p><strong>OWASP Top 10 (2025) — A02 Security Misconfiguration + A04 Cryptographic Failures.</strong> Both apply. A02 covers the broad class &quot;credentials in source control with weak protection.&quot; A04 (the modern name for &quot;Sensitive Data Exposure&quot;) covers the specific MD5-unsalted choice. (<a href="https://owasp.org/Top10/" target="_blank" rel="noopener noreferrer">OWASP Top 10</a>)</p>
+<p><strong>OWASP Application Security Verification Standard (ASVS) v4.0.3.</strong> V2.4 (Credential Storage) verifies that any password hash uses Argon2 / bcrypt / scrypt / PBKDF2 with appropriate parameters AND includes salt. (<a href="https://github.com/OWASP/ASVS" target="_blank" rel="noopener noreferrer">OWASP ASVS GitHub repo</a>)</p>
+<p><strong>OWASP Password Storage Cheat Sheet.</strong> The most-cited single page on this topic. Recommends Argon2id as the default modern choice, with bcrypt/scrypt/PBKDF2 as situationally-appropriate alternatives. Names the parameter floors. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Cheat Sheet Series — Password Storage</a>)</p>
+<p><strong>CIS Critical Security Controls v8.1.</strong></p>
+<ul>
+<li>Control 5.2 — Use Unique Passwords. The four hashes being the same plaintext is a direct violation.</li>
+<li>Control 16.4 — Establish and Maintain an Inventory of Application Authorization Methods. Theo&#39;s repo-committed credentials bypass the inventory.</li>
+<li>Control 18.6 — Train Workforce on Authentication Best Practices. The &quot;hashes are safer than plaintext, right?&quot; reasoning is what this control exists to update.</li>
+</ul>
+<h2 id="certifications">§6 — Cert exam relevance<a class="anchor" href="#certifications" aria-label="Link to this section">#</a></h2>
+<p><strong>CompTIA Security+ (SY0-701).</strong> Domain 1.4 (Cryptographic concepts) — symmetric vs hash primitives, salting, PBKDFs. Domain 4.5 (Modify enterprise capabilities to enhance security) — credential management. Wordlist-based dictionary attacks named explicitly. (<a href="https://www.comptia.org/en-us/certifications/security/" target="_blank" rel="noopener noreferrer">CompTIA Security+ cert page</a>)</p>
+<p><strong>CompTIA CySA+ (CS0-003 / CS0-004).</strong> CS0-004 launched in early 2026 for parallel availability; CS0-003 retires June 2026. Domain 1 (Security Operations) — incident response on credential exposure. Domain 4 (Reporting &amp; Communication) — the &quot;what would you tell the auditor&quot; question.</p>
+<p><strong>CompTIA PenTest+ (PT0-003).</strong> Domain 3 (Attacks and Exploits) — Hashcat / John / Hydra naming, rockyou.txt as a named wordlist, salt-aware vs salt-unaware crack approaches.</p>
+<p><strong>(ISC)² CISSP.</strong> Domain 3 (Security Architecture and Engineering) — modern password hashing. Domain 5 (Identity and Access Management) — credential lifecycle.</p>
+<p><strong>OffSec OSCP / PEN-200.</strong> Standard primitive on every lab box. The exam-objective bullets explicitly name <code>john</code> and <code>hashcat</code> as required tooling. The 2023 curriculum revision added Argon2id as a brief defender-side mention.</p>
+<p><strong>EC-Council CEH v13.</strong> Module 5 (Vulnerability Analysis) and Module 6 (System Hacking) cover hash extraction + dictionary attacks. The v13 release (April 2024) refreshed the password-hashing-recommendations section.</p>
+<h2 id="defender">§7 — What a defender does<a class="anchor" href="#defender" aria-label="Link to this section">#</a></h2>
+<p><strong>Rotate all four immediately.</strong> The cracked credentials are fungible; attackers harvesting Vesta&#39;s repo got all four with one wordlist run. Coordinated rotation is non-negotiable. The token backup the aes-backup password encrypts has to be re-encrypted with a new (strong, unique) key, then the original backup destroyed. The S3 service account requires application-side coordination. The prod-DB password requires connection-string rotation across every consumer.</p>
+<p><strong>Move to Argon2id.</strong> Modern frameworks default to it: Django auth (since 1.10), Spring Security (since 5.7), Laravel (since 5.5 via the <code>argon</code> driver), Node&#39;s <code>argon2</code> npm package, Python&#39;s <code>argon2-cffi</code>, Ruby&#39;s <code>argon2</code> gem. The work-factor parameters are the actual security boundary; the OWASP Password Storage Cheat Sheet&#39;s 2025 floors (Argon2id: 2 iterations, 19 MiB memory minimum; the level data uses the more conservative 64 MiB starting point) are well-tested. Function name without parameter tuning is theater.</p>
+<p><strong>Per-credential salt at the application layer.</strong> Or — equivalently — adopt a framework&#39;s built-in password storage that handles salting transparently. The opt-OUT-of-salting path requires more code than the opt-IN path in every modern framework.</p>
+<p><strong>Block rockyou-class passwords at registration.</strong> <a href="https://haveibeenpwned.com/Passwords" target="_blank" rel="noopener noreferrer">Have I Been Pwned&#39;s Pwned Passwords API</a> is the de-facto implementation; integration is typically ~20 lines of code. The API returns a count of how many breaches the candidate password has appeared in; rejecting any candidate with count &gt; 0 is the standard implementation. NIST SP 800-63B-4 §5.1.1 codifies this requirement; OWASP ASVS V2.1.7 verifies it.</p>
+<p><strong>Scan repos for committed credentials.</strong> <a href="https://github.com/gitleaks/gitleaks" target="_blank" rel="noopener noreferrer">gitleaks</a>, <a href="https://github.com/trufflesecurity/trufflehog" target="_blank" rel="noopener noreferrer">trufflehog</a>, <a href="https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning" target="_blank" rel="noopener noreferrer">GitHub Secret Scanning</a>, <a href="https://docs.gitlab.com/ee/user/application_security/secret_detection/" target="_blank" rel="noopener noreferrer">GitLab Secret Detection</a>. All flag hash files. <code>backup-passwords.txt</code> would have been caught at pre-commit by any of these.</p>
+<p><strong>Move secrets out of repos entirely.</strong> <a href="https://developer.hashicorp.com/vault/docs/secrets" target="_blank" rel="noopener noreferrer">HashiCorp Vault</a>, <a href="https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html" target="_blank" rel="noopener noreferrer">AWS Secrets Manager</a>, <a href="https://cloud.google.com/secret-manager/docs" target="_blank" rel="noopener noreferrer">GCP Secret Manager</a>, <a href="https://learn.microsoft.com/en-us/azure/key-vault/general/overview" target="_blank" rel="noopener noreferrer">Azure Key Vault</a>, <a href="https://docs.doppler.com/" target="_blank" rel="noopener noreferrer">Doppler</a>, <a href="https://developer.1password.com/docs/secrets-automation/" target="_blank" rel="noopener noreferrer">1Password Business + 1Password Secrets Automation</a>. The pattern Theo&#39;s commit fulfills (&quot;I needed to share creds across environments so I put them in the repo&quot;) is what these tools exist to replace. Ops cost: ~one day. Replacement value: the entire repo-credential-exposure class of finding.</p>
+<p><strong>Educate.</strong> The <code>hash-id</code> → <code>john</code> → <code>cat README.rockyou</code> sequence is identical to what every intro-tier red-team / blue-team training program teaches. Engineers shipping production credentials should be aware of how cheap the offline attack is. <a href="https://hashcat.net/wiki/" target="_blank" rel="noopener noreferrer">The HashCat wiki</a> and <a href="https://hashcat.net/wiki/doku.php?id=cracking_wpawpa2" target="_blank" rel="noopener noreferrer">Hashcat Crackstation</a> have the canonical defender-side reference material.</p>
+<h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
+<p>Both bonus finds in this level surface auxiliary lessons the main finding doesn&#39;t directly require. Each captures a distinct dimension of the broader password-storage problem space.</p>
+<p><strong>Bonus find — Theo&#39;s password reuse.</strong> The four-systems-one-rotation finding is the headline of the QSA call, but the deeper lesson is structural: same-string-different-system is the recurring pattern that turns a single weak credential into a multi-system blast radius. The math is the same regardless of how the reuse arose — Theo chose it individually here; Halton Bank&#39;s password policy mandates it institutionally in the linux track. The mitigation is the same too: cryptographically-random per-credential strings, machine-generated, managed via a secrets manager that the humans never type into a file. The CWE-521 + CWE-262 catalog entries are the conceptual hooks; the operational fix is a tooling choice.</p>
+<p><strong>Bonus find — RockYou 2009 provenance.</strong> The wordlist&#39;s age is the point. &quot;We used a unique password&quot; is a defensible claim against an attacker with a 1000-entry wordlist; it&#39;s a meaningless claim against an attacker with a 14M-entry wordlist plus 15 years of mangling-rule development against it. NIST SP 800-63B-4&#39;s blocklist-based approach (§5.1.1) is the policy-side mitigation: rather than rely on user-chosen &quot;unique&quot; passwords, verify the candidate against the known breach corpus and reject any match. HIBP&#39;s Pwned Passwords API is the implementation. The educational artifact for this bonus is the README.rockyou file itself, which captures the provenance that turns &quot;unique password&quot; from a defensible claim into a measurable claim against a known-bad list.</p>
+<h2 id="takeaways">§8 — Key takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section">#</a></h2>
+<ol>
+<li><p><strong>A hash function is not a safety net for an enumerable input domain.</strong> The cryptographic one-wayness of MD5/SHA-1/SHA-256 doesn&#39;t protect a password file when the attacker can guess plaintexts and hash them faster than your system can do meaningful work.</p>
+</li>
+<li><p><strong>Fast hashes are a force multiplier for the attacker.</strong> MD5 at ~50 billion/s on a single consumer GPU + rockyou.txt&#39;s 14M entries = the entire wordlist hashes end-to-end in ~300 microseconds. The mitigation is <em>deliberately slow</em> functions (Argon2id, scrypt, bcrypt, PBKDF2).</p>
+</li>
+<li><p><strong>Per-password salt is non-optional.</strong> Without it, identical plaintexts hash to identical outputs and bulk-cracking parallelism wins. The salt is what makes &quot;four hashes from one wordlist run&quot; into &quot;four hashes that each require independent cracking work.&quot;</p>
+</li>
+<li><p><strong>Password reuse collapses security boundaries.</strong> Four cracked plaintexts that share one value gate four production systems with one rotation. Cryptographically-random per-credential strings via a secrets manager is the operational fix.</p>
+</li>
+<li><p><strong>rockyou.txt is part of the threat model.</strong> &quot;We used a unique password&quot; only holds if you can prove the password isn&#39;t a near-neighbor of any of the ~14 million entries. NIST SP 800-63B-4 codifies the blocklist approach; HIBP&#39;s Pwned Passwords API is the implementation. Vesta does not run this check today; if they did, Theo&#39;s password would have been rejected at creation.</p>
+</li>
+<li><p><strong>Repo-committed credentials are repo-committed credentials.</strong> The hash-not-plaintext distinction does not move the CWE-798 mapping. Secrets managers exist to eliminate the pattern entirely; modern pre-commit hooks (gitleaks, trufflehog, GitHub Secret Scanning) catch it at the gate.</p>
+</li>
+<li><p><strong>PCI-DSS v4.0.1 §3.5.1 requires BOTH strong cipher and strong key.</strong> AES-128 with a 12-character rockyou-class password is, by the control&#39;s definition, plaintext. The QSA&#39;s job on Vesta&#39;s audit includes confirming that the encryption Theo did last quarter meets §3.5.1; the file you just found is the negative finding.</p>
+</li>
+</ol>
+<p>The level3 credential — <code>TheoVesta!1</code> — is the AES backup encryption password (label: <code>aes-backup</code>) that Theo also reused for the admin login, the prod-DB account, and the S3 read-only service. The breadcrumb to level3 is not a leak the way the JWT was; it&#39;s the <em>finding</em> — same plaintext, four systems, one rotation event.</p>
+<h2 id="further-reading">§9 — Further reading<a class="anchor" href="#further-reading" aria-label="Link to this section">#</a></h2>
+<p><em>Last reviewed: April 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project&#39;s GitHub issues tracker.</em></p>
+<p><strong>Modern password hashing</strong></p>
+<ul>
+<li><a href="https://pages.nist.gov/800-63-4/" target="_blank" rel="noopener noreferrer">NIST SP 800-63B-4</a> — Digital Identity Guidelines: Authentication and Lifecycle Management (August 2025). §5.1.1 covers Memorized Secret Verifiers.</li>
+<li><a href="https://en.wikipedia.org/wiki/PBKDF2" target="_blank" rel="noopener noreferrer">the PBKDF2 Wikipedia entry summarising NIST SP 800-132</a> — Recommendation for Password-Based Key Derivation (December 2010).</li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc9106" target="_blank" rel="noopener noreferrer">RFC 9106</a> — Argon2 Memory-Hard Function (September 2021).</li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc8018" target="_blank" rel="noopener noreferrer">RFC 8018</a> — PKCS #5: Password-Based Cryptography Specification v2.1 (January 2017).</li>
+<li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Password Storage Cheat Sheet</a> — the most-cited single page on the topic.</li>
+<li><a href="https://github.com/OWASP/ASVS" target="_blank" rel="noopener noreferrer">OWASP ASVS</a> — V2.4 (Credential Storage) verification requirements.</li>
+</ul>
+<p><strong>Offline cracking + wordlists</strong></p>
+<ul>
+<li><a href="https://hashcat.net/wiki/" target="_blank" rel="noopener noreferrer">Hashcat wiki</a> — canonical reference for the most-used GPU-side cracking tool.</li>
+<li><a href="https://www.openwall.com/john/" target="_blank" rel="noopener noreferrer">John the Ripper documentation</a> — Solar Designer&#39;s classic CPU-side cracker.</li>
+<li><a href="https://haveibeenpwned.com/" target="_blank" rel="noopener noreferrer">Have I Been Pwned</a> — Troy Hunt&#39;s aggregate breach database.</li>
+<li><a href="https://haveibeenpwned.com/Passwords" target="_blank" rel="noopener noreferrer">Have I Been Pwned — Pwned Passwords API</a> — the de-facto implementation for the NIST 800-63B-4 §5.1.1 blocklist requirement.</li>
+</ul>
+<p><strong>Real-world cases</strong></p>
+<ul>
+<li>LinkedIn 2012 — <a href="https://haveibeenpwned.com/PwnedWebsites#LinkedIn" target="_blank" rel="noopener noreferrer">HIBP page</a>; <a href="https://blog.linkedin.com/2012/06/09/an-update-on-taking-steps-to-protect-our-members" target="_blank" rel="noopener noreferrer">LinkedIn 2012 security advisory</a>.</li>
+<li>RockYou 2009 — <a href="https://techcrunch.com/2009/12/14/rockyou-hacked/" target="_blank" rel="noopener noreferrer">TechCrunch coverage</a>; <a href="https://en.wikipedia.org/wiki/RockYou" target="_blank" rel="noopener noreferrer">Wikipedia case study</a> covering the subsequent FTC COPPA settlement.</li>
+<li>Adobe 2013 — <a href="https://nakedsecurity.sophos.com/2013/11/04/anatomy-of-a-password-disaster-adobes-giant-sized-cryptographic-blunder/" target="_blank" rel="noopener noreferrer">Sophos Naked Security analysis</a>.</li>
+<li>Yahoo 2013 / 2014 — <a href="https://en.wikipedia.org/wiki/Yahoo_data_breaches" target="_blank" rel="noopener noreferrer">Wikipedia consolidated case study</a>.</li>
+<li>Ashley Madison 2015 — <a href="https://cynosureprime.blogspot.com/2015/09/how-we-cracked-millions-of-ashley.html" target="_blank" rel="noopener noreferrer">CynoSure Prime crack writeup</a>; <a href="https://en.wikipedia.org/wiki/Ashley_Madison_data_breach" target="_blank" rel="noopener noreferrer">Wikipedia case study</a>.</li>
+</ul>
+<p><strong>Secrets management + repo scanning</strong></p>
+<ul>
+<li><a href="https://developer.hashicorp.com/vault/docs/secrets" target="_blank" rel="noopener noreferrer">HashiCorp Vault docs</a> — internal secrets-management.</li>
+<li><a href="https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html" target="_blank" rel="noopener noreferrer">AWS Secrets Manager</a>.</li>
+<li><a href="https://cloud.google.com/secret-manager/docs" target="_blank" rel="noopener noreferrer">GCP Secret Manager</a>.</li>
+<li><a href="https://learn.microsoft.com/en-us/azure/key-vault/general/overview" target="_blank" rel="noopener noreferrer">Azure Key Vault</a>.</li>
+<li><a href="https://docs.doppler.com/" target="_blank" rel="noopener noreferrer">Doppler docs</a>.</li>
+<li><a href="https://github.com/gitleaks/gitleaks" target="_blank" rel="noopener noreferrer">gitleaks</a> — pre-commit + repo-history secret scanner.</li>
+<li><a href="https://github.com/trufflesecurity/trufflehog" target="_blank" rel="noopener noreferrer">trufflesecurity / trufflehog</a> — entropy-aware secret scanner.</li>
+<li><a href="https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning" target="_blank" rel="noopener noreferrer">GitHub Secret Scanning</a> — platform-side scanning.</li>
+</ul>
+<p><strong>Compliance</strong></p>
+<ul>
+<li><a href="https://www.pcisecuritystandards.org/document_library/" target="_blank" rel="noopener noreferrer">PCI Security Standards Council document library</a> — PCI-DSS v4.0.1 §3.5.1 (Strong Cryptography for Account Data) + §8.3.2 (Strong Cryptography for Password Hashing).</li>
+<li><a href="https://owasp.org/Top10/" target="_blank" rel="noopener noreferrer">OWASP Top 10:2025</a> — A02 Security Misconfiguration, A04 Cryptographic Failures.</li>
+<li><a href="https://www.cisecurity.org/controls/cis-controls-list" target="_blank" rel="noopener noreferrer">CIS Critical Security Controls v8.1</a> — Controls 5.2, 16.4, 18.6 covered above.</li>
+</ul>
+<p><strong>MITRE ATT&amp;CK references</strong></p>
+<ul>
+<li><a href="https://attack.mitre.org/techniques/T1110/002/" target="_blank" rel="noopener noreferrer">T1110.002 — Brute Force: Password Cracking</a>.</li>
+<li><a href="https://attack.mitre.org/techniques/T1552/001/" target="_blank" rel="noopener noreferrer">T1552.001 — Credentials In Files</a>.</li>
+<li><a href="https://attack.mitre.org/techniques/T1078/" target="_blank" rel="noopener noreferrer">T1078 — Valid Accounts</a>.</li>
+<li><a href="https://attack.mitre.org/techniques/T1003/008/" target="_blank" rel="noopener noreferrer">T1003.008 — OS Credential Dumping: /etc/passwd and /etc/shadow</a>.</li>
+<li><a href="https://attack.mitre.org/techniques/T1187/" target="_blank" rel="noopener noreferrer">T1187 — Forced Authentication</a>.</li>
+</ul>
+<p><strong>CWE catalog</strong></p>
+<ul>
+<li><a href="https://cwe.mitre.org/data/definitions/916.html" target="_blank" rel="noopener noreferrer">CWE-916 — Use of Password Hash With Insufficient Computational Effort</a>.</li>
+<li><a href="https://cwe.mitre.org/data/definitions/759.html" target="_blank" rel="noopener noreferrer">CWE-759 — Use of a One-Way Hash without a Salt</a>.</li>
+<li><a href="https://cwe.mitre.org/data/definitions/521.html" target="_blank" rel="noopener noreferrer">CWE-521 — Weak Password Requirements</a>.</li>
+<li><a href="https://cwe.mitre.org/data/definitions/262.html" target="_blank" rel="noopener noreferrer">CWE-262 — Not Using Password Aging</a>.</li>
+<li><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" rel="noopener noreferrer">CWE-798 — Use of Hard-coded Credentials</a>.</li>
+</ul>
+<nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/crypto/level1.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level1@crypto</span><span class="pager-title">Theo's Signature That Wasn't</span></a><a class="pager-cell pager-next" href="/walkthroughs/crypto/level3.html"><span class="pager-dir">&rarr; Next</span><span class="pager-label">level3@crypto</span><span class="pager-title">Theo's Encrypted Backup</span></a></nav>    </main>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box</a></li><li><a href="#step-2-read-priyas-note-the-backup-passwords-file">Step 2: Read Priya's note + the backup-passwords file</a></li><li><a href="#step-3-hash-id-confirms-md5">Step 3: hash-id confirms MD5</a></li><li><a href="#step-4-john-cracks-four-hashes-all-the-same-plaintext">Step 4: john cracks four hashes — all the same plaintext</a></li><li><a href="#step-5-the-2009-rockyou-provenance-optional-exploration">Step 5: The 2009 RockYou provenance (optional exploration)</a></li><li><a href="#step-6-return-to-the-lobby-with-the-finding">Step 6: Return to the lobby with the finding</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+  </div>
+
+  <footer id="site-footer">
+    <p class="footer-disclaimer">
+      For educational use. Don't run these techniques against systems
+      you don't own or aren't authorized to test.
+    </p>
+    <p class="footer-links">
+      <a href="/" class="footer-link">&larr; Back to d3cyph3r.com</a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://github.com/rlwilliamson-dev/d3cyph3r" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="View source on GitHub">
+        <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
+          <path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82a7.62 7.62 0 0 0-2-.27c-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/>
+        </svg>
+        <span>Source on GitHub</span>
+      </a>
+      <span class="footer-sep" aria-hidden="true">&middot;</span>
+      <a href="https://azure.microsoft.com/" target="_blank" rel="noopener noreferrer" class="footer-link" aria-label="Hosted on Microsoft Azure">
+        <svg width="13" height="13" viewBox="0 0 18 18" aria-hidden="true">
+          <path d="M10.61 2L4.05 14.4l5.6.04 1.5-2.92 4.9 2.88L10.61 2z" fill="#0078D4"/>
+        </svg>
+        <span>Hosted on Microsoft Azure</span>
+      </a>
+    </p>
+  </footer>
+
+  <script type="module" src="/walkthroughs/reader.js"></script>
+</body>
+</html>

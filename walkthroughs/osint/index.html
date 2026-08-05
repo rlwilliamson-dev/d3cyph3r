@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>D3CYPH3R Walkthroughs</title>
-  <meta name="description" content="Long-form solve guides for D3CYPH3R levels: solve paths, vulnerability deep-dives, framework and certification mappings, MITRE ATT&amp;CK, and defender remediation.">
-  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/">
-  <meta property="og:title" content="D3CYPH3R Walkthroughs">
-  <meta property="og:description" content="Long-form solve guides for D3CYPH3R levels: solve paths, vulnerability deep-dives, framework and certification mappings, MITRE ATT&amp;CK, and defender remediation.">
-  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/">
+  <title>OSINT — D3CYPH3R Walkthroughs</title>
+  <meta name="description" content="Open-source breach corpus and identity reconnaissance. Client: Veridian Analytics — HIPAA / HITRUST CSF.">
+  <link rel="canonical" href="https://www.d3cyph3r.com/walkthroughs/osint/">
+  <meta property="og:title" content="OSINT — D3CYPH3R Walkthroughs">
+  <meta property="og:description" content="Open-source breach corpus and identity reconnaissance. Client: Veridian Analytics — HIPAA / HITRUST CSF.">
+  <meta property="og:url" content="https://www.d3cyph3r.com/walkthroughs/osint/">
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="D3CYPH3R">
   <meta name="twitter:card" content="summary">
@@ -29,7 +29,7 @@
         <span class="brand-sub">walkthroughs</span>
       </a>
     </div>
-    <nav id="crumbs" aria-label="Breadcrumb"><span class="current">index</span></nav>
+    <nav id="crumbs" aria-label="Breadcrumb"><a href="/walkthroughs/">index</a><span class="sep" aria-hidden="true">/</span><span class="current">osint</span></nav>
     <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle light / dark theme" title="Toggle light / dark">
       <svg class="theme-icon theme-icon-moon" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor">
         <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277.527 0 1.04-.055 1.533-.16a.78.78 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.78.78 0 0 1 6 .278"/>
@@ -41,24 +41,13 @@
   </header>
 
   <main id="main" class="doc doc-narrow">
-<h1 class="index-title"><span class="brand-cascade"><span class="glyph-bracket">[</span><span class="glyph-vt323 glyph-bright">D</span><span class="glyph-vt323 glyph-mid">3</span><span class="glyph-vt323 glyph-mid">C</span><span class="glyph-vt323 glyph-bright">Y</span><span class="glyph-vt323 glyph-dim">P</span><span class="glyph-vt323 glyph-mid">H</span><span class="glyph-vt323 glyph-dim">3</span><span class="glyph-vt323 glyph-bright">R</span><span class="glyph-bracket">]</span></span><span class="index-title-sub">walkthroughs</span></h1>
-<p>Per-level deep dives: full solve paths plus extended post-mortems tying each level back to the certifications, frameworks, real-world incidents, and defender tooling covered in the in-game lessons-learned files.</p>
-<p><em>These pages are spoiler-tolerant by design. Solve the level first; come back here for the study session.</em></p>
-<div class="search-wrap">
-  <label class="search-label" for="search-input">Search all walkthroughs</label>
-  <input type="search" id="search-input" class="search-input" placeholder="Try: CWE-532, PCI-DSS, sudo, DMARC" autocomplete="off" aria-describedby="search-hint">
-  <p id="search-hint" class="search-hint">Searches section headings and body text across all 24 walkthroughs.</p>
-  <div id="search-results" class="search-results" aria-live="polite"></div>
-</div>
-<h2>Tracks</h2>
-<ul class="track-list">
-<li><a href="/walkthroughs/linux/">Linux</a> <span class="count">4 walkthroughs</span><div class="desc">File reading, credential hunting, and the consultant-laptop audit pattern. Client: Halton Bank — GLBA Safeguards Rule.</div></li>
-<li><a href="/walkthroughs/network/">Network</a> <span class="count">3 walkthroughs</span><div class="desc">Port scanning, perimeter audit, and DNS reconnaissance. Client: Atlas Health — HIPAA.</div></li>
-<li><a href="/walkthroughs/crypto/">Crypto</a> <span class="count">4 walkthroughs</span><div class="desc">Encoding ≠ encryption, and signing ≠ verifying. Client: Vesta Retail — PCI-DSS.</div></li>
-<li><a href="/walkthroughs/web/">Web</a> <span class="count">3 walkthroughs</span><div class="desc">HTTP directory enumeration and broken access control. Client: Meridian State University — FERPA.</div></li>
-<li><a href="/walkthroughs/forensics/">Forensics</a> <span class="count">4 walkthroughs</span><div class="desc">EXIF metadata and insider-threat analysis. Client: Polaris Defense Systems — CMMC / NIST 800-171.</div></li>
-<li><a href="/walkthroughs/osint/">OSINT</a> <span class="count">3 walkthroughs</span><div class="desc">Open-source breach corpus and identity reconnaissance. Client: Veridian Analytics — HIPAA / HITRUST CSF.</div></li>
-<li><a href="/walkthroughs/cloud/">Cloud</a> <span class="count">3 walkthroughs</span><div class="desc">AWS S3, IAM, EC2 auditing + RDS-adjacent psql enumeration. Client: Coverline Insurance — SOC 2 / NAIC / NYDFS / GLBA.</div></li>
+<h1>OSINT track</h1>
+<p>Open-source breach corpus and identity reconnaissance. Client: Veridian Analytics — HIPAA / HITRUST CSF.</p>
+<h2>Walkthroughs</h2>
+<ul class="level-list">
+<li><a href="/walkthroughs/osint/level0.html">level0@osint — Veridian's Open Letter</a><div class="desc">Executive-protection OSINT for a newly-hired CMO at a HIPAA Business Associate. HIBP surfaces the same cleartext password in two breaches — the high-confidence credential-reuse signal.</div></li>
+<li><a href="/walkthroughs/osint/level1.html">level1@osint — Aaron's Weekend Project</a><div class="desc">Day two. After Friday's HIBP finding, Marisol expands scope to Aaron's developer footprint. His public GitHub has a clinical-era personal project with a committed .env at HEAD carrying live AWS access keys, an OpenFDA personal API key, and a Flask secret — the .gitignore was added later (and lists .env) but doesn't retroactively untrack the file. CWE-798 + CWE-540, with the universal source-control credential-leak mechanic on display.</div></li>
+<li><a href="/walkthroughs/osint/level2.html">level2@osint — The Internet Never Forgets</a><div class="desc">Day three. Aaron deleted the leaky repo and called it fixed — so the wayback Machine becomes the proof that deletion isn't remediation: the 2023-24 captures still serve the repo while the live URL 404s, and the AWS key was never rotated. An archive sweep of Aaron's scrubbed 2009 personal site recovers a pseudonymous handle, sherlock maps his 'other life,' and a homelab blog post pastes a cleartext Nextcloud admin password that gates level3. Internet Archive permanence, alias attribution, robots.txt as a map (WSTG-INFO-03), CWE-312.</div></li>
 </ul>
   </main>
 
@@ -87,6 +76,5 @@
   </footer>
 
   <script type="module" src="/walkthroughs/reader.js"></script>
-  <script type="module" src="/walkthroughs/search.js"></script>
 </body>
 </html>

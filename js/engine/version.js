@@ -29,15 +29,24 @@
 //       visitors — bumping unnecessarily forces a re-fetch of
 //       identical bytes.
 //
+//       As of v2.4.0 the walkthrough stylesheet link is emitted by
+//       the generator, so this bump is made by editing CSS_VERSION in
+//       `tools/build-walkthroughs.mjs` and re-running it, NOT by
+//       hand-editing `walkthroughs/index.html` (which is generated
+//       and would be overwritten).
+//
 //       JS files do NOT need a version-string cache-bust. As of
-//       v1.8.1, `staticwebapp.config.json` serves `/js/*`,
-//       `/levels/*`, and `/walkthroughs/walkthrough.js` with
-//       `Cache-Control: no-cache, must-revalidate`, so every page
-//       load revalidates the engine modules. (Pre-v1.8.1, Azure's
-//       default 4-hour cache TTL meant returning visitors ran the
-//       prior release's engine for hours after a deploy.) Vendored
-//       libraries under `/walkthroughs/vendor/*` stay cached at the
-//       SWA default — they're stable across releases.
+//       v1.8.1, `staticwebapp.config.json` serves `/js/*` and
+//       `/levels/*` with `Cache-Control: no-cache, must-revalidate`,
+//       so every page load revalidates the engine modules. (Pre-
+//       v1.8.1, Azure's default 4-hour cache TTL meant returning
+//       visitors ran the prior release's engine for hours after a
+//       deploy.) As of v2.4.0 a `/walkthroughs/*` catch-all covers
+//       the generated pages plus reader.js / search.js /
+//       search-index.json. Vendored libraries under
+//       `/walkthroughs/vendor/*` are matched by an EARLIER route and
+//       stay immutable — SWA routes match in order, first wins, so
+//       that rule must stay above the catch-all.
 //
 //   2c. As of v1.21.0, ALSO bump the `CACHE_VERSION` constant near
 //       the top of `sw.js` to match the new release version. The
@@ -50,8 +59,17 @@
 //
 //   3. Author the level walkthrough at
 //      walkthroughs/<track>/<level>.md. Use level0@linux's walkthrough
-//      as the template (9 sections, 7000-9000 words). Update the
-//      MANIFEST in walkthroughs/walkthrough.js so the index lists it.
+//      as the template (10 sections, 4000-8000 words — band widened in
+//      v2.4.0 to match the corpus; shorter is usually better). Add the
+//      entry to MANIFEST in walkthroughs/manifest.mjs, then run
+//      `node tools/build-walkthroughs.mjs` and COMMIT the generated
+//      .html files alongside the .md.
+//
+//      The generator enforces the section template: all 10 sections,
+//      exactly once, in order, plus the leading spoiler blockquote. A
+//      deviation fails the build and writes nothing. CI additionally
+//      re-runs the generator and fails if committed output is stale,
+//      so a markdown edit without a regenerate cannot merge.
 //
 //      WALKTHROUGH GATE (tightened 2026-05-28 after v1.23.0 shipped
 //      a level without its walkthrough): the walkthrough may ship in
@@ -260,6 +278,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "2.3.1";
+export const VERSION = "2.4.0";
 
 export const VERSION_DISPLAY = "v" + VERSION;

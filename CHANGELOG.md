@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-08-05
+
+**The walkthroughs subsite is now statically generated.** 24 documents averaging 7,000 words each had the navigation of a single blog post: no table of contents, no linkable sections, and no way to search 170,000 words. This release rebuilds the reader around real pages at real URLs, and makes the section template something the build enforces rather than something review is supposed to catch.
+
+### Added
+
+- **A table of contents on every walkthrough.** A sticky rail tracks the section you are reading and reveals that section's subheadings while collapsing the rest. The densest walkthrough carries 40 subheadings, so showing them all at once would have been longer than the viewport and useless for orientation. Below 1100px the rail becomes a collapsible list above the article.
+- **Linkable sections.** Every heading has an anchor, and the ten standard sections use curated, stable slugs (`#setup`, `#solve`, `#vulnerability`, `#real-world-parallels`, `#frameworks`, `#certifications`, `#defender`, `#optional-exploration`, `#takeaways`, `#further-reading`). They mean the same thing on all 24 pages, so `/walkthroughs/linux/level3.html#frameworks` and its `cloud/level0` counterpart can be compared by editing the path. Because the slugs are curated rather than derived from heading text, retitling a heading does not break links already published.
+- **Search across the whole corpus.** Queries resolve to a section rather than a document, so "CWE-532" lands on the level and section that explains it instead of the top of a 6,000-word page. Results are weighted so explanation outranks bibliography.
+- **Previous and next navigation** within a track, plus reading time, word count, a back-to-top link, and a skip-to-content link.
+- **`llms.txt`** describing the corpus for AI crawlers and agents.
+
+### Changed
+
+- **Real URLs instead of hash routing.** Each walkthrough is a generated page at `/walkthroughs/<track>/<level>.html`. Everything after `#` is never sent to a server, so the previous reader served all 24 walkthroughs from one URL and one empty 6KB shell: `robots.txt` declared the subsite discoverable, but nothing in it could be indexed, and the fragment was already taken by the router so no section could be linked. `sitemap.xml` grew from 2 URLs to 33. Existing `#/track/level` links redirect.
+- **Line length reduced to roughly 74 characters**, inside the 50 to 75 that readability research converges on and clear of the 80-character ceiling in WCAG 1.4.8. The previous column measured about 77.
+- **Anchor jumps land instantly instead of animating.** Smooth scrolling suited a page you scrolled by hand. It stops suiting these once anchors are a primary way in: the documents run 15 to 33 screens, so a table-of-contents click or an inbound link can span close to 30,000 pixels, and animating that is a long ride through content the reader deliberately skipped.
+- **Walkthrough length guidance is now 4,000 to 8,000 words**, replacing 6,000 to 8,000. Only 9 of 24 met the old band. The newer walkthroughs are consistently tighter and read better for it, so the standard follows the practice.
+- **The "Last reviewed" footer renders one way.** It was split 16 plain-italic to 8 blockquoted, which produced two visibly different elements for the same thing, because the documented example was itself shown inside a quote.
+
+### Fixed
+
+- **Screen readers no longer announce an entire walkthrough on every navigation.** The reader injected each document into an `aria-live` region, which is meant for small status updates rather than 7,000-word articles. Real page loads remove the live region entirely.
+- **The section template is enforced at build time.** A walkthrough missing a section, repeating one, ordering them differently, or dropping its spoiler warning now fails the build and writes nothing, with every violation across the corpus reported in one run. Previously the reader assumed a uniform structure that only review protected. CI additionally re-runs the generator and fails if the committed pages have drifted from their markdown sources.
+- **README section count.** It described a nine-section walkthrough structure and omitted Key takeaways.
+
 ## [2.3.1] - 2026-07-30
 
 ### Changed

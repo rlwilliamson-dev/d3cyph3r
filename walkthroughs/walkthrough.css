@@ -1,7 +1,8 @@
 /* D3CYPH3R Walkthroughs — clean docs reader.
  *
  * Visual goals:
- *   - Long-form reading, generous line-height, 720px column max.
+ *   - Long-form reading, generous line-height, a measured ~74-character
+ *     column (see --measure), and a sticky TOC rail alongside it.
  *   - Share the main-site brand palette (same CSS variables) so it
  *     feels like the same product, but use a proportional sans-serif
  *     body font instead of monospace — reading 6,000 words in
@@ -248,7 +249,17 @@ body, #site-header, .footer-link {
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+/* Anchor jumps land instantly rather than animating (v2.4.0).
+ *
+ * This was `smooth`, which suited a page you scrolled by hand. It stops
+ * suiting these once anchors become a primary way in: the documents run
+ * 15 to 33 screens, so a TOC click or an inbound deep link can span
+ * close to 30,000px, and animating that is a long disorienting ride
+ * through content the reader deliberately skipped. A navigation control
+ * should arrive, not travel.
+ *
+ * Measured on cloud/level0: #defender sits 29,563px down. */
+html { scroll-behavior: auto; }
 
 body {
   background: var(--bg);
@@ -353,18 +364,94 @@ body {
 
 /* ─── Article ────────────────────────────────────────────────── */
 
-#article {
+/* ─── Reading layout (v2.4.0) ─────────────────────────────────────
+ *
+ * Two columns on desktop: the prose measure, then a sticky TOC rail.
+ * The pair is centred as a unit, so the article sits slightly left of
+ * centre with the rail occupying what used to be dead whitespace.
+ *
+ * ON --measure
+ * ------------
+ * Readability research (Bringhurst; WCAG 1.4.8) puts comfortable prose
+ * at 50-75 characters per line, with 80 as a hard ceiling. Translating
+ * that into CSS needs care, because the obvious unit lies:
+ *
+ *   - `ch` is the advance width of "0". In this proportional body font
+ *     that is ~10.7px, while average prose runs ~8.7px per character.
+ *     Setting `68ch` therefore produced 84 characters per line, not 68.
+ *   - The previous flat 760px column measured ~77 characters: inside
+ *     the WCAG ceiling, marginally past the comfort range.
+ *
+ * So the value below is derived from a MEASURED rate rather than a
+ * nominal unit: at 17px in this font, prose averages ~8.7px/character,
+ * 620px measures ~74 characters here. That sits at the top of the
+ * comfort band, which suits documents this dense in code spans and
+ * citations (a narrower column makes fenced blocks and tables scroll
+ * more often). For reference, the previous 760px column measured ~77.
+ *
+ * If the body font or size ever changes, RE-MEASURE rather than
+ * converting this number: inject a plain paragraph, divide its rendered
+ * height by line-height to get the line count, then divide characters
+ * by lines. Do not trust a canvas measureText average, which skews low
+ * on narrow-glyph samples and will flatter the result.
+ */
+
+:root {
+  --measure: 620px;
+  --rail-width: 232px;
+  --rail-gap: 56px;
+}
+
+.layout {
   flex: 1;
-  max-width: 760px;
+  width: 100%;
+  /* Exactly fits measure + gap + rail + horizontal padding, so the
+     pair centres as a unit with no dead grid track. */
+  max-width: calc(var(--measure) + var(--rail-gap) + var(--rail-width) + 48px);
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+  display: grid;
+  grid-template-columns: minmax(0, var(--measure)) var(--rail-width);
+  gap: var(--rail-gap);
+  align-items: start;
+}
+
+.doc {
+  min-width: 0; /* lets long code blocks scroll instead of widening the grid */
+}
+
+/* Index and track-listing pages have no rail, so they centre normally. */
+.doc-narrow {
+  max-width: var(--measure);
   width: 100%;
   margin: 0 auto;
   padding: 48px 24px 96px;
 }
 
 .loading { color: var(--dim); font-style: italic; }
+
+/* Keyboard users get a way past the header without tabbing the brand,
+ * breadcrumb, and theme toggle on all 32 pages. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-elev);
+  color: var(--fg-bright);
+  border: 1px solid var(--accent);
+  border-radius: 0 0 6px 0;
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-decoration: none;
+}
+.skip-link:focus {
+  left: 0;
+}
 .error   { color: var(--red); }
 
-#article h1 {
+.doc h1 {
   font-size: 2em;
   color: var(--fg-bright);
   font-weight: 700;
@@ -372,7 +459,7 @@ body {
   margin-bottom: 0.3em;
   letter-spacing: -0.5px;
 }
-#article h2 {
+.doc h2 {
   font-size: 1.45em;
   color: var(--fg-bright);
   font-weight: 600;
@@ -382,14 +469,14 @@ body {
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--border);
 }
-#article h3 {
+.doc h3 {
   font-size: 1.18em;
   color: var(--fg-bright);
   font-weight: 600;
   margin-top: 1.6em;
   margin-bottom: 0.5em;
 }
-#article h4 {
+.doc h4 {
   font-size: 1em;
   color: var(--cyan);
   font-weight: 600;
@@ -398,33 +485,33 @@ body {
   font-family: var(--font-mono);
 }
 
-#article p { margin: 0.9em 0; }
+.doc p { margin: 0.9em 0; }
 
-#article a {
+.doc a {
   color: var(--accent);
   text-decoration: underline;
   text-decoration-color: rgba(88, 166, 255, 0.35);
   text-underline-offset: 3px;
 }
-#article a:hover { text-decoration-color: var(--accent); }
+.doc a:hover { text-decoration-color: var(--accent); }
 
-#article strong { color: var(--fg-bright); font-weight: 600; }
-#article em     { color: var(--fg-bright); font-style: italic; }
+.doc strong { color: var(--fg-bright); font-weight: 600; }
+.doc em     { color: var(--fg-bright); font-style: italic; }
 
-#article ul, #article ol { margin: 0.9em 0 0.9em 1.4em; }
-#article li              { margin: 0.35em 0; }
-#article li > ul, #article li > ol { margin-top: 0.3em; margin-bottom: 0.3em; }
+.doc ul, .doc ol { margin: 0.9em 0 0.9em 1.4em; }
+.doc li              { margin: 0.35em 0; }
+.doc li > ul, .doc li > ol { margin-top: 0.3em; margin-bottom: 0.3em; }
 
-#article blockquote {
+.doc blockquote {
   border-left: 3px solid var(--border);
   padding: 0.4em 0 0.4em 1.2em;
   margin: 1.2em 0;
   color: var(--dim);
   font-style: italic;
 }
-#article blockquote p { margin: 0.5em 0; }
+.doc blockquote p { margin: 0.5em 0; }
 
-#article hr {
+.doc hr {
   border: 0;
   border-top: 1px solid var(--border);
   margin: 2.5em 0;
@@ -432,7 +519,7 @@ body {
 
 /* ─── Code ───────────────────────────────────────────────────── */
 
-#article code {
+.doc code {
   font-family: var(--font-mono);
   font-size: 0.88em;
   background: var(--bg-card);
@@ -442,7 +529,7 @@ body {
   color: var(--green);
 }
 
-#article pre {
+.doc pre {
   font-family: var(--font-mono);
   font-size: 0.88em;
   background: var(--bg-elev);
@@ -453,7 +540,7 @@ body {
   overflow-x: auto;
   line-height: 1.55;
 }
-#article pre code {
+.doc pre code {
   background: none;
   border: 0;
   padding: 0;
@@ -463,19 +550,19 @@ body {
 
 /* ─── Tables ─────────────────────────────────────────────────── */
 
-#article table {
+.doc table {
   border-collapse: collapse;
   margin: 1.4em 0;
   width: 100%;
   font-size: 0.95em;
 }
-#article th, #article td {
+.doc th, .doc td {
   border: 1px solid var(--border);
   padding: 8px 12px;
   text-align: left;
   vertical-align: top;
 }
-#article th {
+.doc th {
   background: var(--bg-elev);
   color: var(--fg-bright);
   font-weight: 600;
@@ -486,7 +573,7 @@ body {
  * blockquote whose first line starts with "⚠" and gives it this
  * class. Visually unmissable. */
 
-#article .spoiler-warning {
+.doc .spoiler-warning {
   background: rgba(248, 81, 73, 0.08);
   border: 1px solid var(--red);
   border-left-width: 4px;
@@ -496,7 +583,7 @@ body {
   color: var(--fg);
   font-style: normal;
 }
-#article .spoiler-warning::before {
+.doc .spoiler-warning::before {
   content: "⚠  SPOILER WARNING";
   display: block;
   color: var(--red);
@@ -506,9 +593,9 @@ body {
   margin-bottom: 6px;
   font-family: var(--font-mono);
 }
-#article .spoiler-warning p { margin: 0.3em 0; }
-#article .spoiler-warning p:first-child { margin-top: 0; }
-#article .spoiler-warning p:last-child  { margin-bottom: 0; }
+.doc .spoiler-warning p { margin: 0.3em 0; }
+.doc .spoiler-warning p:first-child { margin-top: 0; }
+.doc .spoiler-warning p:last-child  { margin-bottom: 0; }
 
 /* ─── Index / track listings ─────────────────────────────────── */
 
@@ -607,12 +694,318 @@ body {
 body.light #site-header .theme-toggle .theme-icon-moon { display: none; }
 body.light #site-header .theme-toggle .theme-icon-sun  { display: block; }
 
-/* ─── Mobile ─────────────────────────────────────────────────── */
+/* ─── Document meta (reading time) ────────────────────────────── */
+
+.doc-meta {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--dim);
+  margin: 0 0 1.6em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+.doc-meta-sep { opacity: 0.5; }
+
+/* ─── Heading anchors ─────────────────────────────────────────── */
+/* Hidden until the heading is hovered or the anchor itself is focused,
+ * so they never compete with the heading text, but are always reachable
+ * by keyboard. Absolute positioning keeps them out of the text flow so
+ * a heading's wrap points do not shift when one appears. */
+
+.doc h2, .doc h3, .doc h4 { position: relative; }
+
+.doc .anchor {
+  position: absolute;
+  left: -0.85em;
+  top: 0;
+  width: 0.85em;
+  color: var(--dim);
+  text-decoration: none;
+  opacity: 0;
+  font-weight: 400;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+.doc h2:hover .anchor,
+.doc h3:hover .anchor,
+.doc h4:hover .anchor,
+.doc .anchor:focus-visible {
+  opacity: 1;
+}
+.doc .anchor:hover { color: var(--accent); }
+.doc .anchor:focus-visible { opacity: 1; outline: 1px solid var(--accent); }
+
+/* A linked heading should land clear of the sticky header rather than
+ * flush against the viewport top. */
+.doc h2[id], .doc h3[id] { scroll-margin-top: 24px; }
+
+/* ─── TOC rail ────────────────────────────────────────────────── */
+
+.rail {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  font-size: 0.87em;
+  /* Thin scrollbar only when the rail actually overflows. */
+  scrollbar-width: thin;
+}
+
+.toc-title {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--dim);
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.toc-list, .toc-sub { list-style: none; margin: 0; padding: 0; }
+
+.toc-list > li { margin: 0 0 1px; }
+
+.toc-list a {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 10px;
+  color: var(--dim);
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.4;
+  transition: color 0.12s ease, background-color 0.12s ease,
+              border-color 0.12s ease;
+}
+.toc-list a:hover {
+  color: var(--fg-bright);
+  background: var(--bg-elev);
+}
+
+.toc-ord {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  opacity: 0.6;
+  flex: none;
+  min-width: 2.2em;
+}
+.toc-label { flex: 1; }
+
+/* Current section, set by reader.js scroll-spy. */
+.toc-list > li.is-active > a {
+  color: var(--fg-bright);
+  border-left-color: var(--accent);
+  background: var(--bg-elev);
+}
+
+/* Subheadings are collapsed by default and revealed only for the
+ * section being read. The densest walkthrough has 40 of them; showing
+ * every one at once would make the rail longer than the viewport and
+ * useless for orientation. */
+.toc-sub {
+  display: none;
+  margin: 2px 0 6px 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+  margin-left: 10px;
+}
+.toc-list > li.is-active > .toc-sub { display: block; }
+
+.toc-sub a {
+  font-size: 0.94em;
+  padding: 3px 10px;
+  border-left: 0;
+  color: var(--dim);
+}
+.toc-sub a:hover { color: var(--accent); background: transparent; }
+
+.toc-top {
+  display: inline-block;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  color: var(--dim);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+.toc-top:hover { color: var(--accent); }
+
+/* Mobile TOC: a native <details> above the article. Hidden on desktop
+ * where the rail is visible. Same links in both, emitted once. */
+.toc-mobile { display: none; }
+.toc-mobile summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--dim);
+  padding: 10px 0;
+}
+.toc-mobile[open] summary { color: var(--fg-bright); }
+.toc-mobile .toc-list {
+  padding: 4px 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.4em;
+}
+
+/* ─── Prev / next pager ───────────────────────────────────────── */
+
+.pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 3.5em;
+  padding-top: 1.8em;
+  border-top: 1px solid var(--border);
+}
+.pager-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-decoration: none;
+  background: var(--bg-elev);
+  transition: border-color 0.15s ease;
+}
+.pager-cell:hover { border-color: var(--accent); }
+.pager-empty { border: 0; background: none; }
+.pager-next { text-align: right; }
+.pager-dir {
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--dim);
+}
+.pager-label {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--accent);
+}
+.pager-title { font-size: 0.9em; color: var(--fg); }
+
+/* ─── Search (index page only) ────────────────────────────────── */
+/* Hidden until search.js confirms the index loaded, so a failed fetch
+ * leaves no dead control on the page. */
+
+.search-wrap { display: none; margin: 2em 0 2.4em; }
+.search-wrap.search-ready { display: block; }
+
+.search-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+.search-input {
+  width: 100%;
+  padding: 11px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  color: var(--fg-bright);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.search-input::placeholder { color: var(--dim); }
+.search-hint {
+  font-size: 0.82em;
+  color: var(--dim);
+  margin: 6px 0 0;
+}
+
+.search-count, .search-empty {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--dim);
+  margin: 14px 0 8px;
+}
+.search-list { list-style: none; margin: 0; padding: 0; }
+.search-list li { margin: 0 0 8px; }
+.search-list a {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elev);
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+.search-list a:hover { border-color: var(--accent); }
+.search-hit-head {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--accent);
+}
+.search-hit-section {
+  display: block;
+  font-size: 0.9em;
+  color: var(--fg-bright);
+  margin-top: 2px;
+}
+.search-hit-snippet {
+  display: block;
+  font-size: 0.85em;
+  color: var(--dim);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* Index-page track listing count chips. */
+.track-list .count { color: var(--green); font-size: 0.85em; }
+.track-list .count-empty { color: var(--dim); }
+.track-list .dim { color: var(--dim); }
+
+/* ─── Responsive ──────────────────────────────────────────────── */
+
+/* Below the two-column threshold the rail is dropped entirely and the
+ * mobile <details> TOC takes over. The breakpoint is set by content,
+ * not by device: 1100px is where the measure plus the rail plus the
+ * gutters stop fitting without squeezing the column. */
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: calc(var(--measure) + 48px);
+    gap: 0;
+  }
+  .rail { display: none; }
+  .toc-mobile { display: block; }
+}
 
 @media (max-width: 600px) {
   body { font-size: 16px; }
-  #article { padding: 32px 18px 64px; }
-  #article h1 { font-size: 1.6em; }
-  #article h2 { font-size: 1.25em; }
+  .layout, .doc-narrow { padding: 32px 18px 64px; }
+  .doc h1, .doc-narrow h1 { font-size: 1.6em; }
+  .doc h2, .doc-narrow h2 { font-size: 1.25em; }
   #site-header { padding: 12px 18px; gap: 12px; flex-wrap: wrap; }
+  /* Anchors sit inside the measure on narrow screens, where there is
+   * no left gutter to hang them in. */
+  .doc .anchor { left: auto; right: 0; }
+  .pager { grid-template-columns: 1fr; }
+  .pager-next { text-align: left; }
+  .index-title .brand-cascade { font-size: 40px; }
+  .index-title-sub { font-size: 22px; }
+}
+
+/* Readers who ask for reduced motion also lose the colour and border
+ * transitions. Scroll behaviour is already instant for everyone (see
+ * the note by the `html` rule above), so it is not repeated here. */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; }
 }
