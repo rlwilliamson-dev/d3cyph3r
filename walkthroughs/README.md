@@ -111,7 +111,74 @@ section dividers when starting a new file.
 | 7 | What a defender does          | Concrete tools, audit evidence, and a **required** `### Sample detection rule (Sigma)` subsection (see note) |
 | 7.5 | Optional exploration        | Bonus finds + any optional content (pivot hosts, verification commands). Spoiler-tolerant section; see template below |
 | 8 | Key takeaways                 | 3–5 bullet study-guide summary                                           |
-| 9 | Further reading              | Primary sources, vendor docs, books — links only, no commentary needed   |
+| 9 | Further reading              | The numbered source list, plus unnumbered pointers. See "Citations" below |
+
+## Citations
+
+Claims carry a numbered marker that links to the source at the bottom
+of the page, and each source links back to every place it was cited.
+
+Write the marker directly after the claim it supports:
+
+```markdown
+DFARS gives contractors 72 hours to report.[^dfars-7012]
+```
+
+and define it once, in §9:
+
+```markdown
+[^dfars-7012]: [DFARS 252.204-7012](https://www.ecfr.gov/current/title-48/...).
+    An optional sentence about what the source is good for.
+```
+
+That is GitHub-flavoured footnote syntax, so the raw `.md` still
+renders as a numbered reference list on GitHub. **Never write a
+number** — the generator assigns them in order of first citation, so
+inserting a paragraph renumbers everything automatically.
+
+Keys are lowercase, and the convention is to name the thing rather
+than describe it: `cwe-250`, `t1548-003`, `cve-2021-3156`, `rfc-7519`,
+`nist-800-53`, `cfr-12-30`, `owasp-a01-2025`. When two sources cover
+the same identifier, qualify by publisher: `cve-2021-3156-qualys`
+alongside `cve-2021-3156-nvd`.
+
+### What to cite
+
+Cite where a reader could reasonably ask "says who?":
+
+- the first substantive mention of a standard, CWE, ATT&CK technique,
+  CVE, or regulation
+- any notification clock, penalty figure, or affected-count
+- any named incident, with its date
+- any claim about how a specific product behaves
+- any cert-exam claim in §6
+
+Do not cite the same source twice in one paragraph, and do not add a
+marker where the sentence already links that source inline. Two
+pointers to one destination is noise, and the build has a guard
+against the first case but not the second.
+
+### Sources cited vs further reading
+
+§9 holds two lists and the distinction is load-bearing:
+
+- **Footnote definitions** are cited sources. They are numbered, and
+  the build FAILS if one is never cited. That rule is what keeps the
+  numbered list an audit trail rather than a pile of links that
+  accumulate because deleting one feels like a loss.
+- **A plain bullet list under `### Further reading`** holds pointers
+  that back no particular claim: a tool, a course, a standing
+  reference. Unnumbered, and no build rule applies.
+
+If a source will not attach to a specific sentence, it belongs in the
+second list. Do not manufacture a claim for it.
+
+### What the build enforces
+
+An unknown key, a duplicate definition, a definition with no link or
+more than one link, a marker inside a definition, and a
+defined-but-never-cited source all fail `tools/build-walkthroughs.mjs`.
+Nothing is written when they do.
 
 ### §7.5 Optional exploration — author guide (v1.10.0)
 
@@ -357,17 +424,23 @@ spend. Do not widen this band again to accommodate growth; cut instead.
 ## Pre-merge checklist for a new walkthrough
 
 - [ ] Markdown file at `walkthroughs/<track>/<level>.md`
-- [ ] `MANIFEST` in `walkthrough.js` updated with `title` and `blurb`
+- [ ] `MANIFEST` in `walkthroughs/manifest.mjs` updated with `title`
+      and `blurb`
 - [ ] Spoiler warning is the first content block (starts with `⚠`)
 - [ ] Every framework/cert cited in the in-game `lessons-learned.md`
       has a corresponding subsection
-- [ ] Real-world parallels are linked in §9 Further Reading
+- [ ] Real-world parallels are cited in the body, not only listed
+- [ ] Every checkable claim carries a citation marker (see "Citations")
+- [ ] `node tools/build-walkthroughs.mjs` passes, and the generated
+      `.html` is committed alongside the `.md`
+- [ ] **`node tools/check-links.mjs <track>/<level>` reports no DEAD
+      links.** Investigate MOVED and BLOCKED by hand; see "Link audit"
 - [ ] No raw HTML in the markdown — pure markdown only
 - [ ] Locally rendered via `python3 -m http.server` and visually
       reviewed for layout issues
-- [ ] **Link audit pass run via a general-purpose research agent**
-      (see "Link audit" section below). Apply any corrections; bump
-      the "Last reviewed" date at the top of §9.
+- [ ] **Content audit pass run** (see "Link audit" section below).
+      Apply any corrections; bump the "Last reviewed" date at the top
+      of §9.
 - [ ] Anti-spoiler exception: walkthrough is allowed to contain
       passwords / breadcrumb credentials (this is intentional). The
       anti-spoiler rule applies only to CHANGELOG, README, release
@@ -392,7 +465,39 @@ Historical-case attributions accumulate corrections over time
 Every walkthrough PR — *including small edits to an existing
 walkthrough* — must run a link-audit pass before merge.
 
-**The audit covers BOTH files:**
+**There are two halves, and they catch different things.**
+
+### 1. The mechanical half: `tools/check-links.mjs`
+
+```bash
+node tools/check-links.mjs                  # the whole corpus
+node tools/check-links.mjs forensics/level3 # one walkthrough
+```
+
+Requests every URL and classifies it. Only 404, 410, and DNS or TLS
+failures fail the run. 403 and 429 are reported as BLOCKED (bot
+protection, not a dead page), a 3xx to a different path as MOVED, and
+5xx as FLAKY. Fix every DEAD before merge and read the MOVED list,
+since a redirect that lands on a blog home page means the article is
+gone even though the link "works".
+
+This runs weekly in CI (`.github/workflows/link-check.yml`) and opens
+an issue when something rots between releases. It is deliberately NOT
+in the blocking build: the generator is hermetic and can be required on
+every PR, whereas a network check would fail an unrelated diff because
+a government site chose that morning to rate-limit.
+
+**It cannot tell you a 200 is the right page.** justice.gov answers any
+non-browser client with an interstitial challenge under a 200, for real
+and imaginary paths alike, so citations behind that kind of bot wall
+still need a human to open them.
+
+### 2. The content half
+
+The checker verifies that a URL resolves. It has nothing to say about
+whether the version, control number, or figure you cited is still
+current, which is the drift that actually embarrasses us. That half is
+a research pass, and it covers BOTH files:
 
 - The walkthrough markdown (`walkthroughs/<track>/<level>.md`)
 - The corresponding in-game lessons-learned content in
@@ -407,11 +512,12 @@ Both drift the same way. Both must stay current.
    `subagent_type: general-purpose`) and give it BOTH file paths
    (walkthrough + level), plus today's date.
 2. Ask it to verify, for each citation in both files: current
-   canonical version (is the version cited still the latest?),
-   current canonical URL (does it still resolve?), and any
-   body-text claims tied to those sources (cert exam codes,
+   canonical version (is the version cited still the latest?) and
+   any body-text claims tied to those sources (cert exam codes,
    control numbers, regulation citation IDs, breach incident
-   figures, historical-case dates and attributions).
+   figures, historical-case dates and attributions). URL
+   resolution is already covered by half 1 — don't spend agent
+   time re-checking it.
 3. The agent should report as a structured list — one entry per
    item with status (✓ current / ⚠ needs update / ✗ broken),
    corrected URL/version if needed, and a one-line "what to change"

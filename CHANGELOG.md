@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-08-06
+
+**Walkthrough claims now cite their sources.** Every walkthrough already ended in a list of links. Which link backed which sentence was left to the reader to guess, so "DFARS gives contractors 72 hours to report" sat near twenty-five sources and was supported by none of them in particular. Claims now carry a numbered marker that jumps to the source, and each source links back to every place it was cited.
+
+No gameplay changes.
+
+### Added
+
+- **380 inline citations across all 24 walkthroughs.** A small superscript number after a claim, resolving to a numbered source list at the foot of the page, with backlinks in both directions and a highlight on whichever entry you landed on. Placement was derived from the identifiers a claim already names (CWE, ATT&CK technique, CVE, RFC, NIST SP, CFR part, CIS Safeguard, OWASP entry) or a distinctive phrase from the source title. Anything that matched nothing went to further reading rather than being attached to a plausible-looking sentence.
+- **A separate "Further reading" list.** 316 sources back no particular claim: a tool, a course, a standing reference. Those keep their place, unnumbered. The split is what makes the numbered list worth something, and the build now fails if a numbered source is never actually cited.
+- **`tools/check-links.mjs`.** Requests every cited URL and classifies it: dead, moved, blocked by bot protection, or flaky. Zero dependencies. It runs weekly in CI and opens an issue when a citation rots, and stays out of the blocking build so that an unrelated change never goes red because a government website chose that morning to rate-limit.
+
+### Fixed
+
+- **67 rotted citations.** 15 were dead and 52 had moved. The interesting failures were the four that returned a perfectly healthy 200: Threatpost is defunct and its Code Spaces link now lands on a story about bank fraud, while Naked Security and LinkedIn's 2012 advisory both redirect to a blog home page. Those looked fine and were wrong. Also: Vermont's Attorney General has stopped publishing breach-notice PDFs entirely, Toyota took its own T-Connect disclosure offline, and one FTC link was simply missing its last path segment.
+- **A claim with no support behind it.** `level2@forensics` asserted a specific 2024 Cellebrite release note about write-ahead-log recovery, cited to a product page for link-analysis software that says nothing of the kind. The general point survives; the invented specific does not.
+- **Four incompatible reference formats.** §9 had drifted into flat lists, organisation-prefixed lists, annotated lists with sub-headings, and bare autolinks with sub-headings. All 24 now use one format, and twelve entries that had packed several sources onto a single line are split so that "go to the source" has one answer.
+
 ## [2.6.0] - 2026-08-06
 
 **The in-game post-mortem is now a debrief rather than a compressed walkthrough.** The two surfaces shared 99% of their weakness citations, which made the shorter one redundant and produced a maintenance liability that had already diverged. They now divide by purpose: the post-mortem is read immediately, in character, while the level is fresh; the walkthrough is the study session read afterwards.
@@ -3982,7 +4000,13 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.6.0...v2.7.0
+[2.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.5.0...v2.6.0
+[2.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.4.2...v2.5.0
+[2.4.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.4.1...v2.4.2
+[2.4.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.4.0...v2.4.1
+[2.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.1...v2.2.0
