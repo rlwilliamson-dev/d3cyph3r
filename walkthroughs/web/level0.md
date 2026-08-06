@@ -236,9 +236,9 @@ Three named, well-documented incidents follow this exact pattern. Each was a maj
 
 ### Maricopa Community Colleges — 2013-2014
 
-In November 2013, the Maricopa County Community College District — the largest community college system in Arizona and one of the largest in the United States — discovered that personal information for approximately **2.49 million current and former students, employees, and vendors** had been exposed via a misconfigured web server. The records included names, dates of birth, Social Security numbers, demographic information, and academic records covering individuals dating back to 1980. The cause, per the district's subsequent disclosures and the FTC complaint that followed, was an information-security failure that had been flagged internally as early as 2011 and had remained unremediated.
+In November 2013, the Maricopa County Community College District — the largest community college system in Arizona and one of the largest in the United States — discovered that personal information for approximately **2.49 million current and former students, employees, and vendors** had been exposed via a misconfigured web server. The records included names, dates of birth, Social Security numbers, demographic information, and academic records covering individuals dating back to 1980. The cause, per the district's subsequent disclosures and the class-action litigation that followed, was an information-security failure that had been flagged internally as early as 2011 and had remained unremediated.
 
-The technical mechanism was different in detail from Meridian's autoindex exposure, but the *institutional pattern* is identical. Maricopa had outsourced parts of its IT infrastructure; the vendor relationship produced data sprawl across multiple web-facing systems; an internal audit identified the exposure; the audit's findings were not remediated; the exposure persisted for years until external discovery forced the issue. The district paid an estimated **$26 million in breach-response costs**, including identity-monitoring services for affected individuals and class-action settlements that ran into 2018.
+The technical mechanism was different in detail from Meridian's autoindex exposure, but the *institutional pattern* is identical. Maricopa had outsourced parts of its IT infrastructure; the vendor relationship produced data sprawl across multiple web-facing systems; an internal audit identified the exposure; the audit's findings were not remediated; the exposure persisted for years until external discovery forced the issue. The district paid an estimated **$26 million in breach-response costs**, including identity-monitoring services for affected individuals and class-action settlements that ran into 2018.[^maricopa-class-action]
 
 For higher-education specifically, the Maricopa breach is the canonical case study of "the vendor introduced the exposure; the institution carries the regulatory and reputational burden." FERPA's enforcement mechanism — withdrawal of federal funding — was specifically discussed in the post-incident commentary, though the Department of Education did not invoke it in this case.[^cfr-34-99] The lesson Meridian's general counsel would draw from Maricopa: vendor-introduced FERPA exposures do not stay vendor problems; they become institutional problems the moment they're discovered.
 
@@ -581,6 +581,7 @@ The historical "best practice" of using robots.txt to hide things is the most re
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cwe-1392]: [CWE-1392](https://cwe.mitre.org/data/definitions/1392.html).
 [^cwe-668]: [CWE-668](https://cwe.mitre.org/data/definitions/668.html).
+[^maricopa-class-action]: [Maricopa County Community Colleges District data breach — class-action case summary (Hagens Berman)](https://www.hbsslaw.com/cases/maricopa-county-community-colleges-district-data-breach). 2.49 million records; the district's remediation spend approached $26 million.
 
 ### Further reading
 
@@ -591,7 +592,6 @@ The historical "best practice" of using robots.txt to hide things is the most re
 - [MITRE ATT&CK — T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/).
 - [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/).
 - [Apache HTTP Server — mod_autoindex documentation](https://httpd.apache.org/docs/2.4/mod/mod_autoindex.html).
-- [Maricopa Community Colleges 2013 data breach — Hagens Berman class-action case summary](https://www.hbsslaw.com/cases/maricopa-county-community-colleges-district-data-breach).
 - [gobuster — directory brute-forcer](https://github.com/OJ/gobuster).
 - [ffuf — fast web fuzzer](https://github.com/ffuf/ffuf).
 - [dirsearch — web path scanner](https://github.com/maurosoria/dirsearch).

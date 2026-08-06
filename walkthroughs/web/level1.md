@@ -363,7 +363,7 @@ The Krebs on Security report that broke the story estimated **roughly 60 million
 
 Optus — Australia's second-largest telecommunications carrier — disclosed in September 2022 that an attacker had exfiltrated personal data on customers via an unauthenticated API endpoint. The technical mechanism was IDOR-adjacent: an API endpoint that returned customer records by ID, with no authentication requirement at all. The attacker incremented through the customer-ID range and pulled records sequentially.
 
-Public figures evolved as the investigation progressed. Optus's own early disclosure named "up to 10 million" affected customers; the OAIC's August 2025 Federal Court civil-penalty filing alleges interference with the privacy of approximately **9.5 million** Australians, with approximately 2.1 million having government-issued ID numbers (driver's licenses, passports, Medicare numbers) exposed. The Australian Federal Police investigation, the single OAIC civil-penalty proceeding filed in August 2025 (alleging contraventions with potential per-contravention penalties up to AUD $2.22 million), and the **AUD ~$140 million** Optus reserved for breach remediation (Equifax Protect subscriptions for affected customers, the Deloitte external review, replacement-document costs) make this one of the most consequential privacy incidents in Australian history.
+Public figures evolved as the investigation progressed. Optus's own early disclosure named "up to 10 million" affected customers; the OAIC's August 2025 Federal Court civil-penalty filing alleges interference with the privacy of approximately **9.5 million** Australians, with approximately 2.1 million having government-issued ID numbers (driver's licenses, passports, Medicare numbers) exposed. The Australian Federal Police investigation, the single OAIC civil-penalty proceeding filed in August 2025 (alleging contraventions with potential per-contravention penalties up to AUD $2.22 million), and the **AUD ~$140 million** Optus reserved for breach remediation (Equifax Protect subscriptions for affected customers, the Deloitte external review, replacement-document costs) make this one of the most consequential privacy incidents in Australian history.[^optus-oaic-penalty]
 
 Optus's case is the *unauthenticated* variant of IDOR — Carlos's endpoint is the *authenticated* variant. The defender's discipline difference: Optus's API had no authentication of any kind; Carlos's has authentication but no authorization. The blast radius shape is the same; the remediation conversation is different.
 
@@ -371,7 +371,7 @@ Optus's case is the *unauthenticated* variant of IDOR — Carlos's endpoint is t
 
 T-Mobile US disclosed in January 2023 that an attacker had used an API to obtain personal data on approximately **37 million** prepaid and postpaid customers. The exfiltration began in late November 2022 and was detected and stopped in mid-January 2023, an approximately seven-week window. The technical mechanism, per T-Mobile's SEC 8-K disclosure, was abuse of an API endpoint that returned customer records without adequate access controls on the resource being requested.
 
-The OWASP API Security Top 10's framing labels this category **API1:2023 — Broken Object Level Authorization (BOLA)**. T-Mobile's incident is the canonical recent reminder that BOLA at scale, against a high-value data set, produces immediate breach disclosures and regulatory follow-on (the FCC opened an investigation; T-Mobile had previously paid US$350 million to settle a class action stemming from an earlier 2021 breach, so the pattern repetition mattered).
+The OWASP API Security Top 10's framing labels this category **API1:2023 — Broken Object Level Authorization (BOLA)**. T-Mobile's incident is the canonical recent reminder that BOLA at scale, against a high-value data set, produces immediate breach disclosures and regulatory follow-on (the FCC opened an investigation; T-Mobile had previously paid US$350 million to settle a class action stemming from an earlier 2021 breach, so the pattern repetition mattered).[^tmobile-2023-8k]
 
 ### The base rate
 
@@ -675,6 +675,8 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 [^cwe-200]: [CWE-200](https://cwe.mitre.org/data/definitions/200.html).
 [^cwe-540]: [CWE-540](https://cwe.mitre.org/data/definitions/540.html).
 [^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://csrc.nist.gov/pubs/sp/800/63/b/4/final).
+[^optus-oaic-penalty]: [Australian Information Commissioner takes civil penalty action against Optus (OAIC, August 2025)](https://www.oaic.gov.au/news/media-centre/australian-information-commissioner-takes-civil-penalty-action-against-optus). Alleges one contravention for each of roughly 9.5 million individuals, at up to AUD $2.22 million per contravention.
+[^tmobile-2023-8k]: [T-Mobile Form 8-K, 19 January 2023 (SEC)](https://www.sec.gov/Archives/edgar/data/1283699/000119312523010949/d641142d8k.htm). The disclosure of the API-abuse incident.
 
 ### Further reading
 
@@ -687,8 +689,6 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 - [Open Policy Agent (OPA)](https://www.openpolicyagent.org/).
 - [Casbin](https://casbin.apache.org/).
 - [Oso](https://www.osohq.com/).
-- [Optus 2022 — OAIC public statement and updates](https://www.oaic.gov.au/). The OAIC's enforcement page tracks the multiple proceedings against Optus across 2022-2025.
-- [T-Mobile 2023 — SEC 8-K disclosure (January 19, 2023)](https://www.sec.gov/Archives/edgar/data/1283699/000119312523010949/d641142d8k.htm). The official disclosure document.
 - [HackerOne *Hacker-Powered Security Report* (evergreen landing)](https://www.hackerone.com/report/hacker-powered-security). Industry-wide vulnerability-class frequencies.
 - [Semgrep registry](https://semgrep.dev/r/). Search for `idor`, `bola`, `authorization`.
 - [CodeQL](https://codeql.github.com/). GitHub-native semantic code analysis with IDOR-aware queries in the default JavaScript, Python, and Java suites.

@@ -164,7 +164,7 @@ Three named, well-documented incidents follow this exact pattern. Each was a maj
 
 In late 2016, a researcher at GDI Foundation began documenting cases of unauthenticated MongoDB instances on the public internet being wiped and replaced with a ransom note demanding bitcoin payment.[^gdi-foundation-mongodb-ransom-attack] The technique was trivial: the attacker ran a Shodan query for MongoDB's default port (27017), connected without credentials (older MongoDB versions defaulted to no authentication enabled), dumped or destroyed the databases, and left a single record in a `WARNING` collection demanding ~0.2 BTC for "recovery." By January 2017, the count of compromised instances had passed 28,000.
 
-The campaign continued through 2017, expanded to Elasticsearch (port 9200), Hadoop (port 8020 and others), CouchDB (port 5984), and Cassandra. A 2020 follow-up campaign called "Meow" — named for its calling card, the string `meow` appended to wiped databases — destroyed roughly 4,000 databases in a single week in July of that year, with no ransom demand at all. The attacker simply deleted what they found.
+The campaign continued through 2017, expanded to Elasticsearch (port 9200), Hadoop (port 8020 and others), CouchDB (port 5984), and Cassandra. A 2020 follow-up campaign called "Meow" — named for its calling card, the string `meow` appended to wiped databases — destroyed roughly 4,000 databases in a single week in July of that year,[^meow-2020] with no ransom demand at all. The attacker simply deleted what they found.
 
 What makes this the closest parallel to the Atlas Health finding is the mechanism. The campaign was not the result of zero-day exploitation; it required no skill beyond writing a Shodan query and copy-pasting the appropriate database client command. The vulnerability was the public exposure itself. Every organization affected had a database server bound to the internet that, by some combination of intent and inattention, should not have been. The 2017 campaigns hit hospitals, school districts, dating sites, retail companies, and one US-state-level Department of Motor Vehicles. Atlas Health's exposed postgres is the same shape, with a credential layer the MongoDB and Elasticsearch campaigns mostly didn't have. If the credential were rotated, the exposed port would still be a finding — and the moment any future credential leaked into a breach corpus, the door would be open.
 
@@ -182,7 +182,7 @@ UHS was not the only large healthcare ransomware event of 2020 — Cerner, Magel
 
 ### Change Healthcare — February 2024
 
-On February 21, 2024, Change Healthcare — a subsidiary of UnitedHealth Group that processes roughly one third of all US healthcare payment transactions — was breached by the ALPHV/BlackCat ransomware affiliate program. The attacker disrupted payment processing across the US healthcare system for weeks; pharmacies could not verify insurance, providers could not submit claims, small medical practices ran out of operating cash. The Department of Health and Human Services issued emergency funding programs. UnitedHealth's CEO testified before Congress in May. The disclosed cost as of UnitedHealth's FY2024 financial statements was approximately $2.4 billion. The number of individuals whose PHI was exposed climbed across subsequent disclosures — initially reported around 100 million in October 2024, the HHS Office for Civil Rights count reached approximately 192.7 million by July 2025, making it by an enormous margin the largest US healthcare data breach on record.
+On February 21, 2024, Change Healthcare — a subsidiary of UnitedHealth Group that processes roughly one third of all US healthcare payment transactions — was breached by the ALPHV/BlackCat ransomware affiliate program. The attacker disrupted payment processing across the US healthcare system for weeks; pharmacies could not verify insurance, providers could not submit claims, small medical practices ran out of operating cash. The Department of Health and Human Services issued emergency funding programs. UnitedHealth's CEO testified before Congress in May. The cost reported in UnitedHealth's FY2024 annual results was approximately $3.1 billion: $2.2 billion of direct response costs plus $867 million of business disruption at Optum Insight.[^change-healthcare-8k] The number of individuals whose PHI was exposed climbed across subsequent disclosures — initially reported around 100 million in October 2024, the HHS Office for Civil Rights count reached approximately 192.7 million by July 2025, making it by an enormous margin the largest US healthcare data breach on record.
 
 The initial access vector, per UnitedHealth's congressional testimony, was a Citrix portal that did not have multi-factor authentication enforced. The attacker used a compromised credential — exact source disclosed but not central to this analysis — to log in. From there, they pivoted, escalated, deployed BlackCat across Change Healthcare's environment, and exfiltrated approximately 4 TB of data.
 
@@ -472,6 +472,8 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 [^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cwe-749]: [CWE-749](https://cwe.mitre.org/data/definitions/749.html).
+[^change-healthcare-8k]: [UnitedHealth Group Form 10-K, FY2024 (SEC)](https://www.sec.gov/Archives/edgar/data/731766/000073176625000063/unh-20241231.htm). Reports the full-year cyberattack impact: $2.2 billion of direct response costs plus $867 million of business disruption.
+[^meow-2020]: [New 'Meow' attack has deleted almost 4,000 unsecured databases (BleepingComputer, July 2020)](https://www.bleepingcomputer.com/news/security/new-meow-attack-has-deleted-almost-4-000-unsecured-databases/). Over 97% of the affected systems were Elasticsearch or MongoDB.
 
 ### Further reading
 
@@ -480,7 +482,6 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 - [MITRE ATT&CK — T1595.002: Active Scanning: Vulnerability Scanning](https://attack.mitre.org/techniques/T1595/002/).
 - [MITRE ATT&CK — T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/).
 - [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/).
-- [Change Healthcare February 2024 cyberattack — UnitedHealth Group 8-K filing (SEC, Feb 22 2024)](https://www.sec.gov/Archives/edgar/data/731766/000073176624000045/unh-20240221.htm).
 - [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/).
 - [Shodan — internet-wide scanner](https://www.shodan.io/).
 

@@ -270,7 +270,7 @@ changes nothing, as the next level demonstrates directly.
 
 Source-control credential leakage is one of the most documented categories of cybersecurity incident in modern history. A non-exhaustive tour:
 
-**Uber (2014, disclosed 2015).** Uber filed an early-2015 lawsuit that ultimately attributed a 2014 data breach to AWS credentials that an Uber engineer had committed to a public GitHub Gist. The credentials gated an S3 bucket containing personal data on ~50,000 Uber drivers. The 2014 breach was disclosed to drivers February 2015; the lawsuit was settled in 2016. Uber's *second* breach in 2016 (the much larger one, ~57M users + drivers, with the $148M FTC settlement and Joe Sullivan's prosecution) had different mechanics but is often conflated with the 2014 incident; the credential-in-GitHub vector is from the *first* incident.
+**Uber (2014, disclosed 2015).** Uber filed an early-2015 lawsuit that ultimately attributed a 2014 data breach to AWS credentials that an Uber engineer had committed to a public GitHub Gist. The credentials gated an S3 bucket containing personal data on ~50,000 Uber drivers. The 2014 breach was disclosed to drivers February 2015; the lawsuit was settled in 2016. Uber's *second* breach in 2016 (the much larger one, ~57M users + drivers, with the $148M all-50-states attorneys-general settlement and Joe Sullivan's prosecution)[^uber-2016-sullivan] had different mechanics but is often conflated with the 2014 incident; the credential-in-GitHub vector is from the *first* incident.
 
 **GitGuardian's annual "State of Secrets Sprawl" report** has tracked source-control secret exposure year over year since 2021.[^gitguardian-state-of-secrets-sprawl] The 2024 report counted 12.8 million new secrets exposed in public commits during 2023; the **2026 report (5th edition, published March 17, 2026) tallied approximately 28.65 million new secrets exposed in public commits during 2025** — a 34% year-over-year increase — with AWS, GitHub, and database credentials consistently in the top three categories. Snyk's annual State of Open Source Security report tracks dependency vulnerabilities rather than committed secrets, but their related practitioner-survey data shows secret-in-source-code findings as a top-five category in real-world code review.
 
@@ -594,6 +594,7 @@ For broader awareness: every fitness app, every social media platform, every "fi
 [^t1589-001]: [MITRE ATT&CK — T1589.001: Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/).
 [^t1591-002]: [MITRE ATT&CK — T1591.002: Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/).
 [^t1593-001]: [MITRE ATT&CK — T1593.001: Search Open Websites/Domains: Social Media](https://attack.mitre.org/techniques/T1593/001/).
+[^uber-2016-sullivan]: [Former Uber CSO convicted for covering up the 2016 breach (DOJ, N.D. Cal.)](https://www.justice.gov/usao-ndca/pr/former-chief-security-officer-uber-convicted-federal-charges-covering-data-breach). The prosecution arising from the concealed 2016 incident; Uber separately settled with all 50 states for $148 million in 2018.
 
 ### Further reading
 
@@ -607,7 +608,6 @@ For broader awareness: every fitness app, every social media platform, every "fi
 - [detect-secrets (Yelp)](https://github.com/Yelp/detect-secrets). Pre-commit hook with entropy-based detection.
 - [pre-commit framework](https://pre-commit.com/). The meta-framework for running hooks.
 - [AWS Security Token Service (STS)](https://docs.aws.amazon.com/STS/latest/APIReference/). The temporary-credential alternative to long-lived IAM access keys.
-- [Uber 2014/2016 breaches — Krebs on Security retrospective](https://krebsonsecurity.com/?s=uber). Brian Krebs's archive includes the 2014 incident (AWS-keys-in-GitHub) and the 2016 follow-on.
 - [Mercedes-Benz January 2024 (RedHunt Labs writeup)](https://redhuntlabs.com/blog/mercedes-benz-source-code-at-risk-github-token-mishap-sparks-major-security-concerns/). The PAT-in-public-repo finding.
 - [Wiz Microsoft AI Research September 2023 writeup](https://www.wiz.io/blog/38-terabytes-of-private-data-accidentally-exposed-by-microsoft-ai-researchers). The 38TB Azure SAS exposure.
 - [SANS GOSI / SEC497 reading list](https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/).

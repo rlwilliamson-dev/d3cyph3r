@@ -548,6 +548,65 @@ function uncitedIdentifiers(md, label) {
   ];
 }
 
+// A figure a reader could check: money, or a count of people or systems.
+//
+// The negative lookahead on 19xx/20xx keeps years out. "pre-2018
+// accounts that didn't opt in" is a date, not a population, and the
+// first version of this read it as one.
+const FIGURE =
+  /\$[\d,.]+ ?(?:million|billion|bn\b)|\b(?!(?:19|20)\d\d\s)\d[\d,]{2,}(?:\.\d+)? ?(?:million|billion)?\s*(?:records|accounts|customers|individuals|patients|users|victims|servers|databases|instances|machines)\b/i;
+
+// The fictional consultancy and its clients. Figures about Driftwood's
+// own engagements are authored worldbuilding, and demanding a source for
+// "roughly $80M in annual revenue" at a company that does not exist
+// would be absurd.
+// Case-insensitive on purpose: the same names appear as hostnames and
+// identifiers in lowercase (`meridian_portal`, `halton-prod-bastion`),
+// and a paragraph discussing the fictional CSV by its table name is
+// still discussing fiction.
+const IN_WORLD =
+  /Halton|Atlas|Vesta|Meridian|Polaris|Veridian|Coverline|Driftwood|BluePier|Reed|Daniel|Theo|Priya|Saanvi|Dana|Marisol/i;
+
+/**
+ * Paragraphs asserting a real-world figure with no citation anywhere in
+ * them.
+ *
+ * §3.5 and §4 are full of dollar amounts, record counts and penalty
+ * figures, and those are the most checkable claims a walkthrough makes
+ * and the easiest to get subtly wrong. This corpus had a Change
+ * Healthcare cost frozen at a mid-year estimate ($2.4bn against a final
+ * $3.1bn) and a $148 million settlement attributed to the FTC when it
+ * was a fifty-state attorneys-general action. Both sat unsourced.
+ *
+ * Checked per PARAGRAPH rather than per sentence: a figure usually
+ * appears in a run of sentences about one incident, and one citation on
+ * that run is the right density. Requiring one per sentence would push
+ * authors toward the citation clutter this is meant to avoid.
+ */
+function uncitedFigures(md, label) {
+  const nineAt = md.search(/^## .*Further reading/m);
+  if (nineAt < 0) return [];
+
+  const body = md.slice(0, nineAt).replace(/```[\s\S]*?```/g, " ");
+  const bad = [];
+
+  for (const para of body.split(/\n{2,}/)) {
+    if (para.includes("[^")) continue;
+    if (para.trimStart().startsWith("|")) continue; // handled by §3.5's own rows
+    if (!FIGURE.test(para)) continue;
+    if (IN_WORLD.test(para)) continue;
+
+    const hit = para.match(FIGURE)[0];
+    bad.push(hit.trim());
+  }
+
+  if (!bad.length) return [];
+  return [
+    `  ${label}: states ${bad.map((b) => `"${b}"`).join(", ")} about a ` +
+      `real-world incident with no source in the paragraph`,
+  ];
+}
+
 // Placeholder swapped for the rendered reference list after parsing.
 //
 // Position, not string surgery on the output: markdown rendering moves
@@ -879,6 +938,7 @@ function renderMarkdown(md, label = "") {
   // meets "CWE-863" can reasonably expect a link; prose claims need
   // editorial judgement and stay out of the build.
   problems.push(...uncitedIdentifiers(md, label));
+  problems.push(...uncitedFigures(md, label));
   if (defs.size && html.includes(REFS_TOKEN)) {
     problems.push(`  ${label}: internal error, the reference-list anchor survived rendering`);
   }

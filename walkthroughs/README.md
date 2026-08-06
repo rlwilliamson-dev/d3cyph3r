@@ -186,6 +186,26 @@ CVE, ATT&CK sub-technique, RFC and NIST SP numbers, which each have a
 canonical per-identifier page, so "named but unsourced" is a fact
 rather than an opinion.
 
+And **figures**. A paragraph stating a dollar amount or a count of
+people or systems about a real-world incident, with no citation
+anywhere in it, fails the build. Those are the most checkable claims a
+walkthrough makes and the easiest to get subtly wrong: this corpus had
+a Change Healthcare cost frozen at a mid-year estimate and a $148
+million settlement attributed to the FTC when it was a fifty-state
+attorneys-general action. Both sat unsourced for releases.
+
+Checked per paragraph, not per sentence — a figure usually sits in a
+run of sentences about one incident, and one citation on that run is
+the right density. Figures about Driftwood and its clients are exempt:
+demanding a source for the revenue of a company that does not exist
+would be absurd.
+
+**Authorial estimates are not citable and should not pretend to be.**
+"Roughly 80% of practical forensic queries" is a judgement; attaching a
+source to it would be false precision. Write those so a reader can tell
+which kind of claim they are reading ("the large majority of"), rather
+than dressing an opinion as a measurement.
+
 Both directions matter and they are not the same check. Verifying only
 that every listed source gets used says nothing about whether every
 claim has a source — which is how 53 identifiers ended up asserted in

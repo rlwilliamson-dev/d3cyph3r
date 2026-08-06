@@ -284,7 +284,7 @@ records. The proof and the harm are separated by where you choose to stop.
 
 **Sony Pictures, 2011 (LulzSec).** LulzSec used a single SQL injection against a Sony Pictures web property to extract users' names, passwords, email and home addresses, and dates of birth. It's the canonical example of a public web form with an unparameterized query behind it — one injectable parameter, the whole user table. [Wikipedia's LulzSec article](https://en.wikipedia.org/wiki/LulzSec) documents the incident.
 
-**TalkTalk, 2015.** The UK telecom TalkTalk suffered a SQL injection breach exposing the personal data of over 156,000 customers. The UK Information Commissioner's Office fined TalkTalk £400,000 — at the time a record — stressing that the attack exploited a SQL-injection flaw "well understood for more than ten years," on an out-of-date database, that known defences would have stopped. This is the regulatory parallel for Meridian: TalkTalk's fine came not just from the breach but from the *preventability* — the same framing FERPA and Cedarwood Mutual will apply. The [ICO's account of the investigation](https://ico.org.uk/about-the-ico/media-centre/talktalk-cyber-attack-how-the-ico-investigation-unfolded/) is the primary source.
+**TalkTalk, 2015.** The UK telecom TalkTalk suffered a SQL injection breach exposing the personal data of over 156,000 customers.[^talktalk-ico] The UK Information Commissioner's Office fined TalkTalk £400,000 — at the time a record — stressing that the attack exploited a SQL-injection flaw "well understood for more than ten years," on an out-of-date database, that known defences would have stopped. This is the regulatory parallel for Meridian: TalkTalk's fine came not just from the breach but from the *preventability* — the same framing FERPA and Cedarwood Mutual will apply. The [ICO's account of the investigation](https://ico.org.uk/about-the-ico/media-centre/talktalk-cyber-attack-how-the-ico-investigation-unfolded/) is the primary source.
 
 **MOVEit Transfer, 2023 (CVE-2023-34362).** The most consequential proof that SQL injection is not a solved problem: the Cl0p ransomware group exploited a SQL injection vulnerability in Progress Software's MOVEit Transfer file-transfer product to steal data from *thousands* of organizations — government agencies, universities, pension funds, corporations — affecting tens of millions of individuals. It was a textbook SQLi (untrusted input into a query) in widely-deployed enterprise software, in 2023. CISA issued an advisory; [the NVD entry for CVE-2023-34362](https://nvd.nist.gov/vuln/detail/CVE-2023-34362) and the [CISA advisory AA23-158A](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a) are the authoritative references. When OWASP says injection "dropped to A05 but stays on the list because the impact is total," MOVEit is the case they mean.
 
@@ -461,6 +461,7 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 [^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
 [^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
 [^cwe-639]: [CWE-639](https://cwe.mitre.org/data/definitions/639.html).
+[^talktalk-ico]: [TalkTalk cyber attack: how the ICO investigation unfolded](https://ico.org.uk/about-the-ico/media-centre/talktalk-cyber-attack-how-the-ico-investigation-unfolded/). 156,959 customers affected; a record £400,000 ICO fine.
 
 ### Further reading
 
@@ -472,7 +473,6 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 - [Heartland Payment Systems 2008 Albert Gonzalez (SQLi methodology)](https://en.wikipedia.org/wiki/Albert_Gonzalez).
 - [Heartland breach scope](https://en.wikipedia.org/wiki/Heartland_Payment_Systems#Security_breach).
 - [Sony Pictures / LulzSec 2011 Wikipedia (LulzSec)](https://en.wikipedia.org/wiki/LulzSec).
-- [TalkTalk 2015 ICO investigation account](https://ico.org.uk/about-the-ico/media-centre/talktalk-cyber-attack-how-the-ico-investigation-unfolded/).
 - [MOVEit Transfer 2023 (CVE-2023-34362) NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2023-34362).
 - [CISA advisory AA23-158A](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a).
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/cis-controls-list). — Control 16 (Application Software Security), Control 3 (Data Protection).

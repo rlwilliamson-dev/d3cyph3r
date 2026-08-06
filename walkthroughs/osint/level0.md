@@ -151,7 +151,7 @@ Three named, well-documented incidents where credential reuse — recovered from
 
 In early October 2023, attackers used credential stuffing against the genetic-testing service 23andMe, accessing approximately 14,000 user accounts directly.[^23andme-credential-stuffing-breach-23andme] The compromise itself was unremarkable in scale — credential-stuffing attacks of that magnitude happen daily across the consumer internet. What made the 23andMe case notable was the *secondary blast radius*: 23andMe's relative-sharing features, which let users opt into sharing limited genetic data with relatives in the service's database, meant that the ~14,000 directly-compromised accounts gave the attackers access to data fragments for approximately **6.9 million additional users** — roughly **5.5 million** via DNA Relatives profiles plus another **1.4 million** via Family Tree profiles — who had shared with the compromised accounts.
 
-23andMe confirmed the breach publicly on October 6, 2023. Investigation took until December for the company to begin notifying affected users. The exposed data included names, profile photos, ancestry-percentage breakdowns, locations, and (in some cases) DNA segment information — the kind of personal data that is uniquely sensitive because it does not change and cannot be rotated. Class-action litigation followed; 23andMe initially settled the consolidated cases for **$30 million in September 2024**, a figure subsequently revised upward to **$50 million** with final court approval on **January 30, 2026**, post-bankruptcy. The company filed for Chapter 11 bankruptcy in March 2025, citing the breach's financial and reputational impact as a contributing factor.
+23andMe confirmed the breach publicly on October 6, 2023. Investigation took until December for the company to begin notifying affected users. The exposed data included names, profile photos, ancestry-percentage breakdowns, locations, and (in some cases) DNA segment information — the kind of personal data that is uniquely sensitive because it does not change and cannot be rotated. Class-action litigation followed; 23andMe initially settled the consolidated cases for **$30 million in September 2024**, a figure subsequently revised upward to **$50 million** with final court approval on **January 30, 2026**, post-bankruptcy.[^23andme-settlement] The company filed for Chapter 11 bankruptcy in March 2025, citing the breach's financial and reputational impact as a contributing factor.
 
 The relevance to Aaron is the underlying technique. 23andMe wasn't breached through any vulnerability in their own infrastructure. The attackers used credentials *that had been reused* from prior breaches — names like LinkedIn, MyFitnessPal, Yahoo, Adobe (the same breaches Aaron appears in) — and tested them against 23andMe's login system. Accounts where the user's 23andMe password was the same as their LinkedIn-2012 password got compromised. The remediation 23andMe imposed post-incident was mandatory 2FA on all accounts, which would have prevented the attack regardless of the password-reuse failure.
 
@@ -499,6 +499,7 @@ The historical lesson is for product designers: **never store password hints in 
 [^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
 [^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
 [^t1591-002]: [MITRE ATT&CK — T1591.002: Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/).
+[^23andme-settlement]: [23andMe settlement filing — In re 23andMe Inc. Customer Data Security Breach Litigation (Sept 2024)](https://www.courtlistener.com/docket/68160775/in-re-23andme-inc-customer-data-security-breach-litigation/).
 
 ### Further reading
 
@@ -509,7 +510,6 @@ The historical lesson is for product designers: **never store password hints in 
 - [MITRE ATT&CK — T1078.004: Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/).
 - [HIBP Pwned Passwords API (k-anonymity, free)](https://haveibeenpwned.com/Passwords).
 - [Massachusetts 201 CMR 17.00 — Standards for the Protection of Personal Information](https://www.mass.gov/regulations/201-CMR-1700-standards-for-the-protection-of-personal-information-of-residents-of-the-commonwealth).
-- [23andMe settlement filing — In re 23andMe Inc. Customer Data Security Breach Litigation (Sept 2024)](https://www.courtlistener.com/docket/68160775/in-re-23andme-inc-customer-data-security-breach-litigation/).
 - [SANS SEC497 — Practical Open-Source Intelligence (OSINT) — effectively replaced SEC487](https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/).
 - [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/).
 - [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach).

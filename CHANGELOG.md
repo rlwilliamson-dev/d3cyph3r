@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-08-06
+
+**Every figure in the corpus was checked against a source, and the ones that hold now cite it.** 26 sentences asserted a dollar amount, a record count or a court date about a real incident with nothing behind them. All were verified; two were wrong.
+
+No gameplay changes.
+
+### Fixed
+
+- **Change Healthcare's cost was frozen at a mid-year estimate.** The walkthrough carried $2.4 billion. UnitedHealth's FY2024 annual results report $3.1 billion: $2.2 billion of direct response costs plus $867 million of business disruption at Optum Insight.
+- **A $148 million settlement attributed to the wrong regulator.** Uber's 2016 breach settlement was with all fifty state attorneys general, not the FTC. Uber settled with the FTC separately, through an expanded consent order carrying no monetary penalty.
+- **An FTC enforcement action that never happened.** The Maricopa Community Colleges walkthrough referred to "the FTC complaint that followed". A complaint was filed *with* the FTC by a third party asking it to investigate, which is a different thing and reads as the first.
+- **Two more citations that pointed nowhere useful.** A Krebs on Security *search query* stood in for the Uber coverage, and the OAIC *homepage* for the Optus penalty proceeding. Both replaced with the specific documents.
+
+### Added
+
+- **Sources for 26 figure claims**, verified against reporting or a primary filing: Deep Root's 198 million records, Capital One's 100 million and the $80 million OCC penalty, Cisco's 456 deleted virtual machines, CommonSpirit's 623,774 patients, Scripps at $113 million, UHS at $67 million, the Meow campaign's 4,000 databases, TalkTalk's 156,959 customers, Optus at AUD $2.22 million per contravention, and the rest. Most already existed in the corpus, sitting in the unnumbered further-reading list instead of attached to the claim they support.
+- **A build gate on unsourced figures.** A paragraph stating a dollar amount or a count of people or systems about a real-world incident, with no citation in it, now fails the build. Figures about Driftwood and its fictional clients are exempt.
+
+### Changed
+
+- **Authorial estimates no longer read as measurements.** "Approximately 80% of practical forensic queries" and "fails roughly 5-15% of the time at scale" are judgements, not findings. Attaching a source to them would be false precision, so they are now written as the judgements they are.
+
 ## [2.9.0] - 2026-08-06
 
 **Every citation now has to point at the page it claims.** v2.7.0 and v2.8.0 checked that each listed source got used. Nothing checked the reverse — that each claim had a source — or that a link went where it said it did. Both gaps are now closed and enforced.
@@ -4036,7 +4058,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.9.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.10.0...HEAD
+[2.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.6.0...v2.7.0
