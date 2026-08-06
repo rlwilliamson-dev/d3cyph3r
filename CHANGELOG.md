@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Walkthroughs described levels as unbuilt after they had shipped.** A walkthrough written before the next level existed naturally calls it "a future `level3@linux`", and nothing went back to correct that once the level became playable. `linux/level1` went further and told readers outright that `level2@linux` "hasn't been built yet" and was unreachable from the lobby, which was wrong for two releases. Corrected in `linux/level1`, `linux/level2`, and `crypto/level2`.
 
+  A full sweep found ten in total across five files, and the second half only turned up because the first pass's vocabulary was too narrow. "The eventual `level2@crypto`" and "at time of writing, `level2@network` hasn't shipped yet" appeared in the level1 walkthroughs of three tracks, all written before their level2 existed. The credentials those passages publish were checked against the shipped level data and are still correct; only the prose around them was wrong.
+
   The build now catches this class rather than relying on anyone remembering: the generator knows which levels exist, and shipping a new one makes the previous walkthrough's forward reference fail until it is rewritten. Describing a level that genuinely does not exist yet as "a future" level is still correct and still passes; the check only objects once the statement stops being true.
 
 ### Changed

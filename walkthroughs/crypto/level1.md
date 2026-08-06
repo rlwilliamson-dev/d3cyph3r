@@ -193,14 +193,14 @@ vesta-deploy@crypto:~$ exit
 
 ### Step 7 (game-world only): Use the breadcrumb
 
-In a real engagement, today ends here. In D3CYPH3R the credential chain continues into the eventual `level2@crypto`, where the `handoff_token` you extracted becomes the entry point.
+In a real engagement, today ends here. In D3CYPH3R the credential chain continues into `level2@crypto`, where the `handoff_token` you extracted becomes the entry point.
 
 ```bash
 guest@d3cyph3r:~$ ssh level2@crypto
 level2@crypto's password: vesta-admin-handoff-2026
 ```
 
-(At time of writing, `level2@crypto` hasn't shipped yet. The credential chain is staged for it.)
+`level2@crypto` is playable, and its walkthrough picks up from here.
 
 ## §3 — The vulnerability
 

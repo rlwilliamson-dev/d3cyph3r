@@ -155,14 +155,14 @@ dbadmin@network:~$ exit
 
 ### Step 5 (game-world only): Use the credential
 
-In a real engagement, today ends here. In D3CYPH3R the credential chain continues into the eventual `level2@network`, where the audit-bypass account becomes the entry point. The mechanic is the same as it was for `level0@network → level1@network`: yesterday's leaked password gates today's level. Today's TXT-disclosed credential will gate tomorrow's.
+In a real engagement, today ends here. In D3CYPH3R the credential chain continues into `level2@network`, where the audit-bypass account becomes the entry point. The mechanic is the same as it was for `level0@network → level1@network`: yesterday's leaked password gates today's level. Today's TXT-disclosed credential will gate tomorrow's.
 
 ```bash
 guest@d3cyph3r:~$ ssh level2@network
 level2@network's password: atlas-audit-bypass-2026
 ```
 
-(At time of writing, `level2@network` hasn't shipped yet. The credential chain is staged for it.)
+`level2@network` is playable, and its walkthrough picks up from here.
 
 ## §3 — The vulnerability
 

@@ -193,12 +193,28 @@ was unbuilt and unreachable for two releases after it became playable, and
 `crypto/level2` and `linux/level2` carried the same staleness in their
 spoiler lines. All were fixed in v2.5.1.
 
-The generator now knows which levels exist and fails the build on:
+The generator now knows which levels exist and fails the build on any
+sentence that names a **shipped** level alongside not-yet-built language.
+The vocabulary was assembled from an actual sweep rather than guessed,
+because the first version of this check caught only two phrasings and
+missed the two that accounted for most of the corpus:
 
-- `a future \`levelN@track\`` where that level has shipped
-- prose claiming a shipped level "hasn't been built" or "isn't built"
-- the phrases "no levelN is currently solvable" and "the level content is
-  forthcoming"
+```
+hasn't been built    has not been built   isn't built
+is not built         not yet built        hasn't shipped
+has not shipped      isn't shipped        not yet shipped
+doesn't exist        does not exist       no entry point
+forthcoming          will eventually      eventually explore
+the eventual         staged for it        when it ships
+once it ships        not yet available    to be built
+```
+
+Plus the fixed phrases "no levelN is currently solvable" and "the level
+content is forthcoming".
+
+**Add to that list whenever a new euphemism turns up.** A false positive
+costs one rewording; a miss costs a reader being told to stop at a level
+that is playable
 
 **So the workflow is automatic.** Shipping a new level makes the previous
 walkthrough's forward reference fail, and the build will not pass until it

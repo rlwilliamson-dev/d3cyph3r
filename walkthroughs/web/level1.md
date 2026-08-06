@@ -269,14 +269,14 @@ webapp_admin@web:~$ exit
 
 ### Step 9 (game-world only): Use the breadcrumb
 
-In a real engagement, today ends here. In D3CYPH3R the credential chain continues into the eventual `level2@web`, where the `portal-svc` account becomes the entry point.
+In a real engagement, today ends here. In D3CYPH3R the credential chain continues into `level2@web`, where the `portal-svc` account becomes the entry point.
 
 ```bash
 guest@d3cyph3r:~$ ssh level2@web
 level2@web's password: meridian-portal-svc-2026
 ```
 
-(At time of writing, `level2@web` hasn't shipped yet. The credential chain is staged for it.)
+`level2@web` is playable, and its walkthrough picks up from here.
 
 ## §3 — The vulnerability
 

@@ -517,7 +517,7 @@ What's there that's useful:
 
 If you want to see this lateral-movement pattern documented in the wild, the **MITRE ATT&CK T1021.004 — Remote Services: SSH** technique writeup is the canonical reference. The agent-forwarded-cron variant specifically is one of the most common single-engineer convenience patterns that produces real-world lateral access (and one of the hardest to detect without explicit `AllowAgentForwarding no` policy + named-host audit).
 
-This pivot exists in level1@linux specifically to let curious players exercise the multi-host workflow without leaving the engagement; **the credential chain works without it.** If you're racing to level2 once it ships, skip this section.
+This pivot exists in level1@linux specifically to let curious players exercise the multi-host workflow without leaving the engagement; **the credential chain works without it.** If you're racing on to level2, skip this section.
 
 ### Bonus finds on this level
 

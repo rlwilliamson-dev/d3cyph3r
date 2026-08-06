@@ -371,20 +371,38 @@ function validate(md, label, shipped) {
   }
 
   // The prose forms, which are worse than the spoiler line because they
-  // tell a reader the level is unreachable.
+  // tell a reader the level is unreachable rather than merely unwritten.
+  //
+  // This vocabulary was assembled from an actual sweep rather than
+  // guessed. The first pass caught only "a future" and "hasn't been
+  // built", and missed "the eventual levelN" and "at time of writing,
+  // levelN hasn't shipped yet", which between them accounted for six of
+  // the seven stale references in the corpus. Add to this list whenever
+  // a new euphemism turns up; the cost of a false positive is one
+  // rewording, and the cost of a miss is a reader being told to stop.
+  const UNBUILT_VOCAB =
+    "hasn't been built|has not been built|isn't built|is not built|" +
+    "not yet built|hasn't shipped|has not shipped|isn't shipped|" +
+    "not yet shipped|hasn't yet shipped|doesn't exist|does not exist|" +
+    "no entry point|forthcoming|will eventually|eventually explore|" +
+    "the eventual|staged for it|when it ships|once it ships|" +
+    "not yet available|currently solvable|to be built|will be built";
+
   const UNBUILT_CLAIMS = [
-    /(`?level\d+@[a-z]+`?)[^.\n]{0,60}(hasn't been built|isn't built|has not been built|is not built)/i,
-    /(hasn't been built|isn't built)[^.\n]{0,60}(`?level\d+@[a-z]+`?)/i,
+    new RegExp(`(\`?level\\d+@[a-z]+\`?)[^.\\n]{0,80}(${UNBUILT_VOCAB})`, "i"),
+    new RegExp(`(${UNBUILT_VOCAB})[^.\\n]{0,80}(\`?level\\d+@[a-z]+\`?)`, "i"),
     /no level\d+ is currently solvable/i,
     /the level content is forthcoming/i,
   ];
   for (const re of UNBUILT_CLAIMS) {
     const m = md.match(re);
     if (m) {
+      // Only a problem when the sentence names a level that EXISTS.
+      // "a future level4@linux" is correct while level4 is unwritten.
       const named = (m[0].match(/level\d+@[a-z]+/) || [])[0];
       if (!named || shipped.has(named)) {
         problems.push(
-          `claims a level is unbuilt: "${m[0].trim().slice(0, 70)}..." ` +
+          `claims a level is unbuilt: "${m[0].trim().slice(0, 80)}..." ` +
             `(verify against the shipped set and rewrite)`
         );
       }
