@@ -20,7 +20,7 @@ She asked Carlos to send her the verification middleware and a captured SSO sess
 
 You're logged in as `webapp_admin` on `portal.meridian.edu`. The path that got you here is the same path the credential chain has been running since `level0@web`: the leaked DB credential `M3rid14n!2023-prod` from the BluePier-era `db-creds.txt` is, per the comment in that file, also a shell user on the portal host. The pattern is identical to the network and crypto level1s: a service-account credential that was supposed to be database-scoped grew an interactive login somewhere along the way and nobody reverted it. The shell access itself is its own finding; today's audit is a different finding entirely.
 
-The legal frame hasn't softened. FERPA applies to Meridian — to "education records," which under 34 CFR §99.3 explicitly include transcripts. The enforcement mechanism is "the federal government can withdraw your funding," which for a public university is existential. FERPA does not have a HIPAA-style breach-notification clock, but the Department of Education's Privacy Technical Assistance Center expects "reasonable" notification timing for confirmed disclosures of education records to unauthorized parties, and Meridian's annual Federal Student Aid attestation will include any documented disclosure that happened during the reporting cycle. Today is part of the reporting cycle.
+The legal frame hasn't softened. FERPA applies to Meridian — to "education records," which under 34 CFR §99.3 explicitly include transcripts. The enforcement mechanism is "the federal government can withdraw your funding," which for a public university is existential. FERPA does not have a HIPAA-style breach-notification clock, but the Department of Education's Privacy Technical Assistance Center expects "reasonable" notification timing for confirmed disclosures of education records to unauthorized parties, and Meridian's annual Federal Student Aid attestation will include any documented disclosure that happened during the reporting cycle.[^department-of-education-privacy-technical] Today is part of the reporting cycle.
 
 What you don't know yet, walking in, is that Carlos's verification middleware is doing one job (authentication) correctly and skipping the second job (authorization) entirely. The endpoint trusts whatever `student_id` it's asked for and returns whatever transcript matches. Any student with an active Meridian session can pull any other student's transcript. The blast radius is everything in the database's `transcripts` table — every currently-enrolled student, every formerly-enrolled student, and every legacy system account that nobody has gotten around to cleaning up since 2023.
 
@@ -259,7 +259,7 @@ The minimum report content:
 3. **The IDOR extends to legacy system accounts.** Meridian's `M-000xxxx` ID range still contains BluePier-era demo accounts. The student-facing UI hides them; the API does not filter them out. Their records may contain test data or operational metadata that shouldn't be reachable through an unauthorized API path.
 4. **A live service-account credential is published in plain text in a record's `advisor_notes` field.** The BluePier demo account at M-0000001 carries `portal-svc` credential `meridian-portal-svc-2026`. The credential should be rotated and the demo account decommissioned outright.
 5. **The `advisor_notes` field is a free-form text field with no schema constraint.** Anything anyone has ever written into it is recoverable through an IDOR-style query. The advisor_notes contents of other student records may contain similar leftovers from BluePier-era data.
-6. **Session-token observation**: the captured SSO session's `exp` claim decodes to 2036-04-09, ten years out. Long-lived service-account tokens are a separate finding under NIST SP 800-63B-4 §5 *Session Management* — short-lived tokens with proper refresh are the modern standard.
+6. **Session-token observation**: the captured SSO session's `exp` claim decodes to 2036-04-09, ten years out. Long-lived service-account tokens are a separate finding under NIST SP 800-63B-4 §5 *Session Management* — short-lived tokens with proper refresh are the modern standard.[^nist-800-63b]
 
 Send the report to Carlos with general counsel cc'd. He'll have the fix shipped before lunch.
 
@@ -269,14 +269,14 @@ webapp_admin@web:~$ exit
 
 ### Step 9 (game-world only): Use the breadcrumb
 
-In a real engagement, today ends here. In D3CYPH3R the credential chain continues into the eventual `level2@web`, where the `portal-svc` account becomes the entry point.
+In a real engagement, today ends here. In D3CYPH3R the credential chain continues into `level2@web`, where the `portal-svc` account becomes the entry point.
 
 ```bash
 guest@d3cyph3r:~$ ssh level2@web
 level2@web's password: meridian-portal-svc-2026
 ```
 
-(At time of writing, `level2@web` hasn't shipped yet. The credential chain is staged for it.)
+`level2@web` is playable, and its walkthrough picks up from here.
 
 ## §3 — The vulnerability
 
@@ -286,25 +286,25 @@ Today's finding looks like one missing line of code. It's actually a couple of f
 
 Carlos's middleware confirms the requester is *a* logged-in Meridian user. The handler then trusts whatever resource identifier the URL says — and any logged-in user can request any resource ID. The general weakness pattern is **Insecure Direct Object Reference (IDOR)**: an endpoint takes a resource identifier as input, looks the resource up in the data store, and returns it without verifying the caller's authorization to access that specific resource.
 
-The most precise CWE mapping is **CWE-639: Authorization Bypass Through User-Controlled Key**. The catalog entry describes the weakness as "the system's authorization functionality does not prevent one user from gaining access to another user's data or record by modifying the key value identifying the data" — which is Carlos's case described as a definition.
+The most precise CWE mapping is **CWE-639: Authorization Bypass Through User-Controlled Key**.[^cwe-639] The catalog entry describes the weakness as "the system's authorization functionality does not prevent one user from gaining access to another user's data or record by modifying the key value identifying the data" — which is Carlos's case described as a definition.
 
-The parent weakness is **CWE-285: Improper Authorization**. CWE-285 is the broad umbrella for any case where the authorization decision is wrong or missing.
+The parent weakness is **CWE-285: Improper Authorization**.[^cwe-285] CWE-285 is the broad umbrella for any case where the authorization decision is wrong or missing.
 
-For the specific failure mode where the authorization check is *entirely absent* (rather than present-but-wrong), **CWE-862: Missing Authorization** is the better fit. Carlos's handler doesn't have a broken check; it has no check at all. CWE-862 is a recurring CWE Top 25 entry — it ranked in the upper half on the 2024 edition.
+For the specific failure mode where the authorization check is *entirely absent* (rather than present-but-wrong), **CWE-862: Missing Authorization** is the better fit.[^cwe-862] Carlos's handler doesn't have a broken check; it has no check at all. CWE-862 is a recurring CWE Top 25 entry — it ranked in the upper half on the 2024 edition.
 
-(For completeness: **CWE-863: Incorrect Authorization** is the sibling pattern where the check exists but produces the wrong answer. Carlos's case isn't CWE-863 because there's nothing to be incorrect — the check isn't there.)
+(For completeness: **CWE-863: Incorrect Authorization** is the sibling pattern where the check exists but produces the wrong answer. Carlos's case isn't CWE-863 because there's nothing to be incorrect — the check isn't there.)[^cwe-863]
 
 ### Failure 2: The demo account that outlived its purpose
 
 The BluePier `M-0000001` demo account was created for transcript-portal acceptance testing in 2023, scheduled for decommission in Q4 2024, and is still live in 2026. The advisor_notes field for that account contains a service-account credential that was supposed to be migrated to a real secrets manager when the new monitoring system landed. Neither thing happened.
 
-This is the sticky-account anti-pattern documented in NIST SP 800-53 Rev. 5 control AC-2(3) *Disable Accounts* and CIS Critical Security Controls v8.1 sub-control 5.3 *Disable Dormant Accounts*. Same pattern shape as the `audit-bypass.atlas.internal` host in `level1@network` and the `audit-svc` account in that same scenario. Different surface; same failure mode.
+This is the sticky-account anti-pattern documented in NIST SP 800-53 Rev. 5 control AC-2(3) *Disable Accounts* and CIS Critical Security Controls v8.1 sub-control 5.3 *Disable Dormant Accounts*.[^nist-800-53] Same pattern shape as the `audit-bypass.atlas.internal` host in `level1@network` and the `audit-svc` account in that same scenario. Different surface; same failure mode.
 
 ### Failure 3: Sensitive data in a free-form text field
 
 The `advisor_notes` field exists for human-readable comments — "encouraged to apply to CMU," "recommend tutoring referral." It was used during BluePier's acceptance testing as a place to stash a credential because "it's just a string field, who's going to look at it on a system account?" The fact that the IDOR turned the JSON record into a publicly-recoverable artifact means anything stashed in any such field — across any record — is recoverable in the same way.
 
-This isn't a single CWE. The pattern shape is **CWE-200: Exposure of Sensitive Information to an Unauthorized Actor** (the broad umbrella, currently DISCOURAGED for mapping per the CWE catalog) layered with **CWE-540: Inclusion of Sensitive Information in Source Code** (the literal CWE-540 entry is about source code, but the spirit — "sensitive data should not appear in artifacts whose access control is not credential-grade" — applies). The narrower modern mapping is **CWE-312: Cleartext Storage of Sensitive Information**.
+This isn't a single CWE. The pattern shape is **CWE-200: Exposure of Sensitive Information to an Unauthorized Actor** (the broad umbrella, currently DISCOURAGED for mapping per the CWE catalog) layered with **CWE-540: Inclusion of Sensitive Information in Source Code** (the literal CWE-540 entry is about source code, but the spirit — "sensitive data should not appear in artifacts whose access control is not credential-grade" — applies).[^cwe-540][^cwe-200] The narrower modern mapping is **CWE-312: Cleartext Storage of Sensitive Information**.[^cwe-312]
 
 ### The compound effect
 
@@ -357,13 +357,13 @@ IDOR is, by several published metrics, the most-disclosed vulnerability class on
 
 The United States Postal Service ran (and runs) a service called *Informed Visibility*, an API that lets logged-in USPS account holders see mail-tracking data. In November 2018, a security researcher discovered that the API would return mail-tracking data for **any** account holder when an account holder authenticated and asked for someone else's data — there was no check that the authenticated user owned the data being requested.
 
-The Krebs on Security report that broke the story estimated **roughly 60 million** USPS user accounts were exposed via the bug. The data accessible per the Krebs writeup included email addresses, usernames, user IDs, account numbers, street addresses, phone numbers, authorized-users metadata, and mailing-campaign data. USPS confirmed the issue and patched, but the underlying technical pattern — authenticated user, missing per-resource authorization check, predictable account identifiers — was exactly the IDOR shape you just walked through with Carlos's transcript endpoint. The USPS case differs only in scale and in regulated-data category (postal records vs. education records).
+The Krebs on Security report that broke the story estimated **roughly 60 million** USPS user accounts were exposed via the bug.[^krebs-on-security-usps-site] The data accessible per the Krebs writeup included email addresses, usernames, user IDs, account numbers, street addresses, phone numbers, authorized-users metadata, and mailing-campaign data. USPS confirmed the issue and patched, but the underlying technical pattern — authenticated user, missing per-resource authorization check, predictable account identifiers — was exactly the IDOR shape you just walked through with Carlos's transcript endpoint. The USPS case differs only in scale and in regulated-data category (postal records vs. education records).
 
 ### Thread 2: Optus (September 2022)
 
 Optus — Australia's second-largest telecommunications carrier — disclosed in September 2022 that an attacker had exfiltrated personal data on customers via an unauthenticated API endpoint. The technical mechanism was IDOR-adjacent: an API endpoint that returned customer records by ID, with no authentication requirement at all. The attacker incremented through the customer-ID range and pulled records sequentially.
 
-Public figures evolved as the investigation progressed. Optus's own early disclosure named "up to 10 million" affected customers; the OAIC's August 2025 Federal Court civil-penalty filing alleges interference with the privacy of approximately **9.5 million** Australians, with approximately 2.1 million having government-issued ID numbers (driver's licenses, passports, Medicare numbers) exposed. The Australian Federal Police investigation, the single OAIC civil-penalty proceeding filed in August 2025 (alleging contraventions with potential per-contravention penalties up to AUD $2.22 million), and the **AUD ~$140 million** Optus reserved for breach remediation (Equifax Protect subscriptions for affected customers, the Deloitte external review, replacement-document costs) make this one of the most consequential privacy incidents in Australian history.
+Public figures evolved as the investigation progressed. Optus's own early disclosure named "up to 10 million" affected customers; the OAIC's August 2025 Federal Court civil-penalty filing alleges interference with the privacy of approximately **9.5 million** Australians, with approximately 2.1 million having government-issued ID numbers (driver's licenses, passports, Medicare numbers) exposed. The Australian Federal Police investigation, the single OAIC civil-penalty proceeding filed in August 2025 (alleging contraventions with potential per-contravention penalties up to AUD $2.22 million), and the **AUD ~$140 million** Optus reserved for breach remediation (Equifax Protect subscriptions for affected customers, the Deloitte external review, replacement-document costs) make this one of the most consequential privacy incidents in Australian history.[^optus-oaic-penalty]
 
 Optus's case is the *unauthenticated* variant of IDOR — Carlos's endpoint is the *authenticated* variant. The defender's discipline difference: Optus's API had no authentication of any kind; Carlos's has authentication but no authorization. The blast radius shape is the same; the remediation conversation is different.
 
@@ -371,7 +371,7 @@ Optus's case is the *unauthenticated* variant of IDOR — Carlos's endpoint is t
 
 T-Mobile US disclosed in January 2023 that an attacker had used an API to obtain personal data on approximately **37 million** prepaid and postpaid customers. The exfiltration began in late November 2022 and was detected and stopped in mid-January 2023, an approximately seven-week window. The technical mechanism, per T-Mobile's SEC 8-K disclosure, was abuse of an API endpoint that returned customer records without adequate access controls on the resource being requested.
 
-The OWASP API Security Top 10's framing labels this category **API1:2023 — Broken Object Level Authorization (BOLA)**. T-Mobile's incident is the canonical recent reminder that BOLA at scale, against a high-value data set, produces immediate breach disclosures and regulatory follow-on (the FCC opened an investigation; T-Mobile had previously paid US$350 million to settle a class action stemming from an earlier 2021 breach, so the pattern repetition mattered).
+The OWASP API Security Top 10's framing labels this category **API1:2023 — Broken Object Level Authorization (BOLA)**. T-Mobile's incident is the canonical recent reminder that BOLA at scale, against a high-value data set, produces immediate breach disclosures and regulatory follow-on (the FCC opened an investigation; T-Mobile had previously paid US$350 million to settle a class action stemming from an earlier 2021 breach, so the pattern repetition mattered).[^tmobile-2023-8k]
 
 ### The base rate
 
@@ -385,17 +385,17 @@ The post-mortem at the bottom of the level (`lessons-learned.md`) walks through 
 
 ### CWE — Common Weakness Enumeration
 
-**CWE-639: Authorization Bypass Through User-Controlled Key.** The most precise weakness ID. The catalog entry describes the weakness as "the system's authorization functionality does not prevent one user from gaining access to another user's data or record by modifying the key value identifying the data." MITRE mapping status: **ALLOWED**.
+**CWE-639: Authorization Bypass Through User-Controlled Key.**[^cwe-639] The most precise weakness ID. The catalog entry describes the weakness as "the system's authorization functionality does not prevent one user from gaining access to another user's data or record by modifying the key value identifying the data." MITRE mapping status: **ALLOWED**.
 
-**CWE-862: Missing Authorization.** The variant where the authorization check is entirely absent. Carlos's handler is CWE-862 — the check on `student_id` ownership is missing entirely, not present-but-wrong. MITRE mapping status: **ALLOWED-WITH-REVIEW** (CWE-862 is a Class-level weakness; the catalog recommends reviewing Base-level children before mapping). CWE-862 has been a recurring CWE Top 25 entry, climbing to #9 on the 2024 edition and #4 on the 2025 edition.
+**CWE-862: Missing Authorization.**[^cwe-862] The variant where the authorization check is entirely absent. Carlos's handler is CWE-862 — the check on `student_id` ownership is missing entirely, not present-but-wrong. MITRE mapping status: **ALLOWED-WITH-REVIEW** (CWE-862 is a Class-level weakness; the catalog recommends reviewing Base-level children before mapping). CWE-862 has been a recurring CWE Top 25 entry, climbing to #9 on the 2024 edition and #4 on the 2025 edition.
 
-**CWE-863: Incorrect Authorization.** The sibling weakness where the check exists but produces the wrong answer. Not Carlos's case directly; cited here as the differentiator.
+**CWE-863: Incorrect Authorization.**[^cwe-863] The sibling weakness where the check exists but produces the wrong answer. Not Carlos's case directly; cited here as the differentiator.
 
-**CWE-285: Improper Authorization.** The broad parent for the authorization-failure family. MITRE mapping status: **DISCOURAGED** — the catalog explicitly recommends mappers use CWE-862 *Missing Authorization* or CWE-863 *Incorrect Authorization* (or a narrower variant like CWE-639) instead. CWE-285 is included here as the historical / hierarchy reference only; for surgical analytics, always reach for CWE-862 / CWE-863 / CWE-639.
+**CWE-285: Improper Authorization.**[^cwe-285] The broad parent for the authorization-failure family. MITRE mapping status: **DISCOURAGED** — the catalog explicitly recommends mappers use CWE-862 *Missing Authorization* or CWE-863 *Incorrect Authorization* (or a narrower variant like CWE-639) instead. CWE-285 is included here as the historical / hierarchy reference only; for surgical analytics, always reach for CWE-862 / CWE-863 / CWE-639.
 
 **CWE-200: Exposure of Sensitive Information to an Unauthorized Actor.** The umbrella for any sensitive-data disclosure. MITRE marks CWE-200 as **DISCOURAGED for mapping** — it's frequently misused as a catch-all when a more specific weakness applies. Use the more specific weakness (CWE-639 / CWE-862 here) and cite CWE-200 only for framework-mapping reference.
 
-**CWE-312: Cleartext Storage of Sensitive Information.** Maps the BluePier-demo credential stored in plain text in an `advisor_notes` field. The catalog text covers exactly this case — credential data stored unencrypted in a database field.
+**CWE-312: Cleartext Storage of Sensitive Information.**[^cwe-312] Maps the BluePier-demo credential stored in plain text in an `advisor_notes` field. The catalog text covers exactly this case — credential data stored unencrypted in a database field.
 
 ### FERPA — 20 U.S.C. § 1232g; 34 CFR Part 99
 
@@ -413,7 +413,7 @@ The Family Educational Rights and Privacy Act and its implementing regulations.
 
 ### NIST SP 800-171 Rev. 3
 
-NIST Special Publication 800-171 *Protecting Controlled Unclassified Information (CUI) in Nonfederal Systems and Organizations*, Revision 3 (May 2024 — supersedes Rev. 2). Universities map to this standard for FSA-related CUI handling. The Rev. 3 numbering uses the format 03.xx.xx (three-digit family + two-digit control + optional enhancement).
+NIST Special Publication 800-171 *Protecting Controlled Unclassified Information (CUI) in Nonfederal Systems and Organizations*, Revision 3 (May 2024 — supersedes Rev. 2).[^nist-800-171] Universities map to this standard for FSA-related CUI handling. The Rev. 3 numbering uses the format 03.xx.xx (three-digit family + two-digit control + optional enhancement).
 
 **03.01.01 — Account Management.** Covers account lifecycle: creation, modification, disabling. The BluePier demo account that outlived its purpose is a direct violation.
 
@@ -445,13 +445,13 @@ The Center for Internet Security's *Critical Security Controls v8.1* (June 2024)
 
 ### OWASP
 
-**OWASP Top 10 (2025) — A01: Broken Access Control.** Held the #1 slot from 2021 to 2025. IDOR is the most-cited example in the category description. The category covers "violation of the principle of least privilege or deny by default," "bypassing access control checks by modifying the URL," and "IDOR (Insecure Direct Object References)." All three apply directly to Carlos's endpoint.
+**OWASP Top 10 (2025) — A01: Broken Access Control.**[^owasp-top-10-2025-a01] Held the #1 slot from 2021 to 2025. IDOR is the most-cited example in the category description. The category covers "violation of the principle of least privilege or deny by default," "bypassing access control checks by modifying the URL," and "IDOR (Insecure Direct Object References)." All three apply directly to Carlos's endpoint.
 
-**OWASP API Security Top 10 (2023) — API1: Broken Object Level Authorization (BOLA).** OWASP's API-specific Top 10 (last updated in 2023) has had Broken Object Level Authorization as API1 since the list was first published in 2019. The category description names "the most common API attack vector" — IDOR's API expression. The remediation guidance is the same as OWASP A01: check authorization on every resource access, regardless of the authentication state.
+**OWASP API Security Top 10 (2023) — API1: Broken Object Level Authorization (BOLA).**[^owasp-api-security-top-10] OWASP's API-specific Top 10 (last updated in 2023) has had Broken Object Level Authorization as API1 since the list was first published in 2019. The category description names "the most common API attack vector" — IDOR's API expression. The remediation guidance is the same as OWASP A01: check authorization on every resource access, regardless of the authentication state.
 
 ### Cloud-native / SDLC frameworks worth knowing
 
-**OWASP ASVS (Application Security Verification Standard) v5.0.** ASVS publishes a verification checklist for application security at three increasing levels. Section V4 *Access Control* explicitly requires (Level 1, the minimum) per-request authorization checks against the authenticated principal. Carlos's endpoint fails V4.1.1 (the trivially obvious one).
+**OWASP ASVS (Application Security Verification Standard) v5.0.**[^owasp-asvs-v5-0-v4] ASVS publishes a verification checklist for application security at three increasing levels. Section V4 *Access Control* explicitly requires (Level 1, the minimum) per-request authorization checks against the authenticated principal. Carlos's endpoint fails V4.1.1 (the trivially obvious one).
 
 **OWASP Cheat Sheet — Authorization.** <https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html>. Walks through the layered model (authentication vs authorization), the centralization pattern, the per-resource-check pattern, and the audit-the-codebase pattern. Read it as a defender; hand it to Carlos.
 
@@ -459,17 +459,17 @@ The Center for Internet Security's *Critical Security Controls v8.1* (June 2024)
 
 IDOR is taught everywhere. If you study any of the certs below, you've seen the pattern.
 
-**CompTIA Security+ (SY0-701).** The current exam (released November 2023). Domain 2 (*Threats, Vulnerabilities, and Mitigations*) covers application-layer vulnerabilities including IDOR / Broken Access Control. Domain 3 (*Security Architecture*) covers the authentication-vs-authorization distinction.
+**CompTIA Security+ (SY0-701).**[^cert-security-plus] The current exam (released November 2023). Domain 2 (*Threats, Vulnerabilities, and Mitigations*) covers application-layer vulnerabilities including IDOR / Broken Access Control. Domain 3 (*Security Architecture*) covers the authentication-vs-authorization distinction.
 
-**CompTIA PenTest+ (PT0-003).** The current exam (released December 2024, replacing PT0-002 which sunset mid-2025). Domain 3 (*Attacks and Exploits*) names IDOR in the web-application-attack taxonomy and tests candidates' ability to identify and exploit it in hands-on lab scenarios.
+**CompTIA PenTest+ (PT0-003).**[^cert-pentest-plus] The current exam (released December 2024, replacing PT0-002 which sunset mid-2025). Domain 3 (*Attacks and Exploits*) names IDOR in the web-application-attack taxonomy and tests candidates' ability to identify and exploit it in hands-on lab scenarios.
 
-**CompTIA CySA+ (CS0-003).** The current exam (released June 2023). Domain 2 (*Threat Intelligence*) covers IDOR detection patterns — log-based detection of cross-user access patterns is a named module.
+**CompTIA CySA+ (CS0-003).**[^cert-cysa] The current exam (released June 2023). Domain 2 (*Threat Intelligence*) covers IDOR detection patterns — log-based detection of cross-user access patterns is a named module.
 
-**(ISC)² CISSP.** Domain 3 (*Security Architecture and Engineering*) — the authentication / authorization distinction is a CISSP fundamental. The CBK chapters on access-control models (DAC, MAC, RBAC, ABAC) all cover the per-resource-check pattern.
+**(ISC)² CISSP.**[^cert-cissp] Domain 3 (*Security Architecture and Engineering*) — the authentication / authorization distinction is a CISSP fundamental. The CBK chapters on access-control models (DAC, MAC, RBAC, ABAC) all cover the per-resource-check pattern.
 
-**Offensive Security OSWA / OSWE / OSCP.** OffSec's web-focused certs spend substantial curriculum time on IDOR. The OSWE exam (Web Expert) includes IDOR-style challenges as a recurring test of the candidate's ability to identify authorization failures in real applications. The OSWA (Web Assessor) covers IDOR exploitation in its initial-attacks module. The OSCP touches IDOR briefly but the deep treatment lives in the web-specific certs.
+**Offensive Security OSWA / OSWE / OSCP.**[^cert-oswe][^cert-oscp] OffSec's web-focused certs spend substantial curriculum time on IDOR. The OSWE exam (Web Expert) includes IDOR-style challenges as a recurring test of the candidate's ability to identify authorization failures in real applications. The OSWA (Web Assessor) covers IDOR exploitation in its initial-attacks module. The OSCP touches IDOR briefly but the deep treatment lives in the web-specific certs.
 
-**SANS GIAC GWAPT (GIAC Web Application Penetration Tester).** Covers IDOR in depth. The associated course (SEC542) maps IDOR to its OWASP categorization and walks through detection in the labs.
+**SANS GIAC GWAPT (GIAC Web Application Penetration Tester).**[^cert-gwapt] Covers IDOR in depth. The associated course (SEC542) maps IDOR to its OWASP categorization and walks through detection in the labs.
 
 ## §7 — What a defender does
 
@@ -528,7 +528,7 @@ The pattern "endpoint takes ID as input, looks up record, returns record" repeat
 
 - **Semgrep registry** (<https://semgrep.dev/r/>): community-maintained static analysis rules. Search for `idor`, `bola`, `authorization` — multiple rule packs available for Express, FastAPI, Django, Rails, Spring, ASP.NET.
 - **CodeQL** (<https://codeql.github.com/>): GitHub's semantic code analysis. The default query suites for JavaScript / Python / Java include IDOR-class patterns.
-- **Burp Suite Pro** (commercial): the *Authorize* extension performs per-request authorization testing during a regular Burp scan. Pairs well with manual testing of newly-discovered endpoints.
+- **Burp Suite Pro** (commercial): the *Authorize* extension performs per-request authorization testing during a regular Burp scan.[^burp-suite-authorize-extension] Pairs well with manual testing of newly-discovered endpoints.
 
 ### 5. Decommission the BluePier demo account
 
@@ -562,6 +562,53 @@ Assume the application-level authz check will, at some point, be missing. Belt-a
 - **Service mesh authorization**: in a Kubernetes environment, Istio / Linkerd authorization policies can enforce per-route claims-matching at the mesh layer.
 
 The principle: any single layer that can be bypassed by a missing check (the application authz, the database RLS, the gateway policy) is meaningfully harder to bypass when all three are present.
+
+### Sample detection rule (Sigma)
+
+Every request in this attack is authenticated and well-formed, so no
+single request is anomalous. The signal is in the aggregate: one session
+retrieving many different students' transcripts.
+
+```yaml
+title: Single session retrieving transcripts for many distinct students
+status: experimental
+description: >
+  Detects horizontal enumeration of an object-id parameter. The endpoint
+  authenticates correctly and authorises nothing, so individual requests
+  are indistinguishable from legitimate use and only the distribution of
+  requested ids separates a student from a scraper.
+logsource:
+  category: webserver
+detection:
+  transcript_fetch:
+    cs-uri-stem|contains: '/transcript/download'
+    sc-status: 200
+  timeframe: 10m
+  condition: transcript_fetch | count(distinct(student_id)) by session_id > 5
+falsepositives:
+  - Registrar and advising staff, who legitimately access many students'
+    records. Exclude by role rather than by account, and revisit whenever
+    the role membership changes.
+  - Automated report generation and accreditation exports, which should
+    run under a service identity rather than a staff session.
+level: high
+```
+
+The aggregation syntax is Sigma's correlation form and needs a backend
+that supports it. Splunk, Elastic, and Sentinel all do; a simple
+regex-matching pipeline does not, which is worth confirming before this
+rule is promised in a remediation plan.
+
+Choosing a threshold is a judgement call and should be documented as one.
+Five distinct students in ten minutes is a starting point derived from
+what a normal student session looks like, not a standard. Tune it against
+a week of real traffic, and expect the registrar exclusion to matter more
+than the number.
+
+None of this is the fix. An authorisation check comparing the requested
+`student_id` against the session's own identity makes the enumeration
+impossible, and the detection is only covering the interval until that
+ships.
 
 ## §7.5 — Optional exploration
 
@@ -603,49 +650,45 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
-### Standards documents
+[^department-of-education-privacy-technical]: [Department of Education Privacy Technical Assistance Center (PTAC)](https://studentprivacy.ed.gov/). Notification templates, breach-response guides, FERPA training materials for university administrators.
+[^nist-800-171]: [NIST SP 800-171 Rev. 3](https://csrc.nist.gov/pubs/sp/800/171/r3/final). Published May 2024; the current standard for protecting CUI in non-federal systems.
+[^nist-800-53]: [NIST SP 800-53 Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). The federal control catalog. AC family covers access control.
+[^cwe-639]: [CWE-639: Authorization Bypass Through User-Controlled Key](https://cwe.mitre.org/data/definitions/639.html).
+[^cwe-862]: [CWE-862: Missing Authorization](https://cwe.mitre.org/data/definitions/862.html).
+[^cwe-863]: [CWE-863: Incorrect Authorization](https://cwe.mitre.org/data/definitions/863.html).
+[^cwe-285]: [CWE-285: Improper Authorization](https://cwe.mitre.org/data/definitions/285.html).
+[^cwe-312]: [CWE-312: Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
+[^owasp-top-10-2025-a01]: [OWASP Top 10 (2025) — A01: Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/).
+[^owasp-api-security-top-10]: [OWASP API Security Top 10 (2023) — API1: Broken Object Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/).
+[^owasp-asvs-v5-0-v4]: [OWASP ASVS v5.0 — V4 Access Control](https://owasp.org/www-project-application-security-verification-standard/).
+[^krebs-on-security-usps-site]: [Krebs on Security — "USPS Site Exposed Data on 60 Million Users" (Nov 2018)](https://krebsonsecurity.com/2018/11/usps-site-exposed-data-on-60-million-users/). The original USPS Informed Visibility writeup.
+[^burp-suite-authorize-extension]: [Burp Suite Authorize extension](https://portswigger.net/bappstore/f9bbac8c4acf4aefa4d7dc92a991af2f).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
+[^cert-gwapt]: [GIAC GWAPT — Web Application Penetration Tester](https://www.giac.org/certifications/web-application-penetration-tester-gwapt).
+[^cwe-200]: [CWE-200](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-540]: [CWE-540](https://cwe.mitre.org/data/definitions/540.html).
+[^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://csrc.nist.gov/pubs/sp/800/63/b/4/final).
+[^optus-oaic-penalty]: [Australian Information Commissioner takes civil penalty action against Optus (OAIC, August 2025)](https://www.oaic.gov.au/news/media-centre/australian-information-commissioner-takes-civil-penalty-action-against-optus). Alleges one contravention for each of roughly 9.5 million individuals, at up to AUD $2.22 million per contravention.
+[^tmobile-2023-8k]: [T-Mobile Form 8-K, 19 January 2023 (SEC)](https://www.sec.gov/Archives/edgar/data/1283699/000119312523010949/d641142d8k.htm). The disclosure of the API-abuse incident.
 
-- **FERPA full text — 20 U.S.C. § 1232g**: <https://www.govinfo.gov/content/pkg/USCODE-2023-title20/html/USCODE-2023-title20-chap31-subchapIII-part4-sec1232g.htm>. The statute itself.
-- **FERPA implementing regulations — 34 CFR Part 99**: <https://www.ecfr.gov/current/title-34/subtitle-A/part-99>. The operational compliance text. Sections 99.3, 99.31, 99.32, 99.7 are the most cited for IDOR-style disclosure findings.
-- **Department of Education Privacy Technical Assistance Center (PTAC)**: <https://studentprivacy.ed.gov/>. Notification templates, breach-response guides, FERPA training materials for university administrators.
-- **NIST SP 800-171 Rev. 3**: <https://csrc.nist.gov/pubs/sp/800/171/r3/final>. Published May 2024; the current standard for protecting CUI in non-federal systems.
-- **NIST SP 800-53 Rev. 5**: <https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final>. The federal control catalog. AC family covers access control.
+### Further reading
 
-### CWE / MITRE ATT&CK
-
-- **CWE-639: Authorization Bypass Through User-Controlled Key**: <https://cwe.mitre.org/data/definitions/639.html>.
-- **CWE-862: Missing Authorization**: <https://cwe.mitre.org/data/definitions/862.html>.
-- **CWE-863: Incorrect Authorization**: <https://cwe.mitre.org/data/definitions/863.html>.
-- **CWE-285: Improper Authorization**: <https://cwe.mitre.org/data/definitions/285.html>.
-- **CWE-312: Cleartext Storage of Sensitive Information**: <https://cwe.mitre.org/data/definitions/312.html>.
-- **MITRE ATT&CK T1190 — Exploit Public-Facing Application**: <https://attack.mitre.org/techniques/T1190/>.
-- **MITRE ATT&CK T1213 — Data from Information Repositories**: <https://attack.mitre.org/techniques/T1213/>.
-
-### OWASP
-
-- **OWASP Top 10 (2025) — A01: Broken Access Control**: <https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/>.
-- **OWASP API Security Top 10 (2023) — API1: Broken Object Level Authorization**: <https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/>.
-- **OWASP ASVS v5.0 — V4 Access Control**: <https://owasp.org/www-project-application-security-verification-standard/>.
-- **OWASP Authorization Cheat Sheet**: <https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html>.
-- **OWASP Insecure Direct Object Reference Prevention Cheat Sheet**: <https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html>.
-
-### Authorization tooling
-
-- **Open Policy Agent (OPA)**: <https://www.openpolicyagent.org/>.
-- **Casbin**: <https://casbin.apache.org/>.
-- **Oso**: <https://www.osohq.com/>.
-
-### Incident references
-
-- **Krebs on Security — "USPS Site Exposed Data on 60 Million Users" (Nov 2018)**: <https://krebsonsecurity.com/2018/11/usps-site-exposed-data-on-60-million-users/>. The original USPS Informed Visibility writeup.
-- **Optus 2022 — OAIC public statement and updates**: <https://www.oaic.gov.au/>. The OAIC's enforcement page tracks the multiple proceedings against Optus across 2022-2025.
-- **T-Mobile 2023 — SEC 8-K disclosure (January 19, 2023)**: <https://www.sec.gov/Archives/edgar/data/0001283699/000119312523010949/d641142d8k.htm>. The official disclosure document.
-- **HackerOne *Hacker-Powered Security Report* (evergreen landing)**: <https://www.hackerone.com/report/hacker-powered-security>. Industry-wide vulnerability-class frequencies.
-
-### Detection / static analysis
-
-- **Semgrep registry**: <https://semgrep.dev/r/>. Search for `idor`, `bola`, `authorization`.
-- **CodeQL**: <https://codeql.github.com/>. GitHub-native semantic code analysis with IDOR-aware queries in the default JavaScript, Python, and Java suites.
-- **Burp Suite Authorize extension**: <https://portswigger.net/bappstore/f9bbac8c4acf4aefa4d7dc92a991af2f>.
+- [FERPA full text — 20 U.S.C. § 1232g](https://www.govinfo.gov/content/pkg/USCODE-2023-title20/html/USCODE-2023-title20-chap31-subchapIII-part4-sec1232g.htm). The statute itself.
+- [FERPA implementing regulations — 34 CFR Part 99](https://www.ecfr.gov/current/title-34/subtitle-A/part-99). The operational compliance text. Sections 99.3, 99.31, 99.32, 99.7 are the most cited for IDOR-style disclosure findings.
+- [MITRE ATT&CK T1190 — Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/).
+- [MITRE ATT&CK T1213 — Data from Information Repositories](https://attack.mitre.org/techniques/T1213/).
+- [OWASP Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html).
+- [OWASP Insecure Direct Object Reference Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html).
+- [Open Policy Agent (OPA)](https://www.openpolicyagent.org/).
+- [Casbin](https://casbin.apache.org/).
+- [Oso](https://www.osohq.com/).
+- [HackerOne *Hacker-Powered Security Report* (evergreen landing)](https://www.hackerone.com/report/hacker-powered-security). Industry-wide vulnerability-class frequencies.
+- [Semgrep registry](https://semgrep.dev/r/). Search for `idor`, `bola`, `authorization`.
+- [CodeQL](https://codeql.github.com/). GitHub-native semantic code analysis with IDOR-aware queries in the default JavaScript, Python, and Java suites.

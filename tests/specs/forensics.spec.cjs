@@ -124,11 +124,15 @@ test.describe("forensics track", () => {
       expect(t).toContain("POL-IIS-2026-0007-handoff");
     });
 
-    test("lessons-learned.md cites NIST SP 800-86 + CWE-200", async ({ page }) => {
+    test("lessons-learned.md names its anchor and hands off to the walkthrough", async ({ page }) => {
       await dispatchCmd(page, "cat lessons-learned.md");
       const t = await terminalText(page);
       expect(t).toContain("800-86");
-      expect(t).toContain("CWE-200");
+      expect(t).toContain("CWE-359");
+      expect(t).toContain("CHECK YOURSELF");
+      expect(t).toContain("GO DEEPER");
+      expect(t).toContain("walkthroughs/forensics/level0");
+      expect(t).not.toContain("WHERE THIS SHOWS UP ON CERTIFICATIONS");
     });
 
     test("exit from level0@forensics returns to the lobby", async ({ page }) => {
@@ -258,14 +262,15 @@ test.describe("forensics track", () => {
         expect(t).toContain("E01 split");
       });
 
-      test("lessons-learned.md cites the canonical references", async ({ page }) => {
+      test("lessons-learned.md names its anchors and hands off to the walkthrough", async ({ page }) => {
         await dispatchCmd(page, "cat lessons-learned.md");
         const t = await terminalText(page);
         expect(t).toContain("CWE-532");
-        expect(t.includes("AU-2") || t.includes("AU-6")).toBeTruthy();
         expect(t).toContain("T1078");
-        expect(t).toContain("T1567.002");
-        expect(t).toContain("LOLBAS");
+        expect(t).toContain("CHECK YOURSELF");
+        expect(t).toContain("GO DEEPER");
+        expect(t).toContain("walkthroughs/forensics/level1");
+        expect(t).not.toContain("WHERE THIS SHOWS UP ON CERTIFICATIONS");
       });
 
       test("whoami prints 'secops' on the forensics workstation", async ({ page }) => {
@@ -442,13 +447,15 @@ test.describe("forensics track", () => {
         ).toBeTruthy();
       });
 
-      test("lessons-learned cites the canonical references", async ({ page }) => {
+      test("lessons-learned names its anchors and hands off to the walkthrough", async ({ page }) => {
         await dispatchCmd(page, "cat lessons-learned.md");
         const t = await terminalText(page);
-        expect(t).toContain("NIST SP 800-86");
-        expect(t).toContain("GCFE");
-        expect(t).toContain("T1567");
-        expect(t).toContain("AU.L2-3.3");
+        expect(t).toContain("CWE-539");
+        expect(t).toContain("CWE-200");
+        expect(t).toContain("CHECK YOURSELF");
+        expect(t).toContain("GO DEEPER");
+        expect(t).toContain("walkthroughs/forensics/level2");
+        expect(t).not.toContain("WHERE THIS SHOWS UP ON CERTIFICATIONS");
       });
 
       test("unsupported JOIN surfaces a syntax-error message", async ({ page }) => {

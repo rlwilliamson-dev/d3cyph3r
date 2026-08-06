@@ -238,11 +238,11 @@ In level3 you'll assume that identity and discover what an attacker who found th
 
 This level stacks three independent failures, all rooted in the same missing process.
 
-1. **Excessive privilege (CWE-269 / CWE-250).** `legacy-deploy-bot` was granted `AdministratorAccess` — full `*:*` — to "unblock the migration." Attaching the broadest possible policy is faster than working out the specific permissions a task needs, so under deadline pressure it is what happens. The grant was never narrowed afterward. `broker-portal-svc` having account-wide IAM read is the same failure in a smaller costume.
+1. **Excessive privilege (CWE-269 / CWE-250).**[^cwe-269] `legacy-deploy-bot` was granted `AdministratorAccess` — full `*:*` — to "unblock the migration."[^cwe-250] Attaching the broadest possible policy is faster than working out the specific permissions a task needs, so under deadline pressure it is what happens. The grant was never narrowed afterward. `broker-portal-svc` having account-wide IAM read is the same failure in a smaller costume.
 
 2. **A dormant credential left enabled (NIST AC-2(3); CIS AWS 2.11).** The bot's access key has not been used since March 2024 but is still `Active`. Organizations heavily staff *granting* access (work stops without it) and barely staff *removing* it (nothing breaks when it's skipped). A credential nobody uses but everybody could is pure risk.
 
-3. **The secret stored in cleartext in a leftover file (CWE-312 / CWE-798).** Five service-account secrets sit in `bootstrap-iam-keys.env` on a shared host, two years after the file's own author wrote "DELETE THIS FILE AFTER CUTOVER." Long-lived static secrets are the credential type most likely to end up somewhere they shouldn't — a git history, a CI log, a backup, a bastion.
+3. **The secret stored in cleartext in a leftover file (CWE-312 / CWE-798).**[^cwe-798][^cwe-312] Five service-account secrets sit in `bootstrap-iam-keys.env` on a shared host, two years after the file's own author wrote "DELETE THIS FILE AFTER CUTOVER." Long-lived static secrets are the credential type most likely to end up somewhere they shouldn't — a git history, a CI log, a backup, a bastion.
 
 The connective tissue is **an identity lifecycle that has a "create" step and no "destroy" step.** The bot was created in thirty seconds and would have taken thirty seconds to delete. What made it dangerous was the two years in between, during which it was nobody's job to notice it. The owner of the teardown, Vikram Shah, left before the migration finished, and the task had no other owner — so least privilege quietly decayed into standing admin.
 
@@ -257,7 +257,7 @@ There is also a fourth, account-level failure you'll surface in §7.5: the AWS a
 | Where the secret was | A leftover bootstrap-credentials file on the bastion |
 | Effective scope | Administrator, which is the whole account rather than any part of it |
 | Also surfaced | An orphaned terminated-employee account, a never-rotated 2019 key, and a root access key |
-| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively |
+| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively[^nycrr-500] |
 
 **An unused administrator key is not a smaller finding than a used one.**
 "Last used 2024" describes what happened, not what is possible. The
@@ -282,11 +282,11 @@ is the one NYDFS and NAIC examiners will test against.
 
 ## §4 — Real-world parallels
 
-**Capital One, 2019 — the over-privileged role that read 100 million records.** A former AWS engineer exploited a Server-Side Request Forgery flaw in a misconfigured web application firewall to obtain the credentials of an IAM role attached to it. The role had far more S3 permission than the WAF needed — it could list and read buckets holding ~100 million U.S. and ~6 million Canadian credit-card-application records. The breach is the canonical least-privilege cloud failure: the SSRF was the door, but the *blast radius* came from a role granted more than its job required. The U.S. Office of the Comptroller of the Currency assessed an $80 million penalty in 2020, and the attacker was convicted in 2022. Had that role been scoped to only the objects the WAF legitimately touched, the same SSRF would have leaked far less.
+**Capital One, 2019 — the over-privileged role that read 100 million records.** A former AWS engineer exploited a Server-Side Request Forgery flaw in a misconfigured web application firewall to obtain the credentials of an IAM role attached to it. The role had far more S3 permission than the WAF needed — it could list and read buckets holding ~100 million U.S. and ~6 million Canadian credit-card-application records. The breach is the canonical least-privilege cloud failure: the SSRF was the door, but the *blast radius* came from a role granted more than its job required. The U.S. Office of the Comptroller of the Currency assessed an $80 million penalty in 2020, and the attacker was convicted in 2022.[^occ-capital-one-penalty] Had that role been scoped to only the objects the WAF legitimately touched, the same SSRF would have leaked far less.
 
-**Cisco, 2018 (guilty plea 2020) — the access nobody revoked.** A former Cisco engineer who had resigned months earlier retained access to Cisco-controlled AWS infrastructure and, from that access, deployed code that deleted 456 virtual machines hosting Cisco's WebEx Teams application — knocking ~16,000 accounts offline for up to two weeks and costing Cisco roughly $2.4 million in remediation and refunds. He pleaded guilty in 2020. This is the orphaned-account failure exactly: an identity that should have been deprovisioned at departure was still live, and the gap between "left the company" and "lost access" was the whole vulnerability. It is the real-world version of `vikram.shah`'s still-Active key.
+**Cisco, 2018 (guilty plea 2020) — the access nobody revoked.**[^doj-cisco-webex] A former Cisco engineer who had resigned months earlier retained access to Cisco-controlled AWS infrastructure and, from that access, deployed code that deleted 456 virtual machines hosting Cisco's WebEx Teams application — knocking ~16,000 accounts offline for up to two weeks and costing Cisco roughly $2.4 million in remediation and refunds. He pleaded guilty in 2020. This is the orphaned-account failure exactly: an identity that should have been deprovisioned at departure was still live, and the gap between "left the company" and "lost access" was the whole vulnerability. It is the real-world version of `vikram.shah`'s still-Active key.
 
-**EleKtra-Leak, 2023 — long-lived keys harvested at machine speed.** Palo Alto Networks' Unit 42 documented a campaign that continuously scanned public GitHub repositories for exposed long-lived AWS IAM access keys and, in observed cases, began using newly committed keys within *minutes* — spinning up EC2 instances for cryptomining. The lesson that maps directly here: a long-lived static access key sitting in a file is not a theoretical risk. There is an active, automated market for exactly that artifact, and the window between "secret reaches a place it shouldn't" and "secret is abused" is measured in minutes, not months. `bootstrap-iam-keys.env` is five such artifacts in one file.
+**EleKtra-Leak, 2023 — long-lived keys harvested at machine speed.** Palo Alto Networks' Unit 42 documented a campaign that continuously scanned public GitHub repositories for exposed long-lived AWS IAM access keys and, in observed cases, began using newly committed keys within *minutes* — spinning up EC2 instances for cryptomining.[^aws-iam-security-best-practices][^palo-alto-networks-unit-42] The lesson that maps directly here: a long-lived static access key sitting in a file is not a theoretical risk. There is an active, automated market for exactly that artifact, and the window between "secret reaches a place it shouldn't" and "secret is abused" is measured in minutes, not months. `bootstrap-iam-keys.env` is five such artifacts in one file.
 
 ## §5 — Frameworks, deep dive
 
@@ -305,7 +305,7 @@ Audit evidence: an entitlement review showing each principal's effective permiss
 
 ### CIS AWS Foundations Benchmark v7.0.0 — §2 Identity and Access Management
 
-The CIS AWS Foundations Benchmark is the most directly applicable checklist here, and almost every recommendation in §2 is failing in this account. (The IAM controls moved from Section 1 to Section 2 in v7.0.0, when a new Organizations section was added — so older write-ups citing "1.x" numbers are referencing a prior edition.)
+The CIS AWS Foundations Benchmark is the most directly applicable checklist here, and almost every recommendation in §2 is failing in this account.[^cis-aws-foundations-benchmark] (The IAM controls moved from Section 1 to Section 2 in v7.0.0, when a new Organizations section was added — so older write-ups citing "1.x" numbers are referencing a prior edition.)
 
 - **2.4 — Ensure no 'root' user account access key exists.** `get-account-summary` reports `AccountAccessKeysPresent: 1`. A root access key cannot be constrained by IAM policies or Service Control Policies, so its leak is unrecoverable.
 - **2.5 — Ensure MFA is enabled for the 'root' user.** `AccountMFAEnabled: 0`.
@@ -325,13 +325,52 @@ Coverline's SOC 2 attestation depends on the **CC6 (Logical and Physical Access)
 
 ### Regulatory (insurance)
 
-**NYDFS 23 NYCRR 500.07 (Access Privileges and Management)**, as amended by the Second Amendment (effective November 2023, with provisions phased through 2025), requires covered entities to periodically review access privileges, limit the number of privileged accounts, and remove access that is no longer necessary. A dormant `AdministratorAccess` bot is the clean violation. The **NAIC Insurance Data Security Model Law** imposes parallel Information Security Program access-control obligations in the states that have adopted it.
+**NYDFS 23 NYCRR 500.07 (Access Privileges and Management)**, as amended by the Second Amendment (effective November 2023, with provisions phased through 2025), requires covered entities to periodically review access privileges, limit the number of privileged accounts, and remove access that is no longer necessary. A dormant `AdministratorAccess` bot is the clean violation.[^nycrr-500] The **NAIC Insurance Data Security Model Law** imposes parallel Information Security Program access-control obligations in the states that have adopted it.
 
 ### CWE
 
-- **CWE-269 Improper Privilege Management** — the admin-bound bot. (MITRE marks CWE-269 as *discouraged for mapping* — it's a high-level class; the Base-level **CWE-250** below is the more precise root-cause mapping for "ran with more privilege than needed.")
+- **CWE-269 Improper Privilege Management** — the admin-bound bot.[^cwe-269] (MITRE marks CWE-269 as *discouraged for mapping* — it's a high-level class; the Base-level **CWE-250** below is the more precise root-cause mapping for "ran with more privilege than needed.")
 - **CWE-250 Execution with Unnecessary Privileges** — the migration ran with far more privilege than it needed.
 - **CWE-798 Use of Hard-coded Credentials** / **CWE-312 Cleartext Storage of Sensitive Information** — the five plaintext secrets in `bootstrap-iam-keys.env`.
+
+### MITRE ATT&CK — the persistence chain admin unlocks
+
+A dormant administrator key is not dangerous because of what it did. It
+is dangerous because of the sequence it makes available, and the in-game
+post-mortem names that sequence deliberately.
+
+**[T1098.001 — Account Manipulation: Additional Cloud Credentials](https://attack.mitre.org/techniques/T1098/001/)**[^t1098-001]
+
+The first thing an adversary does with admin is stop depending on the
+credential that got them in. Minting a new access key on a *different*
+principal means revoking `legacy-deploy-bot` accomplishes nothing, and
+this is why incident response in cloud environments starts with
+enumerating recently-created credentials rather than with disabling the
+one that was found.
+
+**[T1098.003 — Account Manipulation: Additional Cloud Roles](https://attack.mitre.org/techniques/T1098/003/)**[^t1098-003]
+
+Attaching policies or extending trust relationships spreads the
+privilege across identities that individually look unremarkable. A role
+whose trust policy quietly gained an extra principal is far harder to
+spot than a user holding `AdministratorAccess`.
+
+**[T1136.003 — Create Account: Cloud Account](https://attack.mitre.org/techniques/T1136/003/)**[^t1136-003]
+
+A newly created identity has no history to look anomalous against, and
+in an account that already contains a terminated employee and a
+five-year-old key, one more plausible-looking principal is unlikely to
+be questioned.
+
+**[T1530 — Data from Cloud Storage](https://attack.mitre.org/techniques/T1530/)**
+
+The objective. Administrator reads every bucket in the account,
+including the ones holding the claim documents from `level0@cloud`.
+
+Read in order, the chain explains why the remediation in this level is
+not "deactivate the key." It is deactivate the key, then enumerate
+everything that key could have created, on the assumption that it may
+already have.
 
 ## §6 — Cert exam relevance
 
@@ -339,9 +378,9 @@ Coverline's SOC 2 attestation depends on the **CC6 (Logical and Physical Access)
 
 **AWS Certified Solutions Architect – Associate (SAA-C03).** IAM fundamentals appear throughout: users versus roles, managed versus inline policies, least privilege as a design default, and — the architecturally correct answer to this whole level — preferring short-lived role credentials (`sts:AssumeRole`, IAM roles for service accounts/instances) over long-lived access keys, so there is no static secret to leak or rotate.
 
-**CompTIA Security+ (SY0-701).** Domain 4 (Security Operations) covers identity and access management: provisioning and deprovisioning, account types, least privilege, and privileged access management. A representative framing: *"A service account created for a one-time data migration still holds administrative rights several months later. Which principle was violated?"* — least privilege (with deprovisioning / account management as the supporting control).
+**CompTIA Security+ (SY0-701).**[^cert-security-plus] Domain 4 (Security Operations) covers identity and access management: provisioning and deprovisioning, account types, least privilege, and privileged access management. A representative framing: *"A service account created for a one-time data migration still holds administrative rights several months later. Which principle was violated?"* — least privilege (with deprovisioning / account management as the supporting control).
 
-**ISC2 CCSP.** Domain 5 (Cloud Security Operations) and the IAM content in Domain 3 cover the identity lifecycle, periodic entitlement reviews, and privileged-access management in cloud environments — the exact program-level controls whose absence produced `legacy-deploy-bot`.
+**ISC2 CCSP.**[^cert-ccsp] Domain 5 (Cloud Security Operations) and the IAM content in Domain 3 cover the identity lifecycle, periodic entitlement reviews, and privileged-access management in cloud environments — the exact program-level controls whose absence produced `legacy-deploy-bot`.
 
 ## §7 — What a defender does
 
@@ -353,7 +392,7 @@ Coverline's SOC 2 attestation depends on the **CC6 (Logical and Physical Access)
 
 **Detective / continuous (find the next one automatically):**
 
-- **AWS IAM Access Analyzer.** Its *unused access* findings surface unused roles, users, and access keys on a schedule, turning this manual audit into a dashboard. Access Analyzer *policy generation* goes further: it reads a principal's actual CloudTrail history and proposes a least-privilege policy — it would rebuild `legacy-deploy-bot`'s real footprint (a handful of S3 actions) into a handful-of-actions policy, replacing `*:*`.
+- **AWS IAM Access Analyzer.**[^aws-iam-access-analyzer-review] Its *unused access* findings surface unused roles, users, and access keys on a schedule, turning this manual audit into a dashboard. Access Analyzer *policy generation* goes further: it reads a principal's actual CloudTrail history and proposes a least-privilege policy — it would rebuild `legacy-deploy-bot`'s real footprint (a handful of S3 actions) into a handful-of-actions policy, replacing `*:*`.
 - **AWS Config managed rules:** `iam-user-unused-credentials-check`, `access-keys-rotated`, `iam-policy-no-statements-with-admin-access`, `iam-root-access-key-check`, `mfa-enabled-for-iam-console-access`. These evaluate continuously and alert on drift.
 - **The IAM credential report and `aws iam get-account-summary`** on a cadence, plus **AWS Trusted Advisor's** IAM and unused-credential checks.
 
@@ -365,6 +404,59 @@ Coverline's SOC 2 attestation depends on the **CC6 (Logical and Physical Access)
 - **Wire HR offboarding to IAM deprovisioning** (IAM Identity Center + SCIM), so a termination automatically revokes cloud access. This closes the joiner-mover-leaver gap that left `vikram.shah` live.
 - **GuardDuty** for anomalous credential use — a dormant key suddenly active from a new region or ASN is a high-fidelity alert.
 
+### Sample detection rule (Sigma)
+
+A dormant administrator key is dangerous precisely because nothing about
+it generates events until the day it does. Two rules are worth running:
+one on the credential, one on the privilege.
+
+```yaml
+title: Privileged action by a dormant or legacy IAM principal
+status: experimental
+description: >
+  Detects API activity from principals outside the current operational
+  set, particularly those holding broad managed policies. Migration bots,
+  departed employees, and long-lived automation accumulate because
+  nothing retires them, and each remains as capable as the day it was
+  created.
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  legacy_principals:
+    userIdentity.userName|contains:
+      - 'legacy-'
+      - 'deploy-bot'
+      - 'migration'
+  privileged_action:
+    eventName|startswith:
+      - 'Create'
+      - 'Delete'
+      - 'Put'
+      - 'Attach'
+      - 'Assume'
+  condition: legacy_principals and privileged_action
+falsepositives:
+  - Automation that is genuinely still in service under a legacy name.
+    That is a naming problem worth fixing rather than an exclusion worth
+    adding, and each instance should be renamed or retired.
+level: high
+```
+
+The second rule needs no tuning and should be enabled everywhere: alert on
+**any** use of the account root credential. AWS's own guidance is that
+root access keys should not exist, so the correct expected volume is zero
+and any hit is either an emergency or an incident.
+
+Detection is the weaker control here, and the finding should be written to
+say so. The pattern across the four accounts in this level is a single
+identity-lifecycle process that creates principals and never retires them,
+and no alert fixes that. An
+[IAM credential report](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html)
+reviewed on a schedule, plus automated disablement past a dormancy
+threshold, addresses the class. Deactivating these four addresses the
+instances, and the next migration will produce the next set.
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section — recovering `legacy-deploy-bot`'s key from `bootstrap-iam-keys.env` is all level3 needs. But `level2@cloud` seeds **three** hidden bonus finds that fire when you run specific commands during the audit. `progress --detail` from any prompt lists what you've unlocked.
@@ -373,7 +465,7 @@ The credential chain works without this section — recovering `legacy-deploy-bo
 
 **Trigger:** any `aws` command that inspects `vikram.shah` — e.g. `aws iam list-access-keys --user-name vikram.shah` or `aws iam list-attached-user-policies --user-name vikram.shah`.
 
-`vikram.shah` left Coverline on 2024-01-31 (he's the terminated `USR-004` from yesterday's database `users` table). His IAM user is still present, carries `PowerUserAccess` (full access to everything *except* IAM management — broad, even if not full admin), and has an access key created in 2022 that is still `Active`, last used just before he left. Disabling a departing employee *everywhere* is the "leaver" half of joiner-mover-leaver, and it is the half organizations most often skip, because HR offboarding and cloud IAM deprovisioning are rarely the same workflow. In ATT&CK terms this is **T1078.004 (Valid Accounts: Cloud Accounts)** — a valid, never-revoked credential is the cleanest persistence an attacker can inherit, requiring no malware and no exploit. The Cisco 2018 case in §4 is what this finding looks like when someone abuses it.
+`vikram.shah` left Coverline on 2024-01-31 (he's the terminated `USR-004` from yesterday's database `users` table). His IAM user is still present, carries `PowerUserAccess` (full access to everything *except* IAM management — broad, even if not full admin), and has an access key created in 2022 that is still `Active`, last used just before he left. Disabling a departing employee *everywhere* is the "leaver" half of joiner-mover-leaver, and it is the half organizations most often skip, because HR offboarding and cloud IAM deprovisioning are rarely the same workflow. In ATT&CK terms this is **T1078.004 (Valid Accounts: Cloud Accounts)** — a valid, never-revoked credential is the cleanest persistence an attacker can inherit, requiring no malware and no exploit.[^t1078-004] The Cisco 2018 case in §4 is what this finding looks like when someone abuses it.
 
 ### A key older than the cloud team
 
@@ -397,18 +489,29 @@ The account-level summary reports that the AWS account **root user** has a long-
 
 ## §9 — Further reading
 
-*Last reviewed: June 2026 — links and version-specific claims (cert exam versions, framework revisions, CIS Benchmark control numbers, regulation citation IDs, breach-case figures and dates) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, CIS Benchmark control numbers, regulation citation IDs, breach-case figures and dates) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
 
-- AWS — [IAM security best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html)
-- AWS — [IAM Access Analyzer: review unused access](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-manage-unused.html)
-- AWS — [Generate least-privilege policies from CloudTrail activity](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
-- AWS — [Root user best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-best-practices.html)
-- CIS — [AWS Foundations Benchmark](https://www.cisecurity.org/benchmark/amazon_web_services)
-- NIST — [SP 800-53 Rev. 5 (AC-6 Least Privilege)](https://csrc.nist.gov/projects/risk-management/sp800-53-controls/release-search#!/control?version=5.1&number=AC-6)
-- NIST — [Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework)
-- MITRE ATT&CK — [T1078.004 Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/)
-- MITRE — [CWE-269: Improper Privilege Management](https://cwe.mitre.org/data/definitions/269.html)
-- U.S. DOJ — [Former Cisco engineer sentenced for deleting 16,000 WebEx accounts](https://www.justice.gov/usao-ndca/pr/san-jose-man-sentenced-two-years-imprisonment-damaging-cisco-s-network)
-- U.S. OCC — [$80M civil penalty against Capital One (2020)](https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html)
-- Palo Alto Networks Unit 42 — [EleKtra-Leak: AWS access keys harvested from public GitHub](https://unit42.paloaltonetworks.com/malicious-operations-of-exposed-iam-keys-cryptojacking/)
-- NYDFS — [23 NYCRR 500 (Cybersecurity Requirements, amended)](https://www.dfs.ny.gov/industry_guidance/cybersecurity)
+[^aws-iam-security-best-practices]: [AWS IAM security best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html).
+[^aws-iam-access-analyzer-review]: [AWS IAM Access Analyzer: review unused access](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-manage-unused.html).
+[^cis-aws-foundations-benchmark]: [CIS AWS Foundations Benchmark](https://www.cisecurity.org/benchmark/amazon_web_services).
+[^t1078-004]: [MITRE ATT&CK T1078.004 Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/).
+[^cwe-269]: [MITRE CWE-269: Improper Privilege Management](https://cwe.mitre.org/data/definitions/269.html).
+[^palo-alto-networks-unit-42]: [Palo Alto Networks Unit 42 EleKtra-Leak: AWS access keys harvested from public GitHub](https://unit42.paloaltonetworks.com/malicious-operations-of-exposed-iam-keys-cryptojacking/).
+[^nycrr-500]: [NYDFS 23 NYCRR 500 (Cybersecurity Requirements, amended)](https://www.dfs.ny.gov/industry_guidance/cybersecurity).
+[^cert-ccsp]: [ISC2 CCSP — certification exam outline](https://www.isc2.org/certifications/ccsp/ccsp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cwe-250]: [CWE-250](https://cwe.mitre.org/data/definitions/250.html).
+[^cwe-312]: [CWE-312](https://cwe.mitre.org/data/definitions/312.html).
+[^cwe-798]: [CWE-798](https://cwe.mitre.org/data/definitions/798.html).
+[^t1098-001]: [MITRE ATT&CK — T1098.001: Account Manipulation: Additional Cloud Credentials](https://attack.mitre.org/techniques/T1098/001/).
+[^t1098-003]: [MITRE ATT&CK — T1098.003: Account Manipulation: Additional Cloud Roles](https://attack.mitre.org/techniques/T1098/003/).
+[^t1136-003]: [MITRE ATT&CK — T1136.003: Create Account: Cloud Account](https://attack.mitre.org/techniques/T1136/003/).
+[^doj-cisco-webex]: [Former Cisco engineer sentenced for deleting 16,000 WebEx accounts (DOJ, N.D. Cal.)](https://www.justice.gov/usao-ndca/pr/san-jose-man-sentenced-two-years-imprisonment-damaging-cisco-s-network). 456 virtual machines deleted; 16,000 accounts down for up to two weeks; $1.4 million in restoration and over $1 million refunded.
+[^occ-capital-one-penalty]: [OCC assesses $80 million civil money penalty against Capital One (2020)](https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html).
+
+### Further reading
+
+- [AWS Generate least-privilege policies from CloudTrail activity](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html).
+- [AWS Root user best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-best-practices.html).
+- [NIST SP 800-53 Rev. 5 (AC-6 Least Privilege)](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final).
+- [NIST Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework).

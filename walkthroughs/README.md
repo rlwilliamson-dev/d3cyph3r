@@ -102,16 +102,137 @@ section dividers when starting a new file.
 |---|-------------------------------|--------------------------------------------------------------------------|
 | — | Spoiler warning               | An unnumbered blockquote starting with `⚠`, above §1 — auto-styled as a red callout |
 | 1 | The setup (in-world)          | Driftwood + client + character context. Sets the stage                   |
-| 2 | The solve (mechanical)        | Step-by-step commands with outputs. Include "If you got stuck" sub-note  |
+| 2 | The solve (mechanical)        | Step-by-step commands with outputs. "If you got stuck" sub-note **required for level0 and level1**, optional beyond (see note) |
 | 3 | The vulnerability             | Name the stacked failures. Why each is independently a finding           |
 | 3.5 | Blast radius                | Size the finding: what it reaches, how much is in scope, for how long, what it opens next, and which regime applies. Table of six dimensions plus 2–3 judgement pull-outs. Every figure sourced from level content; regime per the reference table below |
 | 4 | Real-world parallels          | 2–3 named, well-documented incidents. Include the *response* angle       |
 | 5 | Frameworks, deep dive         | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
 | 6 | Cert exam relevance           | Equal-depth treatment of every cert cited. Sample exam-question framings |
-| 7 | What a defender does          | Concrete tools, sample detection rules, audit evidence                   |
+| 7 | What a defender does          | Concrete tools, audit evidence, and a **required** `### Sample detection rule (Sigma)` subsection (see note) |
 | 7.5 | Optional exploration        | Bonus finds + any optional content (pivot hosts, verification commands). Spoiler-tolerant section; see template below |
 | 8 | Key takeaways                 | 3–5 bullet study-guide summary                                           |
-| 9 | Further reading              | Primary sources, vendor docs, books — links only, no commentary needed   |
+| 9 | Further reading              | The numbered source list, plus unnumbered pointers. See "Citations" below |
+
+## Citations
+
+Claims carry a numbered marker that links to the source at the bottom
+of the page, and each source links back to every place it was cited.
+
+Write the marker directly after the claim it supports:
+
+```markdown
+DFARS gives contractors 72 hours to report.[^dfars-7012]
+```
+
+and define it once, in §9:
+
+```markdown
+[^dfars-7012]: [DFARS 252.204-7012](https://www.ecfr.gov/current/title-48/...).
+    An optional sentence about what the source is good for.
+```
+
+That is GitHub-flavoured footnote syntax, so the raw `.md` still
+renders as a numbered reference list on GitHub. **Never write a
+number** — the generator assigns them in order of first citation, so
+inserting a paragraph renumbers everything automatically.
+
+Keys are lowercase, and the convention is to name the thing rather
+than describe it: `cwe-250`, `t1548-003`, `cve-2021-3156`, `rfc-7519`,
+`nist-800-53`, `cfr-12-30`, `owasp-a01-2025`. When two sources cover
+the same identifier, qualify by publisher: `cve-2021-3156-qualys`
+alongside `cve-2021-3156-nvd`.
+
+### What to cite
+
+Cite where a reader could reasonably ask "says who?":
+
+- the first substantive mention of a standard, CWE, ATT&CK technique,
+  CVE, or regulation
+- any notification clock, penalty figure, or affected-count
+- any named incident, with its date
+- any claim about how a specific product behaves
+- any cert-exam claim in §6
+
+Do not cite the same source twice in one paragraph, and do not add a
+marker where the sentence already links that source inline. Two
+pointers to one destination is noise, and the build has a guard
+against the first case but not the second.
+
+### Sources cited vs further reading
+
+§9 holds two lists and the distinction is load-bearing:
+
+- **Footnote definitions** are cited sources. They are numbered, and
+  the build FAILS if one is never cited. That rule is what keeps the
+  numbered list an audit trail rather than a pile of links that
+  accumulate because deleting one feels like a loss.
+- **A plain bullet list under `### Further reading`** holds pointers
+  that back no particular claim: a tool, a course, a standing
+  reference. Unnumbered, and no build rule applies.
+
+If a source will not attach to a specific sentence, it belongs in the
+second list. Do not manufacture a claim for it.
+
+### What the build enforces
+
+An unknown key, a duplicate definition, a definition with no link or
+more than one link, a marker inside a definition, and a
+defined-but-never-cited source all fail `tools/build-walkthroughs.mjs`.
+Nothing is written when they do.
+
+It also enforces the **other direction**: an identifier named in the
+prose with no source anywhere in §9 fails the build. That covers CWE,
+CVE, ATT&CK sub-technique, RFC and NIST SP numbers, which each have a
+canonical per-identifier page, so "named but unsourced" is a fact
+rather than an opinion.
+
+And **figures**. A paragraph stating a dollar amount or a count of
+people or systems about a real-world incident, with no citation
+anywhere in it, fails the build. Those are the most checkable claims a
+walkthrough makes and the easiest to get subtly wrong: this corpus had
+a Change Healthcare cost frozen at a mid-year estimate and a $148
+million settlement attributed to the FTC when it was a fifty-state
+attorneys-general action. Both sat unsourced for releases.
+
+Checked per paragraph, not per sentence — a figure usually sits in a
+run of sentences about one incident, and one citation on that run is
+the right density. Figures about Driftwood and its clients are exempt:
+demanding a source for the revenue of a company that does not exist
+would be absurd.
+
+**Authorial estimates are not citable and should not pretend to be.**
+"Roughly 80% of practical forensic queries" is a judgement; attaching a
+source to it would be false precision. Write those so a reader can tell
+which kind of claim they are reading ("the large majority of"), rather
+than dressing an opinion as a measurement.
+
+Both directions matter and they are not the same check. Verifying only
+that every listed source gets used says nothing about whether every
+claim has a source — which is how 53 identifiers ended up asserted in
+prose with nothing to look them up by.
+
+### Verifying the destination, not just the status code
+
+```bash
+node tools/verify-citations.mjs                 # whole corpus
+node tools/verify-citations.mjs linux/level3    # one walkthrough
+```
+
+`check-links` answers "does this URL resolve", which is weaker than it
+sounds. A citation reading `[CWE-250 — ...](.../205.html)` resolves
+perfectly and is wrong. So does one pointing at a vendor's homepage
+instead of the document it names.
+
+This fetches each page and requires the thing the citation *claims* to
+actually appear there: the identifier if the title carries one (a
+CWE-250 page says "CWE-250" and no other page does), otherwise a
+majority of the title's distinctive words. Anything it cannot read —
+bot walls, PDFs, JavaScript-rendered pages — is reported as UNVERIFIED
+rather than guessed at, and those need a human to open them.
+
+Run it on every walkthrough PR. Zero MISMATCH is the bar; read the WEAK
+list, since that is where a title that over-claims what a page contains
+shows up.
 
 ### §7.5 Optional exploration — author guide (v1.10.0)
 
@@ -142,6 +263,87 @@ documented destination for spoiling those bonuses:
   verification commands that aren't part of the solve.
 - **Section anchor is literally `## §7.5 — Optional exploration`**,
   placed between §7 (What a defender does) and §8 (Key takeaways).
+
+### "If you got stuck" — required for level0 and level1 only
+
+The rule used to say every §2 carries one. In practice nine of 24 did,
+and all nine were level0 or level1. That was not drift; it was the right
+instinct applied inconsistently. A reader on `level3@crypto` has solved
+three levels in that track and does not need to be told how to check
+their working directory, while a reader on any level0 may be seeing the
+terminal for the first time.
+
+So the rule now matches the instinct: required on level0 and level1,
+optional after. Add one to a later level when the solve has a genuine
+trap, not as a formality.
+
+### The detection rule is required, and it has a shape
+
+Every §7 carries a `### Sample detection rule (Sigma)` subsection. Nine
+walkthroughs had one before v2.5.1 and fifteen did not, which meant §7
+was uniformly good advice but only sometimes actionable.
+
+Each rule must carry `title`, `logsource`, `detection` with an explicit
+`condition`, `falsepositives`, and `level`. The `falsepositives` block is
+not optional padding: a rule shipped without one is a rule the receiving
+team will disable the first week it fires, and naming the benign causes is
+what makes it survivable.
+
+Three things worth doing in the prose around the rule:
+
+- **Say what the rule does not fix.** Most of these are tripwires covering
+  the interval until a real control ships. Write that down, so the
+  detection is never mistaken for the remediation.
+- **Rate honestly, and explain a low rating.** `forensics/level2`'s rule is
+  `level: low` because after-hours work is not an offence and a rule that
+  pages on it gets switched off. That reasoning belongs next to the rule.
+- **Prefer the native control where one exists.** GuardDuty, an IAM
+  credential report, CT-log monitoring, or a pre-receive secret scan will
+  often beat anything a SIEM rule can do, and saying so is more useful
+  than pretending the rule is the whole answer.
+
+### Forward references go stale, and the build now catches them
+
+A walkthrough written before the next level existed naturally describes it
+as "a future `level3@linux`", or says it "hasn't been built yet". When
+that level ships, nothing goes back to correct the prose. The corpus then
+carries statements that were true once and are now wrong.
+
+This is not hypothetical. `linux/level1` told readers that `level2@linux`
+was unbuilt and unreachable for two releases after it became playable, and
+`crypto/level2` and `linux/level2` carried the same staleness in their
+spoiler lines. All were fixed in v2.5.1.
+
+The generator now knows which levels exist and fails the build on any
+sentence that names a **shipped** level alongside not-yet-built language.
+The vocabulary was assembled from an actual sweep rather than guessed,
+because the first version of this check caught only two phrasings and
+missed the two that accounted for most of the corpus:
+
+```
+hasn't been built    has not been built   isn't built
+is not built         not yet built        hasn't shipped
+has not shipped      isn't shipped        not yet shipped
+doesn't exist        does not exist       no entry point
+forthcoming          will eventually      eventually explore
+the eventual         staged for it        when it ships
+once it ships        not yet available    to be built
+```
+
+Plus the fixed phrases "no levelN is currently solvable" and "the level
+content is forthcoming".
+
+**Add to that list whenever a new euphemism turns up.** A false positive
+costs one rewording; a miss costs a reader being told to stop at a level
+that is playable
+
+**So the workflow is automatic.** Shipping a new level makes the previous
+walkthrough's forward reference fail, and the build will not pass until it
+is corrected. Nobody has to remember.
+
+Writing "a future `levelN@track`" is still correct and expected for a
+level that genuinely does not exist yet. The check only objects once the
+statement stops being true.
 
 ### Section formatting
 
@@ -276,17 +478,23 @@ spend. Do not widen this band again to accommodate growth; cut instead.
 ## Pre-merge checklist for a new walkthrough
 
 - [ ] Markdown file at `walkthroughs/<track>/<level>.md`
-- [ ] `MANIFEST` in `walkthrough.js` updated with `title` and `blurb`
+- [ ] `MANIFEST` in `walkthroughs/manifest.mjs` updated with `title`
+      and `blurb`
 - [ ] Spoiler warning is the first content block (starts with `⚠`)
 - [ ] Every framework/cert cited in the in-game `lessons-learned.md`
       has a corresponding subsection
-- [ ] Real-world parallels are linked in §9 Further Reading
+- [ ] Real-world parallels are cited in the body, not only listed
+- [ ] Every checkable claim carries a citation marker (see "Citations")
+- [ ] `node tools/build-walkthroughs.mjs` passes, and the generated
+      `.html` is committed alongside the `.md`
+- [ ] **`node tools/check-links.mjs <track>/<level>` reports no DEAD
+      links.** Investigate MOVED and BLOCKED by hand; see "Link audit"
 - [ ] No raw HTML in the markdown — pure markdown only
 - [ ] Locally rendered via `python3 -m http.server` and visually
       reviewed for layout issues
-- [ ] **Link audit pass run via a general-purpose research agent**
-      (see "Link audit" section below). Apply any corrections; bump
-      the "Last reviewed" date at the top of §9.
+- [ ] **Content audit pass run** (see "Link audit" section below).
+      Apply any corrections; bump the "Last reviewed" date at the top
+      of §9.
 - [ ] Anti-spoiler exception: walkthrough is allowed to contain
       passwords / breadcrumb credentials (this is intentional). The
       anti-spoiler rule applies only to CHANGELOG, README, release
@@ -308,10 +516,57 @@ credentials usage was actually wrong — the correct ID is CWE-1392).
 Historical-case attributions accumulate corrections over time
 (McAfee's hotel attribution, BTK's metadata-recovery attribution).
 
+**The audit covers the WHOLE CORPUS, not just the walkthrough you
+touched.** Certification versions and framework revisions move on their
+own schedule, not on ours, and a claim written a year ago goes stale
+whether or not anyone edits its file. Auditing only the new level is
+what let a CySA+ retirement date be wrong in thirteen walkthroughs at
+once, and left two files sitting at "Last reviewed: April 2026" while
+their neighbours said July.
+
+The build enforces this: a walkthrough whose review date falls more
+than three months behind the freshest one in the corpus fails, and so
+does one missing the line. The check compares files against each other
+rather than against today, so a fresh clone never fails on checkout —
+what it catches is one walkthrough being re-audited while the rest are
+left behind.
+
 Every walkthrough PR — *including small edits to an existing
 walkthrough* — must run a link-audit pass before merge.
 
-**The audit covers BOTH files:**
+**There are two halves, and they catch different things.**
+
+### 1. The mechanical half: `tools/check-links.mjs`
+
+```bash
+node tools/check-links.mjs                  # the whole corpus
+node tools/check-links.mjs forensics/level3 # one walkthrough
+```
+
+Requests every URL and classifies it. Only 404, 410, and DNS or TLS
+failures fail the run. 403 and 429 are reported as BLOCKED (bot
+protection, not a dead page), a 3xx to a different path as MOVED, and
+5xx as FLAKY. Fix every DEAD before merge and read the MOVED list,
+since a redirect that lands on a blog home page means the article is
+gone even though the link "works".
+
+This runs weekly in CI (`.github/workflows/link-check.yml`) and opens
+an issue when something rots between releases. It is deliberately NOT
+in the blocking build: the generator is hermetic and can be required on
+every PR, whereas a network check would fail an unrelated diff because
+a government site chose that morning to rate-limit.
+
+**It cannot tell you a 200 is the right page.** justice.gov answers any
+non-browser client with an interstitial challenge under a 200, for real
+and imaginary paths alike, so citations behind that kind of bot wall
+still need a human to open them.
+
+### 2. The content half
+
+The checker verifies that a URL resolves. It has nothing to say about
+whether the version, control number, or figure you cited is still
+current, which is the drift that actually embarrasses us. That half is
+a research pass, and it covers BOTH files:
 
 - The walkthrough markdown (`walkthroughs/<track>/<level>.md`)
 - The corresponding in-game lessons-learned content in
@@ -326,11 +581,12 @@ Both drift the same way. Both must stay current.
    `subagent_type: general-purpose`) and give it BOTH file paths
    (walkthrough + level), plus today's date.
 2. Ask it to verify, for each citation in both files: current
-   canonical version (is the version cited still the latest?),
-   current canonical URL (does it still resolve?), and any
-   body-text claims tied to those sources (cert exam codes,
+   canonical version (is the version cited still the latest?) and
+   any body-text claims tied to those sources (cert exam codes,
    control numbers, regulation citation IDs, breach incident
-   figures, historical-case dates and attributions).
+   figures, historical-case dates and attributions). URL
+   resolution is already covered by half 1 — don't spend agent
+   time re-checking it.
 3. The agent should report as a structured list — one entry per
    item with status (✓ current / ⚠ needs update / ✗ broken),
    corrected URL/version if needed, and a one-line "what to change"

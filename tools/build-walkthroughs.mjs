@@ -198,6 +198,11 @@ function plain(s) {
     .replace(/`([^`]*)`/g, "$1")
     .replace(/\*\*([^*]*)\*\*/g, "$1")
     .replace(/\*([^*]*)\*/g, "$1")
+    // Citation markers and definition labels. Both would otherwise reach
+    // search snippets and meta descriptions as literal "[^cwe-250]"
+    // noise. Has to run before the link strip below, which does not
+    // match a marker (no "(url)" part) and would leave it behind.
+    .replace(/\[\^[A-Za-z0-9][A-Za-z0-9._-]*\]:?/g, "")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
@@ -275,7 +280,7 @@ function slugify(text, used) {
  * Checks structure only, never prose. Length, tone, and citation
  * quality stay editorial judgement (see walkthroughs/README.md).
  */
-function validate(md, label) {
+function validate(md, label, shipped) {
   const problems = [];
 
   // Heading text in document order, H2 only.
@@ -321,6 +326,123 @@ function validate(md, label) {
     );
   }
 
+  // §7 must carry a usable detection rule.
+  //
+  // Checked by required FIELDS rather than by heading text, because the
+  // rules predating v2.5.1 introduce themselves as a bold numbered item
+  // and the newer ones as an h3. The heading style is cosmetic; what
+  // makes a rule usable is not.
+  //
+  // `falsepositives` is enforced deliberately. A rule shipped without one
+  // gets disabled the first week it fires, so omitting it produces
+  // something that looks like a deliverable and functions as noise.
+  const RULE_FIELDS = [
+    "title:",
+    "logsource:",
+    "detection:",
+    "condition:",
+    "falsepositives:",
+    "level:",
+  ];
+  const missingRuleFields = RULE_FIELDS.filter((f) => !md.includes(f));
+  if (missingRuleFields.length) {
+    problems.push(
+      `detection rule incomplete or absent (§7) — missing: ` +
+        missingRuleFields.map((f) => f.replace(":", "")).join(", ")
+    );
+  }
+
+  // Review staleness.
+  //
+  // Every §9 opens with "Last reviewed: <Month> <Year>", and the value
+  // of that line is entirely in whether anyone acts on it. They did not:
+  // two walkthroughs sat at April 2026 through four releases, while
+  // their neighbours said July, and nothing anywhere noticed. Meanwhile
+  // the corpus accumulated real drift — a CySA+ retirement date off by
+  // six months, a PenTest+ launch year off by one, a CEH release off by
+  // five months, a CISSP outline refresh off by a month.
+  //
+  // Cert vendors and standards bodies move on a roughly annual cycle,
+  // so a review older than MAX_REVIEW_AGE_MONTHS is treated as expired
+  // and fails the build. The fix is to re-audit and re-date, which is
+  // exactly the work the line was supposed to prompt.
+  //
+  // Deliberately checked against the newest date in the corpus rather
+  // than against today. A clone built two years from now should not
+  // fail on a fresh checkout, and a repository whose walkthroughs were
+  // all reviewed together should not go red simply for sitting still.
+  // What this catches is DIVERGENCE: one walkthrough being re-audited
+  // while its neighbours are left behind, which is the actual failure
+  // mode observed.
+  const reviewed = md.match(/Last reviewed:\s*([A-Z][a-z]+)\s+(\d{4})/);
+  if (!reviewed) {
+    problems.push(
+      `missing the "Last reviewed: <Month> <Year>" line at the top of §9`
+    );
+  }
+
+  // Stale forward references.
+  //
+  // A walkthrough written before the next level existed describes it as
+  // "a future level3@linux" or says it "hasn't been built yet". When that
+  // level ships, nothing goes back to correct the prose, so the corpus
+  // accumulates statements that were true once and are now flatly wrong.
+  // A reader following linux/level1 was told level2 was unbuilt for two
+  // releases after it became playable.
+  //
+  // The generator already knows which levels exist, so it can simply
+  // check. Anything claiming a shipped level is unbuilt fails the build,
+  // which means shipping a new level forces the correction rather than
+  // relying on someone remembering.
+  const futureRefs = [...md.matchAll(/a future `(level\d+@[a-z]+)`/g)];
+  for (const m of futureRefs) {
+    if (shipped.has(m[1])) {
+      problems.push(
+        `calls \`${m[1]}\` "a future" level, but it has shipped ` +
+          `(drop "a future" and check the surrounding prose)`
+      );
+    }
+  }
+
+  // The prose forms, which are worse than the spoiler line because they
+  // tell a reader the level is unreachable rather than merely unwritten.
+  //
+  // This vocabulary was assembled from an actual sweep rather than
+  // guessed. The first pass caught only "a future" and "hasn't been
+  // built", and missed "the eventual levelN" and "at time of writing,
+  // levelN hasn't shipped yet", which between them accounted for six of
+  // the seven stale references in the corpus. Add to this list whenever
+  // a new euphemism turns up; the cost of a false positive is one
+  // rewording, and the cost of a miss is a reader being told to stop.
+  const UNBUILT_VOCAB =
+    "hasn't been built|has not been built|isn't built|is not built|" +
+    "not yet built|hasn't shipped|has not shipped|isn't shipped|" +
+    "not yet shipped|hasn't yet shipped|doesn't exist|does not exist|" +
+    "no entry point|forthcoming|will eventually|eventually explore|" +
+    "the eventual|staged for it|when it ships|once it ships|" +
+    "not yet available|currently solvable|to be built|will be built";
+
+  const UNBUILT_CLAIMS = [
+    new RegExp(`(\`?level\\d+@[a-z]+\`?)[^.\\n]{0,80}(${UNBUILT_VOCAB})`, "i"),
+    new RegExp(`(${UNBUILT_VOCAB})[^.\\n]{0,80}(\`?level\\d+@[a-z]+\`?)`, "i"),
+    /no level\d+ is currently solvable/i,
+    /the level content is forthcoming/i,
+  ];
+  for (const re of UNBUILT_CLAIMS) {
+    const m = md.match(re);
+    if (m) {
+      // Only a problem when the sentence names a level that EXISTS.
+      // "a future level4@linux" is correct while level4 is unwritten.
+      const named = (m[0].match(/level\d+@[a-z]+/) || [])[0];
+      if (!named || shipped.has(named)) {
+        problems.push(
+          `claims a level is unbuilt: "${m[0].trim().slice(0, 80)}..." ` +
+            `(verify against the shipped set and rewrite)`
+        );
+      }
+    }
+  }
+
   return problems.map((p) => `  ${label}: ${p}`);
 }
 
@@ -328,6 +450,293 @@ function validate(md, label) {
 function readingTime(words) {
   const mins = Math.max(1, Math.round(words / WORDS_PER_MINUTE));
   return `${mins} min read`;
+}
+
+// ─── Citations ────────────────────────────────────────────────────
+//
+// A walkthrough makes a lot of checkable claims: that a regulator gives
+// you 72 hours, that a named breach cost a named amount, that a standard
+// says a specific thing in a specific control. Before this, §9 carried a
+// pile of links at the bottom and the reader had to guess which link
+// backed which sentence. Now a claim carries a numbered marker and the
+// marker jumps to the source.
+//
+// AUTHORING
+// ---------
+// In the body, put the marker directly after the claim it supports:
+//
+//     DFARS gives contractors 72 hours to report.[^dfars-7012]
+//
+// In §9, define it once:
+//
+//     [^dfars-7012]: [DFARS 252.204-7012](https://www.ecfr.gov/...).
+//         Optional sentence about what the source is good for.
+//
+// That is GitHub-flavoured footnote syntax, chosen so the raw .md files
+// stay readable on GitHub, where the same markers render as a numbered
+// reference list with backlinks. Nothing here is a private dialect.
+//
+// Numbering is by order of first citation, assigned during rendering, so
+// authors never write a number and cannot get one wrong.
+//
+// Sources worth listing but not tied to a specific claim (a tool, a
+// course, a standing reference) go in a plain bullet list under a
+// "### Further reading" H3 inside §9. Those are pointers, not citations,
+// and they stay unnumbered.
+//
+// WHAT IS ENFORCED
+// ----------------
+// Unknown key, duplicate definition, uncited definition, malformed
+// definition, and a marker inside a definition all fail the build. The
+// uncited rule is the load-bearing one: it is what keeps §9 a list of
+// sources that were actually used rather than a pile of links that
+// accumulate because deleting one feels like losing something.
+
+// Identifiers a reader can look up, and which therefore must resolve to
+// a source somewhere in §9. Deliberately limited to unambiguous ones:
+// each has a canonical, per-identifier page, so "named but unsourced"
+// is a fact rather than an opinion.
+const CITABLE_IDS = [
+  [/\bCWE-(\d+)\b/g, (m) => `CWE-${m[1]}`],
+  [/\bCVE-(\d{4})-(\d{4,7})\b/g, (m) => `CVE-${m[1]}-${m[2]}`],
+  [/\bT(\d{4})\.(\d{3})\b/g, (m) => `T${m[1]}.${m[2]}`],
+  [/\bRFC\s?(\d{3,5})\b/g, (m) => `RFC ${m[1]}`],
+  [/\bSP\s?800-(\d+[A-Za-z]?)\b/g, (m) => `SP 800-${m[1]}`],
+];
+
+/**
+ * Identifiers the prose names that §9 never lists.
+ *
+ * Code is excluded: a `CWE-79` inside a command transcript or a config
+ * dump is sample data, not a claim the walkthrough is making.
+ *
+ * Matching against §9 is done on several spellings of the same
+ * identifier because publishers disagree with each other. MITRE writes
+ * "T1548.003" in prose and "T1548/003" in a URL; NIST writes "SP
+ * 800-53" and "800/53". A citation is present if any spelling appears.
+ */
+function uncitedIdentifiers(md, label) {
+  const nineAt = md.search(/^## .*Further reading/m);
+  if (nineAt < 0) return [];
+
+  const body = md
+    .slice(0, nineAt)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`\n]*`/g, " ");
+  const nine = md.slice(nineAt);
+
+  const missing = new Set();
+  for (const [re, fmt] of CITABLE_IDS) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(body))) {
+      const id = fmt(m);
+      const spellings = [
+        id,
+        id.replace(".", "/"),
+        id.replace(/^SP /, ""),
+        id.replace(/\s/g, ""),
+      ];
+      if (!spellings.some((s) => nine.includes(s))) missing.add(id);
+    }
+  }
+
+  if (!missing.size) return [];
+  return [
+    `  ${label}: names ${[...missing].sort().join(", ")} in the prose but ` +
+      `lists no source for ${missing.size === 1 ? "it" : "them"} in §9`,
+  ];
+}
+
+// A figure a reader could check: money, or a count of people or systems.
+//
+// The negative lookahead on 19xx/20xx keeps years out. "pre-2018
+// accounts that didn't opt in" is a date, not a population, and the
+// first version of this read it as one.
+const FIGURE =
+  /\$[\d,.]+ ?(?:million|billion|bn\b)|\b(?!(?:19|20)\d\d\s)\d[\d,]{2,}(?:\.\d+)? ?(?:million|billion)?\s*(?:records|accounts|customers|individuals|patients|users|victims|servers|databases|instances|machines)\b/i;
+
+// The fictional consultancy and its clients. Figures about Driftwood's
+// own engagements are authored worldbuilding, and demanding a source for
+// "roughly $80M in annual revenue" at a company that does not exist
+// would be absurd.
+// Case-insensitive on purpose: the same names appear as hostnames and
+// identifiers in lowercase (`meridian_portal`, `halton-prod-bastion`),
+// and a paragraph discussing the fictional CSV by its table name is
+// still discussing fiction.
+const IN_WORLD =
+  /Halton|Atlas|Vesta|Meridian|Polaris|Veridian|Coverline|Driftwood|BluePier|Reed|Daniel|Theo|Priya|Saanvi|Dana|Marisol/i;
+
+/**
+ * Paragraphs asserting a real-world figure with no citation anywhere in
+ * them.
+ *
+ * §3.5 and §4 are full of dollar amounts, record counts and penalty
+ * figures, and those are the most checkable claims a walkthrough makes
+ * and the easiest to get subtly wrong. This corpus had a Change
+ * Healthcare cost frozen at a mid-year estimate ($2.4bn against a final
+ * $3.1bn) and a $148 million settlement attributed to the FTC when it
+ * was a fifty-state attorneys-general action. Both sat unsourced.
+ *
+ * Checked per PARAGRAPH rather than per sentence: a figure usually
+ * appears in a run of sentences about one incident, and one citation on
+ * that run is the right density. Requiring one per sentence would push
+ * authors toward the citation clutter this is meant to avoid.
+ */
+function uncitedFigures(md, label) {
+  const nineAt = md.search(/^## .*Further reading/m);
+  if (nineAt < 0) return [];
+
+  const body = md.slice(0, nineAt).replace(/```[\s\S]*?```/g, " ");
+  const bad = [];
+
+  for (const para of body.split(/\n{2,}/)) {
+    if (para.includes("[^")) continue;
+    if (para.trimStart().startsWith("|")) continue; // handled by §3.5's own rows
+    if (!FIGURE.test(para)) continue;
+    if (IN_WORLD.test(para)) continue;
+
+    const hit = para.match(FIGURE)[0];
+    bad.push(hit.trim());
+  }
+
+  if (!bad.length) return [];
+  return [
+    `  ${label}: states ${bad.map((b) => `"${b}"`).join(", ")} about a ` +
+      `real-world incident with no source in the paragraph`,
+  ];
+}
+
+// Placeholder swapped for the rendered reference list after parsing.
+//
+// Position, not string surgery on the output: markdown rendering moves
+// everything around, so the only reliable way to put the list exactly
+// where the definitions were is to leave a token behind and substitute
+// it afterwards. Deliberately alphanumeric, so no markdown construct and
+// no HTML escaping can touch it in transit.
+const REFS_TOKEN = "D3CREFERENCELISTANCHOR7F3A";
+
+// A definition line: [^key]: content, at the start of a line.
+const DEF_RE = /^\[\^([A-Za-z0-9][A-Za-z0-9._-]*)\]:[ \t]*(.*)$/;
+
+/**
+ * Split citation definitions out of a walkthrough's markdown.
+ *
+ * Returns { md, defs, problems } where `md` has the definition block
+ * replaced by REFS_TOKEN and `defs` maps key -> raw markdown content.
+ *
+ * Definitions may wrap onto continuation lines indented by two or more
+ * spaces, which is what keeps a long annotation from becoming an
+ * unreadable single line in the source file.
+ */
+function extractDefinitions(md, label) {
+  const problems = [];
+  const defs = new Map();
+  const lines = md.split("\n");
+  const kept = [];
+  let firstDefAt = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = DEF_RE.exec(lines[i]);
+    if (!m) {
+      kept.push(lines[i]);
+      continue;
+    }
+
+    const [, key, head] = m;
+    if (firstDefAt < 0) firstDefAt = kept.length;
+
+    // Absorb indented continuation lines.
+    const parts = [head.trim()];
+    while (i + 1 < lines.length && /^[ \t]{2,}\S/.test(lines[i + 1])) {
+      parts.push(lines[++i].trim());
+    }
+    const content = parts.join(" ").trim();
+
+    if (defs.has(key)) {
+      problems.push(`duplicate citation definition: [^${key}]`);
+      continue;
+    }
+    if (!content) {
+      problems.push(`empty citation definition: [^${key}]`);
+      continue;
+    }
+    // One link, so the reference list always has exactly one destination
+    // and "go to the source" is never ambiguous.
+    const links = content.match(/\]\((https?:\/\/[^\s)]+)\)|<(https?:\/\/[^\s>]+)>/g) || [];
+    if (links.length === 0) {
+      problems.push(`citation [^${key}] has no link (needs one [title](url))`);
+    } else if (links.length > 1) {
+      problems.push(
+        `citation [^${key}] has ${links.length} links; split it into ` +
+          `one definition per source`
+      );
+    }
+    if (/\[\^/.test(content)) {
+      problems.push(`citation [^${key}] contains a marker; definitions cannot cite`);
+    }
+    defs.set(key, content);
+  }
+
+  // Drop blank lines left where the block used to be, then mark the spot.
+  if (firstDefAt >= 0) {
+    let start = firstDefAt;
+    while (start > 0 && kept[start - 1].trim() === "") start--;
+    let end = firstDefAt;
+    while (end < kept.length && kept[end].trim() === "") end++;
+    kept.splice(start, end - start, "", REFS_TOKEN, "");
+  }
+
+  return { md: kept.join("\n"), defs, problems: problems.map((p) => `  ${label}: ${p}`) };
+}
+
+/**
+ * Build the reference list markup.
+ *
+ * `numbers` is key -> assigned number and `counts` is key -> how many
+ * times the key was cited, both filled in during rendering. Entries come
+ * out ordered by number, which is order of first citation.
+ *
+ * Each entry links back to every place it was cited. With one citation
+ * that is a single arrow; with several it is a lettered run (a, b, c),
+ * the convention Wikipedia uses, because numbering the backlinks would
+ * collide visually with the reference numbers themselves.
+ */
+function renderRefList(defs, numbers, counts, renderInline) {
+  const ordered = [...numbers.entries()]
+    .filter(([key]) => defs.has(key))
+    .sort((a, b) => a[1] - b[1]);
+
+  if (!ordered.length) return "";
+
+  const items = ordered
+    .map(([key, num]) => {
+      const n = counts.get(key) || 1;
+      const back =
+        n === 1
+          ? `<a class="ref-back" href="#cite-${esc(key)}-1" ` +
+            `aria-label="Back to the citation of source ${num}">&#8617;</a>`
+          : `<span class="ref-back-group">` +
+            Array.from({ length: n }, (_, i) =>
+              `<a class="ref-back" href="#cite-${esc(key)}-${i + 1}" ` +
+                `aria-label="Back to citation ${i + 1} of source ${num}">` +
+                `${String.fromCharCode(97 + (i % 26))}</a>`
+            ).join("") +
+            `</span>`;
+
+      return (
+        `<li id="ref-${num}">${back}` +
+        `<span class="ref-text">${renderInline(defs.get(key))}</span></li>`
+      );
+    })
+    .join("\n");
+
+  return (
+    `<section class="refs">\n` +
+    `<h3 id="sources">Sources</h3>\n` +
+    `<ol class="ref-list">\n${items}\n</ol>\n` +
+    `</section>\n`
+  );
 }
 
 // ─── Markdown rendering ───────────────────────────────────────────
@@ -344,11 +753,24 @@ const SAFE_URL = /^(?:https?:|mailto:|tel:|#|\/|\.\.?\/)/i;
  * second parse so the ids in the markup and the ids in the rail are
  * guaranteed to agree.
  */
-function renderMarkdown(md) {
+function renderMarkdown(md, label = "") {
   const toc = [];
   const used = new Set();
   // Only the first blockquote is eligible for the spoiler treatment.
   let seenBlockquote = false;
+
+  // Reserved so an author's H3 cannot slug-collide with the generated
+  // "Sources" heading and steal its anchor.
+  used.add("sources");
+
+  const { md: body, defs, problems } = extractDefinitions(md, label);
+
+  // key -> reference number, assigned on first citation; key -> how many
+  // times cited, for the backlinks. Both are filled by the renderer
+  // below, which marked calls in document order.
+  const numbers = new Map();
+  const counts = new Map();
+  const unknown = new Set();
 
   const renderer = {
     // Assign an id to every heading and record H2/H3 in the TOC.
@@ -430,15 +852,101 @@ function renderMarkdown(md) {
     },
   };
 
+  // The inline extension that turns [^key] into a numbered marker.
+  //
+  // Registered as an extension rather than handled by a pre-pass regex
+  // because marked runs extension tokenizers as part of normal inline
+  // lexing, which means a marker inside a code span or a fenced block is
+  // left alone for free. A regex sweep over the raw markdown would
+  // rewrite `[^x]` inside a shell example, and several of these
+  // walkthroughs quote regexes.
+  const citation = {
+    name: "citation",
+    level: "inline",
+    start(src) {
+      const i = src.indexOf("[^");
+      return i < 0 ? undefined : i;
+    },
+    tokenizer(src) {
+      const m = /^\[\^([A-Za-z0-9][A-Za-z0-9._-]*)\]/.exec(src);
+      if (m) return { type: "citation", raw: m[0], key: m[1] };
+      return undefined;
+    },
+    renderer(token) {
+      const { key } = token;
+
+      // An undefined key is a build failure, but rendering has to
+      // produce something. Emitting the raw marker keeps the sentence
+      // readable in the (unreachable, because the build fails) output
+      // rather than dropping the text on the floor.
+      if (!defs.has(key)) {
+        unknown.add(key);
+        return `[^${esc(key)}]`;
+      }
+
+      if (!numbers.has(key)) numbers.set(key, numbers.size + 1);
+      const num = numbers.get(key);
+      const nth = (counts.get(key) || 0) + 1;
+      counts.set(key, nth);
+
+      return (
+        `<sup class="cite">` +
+        `<a id="cite-${esc(key)}-${nth}" href="#ref-${num}" ` +
+        `aria-label="Source ${num}">${num}</a></sup>`
+      );
+    },
+  };
+
   // A fresh Marked instance per file. Reusing a global one would let
   // the `used` slug set and `toc` array leak across walkthroughs, since
   // the renderer closes over both.
   const inst = new Marked();
-  inst.use({ renderer });
+  inst.use({ renderer, extensions: [citation] });
 
-  const html = inst.parse(md);
+  let html = inst.parse(body);
+
+  // The reference list is rendered after the body so the numbering is
+  // settled. parseInline on the same instance means definitions get the
+  // same link treatment as the rest of the page (scheme allowlist,
+  // target=_blank), rather than a second, subtly different renderer.
+  const refs = renderRefList(defs, numbers, counts, (s) => inst.parseInline(s));
+  html = html.replace(new RegExp(`<p>\\s*${REFS_TOKEN}\\s*</p>\\s*`), refs);
+
+  for (const key of unknown) {
+    problems.push(`  ${label}: cites [^${key}], which has no definition in §9`);
+  }
+  for (const key of defs.keys()) {
+    if (!numbers.has(key)) {
+      problems.push(
+        `  ${label}: [^${key}] is defined but never cited ` +
+          `(cite it in the body, or move it to the "Further reading" list)`
+      );
+    }
+  }
+
+  // The OTHER direction: a claim that names a source nobody can look up.
+  //
+  // Everything above verifies that each listed source gets used. That is
+  // only half the relationship, and checking only that half is how 53
+  // identifiers ended up named in prose with no source anywhere in the
+  // walkthrough — CWE-863, CVE-2022-26134, T1098.001, RFC 4648 and the
+  // rest were simply asserted. Both properties matter and they are not
+  // the same: "every source is used" says nothing about "every claim has
+  // a source".
+  //
+  // Scoped to identifiers because those are unambiguous. A reader who
+  // meets "CWE-863" can reasonably expect a link; prose claims need
+  // editorial judgement and stay out of the build.
+  problems.push(...uncitedIdentifiers(md, label));
+  problems.push(...uncitedFigures(md, label));
+  if (defs.size && html.includes(REFS_TOKEN)) {
+    problems.push(`  ${label}: internal error, the reference-list anchor survived rendering`);
+  }
+
+  // Word count comes from the original markdown so adding citations does
+  // not silently inflate the reading-time estimate.
   const words = md.split(/\s+/).filter(Boolean).length;
-  return { html, toc, words };
+  return { html, toc, words, problems, citations: numbers.size };
 }
 
 // ─── Page template ────────────────────────────────────────────────
@@ -556,7 +1064,7 @@ const BRAND_GLYPHS =
 
 // Bumped in lockstep with js/engine/version.js so a release busts the
 // stylesheet cache for returning readers (release checklist step 2b).
-const CSS_VERSION = "2.5.0";
+const CSS_VERSION = "2.7.0";
 
 // ─── TOC rail ─────────────────────────────────────────────────────
 
@@ -676,14 +1184,19 @@ function pagerHtml({ prev, next }) {
   );
 }
 
-/** Build one walkthrough page. */
-async function buildLevel(trackKey, levelKey) {
+/**
+ * Build one walkthrough page.
+ *
+ * `rendered` is the result main() already produced during validation.
+ * Rendering is where citation problems surface, and main() promises to
+ * validate the whole corpus before writing anything, so the render has
+ * to happen up there; passing it back down avoids doing it twice.
+ */
+async function buildLevel(trackKey, levelKey, rendered) {
   const track = MANIFEST[trackKey];
   const lvl = track.levels[levelKey];
-  const mdPath = join(WT, trackKey, `${levelKey}.md`);
-  const md = await readFile(mdPath, "utf8");
 
-  const { html, toc, words } = renderMarkdown(md);
+  const { html, toc, words } = rendered;
   const canonical = `${SITE}${levelUrl(trackKey, levelKey)}`;
   const title = `${levelKey}@${trackKey} — ${lvl.title} — D3CYPH3R Walkthroughs`;
 
@@ -982,6 +1495,189 @@ async function buildSearchIndex(levels) {
 
 // ─── Main ─────────────────────────────────────────────────────────
 
+/**
+ * Extract a level's in-game post-mortem text from levels/<track>.js.
+ *
+ * The content lives inside a JS template literal, so the scan has to
+ * respect backslash escapes: these files use \` for inline code, and a
+ * naive search for the closing backtick truncates most of them at the
+ * first one. That bug produced a 100x spread in measured lengths before
+ * it was caught, so the walk below is deliberate rather than a regex.
+ *
+ * Returns a Map of "<level>@<track>" -> post-mortem text.
+ */
+async function readPostMortems() {
+  const out = new Map();
+  for (const trackKey of Object.keys(MANIFEST)) {
+    let src;
+    try {
+      src = await readFile(join(ROOT, "levels", `${trackKey}.js`), "utf8");
+    } catch (_) {
+      continue; // a track with no level file yet is not an error here
+    }
+    const re =
+      /"lessons-learned\.md":\s*\{\s*type:\s*"file",\s*content:\s*`/g;
+    let m;
+    while ((m = re.exec(src))) {
+      let i = m.index + m[0].length;
+      let body = "";
+      while (i < src.length) {
+        if (src[i] === "\\") { body += src.slice(i, i + 2); i += 2; continue; }
+        if (src[i] === "`") break;
+        body += src[i]; i += 1;
+      }
+      // Attribute to the nearest preceding level key.
+      const before = src.slice(0, m.index);
+      const keys = [...before.matchAll(/"(level\d+@\w+)":\s*\{/g)];
+      if (keys.length) out.set(keys[keys.length - 1][1], body);
+    }
+  }
+  return out;
+}
+
+/**
+ * Cross-check citations between a level's in-game post-mortem and its
+ * walkthrough.
+ *
+ * The contract as of v2.5.2 is "the post-mortem NAMES a weakness, the
+ * walkthrough EXPLAINS it". That only holds if every identifier the
+ * in-game text names is actually covered somewhere in the walkthrough,
+ * so this asserts containment in one direction: post-mortem ⊆
+ * walkthrough. The walkthrough is free to go further, which it always
+ * does.
+ *
+ * This is not hypothetical maintenance theatre. CWE-539 was added to
+ * level2@forensics's post-mortem in v2.3.1 and never added to its
+ * walkthrough, and nothing noticed until the citation sets were compared
+ * by hand months later.
+ */
+// The in-game post-mortem's section banners, in required order.
+//
+// These are player-facing and read in a terminal, so consistency is more
+// visible than it is in the walkthroughs: a reader moving between levels
+// notices immediately when one is shaped differently. Two files used
+// short banner names where 22 used long ones, and level0@linux had its
+// first two sections in the opposite order, since it was written first
+// and the convention settled afterwards. Neither was caught by review.
+const PM_BANNERS = [
+  "THE BLUNT VERSION",
+  "THE CONSULTING-FIRM ANGLE",
+  "FRAMEWORKS THAT COVER THIS",
+  "MITRE ATT&CK MAPPING",
+  "WHAT A DEFENDER SHOULD ACTUALLY DO",
+  "CHECK YOURSELF",
+  "GO DEEPER",
+  "CLOSING THOUGHT",
+];
+
+/**
+ * Check one post-mortem against the debrief template.
+ *
+ * Enforces the banner set and order, and the two things the debrief
+ * contract requires that nothing else would catch: a link to the
+ * level's own walkthrough, and retrieval prompts. Three tracks shipped
+ * with no walkthrough reference at all before v2.6.0, so a player could
+ * finish them without ever learning the deeper material existed.
+ */
+function validatePostMortem(pm, level, track, slot) {
+  const problems = [];
+  const found = [...pm.matchAll(/───\s+([A-Z][A-Z0-9 ,'\-/&()]+?)\s+─+/g)]
+    .map((m) => m[1].trim());
+
+  if (found.join("|") !== PM_BANNERS.join("|")) {
+    const missing = PM_BANNERS.filter((b) => !found.includes(b));
+    const extra = found.filter((b) => !PM_BANNERS.includes(b));
+    problems.push(
+      `post-mortem sections wrong` +
+        (missing.length ? `, missing: ${missing.join(", ")}` : "") +
+        (extra.length ? `, unexpected: ${extra.join(", ")}` : "") +
+        (!missing.length && !extra.length ? ` (out of order)` : "")
+    );
+  }
+
+  if (!pm.includes(`walkthroughs/${track}/${slot}`)) {
+    problems.push(
+      `post-mortem does not link its own walkthrough ` +
+        `(GO DEEPER must name walkthroughs/${track}/${slot}.html)`
+    );
+  }
+
+  return problems.map((p) => `  ${level}: ${p}`);
+}
+
+function crossCheckCitations(postMortem, walkthrough, label) {
+  const ids = (t) =>
+    new Set([
+      ...(t.match(/CWE-\d+/g) || []),
+      ...(t.match(/T\d{4}(?:\.\d{3})?/g) || []),
+    ]);
+  const inGame = ids(postMortem);
+  const inWt = ids(walkthrough);
+  const orphans = [...inGame].filter((id) => !inWt.has(id));
+  if (!orphans.length) return [];
+  return [
+    `  ${label}: cited in-game but absent from the walkthrough: ` +
+      `${orphans.sort().join(", ")} ` +
+      `(the post-mortem names it; the walkthrough must explain it)`,
+  ];
+}
+
+// How far a walkthrough's review date may lag the freshest one in the
+// corpus before the build treats it as abandoned. Three months is one
+// release cycle here, which is long enough to ship a level without
+// tripping over this and short enough that a track cannot quietly fall
+// a year behind.
+const MAX_REVIEW_LAG_MONTHS = 3;
+
+const MONTHS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+
+/** "Last reviewed: August 2026" -> a comparable month ordinal. */
+function reviewOrdinal(md) {
+  const m = md.match(/Last reviewed:\s*([A-Z][a-z]+)\s+(\d{4})/);
+  if (!m) return null;
+  const mi = MONTHS.indexOf(m[1].toLowerCase());
+  if (mi < 0) return null;
+  return { n: Number(m[2]) * 12 + mi, label: `${m[1]} ${m[2]}` };
+}
+
+/**
+ * Fail walkthroughs whose review date has fallen behind the corpus.
+ *
+ * The user's instruction was that the audit happens for ALL walkthroughs
+ * on every level build, not just the new one, "so it stays the most
+ * current". Left to memory that lasted exactly as long as it took to
+ * ship the next level: at the time this was written, two walkthroughs
+ * still said April 2026 while three said July, and the April ones were
+ * carrying four separate factual errors about certification versions.
+ *
+ * Comparing each file against the FRESHEST file rather than against
+ * today is what makes this a divergence check. Re-auditing one
+ * walkthrough and not its neighbours is the thing that goes wrong, and
+ * that is precisely what this makes impossible to merge.
+ */
+function checkReviewDates(entries) {
+  const dated = entries.filter((e) => e.ord);
+  if (!dated.length) return [];
+
+  const newest = Math.max(...dated.map((e) => e.ord.n));
+  const problems = [];
+  for (const e of dated) {
+    const lag = newest - e.ord.n;
+    if (lag > MAX_REVIEW_LAG_MONTHS) {
+      problems.push(
+        `  ${e.label}: last reviewed ${e.ord.label}, ${lag} months behind ` +
+          `the rest of the corpus.\n` +
+          `      Re-audit its certification versions, framework revisions, and\n` +
+          `      regulation citations, then update the "Last reviewed" line.`
+      );
+    }
+  }
+  return problems;
+}
+
 async function main() {
   const seq = levelSequence();
 
@@ -991,11 +1687,39 @@ async function main() {
   // write would leave the committed pages half-updated and trip the CI
   // drift check for an unrelated reason, and an author who has broken
   // three files wants all three reported in one run, not one per fix.
+  // Every level that exists right now, as "<level>@<track>" strings.
+  // validate() uses this to catch prose that still describes a shipped
+  // level as unbuilt.
+  const shipped = new Set(seq.map((x) => `${x.levelKey}@${x.trackKey}`));
+
+  const postMortems = await readPostMortems();
+
   const problems = [];
+  const rendered = new Map();
+  const reviews = [];
   for (const { trackKey, levelKey } of seq) {
     const md = await readFile(join(WT, trackKey, `${levelKey}.md`), "utf8");
-    problems.push(...validate(md, `${trackKey}/${levelKey}.md`));
+    const label = `${trackKey}/${levelKey}.md`;
+    problems.push(...validate(md, label, shipped));
+    reviews.push({ label, ord: reviewOrdinal(md) });
+
+    // Rendering doubles as citation validation: unknown keys and
+    // uncited definitions are only knowable once the body has been
+    // walked. Held for buildLevel() rather than recomputed.
+    const r = renderMarkdown(md, label);
+    problems.push(...r.problems);
+    rendered.set(`${trackKey}/${levelKey}`, r);
+
+    const pm = postMortems.get(`${levelKey}@${trackKey}`);
+    if (pm) {
+      problems.push(...crossCheckCitations(pm, md, label));
+      problems.push(
+        ...validatePostMortem(pm, `${levelKey}@${trackKey}`, trackKey, levelKey)
+      );
+    }
   }
+  problems.push(...checkReviewDates(reviews));
+
   if (problems.length) {
     console.error(
       `\nWalkthrough template violations (${problems.length}):\n`
@@ -1016,7 +1740,9 @@ async function main() {
 
   const levels = [];
   for (const { trackKey, levelKey } of seq) {
-    levels.push(await buildLevel(trackKey, levelKey));
+    levels.push(
+      await buildLevel(trackKey, levelKey, rendered.get(`${trackKey}/${levelKey}`))
+    );
   }
   for (const trackKey of Object.keys(MANIFEST)) {
     await buildTrack(trackKey);
@@ -1035,6 +1761,20 @@ async function main() {
   console.log(`sitemap.xml: ${urlCount} URLs`);
   console.log(`search-index.json: ${sectionCount} sections`);
   console.log(`llms.txt: written`);
+
+  const cites = [...rendered.values()].reduce((a, r) => a + r.citations, 0);
+  const uncited = levels.filter(
+    (l) => !rendered.get(`${l.trackKey}/${l.levelKey}`).citations
+  );
+  console.log(
+    `citations: ${cites} sources cited across ` +
+      `${levels.length - uncited.length}/${levels.length} walkthroughs` +
+      (uncited.length
+        ? `\n  no citations yet: ${uncited
+            .map((l) => `${l.trackKey}/${l.levelKey}`)
+            .join(", ")}`
+        : "")
+  );
   console.log(`total corpus: ${words.toLocaleString("en-US")} words`);
 }
 

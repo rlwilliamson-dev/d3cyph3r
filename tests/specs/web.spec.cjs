@@ -111,9 +111,13 @@ test.describe("web track", () => {
 
     await dispatchCmd(page, "cat lessons-learned.md");
     t = await terminalText(page);
+    // v2.6.0 debrief contract: the post-mortem names its anchors and
+    // hands off; the OWASP/cert depth moved to the walkthrough.
     expect(t).toContain("CWE-548");
-    expect(t).toContain("A05");
-    expect(t).toContain("Misconfiguration");
+    expect(t).toContain("CWE-668");
+    expect(t).toContain("CHECK YOURSELF");
+    expect(t).toContain("GO DEEPER");
+    expect(t).toContain("walkthroughs/web/level0");
 
     // v1.10.0 bonus-find trigger — curl /robots.txt fires the
     // "robots-txt-billboard" bonus.
@@ -349,8 +353,11 @@ test.describe("web track", () => {
     await dispatchCmd(page, "cat lessons-learned.md");
     t = await terminalText(page);
     expect(t).toContain("CWE-89");
-    expect(t).toContain("A05:2025");
+    expect(t).toContain("CWE-209");
     expect(t).toMatch(/parameteriz/i);
+    expect(t).toContain("CHECK YOURSELF");
+    expect(t).toContain("GO DEEPER");
+    expect(t).toContain("walkthroughs/web/level2");
 
     await dispatchCmd(page, "whoami");
     t = await terminalText(page);

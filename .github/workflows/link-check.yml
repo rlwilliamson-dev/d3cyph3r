@@ -1,0 +1,122 @@
+# Weekly link rot check for the walkthrough citations.
+#
+# WHY THIS IS ITS OWN WORKFLOW
+# ----------------------------
+# The walkthroughs cite ~500 external sources, and their value is
+# entirely in whether those still resolve. Standards bodies reorganise,
+# vendors retire blog platforms, and government sites move things
+# without redirects: the first full sweep found 15 dead links and 4
+# more that returned 200 while pointing at a hub page or, in one case,
+# an unrelated article.
+#
+# That decay happens on the calendar, not on our commits, so checking it
+# per-PR would be both too late and too often. It is also a NETWORK
+# check, which makes it the wrong shape for a required status: a PR that
+# touches one CSS rule should not go red because a federal website chose
+# that morning to rate-limit. The blocking build stays hermetic
+# (tools/build-walkthroughs.mjs, which validates citation STRUCTURE
+# offline) and this runs on a schedule instead.
+#
+# When something breaks, it opens an issue rather than failing quietly
+# into a log nobody reads.
+
+name: Link check
+
+on:
+  schedule:
+    # 06:00 UTC every Monday. Early enough in the week that a fix can
+    # ride along with whatever else ships.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: link-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    name: Walkthrough citations still resolve
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      # No npm install: the checker is Node builtins only.
+      - name: Check every cited URL
+        id: check
+        run: |
+          set +e
+          node tools/check-links.mjs > report.txt 2>&1
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          cat report.txt
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo '## Walkthrough link check'
+            echo
+            echo '```'
+            tail -60 report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Only DEAD links open an issue. MOVED and BLOCKED are in the
+      # report for a human to read, but they are not actionable enough
+      # to be worth an interrupt every week.
+      - name: Open an issue for dead links
+        if: steps.check.outputs.status != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('report.txt', 'utf8');
+            const dead = report.slice(report.indexOf('\nDEAD '));
+
+            const title = 'Dead links in the walkthrough citations';
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'link-rot',
+            });
+
+            const body = [
+              'The weekly link check found citations that no longer resolve.',
+              '',
+              'Reproduce locally with `node tools/check-links.mjs`. Fixing a',
+              'dead citation means finding the source at its new home, not',
+              'deleting the claim it supports; see the "Link audit" section',
+              'of walkthroughs/README.md.',
+              '',
+              '```',
+              dead.trim().slice(0, 55000),
+              '```',
+              '',
+              `_Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}_`,
+            ].join('\n');
+
+            // Update the standing issue rather than filing a new one
+            // each week, or a month of neglect produces four duplicates.
+            if (open.length) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                labels: ['link-rot'],
+                body,
+              });
+            }

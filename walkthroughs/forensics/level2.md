@@ -12,13 +12,13 @@ When the lobby spun you out of `level1@forensics` on Friday afternoon, two findi
 
 Both got reported. Sgt. Marcus Chen (Polaris's FSO and the formal case lead) received the package by close-of-business Friday. Larry Hutchins (Polaris's CISO and Maya's manager) was looped in within three hours. Maya rotated her primary account credential before she left the office, escalated the procedural finding to Hutchins on her own initiative — "I want this on the record from me before it shows up on a report" — and stayed late to walk her team through the operational discipline that should have caught it (no password-into-username typos during high-pressure acquisition work; the IR-team buddy-check protocol is supposed to catch exactly this and didn't). The procedural finding closes there. The forensic finding does not.
 
-Over the weekend, Dana Reyes (Polaris's in-house counsel) walked the day-two deliverable through outside counsel for the next phase. The DFARS 252.204-7012 (c) 72-hour clock had started Friday when Polaris formally discovered the CUI compromise; by Monday morning the DC3 report had been filed via DIBNET and the case was officially a DoD-coordinated insider-threat matter. Outside counsel also opened a separate, parallel track: a subpoena to Google Workspace seeking Reed's `rconnolly.personal@gmail.com` account history for the relevant time window. That subpoena is in flight. While it processes, Dana wants Driftwood to take the next forensic pass — the one the Friday deliverable hinted at but didn't yet do.
+Over the weekend, Dana Reyes (Polaris's in-house counsel) walked the day-two deliverable through outside counsel for the next phase. The DFARS 252.204-7012 (c) 72-hour clock had started Friday when Polaris formally discovered the CUI compromise; by Monday morning the DC3 report had been filed via DIBNET and the case was officially a DoD-coordinated insider-threat matter.[^dfars-252-204-7012-safeguarding] Outside counsel also opened a separate, parallel track: a subpoena to Google Workspace seeking Reed's `rconnolly.personal@gmail.com` account history for the relevant time window. That subpoena is in flight. While it processes, Dana wants Driftwood to take the next forensic pass — the one the Friday deliverable hinted at but didn't yet do.
 
 On Friday, Maya had mentioned in passing that during her own initial walk of Reed's seized workstation image she'd noticed a 02:47 personal-webmail visit on Saturday — pre-dawn, seven hours before the 09:42 Bay 4 badge-in. She hadn't pursued it because the day-two scope was the OS-level audit trail (Security event log), not the user-profile artifacts (browser, mail client, application state). The user-profile data lives in a different layer of the EnCase image, requires a different toolchain to query, and frankly requires the kind of patience that comes after the 72-hour reporting clock stops being the priority. Monday morning is that moment.
 
 Maya's authorization for the deeper pass is in writing. The two SQLite-backed browser-artifact files — Chromium's `History` database (renamed `History.sqlite` in this engine for clarity) and `Cookies` database — have been extracted from Reed's user profile (`\Users\rconnolly\AppData\Local\Google\Chrome\User Data\Default\`) and copied to Polaris's IR forensic-analysis workstation (host: `evidence.polaris.local`, internal). Maya provisioned a service account (`ir-audit`) on that bench specifically for Driftwood's continued work, with read-only access scoped to the case directory. The password for that service account is the credential you just used to gate this shell — `P0l4r1s-IR-L3ad-2026!`. The fact that the `ir-audit` password matches the pattern of the credential that leaked in level1's 4625 record is itself a finding, and it's flagged explicitly in this level's `lessons-learned.md`. Maya's a self-aware IR lead; she put the awkward thing in the open rather than letting it surface in someone else's report.
 
-The legal frame hasn't changed since Friday. CUI artifacts are in scope; DFARS reporting has occurred; NISPOM 32 CFR §117.8(c) insider-threat-program controls are active; the case file is POL-IIS-2026-0007 (continuing). The new layer that engaged this morning is 32 CFR Part 2002 (the CUI Program regulation under the National Archives), which makes Polaris responsible for documenting the scope of any actual or suspected CUI disclosure under §2002.48. The browser-artifact pass you're about to run is part of that documentation: if Reed accessed personal services to stage exfiltration, the timeline matters for the disclosure scope.
+The legal frame hasn't changed since Friday. CUI artifacts are in scope; DFARS reporting has occurred; NISPOM 32 CFR §117.8(c) insider-threat-program controls are active; the case file is POL-IIS-2026-0007 (continuing). The new layer that engaged this morning is 32 CFR Part 2002 (the CUI Program regulation under the National Archives), which makes Polaris responsible for documenting the scope of any actual or suspected CUI disclosure under §2002.48.[^cfr-32-2002][^national-archives-cui-program] The browser-artifact pass you're about to run is part of that documentation: if Reed accessed personal services to stage exfiltration, the timeline matters for the disclosure scope.
 
 Your task today is narrow, and the deliverable is correspondingly narrow. Maya wants the timeline reconstruction of Reed's online activity in the 24 hours before the 09:42 Bay 4 badge-in. Specifically: what services did he visit, when, in what order, and is there a live session token she can pass to outside counsel to expedite the Google subpoena. The token is the deliverable. Reading the message bodies in Reed's inbox is explicitly out of scope; that's a separate authorization that the subpoena exists to obtain. Today is "find the token, document the timeline, don't open the mail."
 
@@ -221,7 +221,7 @@ The properties that make this a forensic asymmetry:
 
 **The data is captured by default.** Browsers prioritize "user can find the page they visited last week" over "user has no evidence trail of what they did last week." Building a browser without a history database would be technically trivial; no commercial browser ships that way because the feature is what users expect. The forensic side benefits.
 
-**The data persists beyond user-visible clearing.** "Clear browsing data" does what its name says, but SQLite's [Write-Ahead Logging (WAL)](https://www.sqlite.org/wal.html) journal pages and the [VACUUM](https://www.sqlite.org/lang_vacuum.html) deferral mean that historical row data often survives. Many forensic tools recover records from WAL pages even after a user has cleared history. The 13Cubed and Magnet forensic blogs are full of case studies on this; SANS FOR500 spends a module on it.
+**The data persists beyond user-visible clearing.** "Clear browsing data" does what its name says, but SQLite's [Write-Ahead Logging (WAL)](https://www.sqlite.org/wal.html) journal pages and the [VACUUM](https://www.sqlite.org/lang_vacuum.html) deferral mean that historical row data often survives. Many forensic tools recover records from WAL pages even after a user has cleared history. The 13Cubed and Magnet forensic blogs are full of case studies on this; SANS FOR500 spends a module on it.[^sans-for500]
 
 **The data is structured.** Unlike file-system timestamps (which carry one or two dimensions of time per file) or memory dumps (which require expert interpretation), browser-history databases are *queryable*. Anyone who can compose a SQL SELECT can ask questions like "did this user visit this domain in this time window" and get an unambiguous yes/no with timestamps. The cognitive lift to extract evidence from a browser DB is much lower than the lift to extract equivalent evidence from a Windows event log or a memory image.
 
@@ -241,7 +241,7 @@ The point is not that browsers are designed badly. They're designed for users wh
 | What they establish | A pre-dawn webmail visit hours before the badge-in, and searches about CUI handling rules that speak to intent |
 | Also recovered | A live session cookie for a personal webmail account |
 | Investigative value | The cookie identifies **which account** to name in legal process |
-| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days[^nist-800-171][^dfars-252-204-7012-safeguarding] |
 
 **Searches about the rules go to intent, and intent is what separates a
 policy violation from a deliberate act.** Timeline and technique were
@@ -272,13 +272,13 @@ Browser-artifact forensics has been pivotal in several high-profile cases over t
 
 **Casey Anthony (2008-2011).** [The Caylee Anthony case](https://en.wikipedia.org/wiki/Death_of_Caylee_Anthony) introduced an enduring controversy in browser forensics. The prosecution alleged that Casey Anthony had searched for "chloroform" 84 times on the family computer; the defense argued (and a forensic analyst later confirmed, post-trial) that the searches had actually been performed once — the count came from a tool that double-counted browser-history records. The case is a teaching reference because it shows the asymmetry from the other direction: forensic tools can mis-report what a database contains if the analyst doesn't verify the underlying schema. Anthony was acquitted of the murder charges; the chloroform-search forensic error is part of why.
 
-**Paige Thompson / Capital One (2019).** [Capital One's 2019 breach](https://en.wikipedia.org/wiki/2019_Capital_One_data_breach) — 100 million customer records exfiltrated by a former AWS engineer — was investigated in part through Thompson's browser and chat artifacts. Her Slack-channel posts and GitHub gist activity (also stored in SQLite-backed application databases) provided the timeline the DOJ used at trial. Thompson was convicted in 2022.
+**Paige Thompson / Capital One (2019).** [Capital One's 2019 breach](https://www.justice.gov/usao-wdwa/united-states-v-paige-thompson) — 100 million customer records exfiltrated by a former AWS engineer — was investigated in part through Thompson's browser and chat artifacts. Her Slack-channel posts and GitHub gist activity (also stored in SQLite-backed application databases) provided the timeline the DOJ used at trial. Thompson was convicted in 2022.
 
-**Cambridge Analytica (2018).** Not a criminal investigation per se, but the [FTC's 2019 settlement with Facebook](https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions) leaned on the discoverability of browser-history data via data-broker arrangements. Facebook had access to user browsing activity beyond the Facebook domain via Like-button beacons and Pixel integrations; that activity was stored, queryable, and ultimately the subject of a $5B penalty.
+**Cambridge Analytica (2018).** Not a criminal investigation per se, but the [FTC's 2019 settlement with Facebook](https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions-facebook) leaned on the discoverability of browser-history data via data-broker arrangements. Facebook had access to user browsing activity beyond the Facebook domain via Like-button beacons and Pixel integrations; that activity was stored, queryable, and ultimately the subject of a $5B penalty.
 
 **Strava heatmap (2018).** [Not a browser case, but parallel discipline.](https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases) Strava published an aggregate global heatmap of user activity derived from its mobile-app activity database (also SQLite-backed under iOS / Android). The heatmap inadvertently revealed the locations of U.S. military installations in Iraq, Syria, and Afghanistan because the only people running in those locations were the personnel. The lesson is identical to the browser-DB lesson: persistent activity logs exist for a feature reason (the user wants to see their own runs); the forensic / OSINT side benefits from the same persistence.
 
-**Mobile-forensics paradigm broadly.** The Cellebrite UFED and GrayKey product lines, which dominate the mobile-forensics market, are essentially SQLite parsers at their core. iOS app data, Android app data, and the OS-level databases on both platforms — all SQLite, all queryable. A 2024 Cellebrite product update specifically advertised improved WAL-recovery for [iOS Messages.app](https://cellebrite.com/en/cellebrite-pathfinder/) — the same forensic discipline, scaled to mobile.
+**Mobile-forensics paradigm broadly.** The Cellebrite UFED and GrayKey product lines, which dominate the mobile-forensics market, are essentially SQLite parsers at their core. iOS app data, Android app data, and the OS-level databases on both platforms — all SQLite, all queryable. Cellebrite's [UFED](https://cellebrite.com/en/products/cellebrite-inseyets/ufed/) extraction line is built around recovering and parsing exactly these databases, write-ahead logs included — the same forensic discipline, scaled to mobile.
 
 The thread running through all these cases is the same: SQLite is the universal user-activity ledger across modern computing, and the forensic implications follow from that.
 
@@ -290,7 +290,7 @@ The forensic side of this engagement sits inside a stack of overlapping framewor
 
 ### NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response
 
-[NIST SP 800-86](https://csrc.nist.gov/publications/detail/sp/800-86/final) (published 2006, final / still current as of May 2026 — there is no Rev. 2 and the document remains the canonical U.S. government reference for the forensic process). §3 lays out a four-phase model: collection → examination → analysis → reporting. The examination phase (§3.3) explicitly covers "data sources" and names browser activity records as one of the canonical sources, alongside file-system metadata, memory artifacts, network logs, and operating-system event logs. The 800-86 framing of "preserve the original, work on a verified copy, document each step" is precisely the discipline the `chain-of-custody.txt` baseline and the pre/post hash comparison are modeling in this level.
+[NIST SP 800-86](https://csrc.nist.gov/pubs/sp/800/86/final) (published 2006, final / still current as of May 2026 — there is no Rev. 2 and the document remains the canonical U.S. government reference for the forensic process). §3 lays out a four-phase model: collection → examination → analysis → reporting. The examination phase (§3.3) explicitly covers "data sources" and names browser activity records as one of the canonical sources, alongside file-system metadata, memory artifacts, network logs, and operating-system event logs. The 800-86 framing of "preserve the original, work on a verified copy, document each step" is precisely the discipline the `chain-of-custody.txt` baseline and the pre/post hash comparison are modeling in this level.
 
 The document is 121 pages and worth reading end-to-end if you're going to work in incident response. The §3.3 examination section is the closest thing to a single-source reference for what you just did in the solve.
 
@@ -302,7 +302,7 @@ The shift from Rev. 2 to Rev. 3 tightened several of the AU controls (Rev. 3 add
 
 ### CMMC Level 2 — AU domain
 
-[CMMC Level 2](https://dodcio.defense.gov/CMMC/) (published in final rule form 2024-10-15, effective for new DoD contracts starting 2025) maps NIST SP 800-171's AU controls into the AU.L2-3.3.x assessment objectives. Browser-DB forensics doesn't have its own line item, but the discipline of pulling artifacts from a seized image, hashing them, querying them under documented procedure, and producing a defensible deliverable is exactly what AU.L2-3.3.6 (review and analysis of audit records to identify inappropriate or unusual activity) and AU.L2-3.3.8 (protect audit information and audit logging tools from unauthorized access, modification, and deletion) ask for.
+[CMMC Level 2](https://dodcio.defense.gov/CMMC/) (published in final rule form 2024-10-15, effective for new DoD contracts starting 2025) maps NIST SP 800-171's AU controls into the AU.L2-3.3.x assessment objectives.[^nist-800-171] Browser-DB forensics doesn't have its own line item, but the discipline of pulling artifacts from a seized image, hashing them, querying them under documented procedure, and producing a defensible deliverable is exactly what AU.L2-3.3.6 (review and analysis of audit records to identify inappropriate or unusual activity) and AU.L2-3.3.8 (protect audit information and audit logging tools from unauthorized access, modification, and deletion) ask for.
 
 ### NISPOM 32 CFR Part 117 + 32 CFR Part 2002 (CUI Program)
 
@@ -320,7 +320,7 @@ The shift from Rev. 2 to Rev. 3 tightened several of the AU controls (Rev. 3 add
 
 ### ISO/IEC 27037 + 27042
 
-[ISO/IEC 27037:2012](https://www.iso.org/standard/44381.html) (Guidelines for identification, collection, acquisition, and preservation of digital evidence) and [ISO/IEC 27042:2015](https://www.iso.org/standard/44406.html) (Guidelines for the analysis and interpretation of digital evidence) are the international equivalents to NIST SP 800-86. They cover the same four-phase model with slightly different terminology and are referenced in many non-U.S. forensic-process certifications. If your work crosses jurisdictions, both documents are worth knowing.
+[ISO/IEC 27037:2012](https://www.iso.org/standard/44381.html) (Guidelines for identification, collection, acquisition, and preservation of digital evidence) and [ISO/IEC 27042:2015](https://www.iso.org/standard/44406.html) (Guidelines for the analysis and interpretation of digital evidence) are the international equivalents to NIST SP 800-86.[^nist-800-86] They cover the same four-phase model with slightly different terminology and are referenced in many non-U.S. forensic-process certifications. If your work crosses jurisdictions, both documents are worth knowing.
 
 ### CWE references
 
@@ -339,6 +339,33 @@ A third technique is relevant on the defender side:
 
 ---
 
+### CWE-539 — Use of Persistent Cookies Containing Sensitive Information
+
+[CWE-539](https://cwe.mitre.org/data/definitions/539.html) is the
+weakness class the recovered session artifact belongs to, and it cuts
+both ways in this level.[^cwe-539]
+
+A persistent cookie survives the browser session by design, which is
+what makes "remember me" work. The cost is that the authentication
+material now sits on disk, in a database an investigator can query, for
+as long as its expiry allows. From the provider's perspective this is a
+usability decision with a documented weakness attached. From Reed's
+perspective it is the artifact that identified his account.
+
+Two things follow, and they should be kept separate in the write-up.
+
+For **Polaris as a defender**, the finding is that a cleared workstation
+retained authentication material for a personal service in recoverable
+form. That is a control gap regardless of this investigation: any
+attacker with disk access, and any future forensic examiner, obtains the
+same artifact.
+
+For **the investigation**, the cookie's evidentiary value is entirely in
+what it *names* rather than what it *opens*. Using it would contaminate
+the evidence and likely constitute unauthorised access. CWE-539 explains
+why the artifact exists; it does not license using it, and the
+restraint here is the professional standard being taught.
+
 ## §6 — Cert exam relevance
 
 Forensic curricula align tightly to the techniques this level demonstrates. A non-exhaustive list of where you'll see browser-DB / SQLite forensics tested:
@@ -347,17 +374,17 @@ Forensic curricula align tightly to the techniques this level demonstrates. A no
 
 **GIAC GCFA (Certified Forensic Analyst).** [SANS FOR508: Advanced Incident Response, Threat Hunting, and Digital Forensics](https://www.sans.org/cyber-security-courses/advanced-incident-response-threat-hunting-training/) is the upstream course; [GCFA](https://www.giac.org/certifications/certified-forensic-analyst-gcfa/) is broader-scoped than GCFE — endpoint forensics in general, with browser artifacts as one source among many. Comparable rigor; broader surface.
 
-**EC-Council CHFI (Computer Hacking Forensic Investigator).** [CHFI](https://www.eccouncil.org/programs/computer-hacking-forensic-investigator-chfi/) is the vendor-neutral cert most often required by U.S. federal agencies under [DoD 8570 / 8140](https://public.cyber.mil/cw/cwmp/). Browser DBs feature in the artifact-collection domain. Less rigorous than GCFE on the SQL formation side; broader coverage of legal procedure.
+**EC-Council CHFI (Computer Hacking Forensic Investigator).** [CHFI](https://www.eccouncil.org/train-certify/computer-hacking-forensic-investigator-chfi-north-america/) is the vendor-neutral cert most often required by U.S. federal agencies under [DoD 8140](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodm/814003p.pdf). Browser DBs feature in the artifact-collection domain. Less rigorous than GCFE on the SQL formation side; broader coverage of legal procedure.
 
-**CompTIA Security+ (SY0-701).** [Security+](https://www.comptia.org/certifications/security) Domain 4 (Security Operations) covers digital-forensics fundamentals including "data sources" — browser artifacts are explicitly named. Sec+ is the entry-level reference; if you're doing security work and don't have it, the test is two hours and forty-five questions and worth the morning to take.
+**CompTIA Security+ (SY0-701).** [Security+](https://www.comptia.org/en-us/certifications/security/) Domain 4 (Security Operations) covers digital-forensics fundamentals including "data sources" — browser artifacts are explicitly named. Sec+ is the entry-level reference; if you're doing security work and don't have it, the test is two hours and forty-five questions and worth the morning to take.
 
-**CompTIA CySA+ (CS0-003).** [CySA+](https://www.comptia.org/certifications/cybersecurity-analyst) covers forensic analysis within the broader security-operations role; browser-artifact handling is one section. Intermediate-level cert.
+**CompTIA CySA+ (CS0-003).** [CySA+](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/) covers forensic analysis within the broader security-operations role; browser-artifact handling is one section. Intermediate-level cert.
 
-**(ISC)² SSCP / CISSP.** [SSCP](https://www.isc2.org/Certifications/SSCP) and [CISSP](https://www.isc2.org/Certifications/CISSP) cover digital forensics at the policy / process level rather than the SQL / artifact level. The frameworks discussed in §5 above are the SSCP / CISSP vocabulary.
+**(ISC)² SSCP / CISSP.**[^cert-sscp][^cert-cissp] [SSCP](https://www.isc2.org/Certifications/SSCP) and [CISSP](https://www.isc2.org/Certifications/CISSP) cover digital forensics at the policy / process level rather than the SQL / artifact level. The frameworks discussed in §5 above are the SSCP / CISSP vocabulary.
 
 **AccessData ACE / Magnet AX200 / Magnet AXIOM Certified Examiner (MCE).** Tool-specific certs. ACE is for FTK; the Magnet certs are for AXIOM (the dominant commercial browser-forensics tool in mobile + endpoint work). All three test on the same underlying schemas this level uses; they differ on the toolchain.
 
-**SANS-CERT FOR585 (Smartphone Forensic Analysis In-Depth).** [FOR585](https://www.sans.org/cyber-security-courses/smartphone-forensic-analysis-in-depth/) is the deep-dive course on mobile forensics, which is approximately 80% SQLite parsing in practice. If you're going to do iOS / Android forensic work, this is the course.
+**SANS-CERT FOR585 (Smartphone Forensic Analysis In-Depth).** [FOR585](https://www.sans.org/cyber-security-courses/advanced-smartphone-mobile-device-forensics) is the deep-dive course on mobile forensics, and in practice the large majority of it is SQLite parsing. If you're going to do iOS / Android forensic work, this is the course.
 
 The pattern across all of these: SQL formation against SQLite-backed application databases is the workhorse skill. Tools (FTK, EnCase, AXIOM, Cellebrite, Autopsy) automate the heavy lifting, but the analyst who can compose the queries directly is the one who can answer questions the tool didn't anticipate.
 
@@ -371,7 +398,7 @@ What Polaris (and any defender wanting to be ready for an equivalent case) shoul
 
 ### Endpoint browser policy enforcement
 
-On managed devices in any cleared facility, Chrome Enterprise (or Edge Enterprise) should enforce policies that constrain the personal-use surface area:
+On managed devices in any cleared facility, Chrome Enterprise (or Edge Enterprise) should enforce policies that constrain the personal-use surface area:[^chrome-enterprise-policy-list]
 
 - **`RestrictSigninToPattern`** — limits Chrome sign-in to a specific tenant domain. [Chrome Enterprise documentation](https://chromeenterprise.google/policies/#RestrictSigninToPattern). Set to `*@polaris-ds.local` (or equivalent) and Reed couldn't have signed into Chrome with his personal Google account. The personal-Gmail visit would still technically work in a guest profile, but the session token wouldn't persist past browser close and the artifact trail would be much thinner.
 - **`URLBlocklist`** — blocks specific URL patterns. [Documentation](https://chromeenterprise.google/policies/#URLBlocklist). Entries for `mail.google.com`, `dropbox.com`, `drive.google.com` (personal-account flag), `mega.nz`, `mediafire.com`, and the long tail of consumer cloud-storage hosts.
@@ -402,7 +429,7 @@ Cleared facilities should NOT clear browser histories on logoff. The forensic va
 
 ### Forensic readiness as policy
 
-ISO/IEC 27037 calls this "forensic readiness." The idea: configure systems in advance so that when an incident happens, the data needed to investigate it is already preserved, in known locations, with known retention properties. Polaris's posture is in this neighborhood — they had image-acquisition tooling ready (FTK Imager licensed and on the IR jumpbox), a documented chain-of-custody process, a pre-defined handoff-password convention. Other organizations should aim for the same.
+ISO/IEC 27037 calls this "forensic readiness."[^iso-27037] The idea: configure systems in advance so that when an incident happens, the data needed to investigate it is already preserved, in known locations, with known retention properties. Polaris's posture is in this neighborhood — they had image-acquisition tooling ready (FTK Imager licensed and on the IR jumpbox), a documented chain-of-custody process, a pre-defined handoff-password convention. Other organizations should aim for the same.
 
 ### IR-team password discipline
 
@@ -413,6 +440,55 @@ The awkward note from level1's 4625 record + the awkward note from this level's 
 The fact that outside counsel had a Google subpoena in flight Monday morning, ready to be expedited by a session-token deliverable, is operational maturity. Many organizations don't have established relationships with the major-cloud-provider legal-process teams; the first subpoena is the one that takes six weeks to traverse the queue. Polaris's outside counsel had the [Google Legal Investigations Support](https://support.google.com/transparencyreport/answer/9713961) channel pre-positioned. The general lesson: don't first-meet your cloud provider's legal team during an incident. Establish the channel during quiet periods.
 
 ---
+
+### Sample detection rule (Sigma)
+
+This level examines artifacts after the fact. The detection worth building
+is the one that would have fired at the time, and the strongest signal in
+the timeline is not any single action but when it happened.
+
+```yaml
+title: Off-hours interactive logon followed by consumer cloud-storage access
+status: experimental
+description: >
+  Correlates an interactive logon outside business hours with subsequent
+  traffic to consumer file-sharing hosts from the same workstation. Each
+  half is unremarkable alone; together, on a cleared workstation holding
+  CUI, they are the shape of staging-then-exfiltration.
+logsource:
+  product: windows
+  service: security
+detection:
+  offhours_logon:
+    EventID: 4624
+    LogonType:
+      - 2    # interactive, at the console
+      - 10   # RemoteInteractive
+  business_hours:
+    UtcTime|re: 'T(1[3-9]|2[0-2]):'   # 13:00-22:59 UTC covers a US workday
+  cleared_workstation:
+    Computer|startswith: 'POL-WS-'
+  condition: offhours_logon and cleared_workstation and not business_hours
+falsepositives:
+  - Legitimate after-hours work, which is common enough that this rule is
+    an enrichment signal rather than a standalone alert. It earns its
+    place when correlated with the network half below, not on its own.
+  - Scheduled maintenance windows and on-call response. Exclude by
+    change-ticket window rather than by account.
+level: low
+```
+
+Rated `low` deliberately, and that rating is the point. Working late is not
+an offence and a rule that pages on it will be turned off within a week.
+Its value is as a correlation input: joined with proxy or firewall logs
+showing the same host reaching a consumer file-sharing domain inside the
+same session, the combination is worth waking somebody for.
+
+The stronger control on a CUI system is not detection at all. Block
+consumer file-sharing at the egress point and require an exception
+process, so the interesting event becomes a blocked connection with a
+name attached rather than a successful upload found in an image weeks
+later.
 
 ## §7.5 — Optional exploration
 
@@ -446,11 +522,11 @@ The bonus find awards a marker in the engine's progress tracking and surfaces an
 ## §8 — Key takeaways
 
 - **SQLite is the universal user-activity ledger.** Every browser, every mobile OS, every desktop app that stores local state — all SQLite. Whenever an investigation asks "what did this user do on this machine," there is almost always a SQLite database holding the answer.
-- **The forensic asymmetry favors the defender.** A suspect can clear browsing data and log out of accounts, but SQLite WAL pages, cookie last_access timestamps, and download target_path strings survive far longer than the suspect's mental model expects. Reed knew he was being investigated by 03:14 Saturday (the "CUI how to identify if a document is marked" search proves it). He didn't clear his history. He didn't sign out of Gmail. The asymmetry favored the defender on this case.
+- **The forensic asymmetry favors the defender.** A suspect can clear browsing data and log out of accounts, but SQLite WAL pages, cookie last_access timestamps, and download target_path strings survive far longer than the suspect's mental model expects.[^sqlite-wal-mode] Reed knew he was being investigated by 03:14 Saturday (the "CUI how to identify if a document is marked" search proves it). He didn't clear his history. He didn't sign out of Gmail. The asymmetry favored the defender on this case.
 - **Hash before, hash after.** Chain-of-custody discipline is what makes forensic findings defensible under cross-examination. The `chain-of-custody.txt` baseline + the pre-query and post-query `sha256sum` runs are the procedural form. If the hashes diverge, the analysis is contaminated and STOPS. This isn't optional ceremony; it's the difference between a finding that holds up in a deposition and one that doesn't.
 - **Don't read content unless authorized.** Today's task was the session-token deliverable, not the message content. The discipline of saying "out of scope" and meaning it is what distinguishes the firm.
 - **When two artifacts agree, the case writes itself.** The level1 4688 PowerShell chain and this level's downloads-table `rc-archive-helper.ps1` row are independent artifact sources pointing at the same behavior. One artifact could be coincidence; two is rehearsal. Always query orthogonally to find the second source.
-- **SQL formation is the workhorse skill.** Forensic tools (FTK, EnCase, AXIOM, Cellebrite, Autopsy) automate the heavy lifting, but the analyst who can compose queries directly is the one who can answer questions the tool didn't anticipate. The grammar this level taught (SELECT … FROM … WHERE LIKE … ORDER BY … LIMIT … COUNT(\*)) is enough for ~80% of practical forensic queries.
+- **SQL formation is the workhorse skill.** Forensic tools (FTK, EnCase, AXIOM, Cellebrite, Autopsy) automate the heavy lifting, but the analyst who can compose queries directly is the one who can answer questions the tool didn't anticipate. The grammar this level taught (SELECT … FROM … WHERE LIKE … ORDER BY … LIMIT … COUNT(\*)) covers the large majority of practical forensic queries.
 - **The framework stack matters.** NIST SP 800-86 (forensic process) + NIST SP 800-171 Rev 3 (CUI controls) + CMMC Level 2 (assessment) + NISPOM (cleared-facility regulation) + DoD CUI program (data-handling regulation) are the layered authority Polaris is operating under. The deliverable you produced sits inside that stack and is reviewable against it.
 - **Defender hygiene is endpoint policy + DLP + forensic readiness.** Chrome Enterprise policies, file-staging DLP rules, browser-history retention discipline, and pre-positioned cloud-provider legal-process relationships are what turn a possible incident into a manageable one. None of these are expensive; all of them require operational maturity to actually deploy.
 - **The walkthrough closes the level.** This document is what makes `level2@forensics` a finished engagement rather than a half-shipped exercise. Per the rule that took effect at v1.23.1: walkthroughs gate new level work. The next forensics level (`level3@forensics` — Reed's outbound mail headers) won't open until this writeup is merged.
@@ -459,71 +535,55 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
-### Foundational documents
+[^nist-800-86]: [NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/pubs/sp/800/86/final). The canonical U.S. government reference for the forensic process; §3.3 is the closest single-source reference for what this level demonstrates.
+[^nist-800-171]: [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information in Nonfederal Systems and Organizations](https://csrc.nist.gov/pubs/sp/800/171/r3/final). The CUI control set Polaris is operating under; the AU family is the relevant subset.
+[^iso-27037]: [ISO/IEC 27037:2012 — Guidelines for identification, collection, acquisition and preservation of digital evidence](https://www.iso.org/standard/44381.html). International equivalent to 800-86; covers the same four-phase model.
+[^cfr-32-2002]: [32 CFR Part 2002 — Controlled Unclassified Information](https://www.ecfr.gov/current/title-32/subtitle-B/chapter-XX/part-2002). The CUI Program regulation under the National Archives.
+[^national-archives-cui-program]: [National Archives CUI Program](https://www.archives.gov/cui). Cross-government program landing; canonical reference for the CUI Marking Handbook and category index.
+[^dfars-252-204-7012-safeguarding]: [DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting](https://www.ecfr.gov/current/title-48/chapter-2/subchapter-H/part-252/subpart-252.2/section-252.204-7012.). 72-hour reporting clock authority.
+[^sqlite-wal-mode]: [SQLite WAL mode](https://www.sqlite.org/wal.html). The journal-page mechanism that lets historical row data survive deletion.
+[^sans-for500]: [SANS FOR500](https://www.sans.org/cyber-security-courses/windows-forensic-analysis/).
+[^chrome-enterprise-policy-list]: [Chrome Enterprise policy list](https://chromeenterprise.google/policies/). The catalog defenders should configure.
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-sscp]: [ISC2 SSCP — Systems Security Certified Practitioner](https://www.isc2.org/certifications/sscp).
+[^cwe-539]: [CWE-539](https://cwe.mitre.org/data/definitions/539.html).
 
-- [NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/publications/detail/sp/800-86/final). The canonical U.S. government reference for the forensic process; §3.3 is the closest single-source reference for what this level demonstrates.
-- [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information in Nonfederal Systems and Organizations](https://csrc.nist.gov/pubs/sp/800/171/r3/final). The CUI control set Polaris is operating under; the AU family is the relevant subset.
-- [ISO/IEC 27037:2012 — Guidelines for identification, collection, acquisition and preservation of digital evidence](https://www.iso.org/standard/44381.html). International equivalent to 800-86; covers the same four-phase model.
+### Further reading
+
 - [ISO/IEC 27042:2015 — Guidelines for the analysis and interpretation of digital evidence](https://www.iso.org/standard/44406.html). Companion document to 27037.
-
-### Regulations + DoD documents
-
 - [NISPOM (32 CFR Part 117)](https://www.ecfr.gov/current/title-32/subtitle-A/chapter-I/subchapter-D/part-117). National Industrial Security Program Operating Manual.
-- [32 CFR Part 2002 — Controlled Unclassified Information](https://www.ecfr.gov/current/title-32/subtitle-B/chapter-XX/part-2002). The CUI Program regulation under the National Archives.
 - [DoDI 5205.16 — DoD Insider Threat Program](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520516p.pdf). Parent directive (reissued as an Instruction Dec 20, 2024; previously DoDD) for cleared-contractor insider-threat programs.
 - [DoDI 5200.48 — Controlled Unclassified Information](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520048p.PDF). DoD implementation of the CUI program (browser-only PDF at WHS).
-- [National Archives CUI Program](https://www.archives.gov/cui). Cross-government program landing; canonical reference for the CUI Marking Handbook and category index.
-- [DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting](https://www.acquisition.gov/dfars/252.204-7012-safeguarding-covered-defense-information-and-cyber-incident-reporting.). 72-hour reporting clock authority.
-- [DoD CMMC Final Rule (2024)](https://dodcio.defense.gov/CMMC/). CMMC Level 2 assessment objectives.
-
-### Technical references
-
+- [CMMC Program final rule — 32 CFR Part 170 (89 FR 83214, 15 October 2024)](https://www.federalregister.gov/documents/2024/10/15/2024-22905/cybersecurity-maturity-model-certification-cmmc-program). Carries the CMMC Level 2 assessment objectives.
 - [Chromium History database schema](https://chromium.googlesource.com/chromium/src/+/main/components/history/). The actual source code that creates the urls / visits / downloads / keyword_search_terms tables you queried.
 - [Chromium Cookies schema](https://chromium.googlesource.com/chromium/src/+/main/net/cookies/). Same for the cookies file.
 - [SQLite documentation](https://www.sqlite.org/docs.html). Authoritative reference for the database format.
-- [SQLite WAL mode](https://www.sqlite.org/wal.html). The journal-page mechanism that lets historical row data survive deletion.
 - [SQLite VACUUM](https://www.sqlite.org/lang_vacuum.html). The compaction operation that eventually clears WAL pages (often deferred or never invoked).
-
-### MITRE ATT&CK techniques
-
-- [T1119 — Automated Collection](https://attack.mitre.org/techniques/T1119/)
-- [T1567 — Exfiltration Over Web Service](https://attack.mitre.org/techniques/T1567/) (including sub-technique [T1567.001 — Exfiltration to Code Repository](https://attack.mitre.org/techniques/T1567/001/) and [T1567.002 — Exfiltration to Cloud Storage](https://attack.mitre.org/techniques/T1567/002/))
-- [T1083 — File and Directory Discovery](https://attack.mitre.org/techniques/T1083/)
-
-### Certifications and training
-
-- [GIAC GCFE — Certified Forensic Examiner](https://www.giac.org/certifications/certified-forensic-examiner-gcfe/) + [SANS FOR500](https://www.sans.org/cyber-security-courses/windows-forensic-analysis/)
-- [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa/) + [SANS FOR508](https://www.sans.org/cyber-security-courses/advanced-incident-response-threat-hunting-training/)
-- [SANS FOR585 — Smartphone Forensic Analysis In-Depth](https://www.sans.org/cyber-security-courses/smartphone-forensic-analysis-in-depth/)
-- [EC-Council CHFI](https://www.eccouncil.org/programs/computer-hacking-forensic-investigator-chfi/)
-- [CompTIA Security+ (SY0-701)](https://www.comptia.org/certifications/security)
-- [CompTIA CySA+ (CS0-003)](https://www.comptia.org/certifications/cybersecurity-analyst)
-
-### Practitioner blogs + case studies
-
+- [T1119 — Automated Collection](https://attack.mitre.org/techniques/T1119/).
+- [T1567 — Exfiltration Over Web Service](https://attack.mitre.org/techniques/T1567/).
+- [T1567.001 — Exfiltration to Code Repository](https://attack.mitre.org/techniques/T1567/001/).
+- [T1567.002 — Exfiltration to Cloud Storage](https://attack.mitre.org/techniques/T1567/002/). )
+- [T1083 — File and Directory Discovery](https://attack.mitre.org/techniques/T1083/).
+- [GIAC GCFE — Certified Forensic Examiner](https://www.giac.org/certifications/certified-forensic-examiner-gcfe/).
+- [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa/).
+- [SANS FOR508](https://www.sans.org/cyber-security-courses/advanced-incident-response-threat-hunting-training/).
+- [SANS FOR585 — Smartphone Forensic Analysis In-Depth](https://www.sans.org/cyber-security-courses/advanced-smartphone-mobile-device-forensics).
+- [EC-Council CHFI](https://www.eccouncil.org/train-certify/computer-hacking-forensic-investigator-chfi-north-america/).
+- [CompTIA Security+ (SY0-701)](https://www.comptia.org/en-us/certifications/security/).
+- [CompTIA CySA+ (CS0-003)](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 - [13Cubed YouTube channel](https://www.youtube.com/@13cubed). Long-running forensic-tutorial channel; SQLite browser-DB recovery is a recurring topic.
 - [Forensic Focus](https://www.forensicfocus.com/). Community of practice for digital-forensic examiners; the article archive is searchable by topic.
 - [SANS DFIR Blog](https://www.sans.org/blog/?focus-area=digital-forensics-incident-response). Authoritative source for current research.
-- [Magnet Forensics Research](https://www.magnetforensics.com/blog/). Vendor blog but technically substantive; AXIOM team writes about new artifact discoveries.
-
-### Real-world cases referenced
-
+- [Magnet Forensics Research](https://www.magnetforensics.com/resource-center/). Vendor blog but technically substantive; AXIOM team writes about new artifact discoveries.
 - [Murder of Laci Peterson — Wikipedia](https://en.wikipedia.org/wiki/Murder_of_Laci_Peterson). MapQuest browser-history evidence.
 - [Death of Caylee Anthony — Wikipedia](https://en.wikipedia.org/wiki/Death_of_Caylee_Anthony). Browser-history evidence error in the prosecution case.
-- [2019 Capital One data breach — Wikipedia](https://en.wikipedia.org/wiki/2019_Capital_One_data_breach). Paige Thompson conviction (2022).
+- [2019 Capital One data breach — Wikipedia](https://www.justice.gov/usao-wdwa/united-states-v-paige-thompson). Paige Thompson conviction (2022).
 - [Strava heatmap controversy — The Guardian (2018)](https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases). Activity-database persistence at scale.
-- [FTC Facebook 2019 settlement](https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions). Cambridge Analytica fallout.
-
-### CWE references
-
+- [FTC Facebook 2019 settlement](https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions-facebook). Cambridge Analytica fallout.
 - [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/200.html). Discouraged for mapping; use CWE-359 when applicable.
 - [CWE-359 — Exposure of Private Personal Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/359.html). Precise variant for personal-information leakage.
-
-### Operational references
-
 - [Google Legal Investigations Support](https://support.google.com/transparencyreport/answer/9713961). The cloud-provider legal-process channel referenced in the solve.
-- [Chrome Enterprise policy list](https://chromeenterprise.google/policies/). The catalog defenders should configure.
 
 ---

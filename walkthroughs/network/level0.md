@@ -16,7 +16,7 @@ Today is Atlas Health's quarterly verification. Last quarter, in a recorded revi
 
 There is one other piece of context Priya wrote into the engagement notes. Three quarterly meetings ago, Marcus mentioned that the staging postgres' default admin password was `atlas-default-2025`, "until we finish the rotation we'll do next sprint." That was five sprints back. Priya's note says: *"If staging-db is still reachable, that password is probably still live. Use that information responsibly."*
 
-Atlas Health is HIPAA-covered. The Security Rule (45 CFR Part 164, Subpart C) applies to every system that stores, processes, or transmits ePHI. The HITECH Act gives the breach a 60-day notification clock from discovery; if 500 or more individuals are affected, HHS Office for Civil Rights receives notice in the same window and the breach goes on the public "Wall of Shame." Atlas has 400,000 patients. A confirmed exposure here lands on the wall.
+Atlas Health is HIPAA-covered. The Security Rule (45 CFR Part 164, Subpart C) applies to every system that stores, processes, or transmits ePHI.[^cfr-45-164] The HITECH Act gives the breach a 60-day notification clock from discovery; if 500 or more individuals are affected, HHS Office for Civil Rights receives notice in the same window and the breach goes on the public "Wall of Shame."[^hhs-office-for-civil-rights][^hitech-act-subtitle-d-privacy] Atlas has 400,000 patients. A confirmed exposure here lands on the wall.
 
 What you don't know yet, walking in, is that Marcus's claim was honest in intent and wrong in fact. The staging database is still on the open internet.
 
@@ -130,7 +130,7 @@ The defender's playbook against this category of finding is in §7. First, the p
 | Population at the client | Roughly 400,000 patients across about 40 clinics |
 | Records demonstrably exposed | **Unknown, and that is the finding.** See below |
 | Escalates to | A shell on the staging-db host as the service account, which is `level1@network` |
-| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media |
+| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media[^cfr-45-164] |
 
 **The honest answer to "how many records" is that Atlas cannot say, and
 an assessment that invents a number is worse than one that reports the
@@ -162,9 +162,9 @@ Three named, well-documented incidents follow this exact pattern. Each was a maj
 
 ### The MongoDB and Elasticsearch ransom-leak campaigns — 2017 through 2020
 
-In late 2016, a researcher at GDI Foundation began documenting cases of unauthenticated MongoDB instances on the public internet being wiped and replaced with a ransom note demanding bitcoin payment. The technique was trivial: the attacker ran a Shodan query for MongoDB's default port (27017), connected without credentials (older MongoDB versions defaulted to no authentication enabled), dumped or destroyed the databases, and left a single record in a `WARNING` collection demanding ~0.2 BTC for "recovery." By January 2017, the count of compromised instances had passed 28,000.
+In late 2016, a researcher at GDI Foundation began documenting cases of unauthenticated MongoDB instances on the public internet being wiped and replaced with a ransom note demanding bitcoin payment.[^gdi-foundation-mongodb-ransom-attack] The technique was trivial: the attacker ran a Shodan query for MongoDB's default port (27017), connected without credentials (older MongoDB versions defaulted to no authentication enabled), dumped or destroyed the databases, and left a single record in a `WARNING` collection demanding ~0.2 BTC for "recovery." By January 2017, the count of compromised instances had passed 28,000.
 
-The campaign continued through 2017, expanded to Elasticsearch (port 9200), Hadoop (port 8020 and others), CouchDB (port 5984), and Cassandra. A 2020 follow-up campaign called "Meow" — named for its calling card, the string `meow` appended to wiped databases — destroyed roughly 4,000 databases in a single week in July of that year, with no ransom demand at all. The attacker simply deleted what they found.
+The campaign continued through 2017, expanded to Elasticsearch (port 9200), Hadoop (port 8020 and others), CouchDB (port 5984), and Cassandra. A 2020 follow-up campaign called "Meow" — named for its calling card, the string `meow` appended to wiped databases — destroyed roughly 4,000 databases in a single week in July of that year,[^meow-2020] with no ransom demand at all. The attacker simply deleted what they found.
 
 What makes this the closest parallel to the Atlas Health finding is the mechanism. The campaign was not the result of zero-day exploitation; it required no skill beyond writing a Shodan query and copy-pasting the appropriate database client command. The vulnerability was the public exposure itself. Every organization affected had a database server bound to the internet that, by some combination of intent and inattention, should not have been. The 2017 campaigns hit hospitals, school districts, dating sites, retail companies, and one US-state-level Department of Motor Vehicles. Atlas Health's exposed postgres is the same shape, with a credential layer the MongoDB and Elasticsearch campaigns mostly didn't have. If the credential were rotated, the exposed port would still be a finding — and the moment any future credential leaked into a breach corpus, the door would be open.
 
@@ -172,23 +172,23 @@ The response phase across those campaigns followed a common pattern that's instr
 
 ### Universal Health Services — September 2020
 
-In the early morning hours of September 27, 2020, Universal Health Services — a healthcare network operating roughly 400 hospitals across the United States and the United Kingdom — was hit with a Ryuk ransomware deployment that took every Windows-based clinical system at every affected facility offline simultaneously. UHS clinicians fell back to paper charting for several days. Lab results were delivered by courier. Some patients were diverted to other hospitals. The total disclosed financial impact was approximately $67 million, including remediation, lost revenue, and incident-response costs.
+In the early morning hours of September 27, 2020, Universal Health Services — a healthcare network operating roughly 400 hospitals across the United States and the United Kingdom — was hit with a Ryuk ransomware deployment that took every Windows-based clinical system at every affected facility offline simultaneously.[^universal-health-services-september-2020][^universal-health-services-sec-filings] UHS clinicians fell back to paper charting for several days. Lab results were delivered by courier. Some patients were diverted to other hospitals. The total disclosed financial impact was approximately $67 million, including remediation, lost revenue, and incident-response costs.
 
 The initial access vector, per UHS's own disclosures and subsequent reporting, was a phishing email that delivered Emotet, which delivered TrickBot, which deployed Ryuk. The phishing didn't have to bypass a perimeter — once a clinician clicked, the attacker was already inside. What made the blast radius catastrophic was the subsequent lateral movement: UHS's internal network segmentation was insufficient to prevent the ransomware from spreading to every domain-joined Windows host across the entire network.
 
 The relevance to Atlas Health is two-layered. First, healthcare is a target. Ransomware operators specifically target hospital networks because operational pressure compresses negotiation timelines — every hour of paper charting is patient-care risk and reputational exposure, which means the financial pressure to pay is unusually high. Second, the failure mode UHS demonstrated isn't fundamentally different from the one Atlas Health is one step away from. UHS's perimeter held; their *internal* network was the failure. Atlas's perimeter is not currently holding. If a ransomware operator hits the exposed staging postgres tomorrow with `atlas-default-2025`, the question is whether the lateral-movement story from there into Atlas's production data is short, medium, or long. Atlas Health does not yet know which it is, because nobody has tested.
 
-UHS was not the only large healthcare ransomware event of 2020 — Cerner, Magellan Health, and Crozer-Keystone were all attacked in the same window — but it remains the most-cited because of the scale (400 facilities) and the disclosed cost. The Verizon DBIR and IBM Cost of a Data Breach reports have, every year since, used the UHS incident family as the baseline for healthcare-vertical ransomware cost estimates.
+UHS was not the only large healthcare ransomware event of 2020 — Cerner, Magellan Health, and Crozer-Keystone were all attacked in the same window — but it remains the most-cited because of the scale (400 facilities) and the disclosed cost. The Verizon DBIR and IBM Cost of a Data Breach reports have, every year since, used the UHS incident family as the baseline for healthcare-vertical ransomware cost estimates.[^ibm-cost-of-a-data]
 
 ### Change Healthcare — February 2024
 
-On February 21, 2024, Change Healthcare — a subsidiary of UnitedHealth Group that processes roughly one third of all US healthcare payment transactions — was breached by the ALPHV/BlackCat ransomware affiliate program. The attacker disrupted payment processing across the US healthcare system for weeks; pharmacies could not verify insurance, providers could not submit claims, small medical practices ran out of operating cash. The Department of Health and Human Services issued emergency funding programs. UnitedHealth's CEO testified before Congress in May. The disclosed cost as of UnitedHealth's FY2024 financial statements was approximately $2.4 billion. The number of individuals whose PHI was exposed climbed across subsequent disclosures — initially reported around 100 million in October 2024, the HHS Office for Civil Rights count reached approximately 192.7 million by July 2025, making it by an enormous margin the largest US healthcare data breach on record.
+On February 21, 2024, Change Healthcare — a subsidiary of UnitedHealth Group that processes roughly one third of all US healthcare payment transactions — was breached by the ALPHV/BlackCat ransomware affiliate program. The attacker disrupted payment processing across the US healthcare system for weeks; pharmacies could not verify insurance, providers could not submit claims, small medical practices ran out of operating cash. The Department of Health and Human Services issued emergency funding programs. UnitedHealth's CEO testified before Congress in May. The cost reported in UnitedHealth's FY2024 annual results was approximately $3.1 billion: $2.2 billion of direct response costs plus $867 million of business disruption at Optum Insight.[^change-healthcare-8k] The number of individuals whose PHI was exposed climbed across subsequent disclosures — initially reported around 100 million in October 2024, the HHS Office for Civil Rights count reached approximately 192.7 million by July 2025, making it by an enormous margin the largest US healthcare data breach on record.
 
 The initial access vector, per UnitedHealth's congressional testimony, was a Citrix portal that did not have multi-factor authentication enforced. The attacker used a compromised credential — exact source disclosed but not central to this analysis — to log in. From there, they pivoted, escalated, deployed BlackCat across Change Healthcare's environment, and exfiltrated approximately 4 TB of data.
 
 The Atlas Health parallel here is sharper than it first looks. Change Healthcare's *Citrix portal* was internet-exposed, and the *credential gap* (no MFA) was the exploitable condition. Atlas Health's *postgres* is internet-exposed, and the *credential gap* (default password) is the exploitable condition. The mechanism is "internet-facing service + a credential that shouldn't work but does." That's not a sophisticated technique. It's the most common shape of catastrophic incident.
 
-The aftermath of Change Healthcare also clarifies what the regulatory and contractual cascade looks like when a healthcare exposure of this magnitude lands. UnitedHealth was required to notify affected individuals under HIPAA's Breach Notification Rule. Several state attorneys general opened investigations. Class-action lawsuits were filed in multiple jurisdictions. The HHS Office for Civil Rights opened a formal compliance review. Subsequent HHS HPH-CPGs (Cybersecurity Performance Goals) explicitly called out MFA on internet-facing services as an "Essential" goal — meaning every covered entity is expected to have it. Atlas Health's staging postgres is the same risk class as Change Healthcare's Citrix portal, just with fewer zeros at the end of the patient-count.
+The aftermath of Change Healthcare also clarifies what the regulatory and contractual cascade looks like when a healthcare exposure of this magnitude lands. UnitedHealth was required to notify affected individuals under HIPAA's Breach Notification Rule.[^cfr-45-164] Several state attorneys general opened investigations. Class-action lawsuits were filed in multiple jurisdictions. The HHS Office for Civil Rights opened a formal compliance review. Subsequent HHS HPH-CPGs (Cybersecurity Performance Goals) explicitly called out MFA on internet-facing services as an "Essential" goal — meaning every covered entity is expected to have it.[^hhs-hph-cpgs-healthcare-and] Atlas Health's staging postgres is the same risk class as Change Healthcare's Citrix portal, just with fewer zeros at the end of the patient-count.
 
 ## §5 — Frameworks, deep dive
 
@@ -208,7 +208,7 @@ Audit evidence for §164.312 includes the covered entity's documented risk asses
 
 ### HITECH Act — Pub. L. 111-5, Subtitle D
 
-The Health Information Technology for Economic and Clinical Health Act, enacted as part of the 2009 American Recovery and Reinvestment Act, made two substantive changes to the HIPAA enforcement landscape. First, it formally extended HIPAA's penalties and obligations to business associates — meaning a security consulting firm like Driftwood is directly liable for its handling of ePHI it touches, not just contractually liable through the covered entity. Second, and more famously, it introduced the Breach Notification Rule (now codified at 45 CFR Part 164, Subpart D).
+The Health Information Technology for Economic and Clinical Health Act, enacted as part of the 2009 American Recovery and Reinvestment Act, made two substantive changes to the HIPAA enforcement landscape. First, it formally extended HIPAA's penalties and obligations to business associates — meaning a security consulting firm like Driftwood is directly liable for its handling of ePHI it touches, not just contractually liable through the covered entity. Second, and more famously, it introduced the Breach Notification Rule (now codified at 45 CFR Part 164, Subpart D).[^cfr-45-164]
 
 The Breach Notification Rule requires covered entities to notify affected individuals of a breach of unsecured PHI without unreasonable delay and in no case later than 60 calendar days after discovery. "Discovery" is the day the breach was known or should have been known by exercising reasonable diligence. For a breach affecting 500 or more individuals in a single state or jurisdiction, the covered entity must also notify HHS Office for Civil Rights in the same 60-day window, and must notify "prominent media outlets serving the state or jurisdiction." HHS OCR maintains the public Breach Portal (informally the "Wall of Shame"), where all 500+ breaches are listed indefinitely with the covered entity name, breach date, individuals affected, type of breach, and location of breached information.
 
@@ -218,7 +218,7 @@ Audit evidence for HITECH compliance includes a written breach-notification proc
 
 ### NIST SP 800-53 Rev. 5 — SC-7: Boundary Protection
 
-The NIST Special Publication 800-53 (current revision 5, with the most recent minor update being 5.2.0 in August 2025) is the catalog of security and privacy controls used by federal agencies and widely adopted by state and local governments, contractors handling federal data, and healthcare organizations mapping HIPAA to a more concrete control framework. **SC-7, Boundary Protection**, requires the information system to monitor and control communications at the external boundary of the system and at key internal boundaries within the system.
+The NIST Special Publication 800-53 (current revision 5, with the most recent minor update being 5.2.0 in August 2025) is the catalog of security and privacy controls used by federal agencies and widely adopted by state and local governments, contractors handling federal data, and healthcare organizations mapping HIPAA to a more concrete control framework.[^nist-800-53] **SC-7, Boundary Protection**, requires the information system to monitor and control communications at the external boundary of the system and at key internal boundaries within the system.
 
 SC-7's control statement is direct: "The information system: (a) Monitors and controls communications at the external boundary of the system and at key internal boundaries within the system; (b) Implements subnetworks for publicly accessible system components that are physically or logically separated from internal organizational networks; and (c) Connects to external networks or information systems only through managed interfaces consisting of boundary protection devices arranged in accordance with an organizational security architecture."
 
@@ -238,7 +238,7 @@ Audit evidence includes the documented list of authorized ports/protocols/servic
 
 ### CIS Critical Security Controls v8.1 — Control 4 and Control 13
 
-The Center for Internet Security publishes the CIS Critical Security Controls, currently at **version 8.1** (published 2024, adding alignment with NIST CSF 2.0's *Govern* function but preserving v8 control and safeguard numbering). The CIS Controls are an opinionated, prioritized list of 18 controls and 153 safeguards designed to defend against the most common attack patterns. They're widely adopted in healthcare, financial services, and as a baseline for state-level requirements like the New York Department of Financial Services 23 NYCRR 500.
+The Center for Internet Security publishes the CIS Critical Security Controls, currently at **version 8.1** (published 2024, adding alignment with NIST CSF 2.0's *Govern* function but preserving v8 control and safeguard numbering).[^cis-critical-security-controls-v8] The CIS Controls are an opinionated, prioritized list of 18 controls and 153 safeguards designed to defend against the most common attack patterns. They're widely adopted in healthcare, financial services, and as a baseline for state-level requirements like the New York Department of Financial Services 23 NYCRR 500.
 
 Two safeguards apply directly to the Atlas Health finding:
 
@@ -252,17 +252,17 @@ Audit evidence for CIS controls includes the documented baseline configuration, 
 
 The Common Weakness Enumeration — MITRE's catalog of software weakness patterns — has three entries that map directly to the Atlas Health finding:
 
-**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.** The umbrella weakness. The Atlas Health database is the sensitive information; the unauthorized actor is any entity outside Atlas's authorized user population. CWE-200 has been in the catalog since the early days of the CWE program and is consistently in MITRE's annual Top 25 Most Dangerous Software Weaknesses.
+**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] The umbrella weakness. The Atlas Health database is the sensitive information; the unauthorized actor is any entity outside Atlas's authorized user population. CWE-200 has been in the catalog since the early days of the CWE program and is consistently in MITRE's annual Top 25 Most Dangerous Software Weaknesses.
 
-**CWE-668 — Exposure of Resource to Wrong Sphere.** The conceptual weakness in this finding: a resource (the database) is exposed to a network sphere (the open internet) that should not have access to it. CWE-668 is the parent of more specific weaknesses including CWE-200 (sensitive data) and CWE-749 (exposed dangerous functions). MITRE now flags CWE-668 as **"Discouraged" for mapping real-world vulnerabilities** — it's too high-level a catch-all for compliance-grade citations. It remains useful as an awareness reference and as the conceptual hierarchy parent; for an actual vulnerability writeup the more specific child weakness (CWE-200 here) is the preferred citation.
+**CWE-668 — Exposure of Resource to Wrong Sphere.**[^cwe-668] The conceptual weakness in this finding: a resource (the database) is exposed to a network sphere (the open internet) that should not have access to it. CWE-668 is the parent of more specific weaknesses including CWE-200 (sensitive data) and CWE-749 (exposed dangerous functions).[^cwe-749] MITRE now flags CWE-668 as **"Discouraged" for mapping real-world vulnerabilities** — it's too high-level a catch-all for compliance-grade citations. It remains useful as an awareness reference and as the conceptual hierarchy parent; for an actual vulnerability writeup the more specific child weakness (CWE-200 here) is the preferred citation.
 
-**CWE-1392 — Use of Default Credentials.** The credential half of the finding. The database is operating with a default credential (`atlas-default-2025`) that should have been changed at provisioning time and was not. CWE-1392 is the modern, narrowly-scoped successor to the older "default credentials" patterns — it specifically addresses the case where a product or system ships with a known-default authenticator that the operator failed to change. The closely-related **CWE-798 (Use of Hard-coded Credentials)** would also be cited if the credential were *baked into the product* rather than configured by the operator; in this case the operator chose `atlas-default-2025` themselves at install time, which fits CWE-1392 more precisely.
+**CWE-1392 — Use of Default Credentials.**[^cwe-1392] The credential half of the finding. The database is operating with a default credential (`atlas-default-2025`) that should have been changed at provisioning time and was not. CWE-1392 is the modern, narrowly-scoped successor to the older "default credentials" patterns — it specifically addresses the case where a product or system ships with a known-default authenticator that the operator failed to change. The closely-related **CWE-798 (Use of Hard-coded Credentials)** would also be cited if the credential were *baked into the product* rather than configured by the operator; in this case the operator chose `atlas-default-2025` themselves at install time, which fits CWE-1392 more precisely.[^cwe-798]
 
-Audit and detection tools that surface these CWEs against an infrastructure inventory: Tenable Nessus (credentialed scans), Qualys, Rapid7 InsightVM, Microsoft Defender Vulnerability Management. For codebase-level credential leaks (the CWE-798 cousin), the secret-scanning tools — gitleaks, TruffleHog, GitHub Secret Scanning, GitGuardian — handle the source-control side.
+Audit and detection tools that surface these CWEs against an infrastructure inventory: Tenable Nessus (credentialed scans), Qualys, Rapid7 InsightVM, Microsoft Defender Vulnerability Management.[^tenable-nessus-credentialed-vulnerability-scanning] For codebase-level credential leaks (the CWE-798 cousin), the secret-scanning tools — gitleaks, TruffleHog, GitHub Secret Scanning, GitGuardian — handle the source-control side.
 
 ### OWASP Top 10 — A02:2025 Security Misconfiguration (was A05:2021)
 
-The OWASP Top 10 is the most-cited application-security awareness document in the industry. The current edition is **OWASP Top 10:2025**, finalized in January 2026; the prior edition (2021) is now superseded. The Atlas Health finding maps to A02:2025 — Security Misconfiguration, which moved up from the 2021 A05 slot to A02:2025 specifically because security-misconfiguration findings continued to dominate web-application breach reports in the data underlying the 2025 edition.
+The OWASP Top 10 is the most-cited application-security awareness document in the industry. The current edition is **OWASP Top 10:2025**, finalized in January 2026; the prior edition (2021) is now superseded.[^owasp-top-10-2025] The Atlas Health finding maps to A02:2025 — Security Misconfiguration, which moved up from the 2021 A05 slot to A02:2025 specifically because security-misconfiguration findings continued to dominate web-application breach reports in the data underlying the 2025 edition.
 
 A02:2025 covers the application's runtime configuration: default accounts and passwords still enabled, error messages revealing stack traces, security headers missing, unnecessary services enabled, security settings in application frameworks not configured to secure values. The Atlas Health finding hits "unnecessary services enabled" (the database listening on 5432 from outside the VPN) plus "default accounts and passwords still enabled" (`atlas-default-2025`). Both are explicitly named in the A02:2025 description.
 
@@ -276,7 +276,7 @@ Equal-depth coverage for the five certifications cited in the in-game post-morte
 
 ### CompTIA Security+ — current version SY0-701
 
-Security+ is the entry-level certification most commonly required for DoD 8570/8140 IAT Level II positions and for many state and federal government roles. The current exam is **SY0-701**, which superseded SY0-601 in November 2023 (SY0-601 was retired July 31, 2024). Atlas Health's level0 material maps directly to two domains.
+Security+ is the entry-level certification most commonly required for DoD 8570/8140 IAT Level II positions and for many state and federal government roles.[^cert-security-plus] The current exam is **SY0-701**, which superseded SY0-601 in November 2023 (SY0-601 was retired July 31, 2024). Atlas Health's level0 material maps directly to two domains.
 
 - **Domain 2 — Threats, Vulnerabilities, and Mitigations.** Objective 2.5 covers vulnerability identification, including network scanning and the difference between credentialed and uncredentialed scans. Expect a question that gives you nmap output similar to what you ran and asks which finding represents the highest-severity risk.
 - **Domain 4 — Security Operations.** Objective 4.1 explicitly names nmap as a tool you should be able to recognize and explain. Objective 4.3 covers vulnerability management — including external attack-surface enumeration, the practice you just performed manually for Atlas.
@@ -295,10 +295,10 @@ The trap is A — rotating the credential is necessary but does not address the 
 
 ### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA's CySA+ (Cybersecurity Analyst) is the analyst-track cert, focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. Atlas Health's material maps to two domains.
+CompTIA's CySA+ (Cybersecurity Analyst) is the analyst-track cert, focused on threat-detection, vulnerability-management, and incident-response work.[^cert-cysa] CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched on 23 June 2026**, with CS0-003 retiring 22 December 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. Atlas Health's material maps to two domains.
 
 - **Domain 1 — Security Operations.** Objective 1.4 covers vulnerability scanning interpretation, including nmap output, Nessus output, and the workflow for prioritizing findings. Objective 1.6 covers active and passive reconnaissance — Driftwood's quarterly verification is exactly the activity this objective tests.
-- **Domain 2 — Threat Intelligence and Threat Hunting.** Objective 2.2 covers threat-intelligence sources, including Shodan and Censys (the tools an attacker would use to find Atlas Health's exposed postgres before Driftwood's check found it).
+- **Domain 2 — Threat Intelligence and Threat Hunting.** Objective 2.2 covers threat-intelligence sources, including Shodan and Censys (the tools an attacker would use to find Atlas Health's exposed postgres before Driftwood's check found it).[^censys-internet-wide-scanner]
 
 **Sample question framing:**
 
@@ -313,7 +313,7 @@ CySA+ wants the *first* action; this is a procedural-discipline question. Both A
 
 ### CompTIA PenTest+ — current version PT0-003
 
-CompTIA's PenTest+ is the offensive-track cert, focused on planning, scoping, executing, and reporting penetration tests. The current exam is **PT0-003**, which superseded PT0-002 in December 2024. Atlas Health's level0 material maps directly to PenTest+'s information-gathering domain, which makes this scenario unusually high-value for PenTest+ study.
+CompTIA's PenTest+ is the offensive-track cert, focused on planning, scoping, executing, and reporting penetration tests.[^cert-pentest-plus] The current exam is **PT0-003**, which superseded PT0-002 in December 2024. Atlas Health's level0 material maps directly to PenTest+'s information-gathering domain, which makes this scenario unusually high-value for PenTest+ study.
 
 - **Domain 1 — Engagement Management.** Covers scoping, rules of engagement, and authorization documentation. Driftwood's MSA with Atlas constraining the scan to perimeter verification (not credentialed assessment) is the type of constraint this domain tests.
 - **Domain 2 — Reconnaissance and Enumeration.** Objective 2.2 covers active reconnaissance with nmap, masscan, and similar; objective 2.3 covers vulnerability identification including service-version mapping to known CVEs.
@@ -332,7 +332,7 @@ PT0-003 explicitly tests scope discipline. Both A and C exceed perimeter-verific
 
 ### CISSP
 
-CISSP is the senior-level (ISC)² certification, intended for security professionals with five or more years of experience. The current exam follows the **2024 CBK refresh** (still current, with the next refresh expected in 2027 on the standard three-year cycle). CISSP has eight domains; Atlas Health material spans three.
+CISSP is the senior-level (ISC)² certification, intended for security professionals with five or more years of experience.[^cert-cissp] The current exam follows the **2024 CBK refresh** (still current, with the next refresh expected in 2027 on the standard three-year cycle). CISSP has eight domains; Atlas Health material spans three.
 
 - **Domain 3 — Security Architecture and Engineering.** Covers secure-network-architecture, including segmentation, defense-in-depth, and the secure-by-default principle. The conceptual remediation for Atlas Health's finding lives in this domain.
 - **Domain 4 — Communication and Network Security.** Covers boundary devices, firewalls, intrusion detection/prevention, and network monitoring. The technical "how" of preventing the Atlas exposure lives here.
@@ -353,7 +353,7 @@ The trap is that all four are reasonable. **D** is necessary but is a near-term 
 
 ### OSCP / PEN-200
 
-The Offensive Security Certified Professional is the most-recognized hands-on offensive certification. The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward. The methodology OSCP teaches is, at its core, exactly what you just did to Atlas Health's perimeter — with the discipline that, on the OSCP exam, *you actually do attempt the credential* (because the exam scope authorizes it; the Atlas engagement scope did not).
+The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.[^cert-oscp] The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward. The methodology OSCP teaches is, at its core, exactly what you just did to Atlas Health's perimeter — with the discipline that, on the OSCP exam, *you actually do attempt the credential* (because the exam scope authorizes it; the Atlas engagement scope did not).
 
 The OSCP enumeration loop, applied to a target like Atlas Health, looks like this:
 
@@ -385,9 +385,9 @@ The Atlas Health scenario is not theoretical. Every defender working at a health
 
 **3. Default-credential scanning on every internal asset.** Even if Atlas closes 5432 at the perimeter, the `atlas-default-2025` credential remains a finding on the *internal* perimeter. Credentialed vulnerability scans — Tenable Nessus, Qualys, Rapid7 InsightVM, Microsoft Defender Vulnerability Management — should be running monthly against every internal asset, and the scan policy should include database default-credential checks. The first credentialed scan that runs against staging-db after the credential's been rotated will validate the rotation; subsequent scans monitor for drift.
 
-**4. Bastion or just-in-time access instead of static VPN.** "VPN-only" as an access model has been increasingly displaced over the past decade by short-lived, individually-attributable connection brokers. HashiCorp Boundary, AWS Systems Manager Session Manager, Cloudflare Access, Teleport, Tailscale — any of them replaces the persistent-VPN model with per-session credentials, audit logs per session, and the ability to expire access immediately when a consultant rolls off an engagement. Atlas's current model puts the entire access policy on the VPN concentrator's identity provider, which works well in steady state but degrades during high-turnover periods.
+**4. Bastion or just-in-time access instead of static VPN.** "VPN-only" as an access model has been increasingly displaced over the past decade by short-lived, individually-attributable connection brokers. HashiCorp Boundary, AWS Systems Manager Session Manager, Cloudflare Access, Teleport, Tailscale — any of them replaces the persistent-VPN model with per-session credentials, audit logs per session, and the ability to expire access immediately when a consultant rolls off an engagement.[^hashicorp-boundary-just-in-time] Atlas's current model puts the entire access policy on the VPN concentrator's identity provider, which works well in steady state but degrades during high-turnover periods.
 
-**5. PostgreSQL hardening specifically.** For the database itself, the hardening checklist is short and standard: `listen_addresses` in `postgresql.conf` set to specific interface bindings (never `*`), `pg_hba.conf` configured to deny by default and allow only documented source CIDRs, `ssl = on` enforced with `hostssl` (not `host`) entries, no `trust` authentication for any host outside the local socket, role-based access with no use of the `postgres` superuser for application connections, and audit logging via the `pgaudit` extension. The CIS PostgreSQL Benchmark is the canonical checklist; Atlas's staging postgres almost certainly does not pass it as configured today.
+**5. PostgreSQL hardening specifically.** For the database itself, the hardening checklist is short and standard: `listen_addresses` in `postgresql.conf` set to specific interface bindings (never `*`), `pg_hba.conf` configured to deny by default and allow only documented source CIDRs, `ssl = on` enforced with `hostssl` (not `host`) entries, no `trust` authentication for any host outside the local socket, role-based access with no use of the `postgres` superuser for application connections, and audit logging via the `pgaudit` extension. The CIS PostgreSQL Benchmark is the canonical checklist; Atlas's staging postgres almost certainly does not pass it as configured today.[^cis-postgresql-benchmark]
 
 **6. Sample detection rule (generic Linux + auditd, for the host side):**
 
@@ -445,35 +445,45 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
-- [HIPAA Security Rule — 45 CFR Part 164, Subpart C (HHS)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C)
-- [HHS Office for Civil Rights — Breach Portal ("Wall of Shame")](https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf)
-- [HITECH Act — Subtitle D, Privacy (HHS Summary)](https://www.hhs.gov/hipaa/for-professionals/special-topics/hitech-act-enforcement-interim-final-rule/index.html)
-- [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final)
-- [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final)
-- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
-- [CIS PostgreSQL Benchmark](https://www.cisecurity.org/benchmark/postgresql)
-- [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html)
-- [CWE-668 — Exposure of Resource to Wrong Sphere (parent; MITRE flags as "Discouraged" for mapping)](https://cwe.mitre.org/data/definitions/668.html)
-- [CWE-1392 — Use of Default Credentials](https://cwe.mitre.org/data/definitions/1392.html)
-- [CWE-798 — Use of Hard-coded Credentials (closely related)](https://cwe.mitre.org/data/definitions/798.html)
-- [OWASP Top 10:2025](https://owasp.org/Top10/2025/)
-- [MITRE ATT&CK — T1046: Network Service Discovery](https://attack.mitre.org/techniques/T1046/)
-- [MITRE ATT&CK — T1595.002: Active Scanning: Vulnerability Scanning](https://attack.mitre.org/techniques/T1595/002/)
-- [MITRE ATT&CK — T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/)
-- [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/)
-- [HHS HPH-CPGs (Healthcare and Public Health Cybersecurity Performance Goals)](https://hphcyber.hhs.gov/performance-goals.html)
-- [Universal Health Services September 2020 ransomware — 8-K filing (direct)](https://www.sec.gov/Archives/edgar/data/0000352915/000156459020044863/uhs-8k_20200927.htm)
-- [Universal Health Services SEC filings index (EDGAR)](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000352915&type=8-K)
-- [Change Healthcare February 2024 cyberattack — UnitedHealth Group 8-K filing (SEC, Feb 22 2024)](https://www.sec.gov/Archives/edgar/data/0000731766/000073176624000045/unh-20240221.htm)
-- [GDI Foundation — MongoDB ransom-attack campaign coverage (2017)](https://gdi.foundation/)
-- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
-- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach)
-- [Shodan — internet-wide scanner](https://www.shodan.io/)
-- [Censys — internet-wide scanner](https://search.censys.io/)
-- [HashiCorp Boundary — just-in-time bastion](https://developer.hashicorp.com/boundary)
-- [Tenable Nessus — credentialed vulnerability scanning](https://www.tenable.com/products/nessus)
+[^cfr-45-164]: [HIPAA Security Rule — 45 CFR Part 164, Subpart C (HHS)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C).
+[^hhs-office-for-civil-rights]: [HHS Office for Civil Rights — Breach Portal ("Wall of Shame")](https://ocrportal.hhs.gov/ocr/breach/breach_frontpage.jsf).
+[^hitech-act-subtitle-d-privacy]: [HITECH Act — Subtitle D, Privacy (HHS Summary)](https://www.hhs.gov/hipaa/for-professionals/special-topics/hitech-act-enforcement-interim-final-rule/index.html).
+[^nist-800-53]: [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final).
+[^cis-critical-security-controls-v8]: [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
+[^cis-postgresql-benchmark]: [CIS PostgreSQL Benchmark](https://www.cisecurity.org/benchmark/postgresql).
+[^cwe-200]: [CWE-200 — Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-668]: [CWE-668 — Exposure of Resource to Wrong Sphere (parent; MITRE flags as "Discouraged" for mapping)](https://cwe.mitre.org/data/definitions/668.html).
+[^cwe-1392]: [CWE-1392 — Use of Default Credentials](https://cwe.mitre.org/data/definitions/1392.html).
+[^cwe-798]: [CWE-798 — Use of Hard-coded Credentials (closely related)](https://cwe.mitre.org/data/definitions/798.html).
+[^owasp-top-10-2025]: [OWASP Top 10:2025](https://owasp.org/Top10/2025/).
+[^hhs-hph-cpgs-healthcare-and]: [HHS HPH-CPGs (Healthcare and Public Health Cybersecurity Performance Goals)](https://hphcyber.hhs.gov/performance-goals.html).
+[^universal-health-services-september-2020]: [Universal Health Services September 2020 ransomware — 8-K filing (direct)](https://www.sec.gov/Archives/edgar/data/352915/000156459020044863/uhs-8k_20200927.htm).
+[^universal-health-services-sec-filings]: [Universal Health Services SEC filings index (EDGAR)](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000352915&type=8-K).
+[^gdi-foundation-mongodb-ransom-attack]: [Massive wave of MongoDB ransom attacks makes 26,000 new victims (BleepingComputer, 2017)](https://www.bleepingcomputer.com/news/security/massive-wave-of-mongodb-ransom-attacks-makes-26-000-new-victims/). Contemporaneous coverage of the campaign GDI Foundation researchers documented.
+[^ibm-cost-of-a-data]: [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach).
+[^censys-internet-wide-scanner]: [Censys — internet-wide scanner](https://search.censys.io/).
+[^hashicorp-boundary-just-in-time]: [HashiCorp Boundary — just-in-time bastion](https://developer.hashicorp.com/boundary).
+[^tenable-nessus-credentialed-vulnerability-scanning]: [Tenable Nessus — credentialed vulnerability scanning](https://www.tenable.com/products/nessus).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cwe-749]: [CWE-749](https://cwe.mitre.org/data/definitions/749.html).
+[^change-healthcare-8k]: [UnitedHealth Group Form 10-K, FY2024 (SEC)](https://www.sec.gov/Archives/edgar/data/731766/000073176625000063/unh-20241231.htm). Reports the full-year cyberattack impact: $2.2 billion of direct response costs plus $867 million of business disruption.
+[^meow-2020]: [New 'Meow' attack has deleted almost 4,000 unsecured databases (BleepingComputer, July 2020)](https://www.bleepingcomputer.com/news/security/new-meow-attack-has-deleted-almost-4-000-unsecured-databases/). Over 97% of the affected systems were Elasticsearch or MongoDB.
+
+### Further reading
+
+- [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final).
+- [MITRE ATT&CK — T1046: Network Service Discovery](https://attack.mitre.org/techniques/T1046/).
+- [MITRE ATT&CK — T1595.002: Active Scanning: Vulnerability Scanning](https://attack.mitre.org/techniques/T1595/002/).
+- [MITRE ATT&CK — T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/).
+- [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/).
+- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/).
+- [Shodan — internet-wide scanner](https://www.shodan.io/).
 
 ---
 

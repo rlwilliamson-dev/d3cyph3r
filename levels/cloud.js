@@ -890,181 +890,25 @@ travels far past the bucket itself.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  SOC 2 Trust Services Criteria (2017, refreshed 2022)
-    CC6.1  Logical and Physical Access Controls — the control
-      that drove this audit walk. Anonymous public access to
-      production data violates the control whenever it isn't
-      intentional.
-    CC6.6  Logical access security measures for outside
-      threats — bucket policies and IAM are the
-      implementation.
-    CC6.7  Transmission and movement of information — applies
-      to data movement into and out of the bucket; bucket
-      policies should restrict by source.
-    CC7.1  Detection of security events — the missing piece
-      here. Coverline had the policy; they didn't have the
-      detection. AWS Config managed rules / Macie / Trusted
-      Advisor close this gap.
+Three weaknesses, one of which outranks the rest.
 
-  NIST SP 800-53 Rev. 5
-    AC-3   Access Enforcement — the bucket policy is the
-      access-enforcement mechanism for the asset.
-    AC-6   Least Privilege — the bucket should grant the
-      minimum access required (no anonymous, named principals
-      only).
-    SC-7   Boundary Protection — Public Access Block + bucket
-      policy together form the boundary.
-    AU-12  Audit Generation — S3 server-access logging and
-      CloudTrail data-event logging produce the audit record.
+  CWE-732   Incorrect Permission Assignment for Critical Resource
+            — the bucket policy.
+  CWE-285   Improper Authorization.
+  CWE-798   Use of Hard-coded Credentials — the RDS master
+            password in the migration script, which reaches
+            further than any document in the bucket.
 
-  NIST Cybersecurity Framework 2.0
-    PR.AA  Identity Management, Authentication, and Access
-      Control — including the "least functionality necessary"
-      sub-category.
-    PR.DS  Data Security — the in-transit and at-rest
-      protections; encryption + access control.
-    DE.CM  Continuous Monitoring — the detection layer
-      Coverline was missing.
+  CIS AWS Foundations Benchmark 3.1.x and Block Public Access are
+  the controls, and the fix is account-level enforcement rather
+  than per-bucket correctness.
 
-  CIS AWS Foundations Benchmark v7.0.0
-  (the current release. v7.0.0 moved Storage to Section 3,
-   so S3 now lives in §3.1.x. NOTE: AWS Security Hub's managed
-   CIS standard still tops out at v5.0.0 — where S3 was §2.1.x —
-   so Security Hub findings will show the older numbering.)
-    §3.1.1  Ensure S3 Bucket Policy is set to deny HTTP
-      requests (TLS-only). Tangential here but relevant
-      hygiene.
-    §3.1.2  Ensure MFA Delete is enabled on S3 buckets.
-    §3.1.3  Ensure all data in S3 is discovered, classified,
-      and secured (the v7 control that replaced the older
-      standalone encryption recommendation, after AWS made
-      SSE-S3 the default).
-    §3.1.4  Ensure S3 is configured with 'Block Public Access'
-      enabled — the headline control that would have prevented
-      this finding. v7.0.0 merged the former account-level and
-      bucket-level BPA controls into this single one.
-
-  ISO/IEC 27017:2015 (Code of practice for information security
-  controls based on ISO/IEC 27002 for cloud services)
-    CLD.6.3.1  Shared roles and responsibilities within a
-      cloud environment.
-    CLD.8.1.5  Removal of cloud service customer assets.
-    CLD.9.5.1  Segregation in virtual computing environments.
-
-  OWASP Cloud-Native Top 10 (2022)
-    CNAS-1: Insecure Cloud, Container, or Orchestration
-      Configuration — this finding is the canonical example.
-    CNAS-2: Injection Flaws (cloud-native versions) — adjacent;
-      the hardcoded RDS password would enable injection-style
-      lateral movement.
-    CNAS-5: Insecure Secrets Storage — the hardcoded RDS
-      master password in migrate-rds.sh is the textbook
-      example of credentials stored in a non-secret-store
-      location.
-
-  CWE
-    CWE-200  Exposure of Sensitive Information to an
-      Unauthorized Actor — the umbrella parent (note: CWE-200
-      is mapping-Discouraged in current MITRE guidance; cite
-      the more specific CWE-732 or CWE-285 below for direct
-      mappings).
-    CWE-732  Incorrect Permission Assignment for Critical
-      Resource — the bucket-policy / Public Access Block
-      misconfiguration.
-    CWE-285  Improper Authorization — the public bucket
-      authorizes the wrong principals (every principal).
-    CWE-798  Use of Hard-Coded Credentials — the RDS master
-      password in the migration script.
-    CWE-540  Inclusion of Sensitive Information in Source
-      Code — the script.
-
-  NAIC Insurance Data Security Model Law (2017)
-    §4   Information Security Program — written program;
-      annual risk assessment; documented controls.
-    §5   Investigation of a Cybersecurity Event — including
-      the determination of whether NPI was acquired.
-    §6   Notification of a Cybersecurity Event — 72-hour
-      notification to the state insurance commissioner.
-
-  NYDFS 23 NYCRR 500 (2017, amended 2023)
-    500.03   Cybersecurity policy.
-    500.05   Penetration testing and vulnerability assessments.
-    500.09   Risk assessment.
-    500.13   Limitations on data retention.
-    500.15   Encryption of nonpublic information.
-    500.17   Notices to Superintendent (72-hour clock).
-
-  GLBA Safeguards Rule (FTC, amended December 2021,
-  enforcement effective June 2023)
-    16 CFR 314.4  Required elements of an information security
-      program. Includes designation of a qualified individual,
-      access controls, encryption of consumer information at
-      rest and in transit, MFA for any individual accessing
-      consumer information.
-
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  AWS Certified Security – Specialty (SCS-C03)
-    AWS released SCS-C03 on December 2, 2025 as the
-    successor to SCS-C02 (decommissioned Dec 1, 2025).
-    Whole-cert relevant. Domain 1 (Threat Detection and
-    Incident Response) and Domain 4 (Identity and Access
-    Management) directly cover bucket policies, Public
-    Access Block, Macie, Config, GuardDuty.
-
-  AWS Certified Solutions Architect (Associate / Professional)
-    Storage and security sub-domains include S3 permission
-    models. The Professional exam expects fluency in
-    multi-account governance (Organizations + SCPs).
-
-  AWS Certified Cloud Practitioner (CLF-C02)
-    Entry-level; covers the shared-responsibility model and
-    S3 basics. The "S3 is private by default but configurable
-    to public" framing is on the exam.
-
-  CompTIA Security+ (SY0-701)
-    Domain 4 (Security Operations) — cloud-security baseline
-    including misconfigurations.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 1 (Security Operations)
-    — cloud-misconfiguration detection and response.
-
-  ISC2 CCSP (Certified Cloud Security Professional)
-    Whole-cert relevant. Domains 2 (Cloud Data Security), 3
-    (Cloud Platform & Infrastructure Security), and 6 (Legal,
-    Risk, and Compliance) all cover this scenario.
-
-  CSA CCSK (Certificate of Cloud Security Knowledge)
-    The vendor-neutral cloud-security cert. The CSA Cloud
-    Controls Matrix (CCM) and Consensus Assessments Initiative
-    Questionnaire (CAIQ) both have multiple controls for
-    "anonymous public access to cloud storage."
-
-  SANS GCSA (Cloud Security Automation), SEC388 (Introduction
-  to Cloud Computing and Security), SEC488 (Cloud Security
-  Essentials), SEC510 (Public Cloud Security)
-    Hands-on cloud-security cert family. Bucket-misconfig
-    detection and remediation is fundamental.
-
-  GIAC GCPN (Cloud Penetration Tester)
-    Tests offensive cloud techniques including
-    \`--no-sign-request\` bucket enumeration.
-
-  CISSP
-    Domain 4 (Communication and Network Security) and Domain
-    7 (Security Operations) both touch cloud-misconfiguration
-    detection.
-
-  Cross-cloud equivalents: Microsoft AZ-500 (Azure Security
-    Engineer Associate), Google Professional Cloud Security
-    Engineer — both certs include the equivalent storage-
-    permission misconfiguration scenarios (Azure Blob
-    Storage anonymous read; GCS bucket-level IAM with
-    allUsers / allAuthenticatedUsers principals).
-
+  Coverline is an insurance carrier, so SOC 2 sits alongside
+  real regulators: NYDFS 23 NYCRR 500.17 gives 72 hours to
+  notify the superintendent, and the NAIC Model gives 72 hours
+  to the commissioner. Both clocks start at the DETERMINATION
+  that a cybersecurity event occurred, which is why an inability
+  to rule one out is not a neutral position.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -1203,6 +1047,32 @@ travels far past the bucket itself.
        is correct; the exceptions should be explicit, named,
        and reviewed.
 
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. Five buckets were configured correctly. Why is that not
+     evidence of a working control?
+
+  2. Which is the more serious finding: the exposed claim
+     documents, or the credential beside them?
+
+  3. Anonymous reads leave no requester identity. What does that
+     do to Coverline's 72-hour determination?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/cloud/level0.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, S3 access-control semantics, Capital
+One and the other cloud-exposure cases, and a Sigma rule for
+public-access configuration changes.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -1918,142 +1788,24 @@ position that the breach response was procedurally sound.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  SOC 2 Trust Services Criteria (2017, refreshed 2022)
-    CC6.1  Logical and Physical Access Controls — Coverline's
-      policy ("credentials shall not be embedded in source /
-      configuration / data rows") exists; the audit evidence
-      was the question.
-    CC6.2  System User Management — covers user-lifecycle
-      management. The dormant vikram.shah account is a CC6.2
-      gap.
-    CC6.6  Logical access security measures for outside
-      threats — the leaked-credential exposure window.
-    CC7.1  Detection of security events — the missing pgaudit
-      source-IP capture is a CC7.1 gap.
+Two weaknesses, and a missing log.
 
-  NIST SP 800-53 Rev. 5
-    IA-5(7)  Authenticator Management: No Embedded Unencrypted
-      Static Authenticators — the direct control. Database
-      rows count as an "embedded location" for this purpose.
-    AC-2     Account Management — covers the dormant-account
-      lifecycle gap.
-    AC-3     Access Enforcement — the credential is the
-      access-enforcement mechanism.
-    AU-12    Audit Generation — the missing source-IP capture
-      is an AU-12 implementation gap.
+  CWE-798   Use of Hard-coded Credentials — a service credential
+            stored as a row in a database table.
+  CWE-312   Cleartext Storage of Sensitive Information.
 
-  NIST Cybersecurity Framework 2.0
-    PR.AA  Identity Management, Authentication, and Access
-      Control — IA + AC family.
-    PR.DS  Data Security.
-    DE.CM  Continuous Monitoring — the missing detection
-      capability for the 2026-05-20 query.
+  The third finding has no CWE because it is an absence: pgaudit
+  was never enabled, so the anomalous 02:14 query carries no
+  source address. NIST SP 800-53 AU-2 (Event Logging) and AU-12
+  (Audit Record Generation) are the controls that were not
+  implemented.
 
-  CIS AWS Foundations Benchmark v7.0.0
-    §2.12  Ensure access keys are rotated every 90 days or
-      less — credentials in database rows have effectively
-      infinite rotation cadence. (Was §1.13/§1.14 in v5.0.0,
-      the numbering AWS Security Hub still reports.)
-    §3.1.4  S3 Block Public Access (the level0 remediation
-      that's already complete).
-
-  CIS PostgreSQL Benchmark v15 / v16
-    §3.x   Audit logging configuration including pgaudit
-      setup.
-    §5.x   Authentication configuration including IAM
-      database authentication.
-
-  CWE
-    CWE-798  Use of Hard-Coded Credentials — primary mapping.
-      Database rows count as "hard-coded" when the credential
-      is stored in cleartext and accessed via fixed lookup.
-    CWE-540  Inclusion of Sensitive Information in Source
-      Code — applies if you treat DB schema + rows as
-      "source" in the broad sense.
-    CWE-312  Cleartext Storage of Sensitive Information —
-      the credential rows are stored in plaintext varchar
-      columns with no application-layer encryption.
-    CWE-200  Exposure of Sensitive Information to an
-      Unauthorized Actor — umbrella parent (note: mapping-
-      Discouraged in current MITRE guidance; cite the more
-      specific child CWEs above for direct mappings).
-
-  NAIC Insurance Data Security Model Law (2017)
-    §4.D   Information Security Program — including ongoing
-      reassessment of risks. Credentials past their TTL in
-      a database row are a documented risk factor.
-    §5     Investigation of a Cybersecurity Event.
-    §6     Notification of a Cybersecurity Event — 72-hour
-      clock.
-
-  NYDFS 23 NYCRR 500 (2017, amended 2023)
-    500.07   Access Privileges and Management — covers
-      credential lifecycle including dormant-account
-      remediation.
-    500.13   Limitations on data retention — DB rows past
-      their stated TTL are a 500.13 violation.
-    500.17   Notices to Superintendent — 72-hour clock.
-
-  GLBA Safeguards Rule (16 CFR 314, amended December 2021,
-  enforcement effective June 2023; notification amendment
-  effective May 2024)
-    314.4(c)(4)  Encrypt customer information at rest — the
-      broker-portal credential row is unencrypted at rest.
-    314.5        Notification of security events affecting
-      500+ consumers (30-day clock from discovery).
-
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  AWS Certified Security – Specialty (SCS-C03)
-    AWS released SCS-C03 on December 2, 2025 as the
-    successor to SCS-C02 (decommissioned Dec 1, 2025).
-    Domain 1 (Threat Detection and Incident Response) and
-    Domain 4 (Identity and Access Management) cover Secrets
-    Manager, GuardDuty RDS Protection, Database Activity
-    Streams, and IAM database
-    authentication.
-
-  AWS Certified Database – Specialty (DBS-C01)
-    Retired April 30, 2024. Database-security content was
-    folded into Solutions Architect Professional and the
-    Security Specialty.
-
-  AWS Certified Solutions Architect (Professional) (SAP-C02)
-    Database security as part of the architecture domain.
-
-  ISC2 CCSP (Certified Cloud Security Professional)
-    Domain 2 (Cloud Data Security) and Domain 3 (Cloud
-    Platform & Infrastructure Security) cover database
-    encryption, key management, and secret management.
-
-  CSA CCSK (Certificate of Cloud Security Knowledge) v5
-    The CSA Cloud Controls Matrix has multiple controls for
-    credential lifecycle (CCM-CEK family).
-
-  GIAC GCPN (Cloud Penetration Tester)
-    Tests offensive cloud techniques including DB enumeration
-    from leaked credentials.
-
-  GIAC GCDA (Continuous Monitoring & Security Operations
-  Analyst)
-    Detection-engineering side for the kind of anomalous
-    query pattern we found at 2026-05-20 02:14.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 1 (Security Operations)
-    covers credential-leak detection and response.
-
-  ISC2 CISSP
-    Domain 5 (Identity and Access Management) — credential
-    lifecycle, including the user-management gap.
-
-  PostgreSQL-specific: there's no formal vendor cert for
-    Postgres administration in the way Oracle has OCP, but
-    the EDB (EnterpriseDB) Postgres certifications include
-    Postgres security as a topic.
-
+  Coverline is an insurance carrier, so SOC 2 sits alongside
+  real regulators: NYDFS 23 NYCRR 500.17 gives 72 hours to
+  notify the superintendent, and the NAIC Model gives 72 hours
+  to the commissioner. Both clocks start at the DETERMINATION
+  that a cybersecurity event occurred, which is why an inability
+  to rule one out is not a neutral position.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -2082,10 +1834,6 @@ position that the breach response was procedurally sound.
   T1078        Valid Accounts.
   T1213        Data from Information Repositories — broker
                portal would be the next info-repo.
-  T1090        Proxy — if the broker portal mediates access
-               to insurance-broker data, lateral movement
-               can chain further.
-
 
 ─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
@@ -2172,6 +1920,32 @@ position that the breach response was procedurally sound.
        which point every credential STORED IN the database
        also leaks.
 
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. The table had TTL columns scheduling its own deletion in
+     Q2 2024. Why is that not a control?
+
+  2. A credential stored as a table row: name three places it
+     exists that an UPDATE will not reach.
+
+  3. Coverline cannot say who ran the 02:14 query. Under a
+     72-hour clock, which way does that ambiguity push?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/cloud/level1.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, database enumeration with psql, the
+real-world retention failures, and a Sigma rule for schema
+enumeration by application credentials.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -2728,7 +2502,7 @@ BACKUP_SVC_SECRET_ACCESS_KEY=bkupSvc+RDSsnapshot/2023scoped/Xq7Lm2
   Coverline Insurance · IAM least privilege + dormant credentials
 
 
-─── BLUNT VERSION ─────────────────────────────────────────────
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 A service account called legacy-deploy-bot was created in
 February 2024 to unblock a region migration. Someone attached
@@ -2754,7 +2528,7 @@ turn off. It is the quietest catastrophic finding in cloud
 security, and it is extremely common.
 
 
-─── CONSULTING-FIRM ANGLE ─────────────────────────────────────
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 The three Coverline findings this week are the same finding in
 three costumes:
@@ -2782,95 +2556,28 @@ for N days, and who owns the leaver half of joiner-mover-leaver.
 The bot is a symptom; the missing lifecycle is the finding.
 
 
-─── FRAMEWORKS ────────────────────────────────────────────────
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-NIST SP 800-53 Rev. 5
-  AC-6 Least Privilege — the control this level is about.
-    AC-6(1) authorize access to security functions; AC-6(2)
-    non-privileged access for nonsecurity functions; AC-6(5)
-    privileged accounts limited to a defined set; AC-6(9) audit
-    the execution of privileged functions. AdministratorAccess on
-    a deploy bot fails all of these.
-  AC-2 Account Management — AC-2(3) disable inactive accounts
-    (the dormant key); AC-2(13) disable accounts of individuals
-    who pose a risk (the terminated employee).
-  IA-4 Identifier Management / IA-5 Authenticator Management —
-    IA-5(1) credential rotation (the 2019 CI key).
+Two weaknesses, four instances, one broken process.
 
-CIS AWS Foundations Benchmark v7.0.0 (§2 Identity & Access Mgmt;
-the IAM block moved from §1 to §2 in v7.0.0 when an Organizations
-section was added)
-  2.4   No 'root' user access key exists. (Coverline:
-        AccountAccessKeysPresent = 1 — fails.)
-  2.5   MFA enabled for the 'root' user. (AccountMFAEnabled = 0 —
-        fails.)
-  2.11  Credentials unused for 45 days or more are disabled.
-        (legacy-deploy-bot's key: idle since 2024 — fails.)
-  2.12  Access keys rotated every 90 days or less. (ci-deploy-svc:
-        created 2019, never rotated — fails.)
-  2.14  IAM policies that allow full "*:*" administrative
-        privileges are not attached. (legacy-deploy-bot — fails.)
+  CWE-269   Improper Privilege Management — a migration bot still
+            holding AdministratorAccess.
+  CWE-250   Execution with Unnecessary Privileges.
 
-NIST CSF 2.0
-  PR.AA (Identity Management, Authentication, and Access Control)
-    — PR.AA-01 identities and credentials managed; PR.AA-05 access
-    permissions enforced per least privilege and separation of
-    duties.
+  CIS AWS Foundations 1.4, 1.12 and 1.16 are the controls:
+  rotate or remove unused credentials, disable dormant users,
+  and do not attach policies directly. The root access key is
+  its own finding, and AWS's own guidance is that it should not
+  exist at all.
 
-SOC 2 (Trust Services Criteria)
-  CC6.1 logical access / least privilege; CC6.2 access authorized
-  before issuance; CC6.3 access modified or removed on role change
-  or termination. Coverline's attestation depends on these; this
-  is a CC6.1 / CC6.3 gap.
+  Coverline is an insurance carrier, so SOC 2 sits alongside
+  real regulators: NYDFS 23 NYCRR 500.17 gives 72 hours to
+  notify the superintendent, and the NAIC Model gives 72 hours
+  to the commissioner. Both clocks start at the DETERMINATION
+  that a cybersecurity event occurred, which is why an inability
+  to rule one out is not a neutral position.
 
-Regulatory (insurance)
-  NYDFS 23 NYCRR 500.07 (Access Privileges and Management), as
-    amended (Second Amendment, effective Nov 2023, phased through
-    2025): periodic review of access privileges, limiting the
-    number of privileged accounts, and removing access no longer
-    needed. A dormant admin bot is the textbook violation.
-  NAIC Insurance Data Security Model Law — Information Security
-    Program access-control requirements (state adoptions vary).
-
-CWE
-  CWE-269 Improper Privilege Management — the admin-bound bot.
-  CWE-250 Execution with Unnecessary Privileges — the bot ran the
-    migration with far more than it needed.
-  CWE-798 Use of Hard-coded Credentials / CWE-312 Cleartext
-    Storage of Sensitive Information — the bootstrap-iam-keys.env
-    file with five secret keys in plaintext.
-
-
-─── CERTIFICATIONS ────────────────────────────────────────────
-
-AWS Certified Security – Specialty (SCS-C03; the successor to
-SCS-C02, which was decommissioned Dec 1, 2025)
-  Identity and Access Management is the heart of this exam.
-  Expect least-privilege policy design, detecting unused
-  credentials (IAM credential report, Access Analyzer
-  unused-access findings), and SCPs / permissions boundaries as
-  guardrails. This level is a Security Specialty scenario in
-  miniature.
-
-AWS Certified Solutions Architect – Associate (SAA-C03)
-  IAM fundamentals: users vs roles, managed vs inline policies,
-  least privilege as a design default, and why short-lived role
-  credentials beat long-lived access keys.
-
-CompTIA Security+ (SY0-701)
-  Domain 4 (identity and access management): provisioning and
-  deprovisioning, account types, least privilege, privileged
-  access management. Sample framing: "A service account used for
-  a one-time migration still has administrative rights months
-  later. Which principle was violated?" — least privilege.
-
-ISC2 CCSP
-  Domain 5 (Cloud Security Operations) plus the IAM content in
-  Domain 3: identity lifecycle, entitlement reviews, and
-  privileged-access management in cloud environments.
-
-
-─── MITRE ATT&CK ──────────────────────────────────────────────
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
   T1078.004  Valid Accounts: Cloud Accounts — a dormant, valid IAM
              credential is the cleanest initial-access and
@@ -2887,7 +2594,7 @@ ISC2 CCSP
              admin reads every bucket in the account.
 
 
-─── DEFENDER ACTION ───────────────────────────────────────────
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
 Immediate (today):
   1. Deactivate legacy-deploy-bot's access key (aws iam
@@ -2923,6 +2630,33 @@ Preventive (guardrails):
     suddenly active from a new region or ASN is a high-fidelity
     alert).
 
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. The key was last used in 2024. Why does "unused" not mean
+     "lower risk"?
+
+  2. Four separate accounts turned up. What single thing do they
+     have in common, and why does that matter more than the
+     four?
+
+  3. Which of these belongs at the top of the executive summary,
+     ahead of the finding you were sent to investigate?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/cloud/level2.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, IAM least-privilege review technique,
+the real-world dormant-credential breaches, and a Sigma rule for
+privileged actions by legacy principals.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ───────────────────────────────────────────
 

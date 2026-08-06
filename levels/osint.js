@@ -505,149 +505,22 @@ threat model. The lookup we just ran is the first step.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  NIST SP 800-63B (Rev. 4) — Digital Identity Guidelines:
-  Authentication and Authenticator Management
-    5.1.1.2  Verifiers SHALL compare prospective secrets
-      against a list of values known to be commonly used,
-      expected, or compromised (this is "breach-list
-      screening" — explicitly called out in 800-63B and the
-      reason HIBP's k-anonymity Pwned Passwords API exists).
-    5.1.1.4  When a memorized secret is changed, verifiers
-      SHALL re-check against the breach list.
-    5.2.2    Verifiers SHALL implement controls to limit
-      credential-stuffing (rate-limiting, anomaly detection,
-      IP reputation).
-    Multi-factor authentication is recommended throughout
-    800-63B for any AAL2+ account. Personal accounts of
-    privileged users are not formally in scope of 800-63B —
-    the scope is the verifier (the service operator) — but
-    the threat model 800-63B describes applies symmetrically.
+One weakness, and it belongs to a person rather than a system.
 
-  HIPAA Security Rule (45 CFR Part 164, Subpart C)
-    164.308(a)(1)(ii)(B)  Risk Management — implement security
-      measures sufficient to reduce risks to PHI to a
-      reasonable and appropriate level. Reused credentials on
-      executive personal accounts are a documented risk
-      factor and should be addressed in the risk register.
-    164.308(a)(5)(ii)(D)  Password Management — procedures
-      for creating, changing, and safeguarding passwords.
-      Breach-list screening and 2FA enforcement are the
-      modern implementation of this control.
-    164.312(d)              Person or Entity Authentication —
-      verify that the person or entity seeking access is the
-      one claimed. Credential-stuffing defeats this control
-      directly when reused passwords succeed.
+  CWE-262   Not Using Password Aging — the closest catalog entry,
+            though the finding is really about a REUSE HABIT
+            rather than any single system's configuration.
 
-  HITRUST CSF v11
-    01.b (Identification and Authentication) — covers the
-      full identity-and-access-management control family,
-      including password complexity, breach-screening, and
-      MFA. HITRUST's authoritative-source mapping ties this
-      back to HIPAA, NIST 800-53, and ISO 27001 controls.
-    01.q (User Identification and Authentication for
-      Privileged Accounts) — heightened requirements for
-      privileged accounts. A CMO's accounts qualify.
-    13.b (Awareness and Training) — security awareness
-      training, including password hygiene and personal-
-      account exposure.
+  NIST SP 800-63B is the standard that matters: it recommends
+  screening candidate passwords against known-breached corpora,
+  which is precisely the check that surfaced this.
 
-  NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule
-    The implementation guide for HIPAA covered entities and
-    business associates. Section 4 (Administrative Safeguards)
-    maps directly to the breach-screening / MFA practices
-    above.
-
-  CIS Critical Security Controls v8.1
-    Control 5  Account Management — including 5.4 (use
-      unique passwords).
-    Control 6  Access Control Management — including 6.3
-      (require MFA for externally-exposed applications) and
-      6.5 (require MFA for administrative access).
-    Control 14 Security Awareness and Skills Training —
-      14.5 (train on the dangers of credential reuse).
-
-  OWASP Top 10 (2025)
-    A07:2025 Authentication Failures —
-      includes "permits credential stuffing" and "permits
-      brute-force attacks" as application weaknesses. Renamed
-      from "Identification and Authentication Failures" in the
-      2021 edition; slot unchanged.
-
-  CWE
-    CWE-521  Weak Password Requirements
-    CWE-262  Not Using Password Aging  (adjacent — though
-      modern guidance is to remove forced rotation and
-      replace with breach-screening)
-    CWE-309  Use of Password System for Primary Authentication
-      (cautionary in 2024+: password-only auth is the
-      vulnerability, MFA is the mitigation)
-
-  MA 201 CMR 17.00 — Massachusetts data security regulation
-    17.04(1)(b)  Secure user authentication protocols —
-      requires control over user passwords, including
-      assignment, secure transmission, and reasonable
-      controls against unauthorized access. The breach-list-
-      screening interpretation is now standard.
-
-  HHS HPH-CPGs (Healthcare and Public Health Cybersecurity
-  Performance Goals)
-    Essential Goal: Mitigate Known Vulnerabilities — including
-      MFA on email, remote access, and privileged accounts.
-    Essential Goal: Strong and Unique Passwords — across the
-      organization. Personal-account hygiene for
-      organizational leaders is in the enhanced tier.
-
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 1 (General Security Concepts) — credential-based
-      attacks. Domain 4 (Security Operations) — identity
-      and access management, MFA, password policy.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 1 (Planning and Scoping) — OSINT is the first
-      phase. Domain 2 (Information Gathering and
-      Vulnerability Scanning) — passive recon, breach-data
-      enumeration, public-records pivoting.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 1 (Security Operations)
-      — OSINT-driven threat intelligence. Domain 3 (Incident
-      Response and Management) — credential-compromise
-      detection and response.
-
-  SANS GOSI (GIAC Open Source Intelligence)
-    Whole-cert relevant. Breach-data corpora are a covered
-    OSINT source. Identity pivoting, deconfliction, and
-    reporting-to-counsel scope discipline are exam topics.
-
-  SANS SEC497 (Practical Open-Source Intelligence (OSINT))
-    The flagship OSINT practitioner course (effectively
-    replaced SEC487 in the SANS catalog). Covers HIBP,
-    IntelX, Dehashed, Constella, and the broader breach-corpus
-    ecosystem.
-
-  OSCP / OSWE
-    OSINT comes up in reporting and in the pre-engagement
-    phase. Credential reuse is a recurring exploitation
-    pattern.
-
-  CISSP
-    Domain 1 (Security and Risk Management) — threat
-    intelligence. Domain 5 (Identity and Access Management) —
-    password policy, breach-screening, MFA.
-
-  GIAC GCIH (Certified Incident Handler)
-    Credential-stuffing attack patterns and IR response are
-    in the body of knowledge.
-
-  Industry-internal: executive-protection and threat-
-  intelligence vendor certifications (Pinkerton, Control
-  Risks, Recorded Future Threat Intelligence Analyst). Real
-  executive-exposure work happens here too.
-
+  Veridian is a HIPAA Business Associate, so a compromise here
+  propagates outward: the BA notifies the covered entity within
+  60 days, and the covered entity then owns the individual
+  notice. One reused credential can start clocks inside
+  companies Veridian does not control. HITRUST CSF is the
+  assurance framework its customers will ask about.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -679,10 +552,6 @@ threat model. The lookup we just ran is the first step.
              personal Microsoft / Google / Apple ID.
 
   Pre-engagement (PRE-ATT&CK):
-
-  T1583      Acquire Infrastructure — the adversary's
-             preparation. Out of scope for our lookup but
-             named here to complete the chain.
 
 
 ─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
@@ -757,6 +626,32 @@ threat model. The lookup we just ran is the first step.
        security awareness training, monitored social-media
        footprints.
 
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. Nothing of Veridian's was touched here. So what exactly is
+     the finding?
+
+  2. The same password appears in two breaches rather than one.
+     Why does that second appearance change the conclusion?
+
+  3. Veridian is a Business Associate. Whose notification clocks
+     could one reused password eventually start?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/osint/level0.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, breach-corpus methodology and its
+ethical limits, the real-world credential-stuffing cases, and a
+Sigma rule for authentication patterns that indicate reuse.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -1507,144 +1402,24 @@ finding is real and the fix is short.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  NIST SP 800-218 — Secure Software Development Framework (SSDF)
-  v1.1 (Final, February 2022)
-    PW.6  Configure the Compilation, Interpreter, and Build
-          Processes to Improve Executable Security — includes
-          secret-management discipline.
-    PO.5  Implement and Maintain Secure Development
-          Environments — covers secrets handling in the dev
-          environment.
-    PS.1  Protect All Forms of Code from Unauthorized Access
-          and Tampering — includes the broader source-control
-          security posture.
-    SSDF was the de facto federal-acquisition baseline under
-    the OMB M-22-18 / M-23-16 attestation regime through 2025.
-    OMB rescinded both memoranda on January 23, 2026 via
-    M-26-05; the CISA attestation Common Form is now optional.
-    SSDF itself remains the most-referenced NIST framework
-    for secure-development practice and continues to show up
-    in commercial procurement RFPs.
+Two weaknesses, and one widely misunderstood control.
 
-  NIST SP 800-53 Rev. 5
-    SA-15 (Development Process, Standards, and Tools) — includes
-      secrets-handling discipline as part of the SDLC.
-    IA-5 (Authenticator Management) — including (5) "Change
-      Authenticators Prior to Delivery" and (7) "No Embedded
-      Unencrypted Static Authenticators" — directly relevant
-      to "don't commit credentials to source."
+  CWE-798   Use of Hard-coded Credentials — live keys committed
+            at HEAD.
+  CWE-312   Cleartext Storage of Sensitive Information.
 
-  OWASP ASVS v5.0 — Application Security Verification Standard
-    Published May 30, 2025 at Global AppSec EU Barcelona.
-    V13 (Configuration) — including secrets-management
-      requirements. V13.x covers ensuring secrets are not in
-      application source code or in build artifacts. (ASVS
-      v5.0 reorganized the secrets-management chapters from
-      v4's V2 → v5's V13; V14 in v5.0 is Data Protection,
-      easy to conflate. Cite by current v5.0 numbering.)
+  .gitignore is the misunderstood part: it prevents UNTRACKED
+  files from being staged and has no effect on a file git is
+  already tracking, nor on history. NIST SP 800-218 (Secure
+  Software Development Framework) covers the practice that
+  prevents this, which is scanning before the commit lands.
 
-  CIS Critical Security Controls v8.1
-    Control 16 (Application Software Security) — including
-      16.4 "Establish and Manage an Inventory of Third-Party
-      Software Components" and 16.11 "Leverage Vetted
-      Modules or Services for Application Security Components"
-      — secrets-management belongs to this control family.
-
-  HIPAA Security Rule (45 CFR Part 164, Subpart C)
-    164.308(a)(3)(ii)(B) Workforce Clearance Procedures — for
-      executives with elevated access. Not directly about
-      source-control hygiene, but reinforces the "executive
-      personal-account exposure is in scope" framing.
-    164.308(a)(1)(ii)(B) Risk Management — credentials in
-      public source control are a documented risk factor.
-
-  CWE
-    CWE-798  Use of Hard-Coded Credentials — the primary
-      mapping. Hardcoded AWS keys in source are textbook
-      CWE-798.
-    CWE-540  Inclusion of Sensitive Information in Source Code
-      — the OSINT-side view: the credential's presence in
-      source enables disclosure.
-    CWE-312  Cleartext Storage of Sensitive Information —
-      adjacent; the .env stores secrets in cleartext.
-    CWE-200  Exposure of Sensitive Information to an
-      Unauthorized Actor — the umbrella parent (note: CWE-200
-      is mapping-Discouraged in current MITRE guidance —
-      cite the more specific CWE-798 or CWE-540 for direct
-      mappings).
-
-  GitHub Secret Scanning
-    Default-on for all public repositories since March 2023.
-    Detects 200+ provider-specific secret patterns. Partner
-    integrations (AWS, GCP, Stripe, Slack, Twilio, dozens
-    of others) auto-revoke detected credentials. The Push
-    Protection feature (free for public repos, paid for
-    private) blocks the push at the git-push step.
-
-  TruffleHog (open-source)
-    Industry-standard pre-push and CI secret scanner.
-    Entropy-based detection complements pattern-based
-    detection. CLI + GitHub Action + pre-commit hook.
-
-  GitGuardian / Gitleaks
-    Commercial / open-source alternatives. Gitleaks is the
-    open-source default (now in feature-complete / maintenance
-    mode — security patches only); GitGuardian adds dashboard,
-    enterprise features, and paid threat-intel feeds.
-
-  detect-secrets / git-secrets / pre-commit (the framework)
-    Pre-commit hook ecosystem. detect-secrets (Yelp) and
-    git-secrets (AWS Labs) are the two most-deployed.
-    pre-commit (pre-commit.com) is the meta-framework that
-    runs them.
-
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  SANS GOSI (GIAC Open Source Intelligence)
-    Source-control OSINT is core curriculum. GitHub repo
-    enumeration, organization mapping, committed-secrets
-    discovery are exam topics.
-
-  SANS SEC497 (Practical Open-Source Intelligence)
-    The flagship OSINT practitioner course (effectively
-    replaced SEC487 in the SANS catalog). Covers source-control
-    OSINT, TruffleHog, and the broader credential-leak
-    ecosystem.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 2 (Information Gathering and Vulnerability
-    Scanning) — OSINT-driven source-control enumeration.
-    Domain 3 (Attacks and Exploits) — credential reuse and
-    lateral movement from leaked secrets.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    Domain 1 (Security Operations) — credential-leak
-    detection workflows. CS0-004 launched in early 2026 for
-    parallel availability; CS0-003 retires June 2026.
-
-  CompTIA Security+ (SY0-701)
-    Domain 1 covers OSINT briefly; Domain 4 covers IAM and
-    credential management.
-
-  GIAC GCIH (Certified Incident Handler)
-    Credential-compromise IR pattern is in scope. The "leaked
-    credential discovered in a public repo, rotated, IR
-    follow-up" workflow is the canonical case.
-
-  ISC2 CISSP
-    Domain 3 (Security Architecture and Engineering) — covers
-    secrets-management as an architectural concern. Domain 8
-    (Software Development Security) covers SSDF / secure SDLC.
-
-  AWS Certified Security — Specialty (SCS-C03)
-    AWS released SCS-C03 in late 2025 / early 2026 as the
-    successor to SCS-C02. IAM hygiene and credential leak
-    response are tested domains. Includes AWS GuardDuty
-    findings ("UnauthorizedAccess:IAMUser/Instance
-    CredentialExfiltration.InsideAWS" and similar) that fire
-    on leaked-credential usage.
-
+  Veridian is a HIPAA Business Associate, so a compromise here
+  propagates outward: the BA notifies the covered entity within
+  60 days, and the covered entity then owns the individual
+  notice. One reused credential can start clocks inside
+  companies Veridian does not control. HITRUST CSF is the
+  assurance framework its customers will ask about.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -1748,6 +1523,31 @@ finding is real and the fix is short.
        produced two distinct, actionable, remediable
        findings.
 
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. The .gitignore lists .env. Why did that not help?
+
+  2. The repository is personal, not Veridian's. Why is it in
+     scope anyway?
+
+  3. How long have these keys been exposed — and what is the
+     only remediation that changes an attacker's position?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/osint/level1.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, git history and why deletion does not
+reach it, the real-world key-leak incidents, and a Sigma rule
+for access keys used from unexpected networks.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -2352,97 +2152,24 @@ exposure and nothing else.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  Internet Archive / Wayback Machine — the mechanic
-    archive.org (founded 1996) is a non-profit digital library;
-    the Wayback Machine (2001) is its web-capture front end.
-    Site owners can request exclusion of their own captures,
-    but it's opt-in, manual, and doesn't touch other archives —
-    which is why "deleted" content stays reachable by default.
-    Treat the archive as permanent; build your remediation on
-    rotation, not removal.
+Three weaknesses, and a property of the internet.
 
-  robots.txt — Robots Exclusion Protocol (RFC 9309, 2022)
-    robots.txt is a politeness signal to well-behaved crawlers
-    about what NOT to index. It is NOT an access control: every
-    path it lists is still fully reachable by anyone who reads
-    the file. Listing /backup/ or a draft directory in robots.txt
-    advertises exactly where the sensitive material is. Move
-    private content off the public server; don't "hide" it with
-    a Disallow line. (Maps to OWASP WSTG-INFO-03, "Review
-    Webserver Metafiles for Information Leakage.")
+  CWE-312   Cleartext Storage of Sensitive Information — the
+            Nextcloud admin password pasted into a blog post.
+  CWE-540   Inclusion of Sensitive Information in Source Code.
+  CWE-200   Exposure of Sensitive Information.
 
-  Secret rotation — the real remediation
-    NIST SP 800-53 Rev. 5, IA-5 (Authenticator Management),
-      including IA-5(1): when an authenticator is compromised,
-      revoke/replace it. A leaked credential is a compromised
-      authenticator by definition.
-    NIST SP 800-218 (SSDF v1.1), PW.6 / PS.1 — secrets
-      management and protecting code; the response to an exposed
-      secret is rotation, not just removal from HEAD.
-    AWS guidance for an exposed access key is explicit: deactivate
-      and delete the key, create a replacement, and audit usage —
-      deletion of the repository is not on the list.
+  No control framework covers the actual mechanism, which is
+  that public archives are permanent and indifferent to what the
+  origin does afterwards. NIST SP 800-53 IA-5 (Authenticator
+  Management) covers the only remediation that works: rotation.
 
-  OWASP
-    WSTG-INFO-03  Review Webserver Metafiles for Information
-      Leakage (robots.txt, sitemap.xml, security.txt).
-    A07:2025 Authentication Failures — pseudonymous personal
-      accounts with reused / pasted credentials feed the same
-      credential-stuffing threat as anything else.
-
-  CWE
-    CWE-312  Cleartext Storage of Sensitive Information — the
-      Nextcloud admin password pasted, in cleartext, in a public
-      blog post. Primary mapping for the saltyhelm finding.
-    CWE-540  Inclusion of Sensitive Information in Source Code —
-      the docker-compose snippet is configuration-as-published.
-    CWE-798  Use of Hard-Coded Credentials — carryover: the
-      AWS key Aaron never rotated is still a hard-coded,
-      now-public credential.
-    CWE-200  Exposure of Sensitive Information to an Unauthorized
-      Actor — the umbrella (note: CWE-200 is mapping-Discouraged
-      in current MITRE guidance; cite the specific CWE-312 /
-      CWE-540 for direct mappings).
-
-  Privacy / OPSEC
-    The durable lesson is data-minimization and identity
-    hygiene: the oldest, most-forgotten accounts carry the
-    weakest passwords, no MFA, and the most personal data, and
-    they're the ones nobody remembers to close. For a publicly-
-    named executive, the forgotten footprint is the soft target.
-
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  SANS SEC497 (Practical Open-Source Intelligence) and GIAC
-  GOSI — archive-based recon, Wayback pivoting, deleted-content
-    recovery, and username / alias attribution are core OSINT
-    curriculum. "Deleted isn't gone" is a first-week lesson.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 1 (Engagement Management) and Domain 2 (Recon and
-    Enumeration) — passive recon, metadata review (robots.txt /
-    sitemap), and OSINT pivoting.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    Domain 1 (Security Operations) — OSINT-driven threat intel
-    and exposed-asset discovery. CS0-004 launched in early 2026
-    for parallel availability; CS0-003 retires June 2026.
-
-  CompTIA Security+ (SY0-701)
-    Domain 2 covers reconnaissance and OSINT; Domain 4 covers
-    identity and credential management (rotation, MFA).
-
-  ISC2 CISSP
-    Domain 1 (threat intelligence / OSINT) and Domain 2 (data
-    lifecycle, retention, and the reality that "delete" rarely
-    means destroyed).
-
-  GIAC GCIH (Certified Incident Handler)
-    The leaked-credential IR pattern — and the classic mistake
-    of removing the artifact instead of rotating the secret —
-    is squarely in scope.
-
+  Veridian is a HIPAA Business Associate, so a compromise here
+  propagates outward: the BA notifies the covered entity within
+  60 days, and the covered entity then owns the individual
+  notice. One reused credential can start clocks inside
+  companies Veridian does not control. HITRUST CSF is the
+  assurance framework its customers will ask about.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -2515,6 +2242,32 @@ exposure and nothing else.
        thinner than it looks, and the archive remembers both
        sides.
 
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. The repository was deleted and the finding was closed. What
+     was wrong with that conclusion?
+
+  2. An archived AWS key and a cleartext Nextcloud password.
+     Which do you triage first, and why?
+
+  3. Alias linkage widened the scope past Aaron's professional
+     footprint. Where does the assessment's obligation stop?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/osint/level2.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, Internet Archive methodology and
+alias attribution, the ethics of executive-protection OSINT, and
+a Sigma rule for dormant credentials waking up.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 

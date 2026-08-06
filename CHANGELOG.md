@@ -7,6 +7,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-08-06
+
+**Every figure in the corpus was checked against a source, and the ones that hold now cite it.** 26 sentences asserted a dollar amount, a record count or a court date about a real incident with nothing behind them. All were verified; two were wrong.
+
+No gameplay changes.
+
+### Fixed
+
+- **Change Healthcare's cost was frozen at a mid-year estimate.** The walkthrough carried $2.4 billion. UnitedHealth's FY2024 annual results report $3.1 billion: $2.2 billion of direct response costs plus $867 million of business disruption at Optum Insight.
+- **A $148 million settlement attributed to the wrong regulator.** Uber's 2016 breach settlement was with all fifty state attorneys general, not the FTC. Uber settled with the FTC separately, through an expanded consent order carrying no monetary penalty.
+- **An FTC enforcement action that never happened.** The Maricopa Community Colleges walkthrough referred to "the FTC complaint that followed". A complaint was filed *with* the FTC by a third party asking it to investigate, which is a different thing and reads as the first.
+- **Two more citations that pointed nowhere useful.** A Krebs on Security *search query* stood in for the Uber coverage, and the OAIC *homepage* for the Optus penalty proceeding. Both replaced with the specific documents.
+
+### Added
+
+- **Sources for 26 figure claims**, verified against reporting or a primary filing: Deep Root's 198 million records, Capital One's 100 million and the $80 million OCC penalty, Cisco's 456 deleted virtual machines, CommonSpirit's 623,774 patients, Scripps at $113 million, UHS at $67 million, the Meow campaign's 4,000 databases, TalkTalk's 156,959 customers, Optus at AUD $2.22 million per contravention, and the rest. Most already existed in the corpus, sitting in the unnumbered further-reading list instead of attached to the claim they support.
+- **A build gate on unsourced figures.** A paragraph stating a dollar amount or a count of people or systems about a real-world incident, with no citation in it, now fails the build. Figures about Driftwood and its fictional clients are exempt.
+
+### Changed
+
+- **Authorial estimates no longer read as measurements.** "Approximately 80% of practical forensic queries" and "fails roughly 5-15% of the time at scale" are judgements, not findings. Attaching a source to them would be false precision, so they are now written as the judgements they are.
+
+## [2.9.0] - 2026-08-06
+
+**Every citation now has to point at the page it claims.** v2.7.0 and v2.8.0 checked that each listed source got used. Nothing checked the reverse — that each claim had a source — or that a link went where it said it did. Both gaps are now closed and enforced.
+
+No gameplay changes.
+
+### Added
+
+- **`tools/verify-citations.mjs`.** Fetches each cited page and requires the thing the citation claims to actually appear there: the identifier when the title carries one, otherwise a majority of its distinctive words. A citation reading `[CWE-250 — ...](.../205.html)` resolves perfectly and is wrong, and a status code cannot tell the difference. Pages it cannot read — bot walls, PDFs, JavaScript-rendered documents — are reported as unverified rather than assumed good.
+- **53 sources for identifiers that had none.** CWE-863, CVE-2022-26134, T1098.001, RFC 4648 and 49 others were named in prose with nothing to look them up by. Every generated URL was fetched and required to contain its identifier before being written down, because a mistyped CWE number produces a real page about a different weakness.
+- **A build gate on the missing direction.** An identifier named in prose with no source in §9 now fails the build. "Every source is used" and "every claim has a source" are different properties; only the first was ever checked.
+
+### Fixed
+
+- **19 citations that resolved but misled.** Two pointed at homepages standing in for documents: Capital One's Senate testimony and OCC consent order went to senate.gov, and the MongoDB ransom campaign coverage to gdi.foundation. Five had connective prose as their link text — "The catalog of Living-Off-The-Land binaries. certutil entry at" — left behind when multi-source entries were split. Six buried an annotation inside the link title, one of them 308 characters long. Three CVE records pointed at a client-rendered page whose text no reader or checker can search.
+- **A source keyed as something it is not.** One entry was keyed `cve-2020-5741` but pointed at a LastPass disclosure that never names the CVE — its own title said so. It is now two sources: the disclosure, and the CVE record.
+- **The CMMC final rule.** Cited to a program landing page rather than the rule; it is 32 CFR Part 170, published at 89 FR 83214 on 15 October 2024.
+
+## [2.8.0] - 2026-08-06
+
+**Frameworks and certifications now cite their sources, and the corpus has been re-audited end to end.** v2.7.0 added citations but placed each source at its first mention, which is the academic convention and turned out to be the wrong one here: the sections that make the checkable claims restate a standard the introduction already named in passing, so the marker landed in the introduction and the claims got nothing. Blast radius had zero citations across all 24 walkthroughs. Cert exam relevance had nine.
+
+No gameplay changes.
+
+### Added
+
+- **A source on every framework and certification claim.** 380 markers became 629, and every §3.5, §5, §6 and §7 in the corpus now carries at least one. A source is cited once per claim-bearing section rather than once per document, because "what a control requires", "what an exam covers" and "what a regulator gives you 36 hours to do" are three separate assertions about the same standard.
+- **119 certification sources.** 18 of 24 walkthroughs discussed between one and six certifications and carried no certification source at all. Every CompTIA, ISC2, GIAC, OffSec, EC-Council and ISACA exam-outline URL was requested and confirmed before being written down.
+- **Citations in tables.** Blast radius is a table, and it holds the notification clocks and penalty figures. Table rows had been excluded from citation, which is why that section was empty.
+
+### Fixed
+
+- **29 stale certification and framework claims across 13 walkthroughs.** CySA+ CS0-004 launched 23 June 2026 rather than "early 2026", and CS0-003 retires 22 December 2026 rather than June — wrong in thirteen files. PenTest+ PT0-003 launched December 2024, not December 2023. CEH v13 launched September 2024, not April. The CISSP exam outline was refreshed 15 April 2024, not May. Two walkthroughs disagreed with each other about CIS Controls v8.1, which was published in June 2024.
+- **A regulatory mis-citation.** Three Linux walkthroughs pointed the blast-radius regime row at the FTC Safeguards Rule, a source those same files list as a counter-example because it governs nonbank institutions. Halton is a bank. The tool that placed it now refuses to auto-cite anything a walkthrough marks as a contrast.
+- **Review dates that had quietly diverged.** Two walkthroughs still read "Last reviewed: April 2026" while their neighbours read July, and the April ones carried four of the errors above. All 24 are re-audited and dated August 2026. The build now fails a walkthrough whose review date falls more than three months behind the freshest in the corpus, and fails one missing the line entirely — so a level build re-audits every walkthrough, not just the new one.
+
+## [2.7.0] - 2026-08-06
+
+**Walkthrough claims now cite their sources.** Every walkthrough already ended in a list of links. Which link backed which sentence was left to the reader to guess, so "DFARS gives contractors 72 hours to report" sat near twenty-five sources and was supported by none of them in particular. Claims now carry a numbered marker that jumps to the source, and each source links back to every place it was cited.
+
+No gameplay changes.
+
+### Added
+
+- **380 inline citations across all 24 walkthroughs.** A small superscript number after a claim, resolving to a numbered source list at the foot of the page, with backlinks in both directions and a highlight on whichever entry you landed on. Placement was derived from the identifiers a claim already names (CWE, ATT&CK technique, CVE, RFC, NIST SP, CFR part, CIS Safeguard, OWASP entry) or a distinctive phrase from the source title. Anything that matched nothing went to further reading rather than being attached to a plausible-looking sentence.
+- **A separate "Further reading" list.** 316 sources back no particular claim: a tool, a course, a standing reference. Those keep their place, unnumbered. The split is what makes the numbered list worth something, and the build now fails if a numbered source is never actually cited.
+- **`tools/check-links.mjs`.** Requests every cited URL and classifies it: dead, moved, blocked by bot protection, or flaky. Zero dependencies. It runs weekly in CI and opens an issue when a citation rots, and stays out of the blocking build so that an unrelated change never goes red because a government website chose that morning to rate-limit.
+
+### Fixed
+
+- **67 rotted citations.** 15 were dead and 52 had moved. The interesting failures were the four that returned a perfectly healthy 200: Threatpost is defunct and its Code Spaces link now lands on a story about bank fraud, while Naked Security and LinkedIn's 2012 advisory both redirect to a blog home page. Those looked fine and were wrong. Also: Vermont's Attorney General has stopped publishing breach-notice PDFs entirely, Toyota took its own T-Connect disclosure offline, and one FTC link was simply missing its last path segment.
+- **A claim with no support behind it.** `level2@forensics` asserted a specific 2024 Cellebrite release note about write-ahead-log recovery, cited to a product page for link-analysis software that says nothing of the kind. The general point survives; the invented specific does not.
+- **Four incompatible reference formats.** §9 had drifted into flat lists, organisation-prefixed lists, annotated lists with sub-headings, and bare autolinks with sub-headings. All 24 now use one format, and twelve entries that had packed several sources onto a single line are split so that "go to the source" has one answer.
+
+## [2.6.0] - 2026-08-06
+
+**The in-game post-mortem is now a debrief rather than a compressed walkthrough.** The two surfaces shared 99% of their weakness citations, which made the shorter one redundant and produced a maintenance liability that had already diverged. They now divide by purpose: the post-mortem is read immediately, in character, while the level is fresh; the walkthrough is the study session read afterwards.
+
+No gameplay changes.
+
+### Added
+
+- **Retrieval questions on every level.** Three per post-mortem, written so they cannot be answered by recall alone: "Halton rotates the Vault token this afternoon — which of the three failures does that fix, and which two survive?" The answers live in the walkthrough rather than inline. This is the best-evidenced technique in the learning literature and neither surface previously did it at all.
+- **A walkthrough handoff on every level.** Each post-mortem now names its walkthrough and says what is in it. Three tracks previously never mentioned walkthroughs existed, so a player could finish them without learning the deeper material was there.
+- **Explained ATT&CK chains in the walkthroughs.** The post-mortems named 25 techniques and weaknesses the walkthroughs never picked up. Nineteen were substantive and are now explained properly, concentrated where the technique *chain* is the teaching: what an attacker does with a dormant administrator key, what a public bucket enables next, why Valid Accounts spans four tactics at once. The walkthroughs previously only listed techniques as links.
+
+### Changed
+
+- **Post-mortems name anchors instead of enumerating frameworks.** Each carries its anchor weaknesses, one control principle, and the governing regime. The certifications section is gone from in-game entirely; it duplicated the walkthrough's own. The corpus went from 40,920 to 34,195 words, which is the duplication coming out.
+
+### Fixed
+
+- **Structural inconsistencies between levels.** Two post-mortems used short section names where 22 used long ones, and one had its first two sections in the opposite order to every other level. Both predate this work and neither was caught by review. All 24 now carry an identical structure, and the build enforces the section set, their order, and the walkthrough handoff.
+- **Citations named in-game but never explained.** A cross-check between each level's post-mortem and its walkthrough is now part of the build, so a weakness named to a player is guaranteed to be explained somewhere. It found 25 on its first run.
+- **The GLBA correction reached the player-facing side.** v2.5.0 fixed the walkthroughs; the four in-game Linux post-mortems still cited the FTC Safeguards Rule, which governs nonbank institutions rather than banks.
+
+
+## [2.5.1] - 2026-08-05
+
+### Added
+
+- **A detection rule on every walkthrough.** Nine carried one; fifteen did not, which meant §7 was uniformly good advice but only sometimes actionable. All 24 now ship a Sigma rule with a log source, an explicit condition, an honest false-positive list, and a severity.
+
+  The rules are written for the finding rather than around it. `crypto/level1` matches the base64url prefix of an `alg: none` JOSE header, which is one of the few authentication flaws with a reliable signature. `network/level1` allowlists the authorised secondaries and alerts on every other zone-transfer request. `web/level1` counts distinct student ids per session, because every individual request in that attack is authenticated and unremarkable. `forensics/level2` is rated low on purpose and says why: after-hours work is not an offence, and a rule that pages on it gets switched off within a week.
+
+  Where a platform-native control beats a SIEM rule, the walkthrough says so instead of pretending otherwise, and points at GuardDuty, IAM credential reports, Certificate Transparency monitoring, or a pre-receive secret scan.
+
+### Fixed
+
+- **Walkthroughs described levels as unbuilt after they had shipped.** A walkthrough written before the next level existed naturally calls it "a future `level3@linux`", and nothing went back to correct that once the level became playable. `linux/level1` went further and told readers outright that `level2@linux` "hasn't been built yet" and was unreachable from the lobby, which was wrong for two releases. Corrected in `linux/level1`, `linux/level2`, and `crypto/level2`.
+
+  A full sweep found ten in total across five files, and the second half only turned up because the first pass's vocabulary was too narrow. "The eventual `level2@crypto`" and "at time of writing, `level2@network` hasn't shipped yet" appeared in the level1 walkthroughs of three tracks, all written before their level2 existed. The credentials those passages publish were checked against the shipped level data and are still correct; only the prose around them was wrong.
+
+  The build now catches this class rather than relying on anyone remembering: the generator knows which levels exist, and shipping a new one makes the previous walkthrough's forward reference fail until it is rewritten. Describing a level that genuinely does not exist yet as "a future" level is still correct and still passes; the check only objects once the statement stops being true.
+
+### Changed
+
+- **The authoring guide now requires the detection rule, and the build enforces it.** A walkthrough missing any of title, log source, detection, condition, false positives, or severity fails, so a rule cannot ship in a state where the receiving team would disable it.
+- **The "If you got stuck" note is now required for level0 and level1 only.** The rule previously applied to every walkthrough, and nine of 24 complied, all of them level0 or level1. That was the right instinct applied inconsistently rather than drift: a reader three levels into a track does not need to be told how to check their working directory. The standard now matches the practice.
+
+
 ## [2.5.0] - 2026-08-05
 
 **Every walkthrough now sizes its finding, and the Linux track cites the right law.** Naming a vulnerability is half of an assessment; the other half is how much is exposed, for how long, and what it opens next. That half was missing from all 24 walkthroughs. Adding it surfaced a regulatory citation error that had been shipped for months.
@@ -3935,7 +4058,16 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.1...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.10.0...HEAD
+[2.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.9.0...v2.10.0
+[2.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.8.0...v2.9.0
+[2.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.7.0...v2.8.0
+[2.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.6.0...v2.7.0
+[2.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.5.0...v2.6.0
+[2.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.4.2...v2.5.0
+[2.4.2]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.4.1...v2.4.2
+[2.4.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.4.0...v2.4.1
+[2.4.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.1.1...v2.2.0

@@ -127,7 +127,7 @@ It's tempting to summarize this level as "Daniel kept passwords in a flat file."
 
 **Failure 1 — Account lifecycle.** Daniel's `level0` local account on this laptop was never disabled after his rolloff. In a properly-run IT shop, his account would have been disabled the same day his engagement ended, with the laptop quarantined for audit before a new user (you) was logged in. Instead, IT logged a new user into Daniel's still-active account, which is operationally convenient but forensically wrong — it commingles your activity with his, contaminates the audit trail, and demonstrates the laptop handling SOP isn't working.
 
-**Failure 2 — Plaintext credential storage.** The credential itself lived in a file at default-readable mode on a consumer-grade laptop with no full-disk encryption verification. No vault, no encrypted password manager, no environment variable scoping. Daniel knew this was wrong — the CWE-798 acknowledgement is literally in the file's own header comment — and did it anyway.
+**Failure 2 — Plaintext credential storage.** The credential itself lived in a file at default-readable mode on a consumer-grade laptop with no full-disk encryption verification. No vault, no encrypted password manager, no environment variable scoping. Daniel knew this was wrong — the CWE-798 acknowledgement is literally in the file's own header comment — and did it anyway.[^cwe-798]
 
 **Failure 3 — No rotation forcing function.** The password is named `please-rotate-me`. Daniel was begging the system to make him rotate it. The system did not. Halton Bank's ops team had no quarterly credential rotation policy that they enforced on Driftwood's consultants. Driftwood had no automated check that scanned consultant home directories for credential patterns at engagement closeout. The "rotate this credential" task was tracked in Daniel's `tasks.md` on Daniel's laptop. When Daniel went away, the task went away.
 
@@ -148,7 +148,7 @@ opens next.
 | Other copies | `notes.txt` names three more locations for the same string: shell history, an exported `DB_PASS`, and a systemd override on Halton's jumphost |
 | Exposure window | Never rotated. The laptop itself sat unaudited from Friday's roll-off to Wednesday's reimage |
 | Escalates to | The same string is the login on Halton's jumphost, which is `level1@linux` |
-| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours |
+| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours[^cfr-12-30] |
 
 Three things separate a useful finding here from a shallow one.
 
@@ -177,9 +177,9 @@ Three named, well-documented incidents follow this exact pattern. Each was a maj
 
 ### Cash App Investing — April 2022
 
-On April 4, 2022, Block Inc. (Cash App's parent company) filed an SEC 8-K disclosing a breach affecting approximately **8.2 million current and former Cash App Investing customers**. The cause: a former employee who had previously had legitimate access to internal reports downloaded customer data after departing the company. Their access had not been revoked.
+On April 4, 2022, Block Inc. (Cash App's parent company) filed an SEC 8-K disclosing a breach affecting approximately **8.2 million current and former Cash App Investing customers**.[^block-cash-app-investing-sec] The cause: a former employee who had previously had legitimate access to internal reports downloaded customer data after departing the company. Their access had not been revoked.
 
-The exposed data included customer names, brokerage account numbers, portfolio values, holdings, and stock trading activity. No Social Security numbers, dates of birth, or payment information were exposed — but the financial details alone were sufficient to drive class-action litigation that Block ultimately settled for $15 million in 2024.
+The exposed data included customer names, brokerage account numbers, portfolio values, holdings, and stock trading activity. No Social Security numbers, dates of birth, or payment information were exposed — but the financial details alone were sufficient to drive class-action litigation that Block ultimately settled for $15 million in 2024.[^block-cash-app-investing-sec]
 
 What makes this the most direct parallel to level0@linux is not the data category (it's different — Cash App is brokerage, not banking). It's the precise vector: **a former employee retained working access after departure because the offboarding process did not actually revoke their access.** Same failure mode, real consequences.
 
@@ -187,7 +187,7 @@ The follow-on critique of Block's response was almost as damaging as the breach 
 
 ### Twitter / "Mudge" Zatko whistleblower disclosure — August 2022
 
-On August 23, 2022, Peiter "Mudge" Zatko — the former head of security at Twitter — filed an 84-page whistleblower complaint with the Securities and Exchange Commission, the Federal Trade Commission, and the Department of Justice, alleging systemic security failures at the company. The complaint became public via The Washington Post and CNN; Mudge testified before the Senate Judiciary Committee on September 13, 2022.
+On August 23, 2022, Peiter "Mudge" Zatko — the former head of security at Twitter — filed an 84-page whistleblower complaint with the Securities and Exchange Commission, the Federal Trade Commission, and the Department of Justice, alleging systemic security failures at the company.[^peiter-zatko-mudge-whistleblower-disclosure] The complaint became public via The Washington Post and CNN; Mudge testified before the Senate Judiciary Committee on September 13, 2022.
 
 The most-cited finding in the disclosure was that Twitter had over 4,000 employees — including engineers — with admin-level access to internal systems that could read or modify any account on the platform. More relevant to this walkthrough: Mudge alleged that the company had no reliable inventory of who had access to what, and that **departed employees frequently retained access to internal tools after leaving.** Twitter's offboarding process, in his telling, was unreliable enough that it could not produce a defensible answer to the question "did any ex-employee have access to internal systems on date X?"
 
@@ -205,7 +205,7 @@ Uber's response was widely studied because the company published a detailed post
 
 This is the exact technique you simulated in level0. A credential lives in a flat file. A person who shouldn't have it reads the file. The credential lets them do something they shouldn't be able to do. The chain of single-step failures becomes a breach.
 
-The pattern shows up in nearly every credible breach report. T1552.001 is one of the highest-frequency MITRE ATT&CK techniques in the public threat intelligence corpus. If you read three breach post-mortems and don't see this technique cited, it's a coincidence — read a fourth.
+The pattern shows up in nearly every credible breach report. T1552.001 is one of the highest-frequency MITRE ATT&CK techniques in the public threat intelligence corpus.[^t1552-001] If you read three breach post-mortems and don't see this technique cited, it's a coincidence — read a fourth.
 
 ## §5 — Frameworks, deep dive
 
@@ -213,7 +213,7 @@ The in-game post-mortem cited six framework controls. Each is expanded below: wh
 
 ### NIST SP 800-53 Rev 5 — AC-2: Account Management
 
-`AC-2` is the foundational access-control control in the NIST 800-53 catalog. It requires the organization to identify and document account types, assign account managers, establish conditions for group/role membership, require approvals for account creation, monitor accounts, and disable accounts under defined conditions. It has more than thirteen control enhancements specifying different aspects.
+`AC-2` is the foundational access-control control in the NIST 800-53 catalog.[^nist-800-53] It requires the organization to identify and document account types, assign account managers, establish conditions for group/role membership, require approvals for account creation, monitor accounts, and disable accounts under defined conditions. It has more than thirteen control enhancements specifying different aspects.
 
 The enhancement most directly applicable to this level is **`AC-2(3) — Disable Accounts`**, which requires accounts to be disabled within an organization-defined time period when: (a) they have expired, (b) they are no longer associated with a user or individual, (c) they violate organizational policy, or (d) they are inactive for an organization-defined time period. For consulting firms, condition (b) — the account is no longer associated with a user — applies the moment a consultant rolls off. The in-game post-mortem references `AC-2(13)`, which is "Disable Accounts for High-Risk Individuals" — that enhancement is more specifically about accounts of people who pose elevated risk (e.g., during an investigation), but the broader AC-2 framework absolutely covers the rolled-off-consultant case via `AC-2(3)` and via complementary controls below.
 
@@ -254,25 +254,25 @@ Audit evidence for CIS Control 5: dormant-account reports (typically anything wi
 
 ### CWE-798: Use of Hard-coded Credentials
 
-CWE (Common Weakness Enumeration) is MITRE's catalog of software weaknesses. **CWE-798 — Use of Hard-coded Credentials** captures the exact pattern of embedding a credential directly in source code, configuration files, or scripts, where any reader of the file can extract it.
+CWE (Common Weakness Enumeration) is MITRE's catalog of software weaknesses. **CWE-798 — Use of Hard-coded Credentials** captures the exact pattern of embedding a credential directly in source code, configuration files, or scripts, where any reader of the file can extract it.[^cwe-798]
 
 The CWE-798 entry has been in the catalog since the early days of CWE (entry created circa 2006) and was one of the longest-standing entries in MITRE's "Top 25 Most Dangerous Software Weaknesses" rankings — it appeared on every annual Top 25 list from 2019 through 2024. The **2025 CWE Top 25 dropped CWE-798 off the published list entirely** when MITRE changed its methodology (removing normalization to abstract weaknesses); the weakness pattern itself remains as widespread as ever — practitioner surveys and tooling-vendor reports continue to identify hardcoded credentials as a top breach contributor — but the formal Top 25 ranking no longer reflects that prominence. The weakness is well-documented, well-publicized, and continues to dominate breach post-mortems despite the prevalence of secrets-management tools that solve it.
 
-Daniel's `creds.txt` is a textbook CWE-798 instance. The credential is in a flat file, with no encryption at rest, in a location readable by anyone on the system. The file is not source code — but CWE-798 explicitly includes configuration files and "any persistent storage" within its scope. The remediation is to use a secrets manager (Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler, etc.) and retrieve credentials at runtime, never store them at rest in flat files.
+Daniel's `creds.txt` is a textbook CWE-798 instance. The credential is in a flat file, with no encryption at rest, in a location readable by anyone on the system. The file is not source code — but CWE-798 explicitly includes configuration files and "any persistent storage" within its scope. The remediation is to use a secrets manager (Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler, etc.) and retrieve credentials at runtime, never store them at rest in flat files.[^aws-secrets-manager-user-guide]
 
-There are related CWEs worth knowing: **CWE-256 (Plaintext Storage of a Password)** is the narrower form specifically about credentials in cleartext; **CWE-312 (Cleartext Storage of Sensitive Information)** is the broader form covering any sensitive data. Auditors and security tools may cite any of the three depending on context. They all map to the same underlying mistake.
+There are related CWEs worth knowing: **CWE-256 (Plaintext Storage of a Password)** is the narrower form specifically about credentials in cleartext; **CWE-312 (Cleartext Storage of Sensitive Information)** is the broader form covering any sensitive data.[^cwe-312][^cwe-256] Auditors and security tools may cite any of the three depending on context. They all map to the same underlying mistake.
 
 ### OWASP Top 10 (2025) — A07: Authentication Failures
 
-The OWASP Top 10 is the most-cited application-security awareness document in the industry. The current edition is **OWASP Top 10:2025**, finalized in January 2026, which kept the auth slot at A07 but renamed it from the 2021 edition's *Identification and Authentication Failures* to simply *Authentication Failures*. The renaming reflects how the working group consolidated identification (knowing who the user is) under broader access-control concerns in A01, leaving A07 to focus specifically on credential and authentication lifecycle weaknesses. The 2025 edition also introduced a new A03 (Software Supply Chain Failures) and A10 (Mishandling of Exceptional Conditions); A01 Broken Access Control retained the #1 slot and absorbed SSRF from the previous edition.
+The OWASP Top 10 is the most-cited application-security awareness document in the industry. The current edition is **OWASP Top 10:2025**, finalized in January 2026, which kept the auth slot at A07 but renamed it from the 2021 edition's *Identification and Authentication Failures* to simply *Authentication Failures*.[^owasp-top-10-2025] The renaming reflects how the working group consolidated identification (knowing who the user is) under broader access-control concerns in A01, leaving A07 to focus specifically on credential and authentication lifecycle weaknesses. The 2025 edition also introduced a new A03 (Software Supply Chain Failures) and A10 (Mishandling of Exceptional Conditions); A01 Broken Access Control retained the #1 slot and absorbed SSRF from the previous edition.
 
 A07 includes weaknesses such as: permitting brute-force attacks, default or weak passwords, ineffective credential recovery, missing or ineffective multi-factor authentication, and **exposing session identifiers in the URL** (and, by extension, anywhere they can leak). The Daniel scenario sits inside A07 because the staging credential, once exposed in `creds.txt`, functions as a no-MFA, no-rate-limit authenticator that any reader of the file can use. It's effectively the same as a default password — the moment anyone reads it, the authentication is bypassed.
 
-The OWASP recommendation for A07 mitigations is layered: enforce multi-factor authentication (and prefer phishing-resistant authenticators like FIDO2/passkeys, per NIST SP 800-63B-4), don't deploy with default credentials, implement weak-password checks, align password length/complexity/rotation policies with **NIST SP 800-63B-4**'s modern guidelines (15-character minimum, no forced periodic rotation unless there's evidence of compromise), and limit failed-login attempts.
+The OWASP recommendation for A07 mitigations is layered: enforce multi-factor authentication (and prefer phishing-resistant authenticators like FIDO2/passkeys, per NIST SP 800-63B-4), don't deploy with default credentials, implement weak-password checks, align password length/complexity/rotation policies with **NIST SP 800-63B-4**'s modern guidelines (15-character minimum, no forced periodic rotation unless there's evidence of compromise), and limit failed-login attempts.[^nist-800-63b]
 
 ### GLBA § 501(b) — Interagency Guidelines (12 CFR Pt. 30 App. B)
 
-The Gramm-Leach-Bliley Act, passed in 1999, requires financial institutions to safeguard the confidentiality of customer information. GLBA § 501(b) is implemented by two different regulators for two different populations, and picking the wrong one is the most common citation error in bank work. The Federal Trade Commission's Safeguards Rule (16 CFR Part 314) covers *nonbank* financial institutions. Banks are supervised by the federal banking agencies instead, under the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks). Halton is a regional bank, so the Guidelines are its rule.
+The Gramm-Leach-Bliley Act, passed in 1999, requires financial institutions to safeguard the confidentiality of customer information. GLBA § 501(b) is implemented by two different regulators for two different populations, and picking the wrong one is the most common citation error in bank work. The Federal Trade Commission's Safeguards Rule (16 CFR Part 314) covers *nonbank* financial institutions.[^cfr-16-314] Banks are supervised by the federal banking agencies instead, under the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks).[^cfr-12-30] Halton is a regional bank, so the Guidelines are its rule.
 
 The substantive requirements track each other closely. Where the FTC rule says § 314.4(c)(1), the Guidelines say III.C.1.a: *"Access controls on customer information systems, including controls to authenticate and permit access only to authorized individuals."* III.C.1.f requires *"monitoring systems and procedures to detect actual and attempted attacks on or intrusions into customer information systems."* III.C.1.g requires *"response programs that specify actions to be taken when the bank suspects or detects that unauthorized individuals have gained access to customer information systems, including appropriate reports to regulatory and law enforcement agencies."* III.D covers oversight of service provider arrangements, which is the provision that reaches Driftwood.
 
@@ -283,7 +283,7 @@ Several sections apply directly to level0@linux:
 - **§ 314.4(c)(6) — Secure disposal.** "Develop, implement, and maintain procedures for the secure disposal of customer information." A laptop that gets reimaged Wednesday with credential files still present and unaudited Monday is a disposal-process gap.
 - **§ 314.4(f) — Service provider oversight.** This is the section that explicitly covers consultants. Financial institutions must require their service providers (consulting firms like Driftwood) to implement appropriate safeguards by contract and periodically assess them. If Halton's vendor-risk team did this assessment well, Driftwood is on the hook to prove they meet the standard. If Halton didn't, both companies have exposure.
 
-A caution on which GLBA rule applies here, because it is the single most common mis-citation in bank engagements. The FTC's Safeguards Rule (16 CFR Part 314), including its 2023 amendment requiring notice to the FTC within 30 days for events affecting 500+ consumers, governs *nonbank* financial institutions under FTC jurisdiction. Halton is a regional bank, so it is carved out: its GLBA § 501(b) obligations run through the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks). Its clock is tighter than the FTC's, not looser: under the Computer-Security Incident Notification Rule (12 CFR Pt. 53 / Pt. 225 Subpart N / Pt. 304 Subpart C), a banking organization must notify its primary federal regulator within **36 hours** of determining a notification incident has occurred. Customer notice follows the 2005 Interagency Guidance on Response Programs. Driftwood as service provider is not directly subject to either, but the MSA with Halton typically sets a contractual notification window measured in hours, sized so Halton can meet that 36-hour clock.
+A caution on which GLBA rule applies here, because it is the single most common mis-citation in bank engagements. The FTC's Safeguards Rule (16 CFR Part 314), including its 2023 amendment requiring notice to the FTC within 30 days for events affecting 500+ consumers, governs *nonbank* financial institutions under FTC jurisdiction. Halton is a regional bank, so it is carved out: its GLBA § 501(b) obligations run through the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks). Its clock is tighter than the FTC's, not looser: under the Computer-Security Incident Notification Rule (12 CFR Pt. 53 / Pt. 225 Subpart N / Pt. 304 Subpart C), a banking organization must notify its primary federal regulator within **36 hours** of determining a notification incident has occurred.[^cfr-12-53] Customer notice follows the 2005 Interagency Guidance on Response Programs.[^interagency-guidance-on-response-programs] Driftwood as service provider is not directly subject to either, but the MSA with Halton typically sets a contractual notification window measured in hours, sized so Halton can meet that 36-hour clock.
 
 ### PCI-DSS v4.0.1 — Requirement 12.8
 
@@ -291,7 +291,7 @@ PCI-DSS (Payment Card Industry Data Security Standard) governs any organization 
 
 Halton Bank is a regional bank — payment-card data is in scope somewhere in its environment. To the extent Daniel's Halton engagement gave him access to systems that touch cardholder data, PCI-DSS Req 12.8 puts Driftwood on Halton's third-party-service-provider list and obligates contract terms covering credential handling.
 
-**PCI-DSS v4.0.1** is the only version currently supported by the PCI SSC. v4.0 was originally published in March 2022 and retired December 31, 2024; v4.0.1 (published June 2024) is a clarifying revision that did not change the requirements but tightened wording in several places. All of the future-dated requirements introduced in v4.0 — including the strengthened Req 12.8 expectations around explicit monitoring and documented agreements — became mandatory March 31, 2025. Driftwood's contractual posture with Halton is therefore evaluated against v4.0.1's full requirement set, not v3.2.1's lighter baseline.
+**PCI-DSS v4.0.1** is the only version currently supported by the PCI SSC. v4.0 was originally published in March 2022 and retired December 31, 2024; v4.0.1 (published June 2024) is a clarifying revision that did not change the requirements but tightened wording in several places.[^pci-dss-v4-0-1] All of the future-dated requirements introduced in v4.0 — including the strengthened Req 12.8 expectations around explicit monitoring and documented agreements — became mandatory March 31, 2025. Driftwood's contractual posture with Halton is therefore evaluated against v4.0.1's full requirement set, not v3.2.1's lighter baseline.
 
 Audit evidence for Req 12.8: the third-party provider list, the executed agreement specifying security responsibilities, due-diligence reports from before engagement, and the most recent compliance attestation (typically a SAQ or RoC from the provider). Common findings: provider list missing entries; agreements that don't specify security responsibilities clearly; no monitoring of provider compliance after the initial engagement.
 
@@ -301,12 +301,12 @@ Equal-depth coverage for the four certifications cited in the in-game post-morte
 
 ### CompTIA Security+ — current version SY0-701
 
-CompTIA refreshed Security+ from SY0-601 to **SY0-701** in November 2023; SY0-601 was retired July 31, 2024. SY0-701 is the only version currently testable. Anyone studying for the cert today should be using SY0-701 study materials. The exam has five domains; level0@linux's material maps directly to two.
+CompTIA refreshed Security+ from SY0-601 to **SY0-701** in November 2023; SY0-601 was retired July 31, 2024.[^cert-security-plus] SY0-701 is the only version currently testable. Anyone studying for the cert today should be using SY0-701 study materials. The exam has five domains; level0@linux's material maps directly to two.
 
 - **Domain 4.1 — Apply common security techniques to computing resources.** This is the technical-controls domain. Within it, secrets management, configuration enforcement, and access management are tested directly. Expect a question asking which control would prevent credentials from being readable in a flat file (correct answer involves a secrets manager; common distractors include "encrypt the file" — which is technically also right but a worse answer because it doesn't address the root cause of credentials being on disk at all).
-- **Domain 5.3 — Explain the processes associated with third-party risk management.** This domain explicitly covers vendor agreements, vendor monitoring, and consulting-firm-style service provider relationships. GLBA-style notification requirements, MSA security clauses, and right-to-audit clauses all live here.
+- **Domain 5.3 — Explain the processes associated with third-party risk management.** This domain explicitly covers vendor agreements, vendor monitoring, and consulting-firm-style service provider relationships. GLBA-style notification requirements, MSA security clauses, and right-to-audit clauses all live here.[^cfr-16-314][^cfr-12-30]
 - **Domain 4.6 — Implement and maintain identity and access management.** Account lifecycle (provisioning, deprovisioning, dormant accounts) is tested.
-- **Domain 5.4 — Summarize elements of effective security compliance.** Frameworks (NIST CSF, CIS Controls, PCI-DSS, GLBA, HIPAA) are the body of this domain; recognition-level knowledge is expected.
+- **Domain 5.4 — Summarize elements of effective security compliance.** Frameworks (NIST CSF, CIS Controls, PCI-DSS, GLBA, HIPAA) are the body of this domain; recognition-level knowledge is expected.[^pci-dss-v4-0-1]
 
 **Sample question framing:**
 
@@ -323,7 +323,7 @@ This is the kind of question Security+ writes: multiple defensible answers, one 
 
 ### (ISC)² Certified in Cybersecurity (CC)
 
-(ISC)²'s Certified in Cybersecurity (CC) is the entry-level certification (ISC)² introduced in 2022 to compete with Security+ as a first-cert option, with the long-term goal of building a pipeline into CISSP. It has five domains; level0@linux's material concentrates in two.
+(ISC)²'s Certified in Cybersecurity (CC) is the entry-level certification (ISC)² introduced in 2022 to compete with Security+ as a first-cert option, with the long-term goal of building a pipeline into CISSP.[^cert-cissp] It has five domains; level0@linux's material concentrates in two.
 
 - **Domain 3 — Access Control Concepts.** Account lifecycle, principle of least privilege, identification/authentication/authorization model.
 - **Domain 5 — Security Operations.** Asset disposal, configuration management, handling of incidents, security awareness training.
@@ -362,7 +362,7 @@ The correct answer is **C**. The CISSP trap here is that A, B, and D are all rea
 
 ### OSCP / PEN-200
 
-The Offensive Security Certified Professional is the most-recognized hands-on offensive certification. Unlike Security+ or CISSP, OSCP's exam is not multiple-choice — it's a 24-hour practical hands-on test where the candidate is given access to a set of target machines and must compromise them. The cert is awarded based on the report submitted afterward.
+The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.[^cert-oscp] Unlike Security+ or CISSP, OSCP's exam is not multiple-choice — it's a 24-hour practical hands-on test where the candidate is given access to a set of target machines and must compromise them. The cert is awarded based on the report submitted afterward.
 
 The methodology OSCP teaches is, at its core, exactly what you just did to Daniel's laptop:
 
@@ -402,11 +402,11 @@ OSCP also tests the *recognition* that a found credential should be tried latera
 
 The level0@linux scenario isn't theoretical. Every defender working at a consulting firm — and every IAM, IT, and security engineer at any large enterprise — has to answer this question concretely. Here's what the work looks like.
 
-**1. Automate Joiner-Mover-Leaver (JML).** The IAM industry's term for the access-lifecycle process. Modern JML automation tools — Okta Lifecycle Management, Microsoft Entra ID Governance (formerly Azure AD Identity Governance), SailPoint IdentityIQ — connect to HR systems (Workday, BambooHR, ADP) and automatically provision/deprovision accounts based on HR events. The signal is the source of truth: HR records the termination → IAM disables the access → laptop is flagged for return → SIEM logs the deauthorization for audit. Without automation, this is a manual ticket chain that fails roughly 5-15% of the time at scale.
+**1. Automate Joiner-Mover-Leaver (JML).** The IAM industry's term for the access-lifecycle process. Modern JML automation tools — Okta Lifecycle Management, Microsoft Entra ID Governance (formerly Azure AD Identity Governance), SailPoint IdentityIQ — connect to HR systems (Workday, BambooHR, ADP) and automatically provision/deprovision accounts based on HR events. The signal is the source of truth: HR records the termination → IAM disables the access → laptop is flagged for return → SIEM logs the deauthorization for audit. Without automation, this is a manual ticket chain, and manual chains fail at a rate that scales with how many systems and how many leavers you have.
 
 **2. Treat the workstation as a witness.** When a consultant rolls off, the laptop is evidence, not stock. Before reimaging, image the disk for forensic preservation (FTK Imager, EnCase, or the open-source `dd` plus a write-blocker). Then run an automated credential scanner against the image. *Then* reimage. The "audit-then-wipe" sequence is what Driftwood's process is supposed to enforce — the fact that you're doing it manually on day one of your job means the process isn't automated.
 
-**3. Run credential scanners against home directories, not just repos.** Most secret-scanning tools were built for source-code repositories. gitleaks, TruffleHog, GitHub secret scanning, GitGuardian — all of them work on filesystems too. Configure them to scan `/home/*` on workstations at engagement closeout. The findings will be uncomfortable. They will also be the correct findings.
+**3. Run credential scanners against home directories, not just repos.** Most secret-scanning tools were built for source-code repositories. gitleaks, TruffleHog, GitHub secret scanning, GitGuardian — all of them work on filesystems too.[^trufflehog-secret-scanning] Configure them to scan `/home/*` on workstations at engagement closeout. The findings will be uncomfortable. They will also be the correct findings.
 
 ```bash
 # Example: scan all home directories for credential patterns
@@ -415,7 +415,7 @@ gitleaks dir /home --report-path /tmp/scan.json --no-git
 
 The first time a firm runs this against a representative sample of consultant laptops, the results are universally bad. That's the value of doing it. The second time it's run, the results are better, because consultants have learned that the firm checks.
 
-**4. Vault credentials at the firm level, not the laptop level.** Driftwood should run a vault — HashiCorp Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler, Bitwarden Secrets Manager — that consultants check credentials *out* of when they need them and that audits every access. Consultants who keep client credentials in files on their laptop are doing it because the alternative (the vault) is friction. Lower the friction. Make the vault the easiest path.
+**4. Vault credentials at the firm level, not the laptop level.** Driftwood should run a vault — HashiCorp Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler, Bitwarden Secrets Manager — that consultants check credentials *out* of when they need them and that audits every access.[^hashicorp-vault-getting-started] Consultants who keep client credentials in files on their laptop are doing it because the alternative (the vault) is friction. Lower the friction. Make the vault the easiest path.
 
 **5. Forensic-grade access logs.** When the question becomes "was Daniel's `creds.txt` ever copied to an external device or uploaded somewhere?" — which is the question Halton's lawyer asks Driftwood's lawyer the day after a breach surfaces — the only acceptable answer is a forensic-grade access log from the laptop's EDR (CrowdStrike Falcon, SentinelOne, Microsoft Defender for Endpoint, Carbon Black). The log should be tamper-evident, retained for a defined period (typically 12+ months), and produceable on demand.
 
@@ -423,7 +423,7 @@ The first time a firm runs this against a representative sample of consultant la
 
 **7. Tabletop the breach.** Run an annual tabletop exercise where the scenario is exactly level0@linux: "A rolling-off consultant's laptop is found to contain client credentials. Walk us through the response." The exercise reveals which playbooks are documented, which aren't, which assumptions the team is making, which legal and contractual notifications are required, and which clients have to be told. The first time a firm runs this tabletop, it goes badly. That's the point — to find the gaps before the real incident does.
 
-**Sample detection rule (Sigma, generic Linux file-access):**
+**Sample detection rule (Sigma, generic Linux file-access):**[^sigma-generic-signature-format-for]
 
 ```yaml
 title: Credential file accessed in user home directory
@@ -477,29 +477,37 @@ The bonus is a small wink at the discipline gap: the same set of commands (`sudo
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
-- [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final)
-- [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html)
-- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
-- [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html)
-- [OWASP Top 10:2025](https://owasp.org/Top10/2025/)
-- [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030)
-- [Computer-Security Incident Notification Rule — 12 CFR Part 53 (36-hour clock)](https://www.ecfr.gov/current/title-12/chapter-I/part-53)
-- [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and)
-- [GLBA Safeguards Rule — 16 CFR Part 314 (FTC; nonbank institutions, shown for contrast)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
-- [PCI-DSS v4.0.1 — PCI Security Standards Council document library](https://www.pcisecuritystandards.org/document_library/)
-- [MITRE ATT&CK — T1552.001: Unsecured Credentials — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/)
-- [MITRE ATT&CK — T1083: File and Directory Discovery](https://attack.mitre.org/techniques/T1083/)
-- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
-- [Block (Cash App Investing) — SEC Form 8-K filed April 4, 2022 (direct filing)](https://www.sec.gov/Archives/edgar/data/0001512673/000119312522095215/d343042d8k.htm)
-- [Peiter Zatko ("Mudge") whistleblower disclosure — Senate Judiciary Committee hearing, September 13, 2022](https://www.judiciary.senate.gov/committee-activity/hearings/data-security-at-risk-testimony-from-a-twitter-whistleblower)
-- [Uber September 2022 security incident — Uber official statement](https://www.uber.com/newsroom/security-update/)
-- [HashiCorp Vault — Getting Started](https://developer.hashicorp.com/vault/tutorials/getting-started)
-- [AWS Secrets Manager — User Guide](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html)
-- [gitleaks — secret scanning](https://github.com/gitleaks/gitleaks)
-- [TruffleHog — secret scanning](https://github.com/trufflesecurity/trufflehog)
-- [Sigma — generic signature format for SIEM systems](https://github.com/SigmaHQ/sigma)
+[^nist-800-53]: [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final).
+[^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html).
+[^cwe-798]: [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html).
+[^owasp-top-10-2025]: [OWASP Top 10:2025](https://owasp.org/Top10/2025/).
+[^cfr-12-30]: [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030).
+[^cfr-12-53]: [Computer-Security Incident Notification Rule — 12 CFR Part 53 (36-hour clock)](https://www.ecfr.gov/current/title-12/chapter-I/part-53).
+[^interagency-guidance-on-response-programs]: [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and).
+[^cfr-16-314]: [GLBA Safeguards Rule — 16 CFR Part 314 (FTC; nonbank institutions, shown for contrast)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule).
+[^pci-dss-v4-0-1]: [PCI-DSS v4.0.1 — PCI Security Standards Council document library](https://www.pcisecuritystandards.org/document_library/).
+[^t1552-001]: [MITRE ATT&CK — T1552.001: Unsecured Credentials — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
+[^block-cash-app-investing-sec]: [Block (Cash App Investing) — SEC Form 8-K filed April 4, 2022 (direct filing)](https://www.sec.gov/Archives/edgar/data/1512673/000119312522095215/d343042d8k.htm).
+[^peiter-zatko-mudge-whistleblower-disclosure]: [Peiter Zatko ("Mudge") whistleblower disclosure — Senate Judiciary Committee hearing, September 13, 2022](https://www.judiciary.senate.gov/committee-activity/hearings/data-security-at-risk-testimony-from-a-twitter-whistleblower).
+[^hashicorp-vault-getting-started]: [HashiCorp Vault — Getting Started](https://developer.hashicorp.com/vault/tutorials/get-started).
+[^aws-secrets-manager-user-guide]: [AWS Secrets Manager — User Guide](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html).
+[^trufflehog-secret-scanning]: [TruffleHog — secret scanning](https://github.com/trufflesecurity/trufflehog).
+[^sigma-generic-signature-format-for]: [Sigma — generic signature format for SIEM systems](https://github.com/SigmaHQ/sigma).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cwe-256]: [CWE-256](https://cwe.mitre.org/data/definitions/256.html).
+[^cwe-312]: [CWE-312](https://cwe.mitre.org/data/definitions/312.html).
+
+### Further reading
+
+- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
+- [MITRE ATT&CK — T1083: File and Directory Discovery](https://attack.mitre.org/techniques/T1083/).
+- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/).
+- [Uber September 2022 security incident — Uber official statement](https://www.uber.com/us/en/newsroom/security-update/).
+- [gitleaks — secret scanning](https://github.com/gitleaks/gitleaks).
 
 ---
 

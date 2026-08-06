@@ -495,90 +495,22 @@ proceeding. The MSA exists in part to protect chain of custody.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  NIST SP 800-86 — Guide to Integrating Forensic Techniques
-  into Incident Response
-    The canonical reference for procedurally-sound digital
-    forensics in an enterprise / incident-response context.
-    Section 4 covers data acquisition and preservation;
-    Section 5 covers examination and analysis; Section 6 covers
-    reporting. The "examine metadata before content" sequence
-    is named explicitly.
+One weakness, and a discipline.
 
-  NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified
-  Information (finalized May 2024; supersedes Rev. 2)
-    03.06.01 Incident Handling — establish an operational
-      incident-handling capability for organizational systems.
-      Forensic competence is part of this.
-    03.06.02 Incident Monitoring, Reporting, and Response
-      Assistance — track, document, and report incidents.
-      Chain-of-custody documentation is part of THIS, not
-      optional.
-    03.14.06, 03.14.07 — System monitoring and unauthorized-use
-      detection. The badge-log audit that opened this case is
-      the 03.14.x family working as designed.
+  CWE-359   Exposure of Private Personal Information — the class
+            the embedded metadata belongs to, though here it
+            works FOR the investigation rather than against it.
 
-  CMMC Level 2 (DoD CIO, 2024)
-    The acquisition-side certification framework that maps to
-    NIST 800-171. Domain IR (Incident Response) carries the
-    forensic-capability practices listed above. CMMC was
-    finalized in 2024 with a phased contract-clause rollout
-    through 2028.
+  NIST SP 800-86 (Guide to Integrating Forensic Techniques into
+  Incident Response) is the reference that governs how this
+  evidence is handled, and the handling is the lesson: the file
+  was produced voluntarily by its subject, which is the
+  strongest provenance an artifact can have.
 
-  CIS Critical Security Controls v8.1
-    Control 17  Incident Response Management — establishes the
-      foundation for forensic capability. 17.1 (designate
-      personnel), 17.2 (define contact information), 17.3
-      (establish reporting), 17.4 (document procedures).
-    Control 14  Security Awareness — including OPSEC training
-      for the metadata problem on the defender side.
-
-  CWE
-    CWE-200  Exposure of Sensitive Information to an Unauthorized
-      Actor — applies on the SUBJECT side: Reed exposed his own
-      location/timestamp by reusing a metadata-bearing artifact.
-    CWE-359  Exposure of Private Personal Information — same
-      pattern, slightly different framing.
-
-  18 U.S.C. § 1832 — Theft of Trade Secrets
-    If the formal investigation develops into a finding that
-    Reed accessed Bay 4 to exfiltrate CUI or trade-secret
-    information, federal criminal exposure attaches. Polaris's
-    procedure handles when (and whether) to refer to FBI.
-
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA CySA+ (CS0-003)
-    Domain 4 (Reporting and Communication) — chain of custody,
-    evidence handling. Domain 3 (Incident Response and
-    Management) — forensic procedures.
-
-  GIAC GCFE (Certified Forensic Examiner)
-    EXIF metadata extraction is on the exam. Image-forensics
-    artifacts more broadly are a core domain.
-
-  GIAC GCFA (Certified Forensic Analyst)
-    The deeper version. File system / memory / network
-    forensics in depth, including chain-of-custody and report
-    writing.
-
-  GIAC GCIH (Certified Incident Handler)
-    The incident-response side. Procedural forensics in an
-    enterprise IR context.
-
-  EC-Council CHFI (Computer Hacking Forensic Investigator)
-    Whole-cert relevant. EXIF / image forensics is in the
-    "Investigating Digital Media" domain.
-
-  CISSP
-    Domain 7 (Security Operations) — includes "Conduct
-    investigations" and "Conduct logging and monitoring
-    activities." Forensic procedure is tested.
-
-  Industry-internal: legal-hold and e-discovery training.
-    Anyone who runs internal investigations professionally
-    will encounter this category of artifact regularly.
-
+  CMMC Level 2 and NIST SP 800-171 are the regime, enforced
+  through DFARS 252.204-7012. A cyber incident affecting covered
+  defense information is reported to DoD via DIBNet within 72
+  hours, and images and logs are preserved for at least 90 days.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -588,17 +520,6 @@ proceeding. The MSA exists in part to protect chain of custody.
   intent at a workplace. But for Reed's case the relevant
   attacker-side techniques to be aware of, IF the formal
   investigation develops in that direction, are:
-
-  T1078     — Valid Accounts. The threat model where a
-              legitimate-credentialed insider uses their own
-              access to do something improper.
-  T1583     — Acquire Infrastructure. The pre-compromise
-              category that includes "Develop Capabilities" —
-              e.g., reusing a previously-captured photograph as
-              an alibi prop falls under capability development.
-  T1592     — Gather Victim Host Information. The
-              reconnaissance technique an insider may have
-              performed before the badge event.
 
   None of these are confirmed by the forensic finding alone.
   They become relevant only if the formal investigation finds
@@ -665,6 +586,31 @@ proceeding. The MSA exists in part to protect chain of custody.
      referrals. The shape protects both the institution and the
      subject. Don't shortcut it.
 
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. The EXIF disproves the photograph. What does it NOT prove?
+
+  2. Reed handed this file over himself. Why does that make the
+     analysis stronger than a seizure would have?
+
+  3. Nothing here is reportable to DoD yet. What would have to
+     be true before the 72-hour clock starts?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/forensics/level0.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, EXIF and container metadata in depth,
+the real-world cases where metadata decided an investigation,
+and a Sigma rule for the activity this level only infers.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -1518,135 +1464,23 @@ in §X."
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  NIST SP 800-53 Rev. 5 — AU family (Audit and Accountability)
-    AU-2  Event Logging — what gets logged.
-    AU-3  Content of Audit Records — what fields each record
-          carries. AU-3(1) is command-line capture (Reed's
-          PowerShell and certutil cmdlines are AU-3(1)
-          operating as designed).
-    AU-6  Audit Record Review, Analysis, and Reporting — the
-          "actually look at the logs" control. This whole
-          engagement is AU-6 working correctly.
-    AU-9  Protection of Audit Information — the integrity of
-          Security.evtx itself. Chain of custody on this
-          file is what makes the finding admissible if the
-          case develops criminal weight.
-    AU-12 Audit Record Generation — the rules that govern
-          what generates an audit record at the system level.
+Two weaknesses, and the second one is about the investigators.
 
-  NIST SP 800-92 — Guide to Computer Security Log Management
-    The canonical reference for enterprise log management.
-    Originally published 2006; NIST published a Revision 1
-    Initial Public Draft on October 11, 2023 to align with
-    SIEM/SOAR practices, but as of mid-2026 no Final has been
-    released — NIST is still processing public comments.
-    Section 3 (Log Management Infrastructure) and Section 5
-    (Operational Processes) are the active sections for IR.
+  CWE-532   Insertion of Sensitive Information into Log File —
+            twice over: the exfil chain is recorded, and an IR
+            responder's password was captured verbatim in the
+            TargetUserName field of a failed-logon record.
+  CWE-117   Improper Output Neutralization for Logs — adjacent,
+            covering log injection rather than disclosure.
 
-  NIST SP 800-86 — Guide to Integrating Forensic Techniques
-  into Incident Response
-    Already cited in the prior engagement (Reed's alibi
-    photo). Section 5.2 covers data examination including
-    event-log triage. Procedurally what we just did.
+  NIST SP 800-171 3.3.x (Audit and Accountability) is the control
+  family, and it is doing its job here: the log is what makes the
+  case. AU-9 covers protecting that log from the people in it.
 
-  NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified
-  Information
-    §03.03 (Audit and Accountability) family — direct
-    inheritance from 800-53 AU controls, profiled for
-    non-federal systems handling CUI. What Polaris is
-    audited against. (Rev. 3 numbering uses zero-padded
-    \`03.03.x\` form, distinct from Rev. 2's \`3.3.x\`.)
-
-  CMMC Level 2 (DoD CIO, finalized 2024)
-    Domain AU — Audit and Accountability practices map 1:1
-    to NIST 800-171 §03.03 (Rev. 3 numbering; §3.3 in the
-    Rev. 2 form CMMC tooling still surfaces alongside the
-    update). Polaris's CMMC posture is what funds the SOC
-    capacity that runs these audits in the first place.
-
-  CIS Critical Security Controls v8.1
-    Control 8  Audit Log Management — the whole control.
-      8.1 (establish audit log management process), 8.2
-      (collect audit logs), 8.4 (standardize time
-      synchronization), 8.5 (collect detailed audit logs),
-      8.10 (retain audit logs), 8.11 (conduct audit log
-      reviews). 8.11 is the "actually look" safeguard.
-
-  CWE
-    CWE-532  Insertion of Sensitive Information into Log File
-      — the 4625-typed-password-as-username finding. Worth
-      knowing this CWE by number; it shows up in log-
-      handling design reviews regularly.
-    CWE-117  Improper Output Neutralization for Logs —
-      adjacent; covers log injection rather than passive
-      sensitive-data exposure.
-    CWE-200  Exposure of Sensitive Information to an
-      Unauthorized Actor — parent of CWE-532. Note: CWE-200
-      itself is now mapping-Discouraged; cite the more
-      specific CWE-532 for direct mappings.
-
-  Microsoft documentation
-    The "Audit Logon" and "Audit Failed Logons" subcategories
-    of the Advanced Audit Policy. The 4624 / 4625 split,
-    LogonType meanings (2 Interactive, 3 Network, 10
-    RemoteInteractive, etc.), and SubStatus codes
-    (0xC0000064 / 0xC000006A / 0xC0000234 / 0xC0000072) are
-    documented at learn.microsoft.com under
-    "windows/security/threat-protection/auditing".
-
-  LOLBAS Project (lolbas-project.github.io)
-    Community-maintained catalog of Living-Off-The-Land
-    binaries shipped with Windows. certutil.exe with its
-    -encode/-decode subcommands is one of the founding
-    entries in the database.
-
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  GIAC GCFE (Certified Forensic Examiner)
-    The Windows-forensics-on-disk specialist cert.
-    Security.evtx structure and analysis is core content.
-    Feeds from SANS FOR500.
-
-  GIAC GCFA (Certified Forensic Analyst)
-    The deeper IR/forensics cert. Event-log analysis at
-    timeline-reconstruction depth. Feeds from SANS FOR508.
-
-  GIAC GCIH (Certified Incident Handler)
-    The enterprise-IR cert. Detection-engineering side
-    of event-log monitoring (designing the rule that
-    fires on 4625 + 0xC0000064 + password-shape
-    TargetUserName). Feeds from SANS SEC504.
-
-  GIAC GCDA (Continuous Monitoring & Security Operations
-  Analyst)
-    SOC/SIEM-side cert. Detection engineering, log pipeline
-    design, threat hunting in event-log data. Feeds from
-    SANS SEC555 (recently renamed "Detection Engineering and
-    SIEM Analytics" — previously "SIEM with Tactical
-    Analytics").
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    Domain 1 (Security Operations) — log analysis and SIEM
-    correlation. Domain 3 (Incident Response and Management)
-    — forensic analysis including event logs. CS0-004 launched
-    in early 2026 for parallel availability; CS0-003 retires
-    June 2026.
-
-  ISC2 CISSP
-    Domain 7 (Security Operations) — includes "Conduct
-    logging and monitoring activities" and "Conduct
-    investigations." Procedural side of what we did today.
-
-  Microsoft SC-200 (Security Operations Analyst Associate)
-    The Microsoft-native SOC cert. Microsoft Sentinel KQL
-    queries, Microsoft Defender XDR investigation. Where
-    the modern Microsoft-stack defender lives.
-
-  EC-Council CHFI (Computer Hacking Forensic Investigator)
-    Module 13 (Windows Forensics) covers event logs in
-    depth. Whole-cert forensics-focused.
-
+  CMMC Level 2 and NIST SP 800-171 are the regime, enforced
+  through DFARS 252.204-7012. A cyber incident affecting covered
+  defense information is reported to DoD via DIBNet within 72
+  hours, and images and logs are preserved for at least 90 days.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -1770,6 +1604,32 @@ in §X."
        that runs the reviews; the CMMC posture is what
        protected this CUI from going undetected for months.
 
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. Every tool in the chain is legitimate software. What does
+     that mean for detection?
+
+  2. A responder's password is sitting in a log you are reading.
+     What is your first action, and whose incident is it?
+
+  3. This is the point where the 72-hour clock can start. What
+     specifically triggers it?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/forensics/level1.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, Windows event IDs and the LOLBin
+pattern, the real-world insider cases, and a Sigma rule for the
+archive-encode-upload sequence.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -2235,7 +2095,7 @@ before the case can rely on the queries you ran.
           content:
 `═══ POST-MORTEM: SQLITE IS THE USER-ACTIVITY LEDGER ═══
 
-─── BLUNT VERSION ────────────────────────────────────────────
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 Reed Connolly accessed personal Gmail at 02:47 Saturday
 morning, seven hours before the 09:42 Bay 4 badge-in. He
@@ -2253,7 +2113,7 @@ Cookies.sqlite (RC-Gmail-PreDawn-2026-03-14-T0247Z). Outside
 counsel will use that session token to subpoena Google for
 Reed's Sent-folder content under day-four authorization.
 
-─── CONSULTING-FIRM ANGLE ────────────────────────────────────
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 Browser-database forensics is a quietly massive lever for
 internal-investigation work. The discipline at consulting
@@ -2282,66 +2142,27 @@ shops looks like this:
      independent artifacts pointing at the same behavior.
      One could be coincidence; both is rehearsal.
 
-─── FRAMEWORKS ────────────────────────────────────────────────
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-539 — Use of Persistent Cookies Containing Sensitive
-    Information. The session token you recovered is still
-    valid in a database on disk, long after Reed would say
-    he had "logged out." Persistence is the defender's gift
-    here and the attacker's on any machine they reach; the
-    same artifact that makes this investigation possible is
-    what makes a stolen browser profile worth stealing.
+Two weaknesses, and a line you do not cross.
 
-  CWE-200 — Exposure of Sensitive Information to an
-    Unauthorized Actor. The browser profile stores
-    authentication material in a location readable by
-    anything running as that user. Full-disk encryption
-    protects it at rest and nothing protects it once the
-    session is unlocked.
+  CWE-539   Use of Persistent Cookies Containing Sensitive
+            Information — the session artifact that identifies
+            the account.
+  CWE-200   Exposure of Sensitive Information to an Unauthorized
+            Actor.
 
-  NIST SP 800-86 — Guide to Integrating Forensic Techniques
-    into Incident Response. Browser artifacts are listed as
-    one of the canonical endpoint-forensics data sources
-    (alongside file-system metadata, memory, network
-    artifacts, and event logs). §3.3 on Examining Data lays
-    out the "preserve original, work on a copy, document
-    each step" workflow this case follows.
+  NIST SP 800-86 governs the handling. The artifact's correct use
+  is narrow and administrative: it names the account for legal
+  process. Replaying it to browse a live mailbox contaminates the
+  evidence and may itself be an offence.
 
-  NIST SP 800-171 Rev. 3 — 3.3.1 (System Audit Records).
-    The browser History database meets the spirit of "create
-    and retain system audit records sufficient to monitor,
-    analyze, investigate, and report unlawful or unauthorized
-    system activity." Chrome's per-profile retention is
-    indefinite by default; clearing browsing data doesn't
-    fully wipe (WAL journal pages persist until vacuum).
+  CMMC Level 2 and NIST SP 800-171 are the regime, enforced
+  through DFARS 252.204-7012. A cyber incident affecting covered
+  defense information is reported to DoD via DIBNet within 72
+  hours, and images and logs are preserved for at least 90 days.
 
-  CMMC Level 2 — AU.L2-3.3.x audit-record family. Polaris is
-    expected to retain audit records that include user-level
-    activity sufficient to support a forensic investigation
-    like this one. Browser artifacts qualify.
-
-  Insider Threat Program — DoD 5205.16. CUI handling
-    obligations (DoDM 5200.48) interact with NISPOM (32 CFR
-    Part 117) for cleared facilities like Polaris. The
-    investigation is authorized; the artifact-handling
-    discipline above is what makes the authorization stand
-    up to challenge.
-
-─── CERTIFICATIONS ───────────────────────────────────────────
-
-  GCFE (GIAC Certified Forensic Examiner) — browser-artifact
-    forensics is a major domain. The exam's Chrome / Firefox
-    history-database modules cover exactly the queries you
-    just ran.
-
-  GCFA (GIAC Certified Forensic Analyst) — broader endpoint
-    forensics; browser artifacts as one of ~12 data sources.
-
-  CHFI (Computer Hacking Forensic Investigator) — vendor-
-    neutral forensic-process cert; lists browser DBs in its
-    artifact-collection domain.
-
-─── MITRE ATT&CK ─────────────────────────────────────────────
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
   T1119 — Automated Collection. Reed's rc-archive-helper.ps1
     is a textbook example of a custom collector pre-staged
@@ -2361,7 +2182,7 @@ shops looks like this:
     search is the defender's window into Reed's level of
     awareness about what he was about to handle.
 
-─── DEFENDER ACTION ──────────────────────────────────────────
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   Browser-policy enforcement. Polaris's Chrome Enterprise
     policy could block personal-Gmail sign-in on managed
@@ -2391,6 +2212,32 @@ shops looks like this:
     individual user credentials. Maya's already on this; the
     finding goes in the day-three deliverable explicitly
     rather than getting filed quietly.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. You hold a live session cookie for the suspect's mailbox.
+     Why must you not use it?
+
+  2. Browser history shows the profile's activity. What can it
+     never establish on its own?
+
+  3. The searches about CUI handling rules matter more than the
+     timestamps. Why?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/forensics/level2.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, browser-artifact forensics with
+sqlite3, the legal-process path from artifact to production, and
+a Sigma rule for the behaviour this level reconstructs.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -2983,70 +2830,22 @@ Enforcement is what turns "suspicious" into "provable."
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-290 — Authentication Bypass by Spoofing
-    The mechanism: asserting an identity in a field that
-    nothing authenticates.
+One weakness, and an asymmetry.
 
-  RFC 7208 — Sender Policy Framework (SPF)
-    Publishes, in DNS, which servers may send for a domain.
-    Checks the ENVELOPE sender, which is why SPF alone does not
-    protect the From: header a human reads.
+  CWE-290   Authentication Bypass by Spoofing — the From: header
+            is free text the sender types.
 
-  RFC 6376 — DomainKeys Identified Mail (DKIM) — Internet Standard
-    Cryptographic signature over selected headers and body,
-    verified against a public key in DNS. dkim=none means no
-    signature existed to verify — an absence, not a failure.
+  The asymmetry is the whole lesson: the sender controls the
+  headers a human reads, and the receiving infrastructure writes
+  the headers that record what happened. SPF (RFC 7208), DKIM
+  (RFC 6376) and DMARC (RFC 9989, which obsoleted RFC 7489 in
+  May 2026) are the mechanisms that make the second set
+  trustworthy. NIST SP 800-177 is the deployment guidance.
 
-  RFC 9989 — DMARC (obsoletes RFC 7489)
-    Ties SPF and DKIM results to the visible From: domain
-    (alignment) and publishes what the recipient should do on
-    failure: p=none, p=quarantine, or p=REJECT. DMARC was
-    Informational for a decade as RFC 7489; it became Standards
-    Track in May 2026 as RFC 9989, with RFC 9990 and RFC 9991
-    covering aggregate and failure reporting. Deployed policies
-    in the wild — Polaris's included — still overwhelmingly
-    reflect the 7489 era.
-
-  RFC 5322 — Internet Message Format
-    Defines the header block itself, including the rule that
-    each relay PREPENDS its Received: line. That ordering rule
-    is what makes the chain readable as a timeline.
-
-  NIST SP 800-177 Rev. 1 — Trustworthy Email
-    The federal guidance consolidating SPF/DKIM/DMARC
-    deployment. Reasonable reading if you have to argue for
-    enforcement internally.
-
-  NIST SP 800-171 / CMMC
-    Polaris handles Controlled Unclassified Information, so
-    3.1.3 (control CUI flow), 3.1.20 (limit connections to
-    external systems), and 3.3.x (audit and accountability)
-    are the controls in scope for Finding 3.
-
-  NIST SP 800-86 — Integrating Forensic Techniques into
-    Incident Response. The methodology backdrop for this whole
-    track: acquire, examine, analyze, report.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Email security controls — SPF, DKIM, DMARC — are directly
-    tested, usually as "which control would have prevented
-    this?" or "what does this header tell you?"
-
-  CompTIA CySA+ (CS0-003)
-    Header analysis appears as a hands-on analyst skill. Expect
-    to be shown a header block and asked to identify the true
-    origin or the spoof indicator.
-
-  GIAC GCFA / GCIH
-    Email as an evidence source, including chain reconstruction
-    and the legal-process side of obtaining provider records.
-
-  ISC2 CISSP
-    Domain 7 (Security Operations): investigations, evidence
-    handling, and the difference between an internal finding
-    and something that has to survive a courtroom.
+  CMMC Level 2 and NIST SP 800-171 are the regime, enforced
+  through DFARS 252.204-7012. A cyber incident affecting covered
+  defense information is reported to DoD via DIBNet within 72
+  hours, and images and logs are preserved for at least 90 days.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -3101,6 +2900,33 @@ Enforcement is what turns "suspicious" into "provable."
      writing a month before the incident and nothing followed.
      A flagged behavior with no owner and no follow-up is a
      control failure regardless of what the employee later did.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. The Date: header and the Received: chain disagree by 34
+     hours. Which one wins, and why?
+
+  2. A single SPF failure proves very little. What makes this
+     set of failures different?
+
+  3. The ESMTPSA on Reed's own message carries a trailing A.
+     What does that letter establish?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/forensics/level3.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, reading Received: chains bottom-up,
+the business-email-compromise cases this mirrors, and a Sigma
+rule for inbound mail failing DMARC while claiming an internal
+sender.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 

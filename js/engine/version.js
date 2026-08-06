@@ -65,11 +65,30 @@
 //      `node tools/build-walkthroughs.mjs` and COMMIT the generated
 //      .html files alongside the .md.
 //
-//      The generator enforces the section template: all 10 sections,
-//      exactly once, in order, plus the leading spoiler blockquote. A
-//      deviation fails the build and writes nothing. CI additionally
-//      re-runs the generator and fails if committed output is stale,
-//      so a markdown edit without a regenerate cannot merge.
+//      The generator enforces the section template: all 11 sections,
+//      exactly once, in order, plus the leading spoiler blockquote and a
+//      complete Sigma detection rule in §7. A deviation fails the build
+//      and writes nothing. CI additionally re-runs the generator and
+//      fails if committed output is stale, so a markdown edit without a
+//      regenerate cannot merge.
+//
+//      It also enforces CITATIONS (v2.7.0). Checkable claims carry a
+//      [^key] marker that resolves to a numbered source at the bottom
+//      of the page; the authoring format is in walkthroughs/README.md
+//      under "Citations". An unknown key, a duplicate or malformed
+//      definition, or a source that is defined but never cited all
+//      fail the build. That last rule is the load-bearing one: it is
+//      what keeps §9 a list of sources the walkthrough actually used
+//      rather than a pile of links. Anything worth listing but not
+//      tied to a claim goes under "### Further reading", unnumbered.
+//
+//      It also catches STALE FORWARD REFERENCES. A walkthrough written
+//      before the next level existed calls it "a future levelN@track";
+//      once that level ships the statement is wrong, and the build fails
+//      until it is corrected. Shipping a new level therefore forces the
+//      previous walkthrough's wording to be fixed rather than relying on
+//      anyone remembering. Expect to touch the prior level's walkthrough
+//      in the same PR as a new level.
 //
 //      WALKTHROUGH GATE (tightened 2026-05-28 after v1.23.0 shipped
 //      a level without its walkthrough): the walkthrough may ship in
@@ -110,11 +129,43 @@
 //      checklist, NOT a follow-up cleanup. If facts haven't been
 //      verified, the walkthrough isn't ready to push.
 //
+//      SCOPE IS THE WHOLE CORPUS, NOT THE NEW LEVEL (tightened
+//      2026-08-06). Certification versions and framework revisions move
+//      on their own schedule; a claim written a year ago goes stale
+//      whether or not anyone edits its file. Auditing only the level
+//      being shipped is what allowed a CySA+ retirement date to be
+//      wrong in thirteen walkthroughs simultaneously, a PenTest+ launch
+//      year to be off by one, and two files to sit at "Last reviewed:
+//      April 2026" while their neighbours said July.
+//
+//      The build enforces it: a walkthrough whose review date falls
+//      more than three months behind the freshest one in the corpus
+//      fails, as does one missing the line. The comparison is against
+//      the corpus rather than against today, so a clone built years
+//      from now does not fail on checkout; what it catches is one
+//      walkthrough being re-audited while the rest are left behind.
+//
 //      Audit BOTH on every walkthrough PR (including small content
 //      edits to an existing walkthrough):
 //        a. The walkthrough itself:
-//             - §8 Further Reading URLs (every link resolves; if a
-//               canonical source blocks curl, note browser-only).
+//             - Run `node tools/verify-citations.mjs <track>/<level>`.
+//               Zero MISMATCH is the bar. This is the check that a
+//               citation points at the page it CLAIMS: check-links only
+//               proves a URL resolves, and a citation reading
+//               "[CWE-250](.../205.html)" resolves perfectly while being
+//               wrong. Read the WEAK list too; that is where a title
+//               over-claiming what a page contains turns up. UNVERIFIED
+//               entries (bot walls, PDFs) need opening by hand.
+//             - Run `node tools/check-links.mjs <track>/<level>`.
+//               Zero DEAD is the bar. Read the MOVED list by hand:
+//               a redirect that lands on a blog home page means the
+//               article is gone even though the link "works", and a
+//               200 is not proof of life on sites that answer scripts
+//               with a bot-challenge page (justice.gov does).
+//               This is the MECHANICAL half only. It says nothing
+//               about whether the version or figure you cited is
+//               still current, which is what the rest of this list
+//               is for.
 //             - §5 and §6 version-specific claims: cert versions
 //               (SY0-701, CS0-003, etc.), framework revisions (NIST
 //               SP numbers + revisions, ISO/IEC publication years,
@@ -141,7 +192,7 @@
 //           that would be noise in the player-facing post-mortem,
 //           so use judgment on which annotations belong where.
 //        d. Bump the "Last reviewed: <Month Year>" line at the top
-//           of §8 to the current month.
+//           of §9 to the current month.
 //        e. The audit report goes in the PR description so the
 //           review trail is preserved.
 //        Soft cross-track sweep: if the audit surfaces a finding
@@ -278,6 +329,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "2.5.0";
+export const VERSION = "2.10.0";
 
 export const VERSION_DISPLAY = "v" + VERSION;
