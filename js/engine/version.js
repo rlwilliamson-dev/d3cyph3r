@@ -65,11 +65,20 @@
 //      `node tools/build-walkthroughs.mjs` and COMMIT the generated
 //      .html files alongside the .md.
 //
-//      The generator enforces the section template: all 10 sections,
-//      exactly once, in order, plus the leading spoiler blockquote. A
-//      deviation fails the build and writes nothing. CI additionally
-//      re-runs the generator and fails if committed output is stale,
-//      so a markdown edit without a regenerate cannot merge.
+//      The generator enforces the section template: all 11 sections,
+//      exactly once, in order, plus the leading spoiler blockquote and a
+//      complete Sigma detection rule in §7. A deviation fails the build
+//      and writes nothing. CI additionally re-runs the generator and
+//      fails if committed output is stale, so a markdown edit without a
+//      regenerate cannot merge.
+//
+//      It also catches STALE FORWARD REFERENCES. A walkthrough written
+//      before the next level existed calls it "a future levelN@track";
+//      once that level ships the statement is wrong, and the build fails
+//      until it is corrected. Shipping a new level therefore forces the
+//      previous walkthrough's wording to be fixed rather than relying on
+//      anyone remembering. Expect to touch the prior level's walkthrough
+//      in the same PR as a new level.
 //
 //      WALKTHROUGH GATE (tightened 2026-05-28 after v1.23.0 shipped
 //      a level without its walkthrough): the walkthrough may ship in

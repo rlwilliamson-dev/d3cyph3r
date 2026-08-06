@@ -275,7 +275,7 @@ function slugify(text, used) {
  * Checks structure only, never prose. Length, tone, and citation
  * quality stay editorial judgement (see walkthroughs/README.md).
  */
-function validate(md, label) {
+function validate(md, label, shipped) {
   const problems = [];
 
   // Heading text in document order, H2 only.
@@ -345,6 +345,50 @@ function validate(md, label) {
       `detection rule incomplete or absent (§7) — missing: ` +
         missingRuleFields.map((f) => f.replace(":", "")).join(", ")
     );
+  }
+
+  // Stale forward references.
+  //
+  // A walkthrough written before the next level existed describes it as
+  // "a future level3@linux" or says it "hasn't been built yet". When that
+  // level ships, nothing goes back to correct the prose, so the corpus
+  // accumulates statements that were true once and are now flatly wrong.
+  // A reader following linux/level1 was told level2 was unbuilt for two
+  // releases after it became playable.
+  //
+  // The generator already knows which levels exist, so it can simply
+  // check. Anything claiming a shipped level is unbuilt fails the build,
+  // which means shipping a new level forces the correction rather than
+  // relying on someone remembering.
+  const futureRefs = [...md.matchAll(/a future `(level\d+@[a-z]+)`/g)];
+  for (const m of futureRefs) {
+    if (shipped.has(m[1])) {
+      problems.push(
+        `calls \`${m[1]}\` "a future" level, but it has shipped ` +
+          `(drop "a future" and check the surrounding prose)`
+      );
+    }
+  }
+
+  // The prose forms, which are worse than the spoiler line because they
+  // tell a reader the level is unreachable.
+  const UNBUILT_CLAIMS = [
+    /(`?level\d+@[a-z]+`?)[^.\n]{0,60}(hasn't been built|isn't built|has not been built|is not built)/i,
+    /(hasn't been built|isn't built)[^.\n]{0,60}(`?level\d+@[a-z]+`?)/i,
+    /no level\d+ is currently solvable/i,
+    /the level content is forthcoming/i,
+  ];
+  for (const re of UNBUILT_CLAIMS) {
+    const m = md.match(re);
+    if (m) {
+      const named = (m[0].match(/level\d+@[a-z]+/) || [])[0];
+      if (!named || shipped.has(named)) {
+        problems.push(
+          `claims a level is unbuilt: "${m[0].trim().slice(0, 70)}..." ` +
+            `(verify against the shipped set and rewrite)`
+        );
+      }
+    }
   }
 
   return problems.map((p) => `  ${label}: ${p}`);
@@ -1017,10 +1061,15 @@ async function main() {
   // write would leave the committed pages half-updated and trip the CI
   // drift check for an unrelated reason, and an author who has broken
   // three files wants all three reported in one run, not one per fix.
+  // Every level that exists right now, as "<level>@<track>" strings.
+  // validate() uses this to catch prose that still describes a shipped
+  // level as unbuilt.
+  const shipped = new Set(seq.map((x) => `${x.levelKey}@${x.trackKey}`));
+
   const problems = [];
   for (const { trackKey, levelKey } of seq) {
     const md = await readFile(join(WT, trackKey, `${levelKey}.md`), "utf8");
-    problems.push(...validate(md, `${trackKey}/${levelKey}.md`));
+    problems.push(...validate(md, `${trackKey}/${levelKey}.md`, shipped));
   }
   if (problems.length) {
     console.error(

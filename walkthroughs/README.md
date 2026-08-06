@@ -181,6 +181,33 @@ Three things worth doing in the prose around the rule:
   often beat anything a SIEM rule can do, and saying so is more useful
   than pretending the rule is the whole answer.
 
+### Forward references go stale, and the build now catches them
+
+A walkthrough written before the next level existed naturally describes it
+as "a future `level3@linux`", or says it "hasn't been built yet". When
+that level ships, nothing goes back to correct the prose. The corpus then
+carries statements that were true once and are now wrong.
+
+This is not hypothetical. `linux/level1` told readers that `level2@linux`
+was unbuilt and unreachable for two releases after it became playable, and
+`crypto/level2` and `linux/level2` carried the same staleness in their
+spoiler lines. All were fixed in v2.5.1.
+
+The generator now knows which levels exist and fails the build on:
+
+- `a future \`levelN@track\`` where that level has shipped
+- prose claiming a shipped level "hasn't been built" or "isn't built"
+- the phrases "no levelN is currently solvable" and "the level content is
+  forthcoming"
+
+**So the workflow is automatic.** Shipping a new level makes the previous
+walkthrough's forward reference fail, and the build will not pass until it
+is corrected. Nobody has to remember.
+
+Writing "a future `levelN@track`" is still correct and expected for a
+level that genuinely does not exist yet. The check only objects once the
+statement stops being true.
+
 ### Section formatting
 
 - Use `##` for the section title (e.g. `## §3 — The solve`).

@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Where a platform-native control beats a SIEM rule, the walkthrough says so instead of pretending otherwise, and points at GuardDuty, IAM credential reports, Certificate Transparency monitoring, or a pre-receive secret scan.
 
+### Fixed
+
+- **Walkthroughs described levels as unbuilt after they had shipped.** A walkthrough written before the next level existed naturally calls it "a future `level3@linux`", and nothing went back to correct that once the level became playable. `linux/level1` went further and told readers outright that `level2@linux` "hasn't been built yet" and was unreachable from the lobby, which was wrong for two releases. Corrected in `linux/level1`, `linux/level2`, and `crypto/level2`.
+
+  The build now catches this class rather than relying on anyone remembering: the generator knows which levels exist, and shipping a new one makes the previous walkthrough's forward reference fail until it is rewritten. Describing a level that genuinely does not exist yet as "a future" level is still correct and still passes; the check only objects once the statement stops being true.
+
 ### Changed
 
 - **The authoring guide now requires the detection rule, and the build enforces it.** A walkthrough missing any of title, log source, detection, condition, false positives, or severity fails, so a rule cannot ship in a state where the receiving team would disable it.

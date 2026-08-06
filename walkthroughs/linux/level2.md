@@ -2,7 +2,7 @@
 
 **Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA § 501(b) (Interagency Guidelines)
 
-> ⚠ This page contains the full solve path **and** the breadcrumb credential for a future `level3@linux`. If you haven't solved `level2@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've worked through `level0@linux` and `level1@linux`; this level continues their narrative directly.
+> ⚠ This page contains the full solve path **and** the breadcrumb credential for `level3@linux`. If you haven't solved `level2@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've worked through `level0@linux` and `level1@linux`; this level continues their narrative directly.
 
 ---
 

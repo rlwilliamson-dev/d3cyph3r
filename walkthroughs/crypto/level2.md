@@ -2,7 +2,7 @@
 
 **Track:** Crypto · **Client:** Vesta Retail (continued) · **Compliance regime:** PCI-DSS v4.0.1 + (post-finding) PCI QSA Phase-2 remediation
 
-> ⚠ This page contains the full solve path **and** the breadcrumb credential for a future `level3@crypto`. If you haven't solved `level2@crypto` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've worked through `level0@crypto` and `level1@crypto`; this level continues their narrative directly.
+> ⚠ This page contains the full solve path **and** the breadcrumb credential for `level3@crypto`. If you haven't solved `level2@crypto` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've worked through `level0@crypto` and `level1@crypto`; this level continues their narrative directly.
 
 ---
 

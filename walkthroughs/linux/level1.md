@@ -2,7 +2,7 @@
 
 **Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA § 501(b) (Interagency Guidelines)
 
-> ⚠ This page contains the full solve path **and** the breadcrumb credential for a future `level2@linux`. If you haven't solved `level1@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've read or solved `level0@linux` first; the setup picks up where that one ended.
+> ⚠ This page contains the full solve path **and** the breadcrumb credential for `level2@linux`. If you haven't solved `level1@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've read or solved `level0@linux` first; the setup picks up where that one ended.
 
 ---
 
@@ -197,18 +197,18 @@ rm -f "$OUT"
 - It demonstrates the *right* pattern for accessing the override: a privileged-context script `source`ing the file with proper permissions, rather than a debug copy with loosened permissions.
 - It's the artifact that would be missed if Halton's remediation team simply deletes the override file. The legitimate use case persists; the remediation has to be *move the credential to a secrets manager, not delete the override*.
 
-### Step 10: The breadcrumb (future game-world)
+### Step 10: The breadcrumb
 
-`Halton-2024-Q3!` is the breadcrumb credential for a future `level2@linux`. That level hasn't been built yet — but the in-game post-mortem you'll read after this walkthrough notes that a real attacker who recovered this credential would pivot to `prod-db.halton.internal` directly, which is the threat model `level2@linux` will eventually explore. The credential chain is in place; the level content is forthcoming.
+`Halton-2024-Q3!` is the breadcrumb credential for `level2@linux`, and it is the production database password the shadow copy just handed you. The in-game post-mortem notes that a real attacker who recovered it would pivot to `prod-db.halton.internal` directly. `level2@linux` explores what happens when that same password is also accepted as an SSH login on Halton's bastion, which is the finding the next level opens on.
 
-For now, the walkthrough ends at *the finding*. Halton's ops team needs to rotate the production credential immediately, delete the shadow copy, audit `app_admin`'s sudo configuration to remove the unrestricted root access that allowed the original `sudo cp`, and migrate the credential management to a secrets backend (HashiCorp Vault, AWS Secrets Manager, etc.).
+The walkthrough ends at *the finding*. Halton's ops team needs to rotate the production credential immediately, delete the shadow copy, audit `app_admin`'s sudo configuration to remove the unrestricted root access that allowed the original `sudo cp`, and migrate credential management to a secrets backend (HashiCorp Vault, AWS Secrets Manager, and equivalents).
 
 ### If you got stuck
 
 - If `ls -la` showed the files but you couldn't tell which one was the shadow copy, look at the **ownership columns** (`app_admin app_admin` vs `root root`) and the **permission strings** (`-rw-r--r--` vs `-rw-------`). The level's pedagogical point is that *those two columns are where the finding lives* — not the filename, not the size, not the date.
 - If `cat staging-worker.env.bak` showed only the staging credentials (not the prod credentials), you may be running an older D3CYPH3R build. Refresh and retry; the file content should match the snippet above.
 - If you tried `cat staging-worker.env` and it succeeded with content, the permission engine in your local build may be misconfigured. The mode-600 file should reject the read. Re-clone or re-deploy.
-- If you tried `ssh level2@linux`, that level isn't built yet — there's no entry point in the lobby's `LEVELS` map for it. The credential is staged for a future build; no level2 is currently solvable.
+- If `ssh level2@linux` rejects `Halton-2024-Q3!`, check for a trailing space on the paste. The credential is exact, including the `!`.
 
 ## §3 — The vulnerability
 
