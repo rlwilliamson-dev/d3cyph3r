@@ -92,7 +92,7 @@ accidental spoilers; the subsite itself is intentionally discoverable
 so search-engine-driven traffic finds the material when they're
 ready for it.
 
-## The 11-section template
+## The 12-section template
 
 Every walkthrough follows the same structure. Use
 `walkthroughs/linux/level0.md` as the reference; copy-paste its
@@ -104,6 +104,7 @@ section dividers when starting a new file.
 | 1 | The setup (in-world)          | Driftwood + client + character context. Sets the stage                   |
 | 2 | The solve (mechanical)        | Step-by-step commands with outputs. Include "If you got stuck" sub-note  |
 | 3 | The vulnerability             | Name the stacked failures. Why each is independently a finding           |
+| 3.5 | Blast radius                | Size the finding: what it reaches, how much is in scope, for how long, what it opens next, and which regime applies. Table of six dimensions plus 2–3 judgement pull-outs. Every figure sourced from level content; regime per the reference table below |
 | 4 | Real-world parallels          | 2–3 named, well-documented incidents. Include the *response* angle       |
 | 5 | Frameworks, deep dive         | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
 | 6 | Cert exam relevance           | Equal-depth treatment of every cert cited. Sample exam-question framings |
@@ -170,6 +171,54 @@ documented destination for spoiling those bonuses:
   references, primary-source links in §10.
 - Three is the sweet spot. Two is the minimum. Four+ becomes a list,
   which dilutes the lesson.
+
+## Per-track regulatory reference (verified August 2026)
+
+The regime is fixed per track, because the same technical defect carries
+different consequences depending on whose data it is. Get the regime
+wrong and every downstream claim in §3.5 and §5 inherits the error.
+
+Verified against primary sources on the date above. **Re-verify before
+citing**, and note the two entries flagged below, which are the ones
+authors most often get wrong.
+
+| Track | Client | Regime | Notification duty |
+|---|---|---|---|
+| Linux | Halton Bank | GLBA §501(b) via the **Interagency Guidelines**, 12 CFR Pt. 30 App. B (OCC), Pt. 208 App. D-2 (Fed), Pt. 364 App. B (FDIC) | **36 hours** to the primary federal regulator (12 CFR Pt. 53 / Pt. 225 Subpart N / Pt. 304 Subpart C). Customer notice per the 2005 Interagency Guidance on Response Programs |
+| Network | Atlas Health | HIPAA, 45 CFR 164.400-414 | Individuals within 60 days. 500+ in scope: HHS without unreasonable delay and media notice in the affected state. Under 500: HHS annually, within 60 days of year end |
+| Crypto | Vesta Retail | PCI-DSS v4.0.1 | Contractual, not statutory. Acquirer and card brands per the merchant agreement |
+| Web | Meridian State University | FERPA, 20 U.S.C. § 1232g / 34 CFR Part 99 | **None under FERPA.** See the warning below |
+| Forensics | Polaris Defense Systems | CMMC, NIST SP 800-171, DFARS 252.204-7012 | **72 hours** to DoD via DIBNet. Preserve images and logs at least 90 days |
+| OSINT | Veridian Analytics | HIPAA as a Business Associate, HITRUST CSF | BA notifies the covered entity within 60 days; the covered entity carries the individual-notice duty |
+| Cloud | Coverline Insurance | SOC 2, NAIC Model 668, NYDFS 23 NYCRR 500, GLBA | NYDFS § 500.17: **72 hours** to the superintendent, plus 24 hours for an extortion payment and an annual certification by April 15. NAIC § 6: **72 hours** to the commissioner |
+
+### Two traps
+
+**Halton is a bank, so the FTC Safeguards Rule does not apply to it.**
+16 CFR Part 314 governs *nonbank* financial institutions under FTC
+jurisdiction; banks are carved out because the federal banking agencies
+supervise them. The 2023 amendment's 500-consumer, 30-day FTC
+notification is therefore the wrong clock for this client, and the right
+one is the 36-hour rule above, which is both accurate and a sharper
+teaching beat. The Linux track carried the FTC citation until v2.5.0.
+
+**FERPA has no breach-notification requirement and no fine schedule.**
+Enforcement runs through the Department of Education's authority to
+withdraw federal funding, which has never been formally invoked, plus the
+annual FSA compliance attestation. Any notification clock in a Meridian
+scenario comes from *state* law attaching to the PII, never from FERPA
+itself. These are separate exposures with separate deadlines.
+
+### Sources
+
+- [12 CFR Part 53 — Computer-Security Incident Notification](https://www.ecfr.gov/current/title-12/chapter-I/part-53)
+- [Interagency Guidance on Response Programs (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and)
+- [45 CFR Part 164 Subpart D — Breach Notification](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-D)
+- [DFARS 252.204-7012](https://www.ecfr.gov/current/title-48/chapter-2/subchapter-H/part-252/subpart-252.2/section-252.204-7012)
+- [23 NYCRR 500](https://www.dfs.ny.gov/system/files/documents/2023/03/23NYCRR500_0.pdf)
+- [NAIC Model 668](https://content.naic.org/sites/default/files/model-law-668.pdf)
+- [PCI DSS v4.0.1](https://blog.pcisecuritystandards.org/just-published-pci-dss-v4-0-1)
+- [FERPA — 34 CFR Part 99](https://www.ecfr.gov/current/title-34/subtitle-A/part-99)
 
 ## Sourcing rules for framework citations (§6)
 
