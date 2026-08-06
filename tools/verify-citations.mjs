@@ -156,13 +156,30 @@ async function fetchText(url) {
       return { skip: "bot challenge under 200", finalUrl: res.url };
     }
 
-    const title = (raw.match(/<title[^>]*>([\s\S]{0,300}?)<\/title>/i) || [])[1] || "";
-    const text = raw
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&[a-z]+;/gi, " ")
-      .replace(/\s+/g, " ");
+    const title = (raw.match(/<title[^>]*>([\s\S]{0,300}?)<\/title\s*>/i) || [])[1] || "";
+
+    // Strip script and style bodies before flattening tags.
+    //
+    // The closing patterns allow whitespace before ">" because HTML
+    // permits it: "</script >" is a valid end tag, and a pattern
+    // requiring "</script>" exactly leaves the body behind. Here that
+    // would leak minified JavaScript into the text this script searches,
+    // which can make a citation look verified on the strength of a
+    // string that appeared in a analytics blob rather than in the page.
+    // The \b stops "<scriptural>" being treated as a script tag.
+    //
+    // The tag strip loops to a fixed point rather than running once, so
+    // a malformed construct that reveals another tag after one pass does
+    // not survive. Same treatment as plain() in build-walkthroughs.mjs.
+    let text = raw
+      .replace(/<script\b[\s\S]*?<\/script\s*>/gi, " ")
+      .replace(/<style\b[\s\S]*?<\/style\s*>/gi, " ");
+    let prev;
+    do {
+      prev = text;
+      text = text.replace(/<[^>]*>/g, " ");
+    } while (text !== prev);
+    text = text.replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ");
 
     return { title: title.replace(/\s+/g, " ").trim(), text, finalUrl: res.url };
   } catch (e) {
