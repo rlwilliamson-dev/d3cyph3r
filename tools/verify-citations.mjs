@@ -160,20 +160,23 @@ async function fetchText(url) {
 
     // Strip script and style bodies before flattening tags.
     //
-    // The closing patterns allow whitespace before ">" because HTML
-    // permits it: "</script >" is a valid end tag, and a pattern
-    // requiring "</script>" exactly leaves the body behind. Here that
-    // would leak minified JavaScript into the text this script searches,
-    // which can make a citation look verified on the strength of a
-    // string that appeared in a analytics blob rather than in the page.
-    // The \b stops "<scriptural>" being treated as a script tag.
+    // The closing patterns accept anything up to the ">" because that is
+    // what a browser accepts. All of "</script>", "</script >" and
+    // "</script\t\n foo>" close a script element, and a pattern
+    // requiring the exact "</script>" leaves the body in place for the
+    // other two. Here that leaks minified JavaScript into the text this
+    // script searches, which can make a citation look verified on the
+    // strength of a string that appeared in an analytics blob rather
+    // than in the page — the precise false confidence this tool exists
+    // to remove. The \b stops "<scriptural>" reading as a script tag.
     //
-    // The tag strip loops to a fixed point rather than running once, so
-    // a malformed construct that reveals another tag after one pass does
-    // not survive. Same treatment as plain() in build-walkthroughs.mjs.
+    // The tag strip below loops to a fixed point rather than running
+    // once, so a malformed construct that reveals another tag after one
+    // pass does not survive. Same treatment as plain() in
+    // build-walkthroughs.mjs.
     let text = raw
-      .replace(/<script\b[\s\S]*?<\/script\s*>/gi, " ")
-      .replace(/<style\b[\s\S]*?<\/style\s*>/gi, " ");
+      .replace(/<script\b[\s\S]*?<\/script[^>]*>/gi, " ")
+      .replace(/<style\b[\s\S]*?<\/style[^>]*>/gi, " ");
     let prev;
     do {
       prev = text;
