@@ -381,7 +381,7 @@ Domain 5 (Identity and Access Management) covers the credential lifecycle includ
 
 ### PostgreSQL-specific
 
-There's no formal vendor certification for PostgreSQL administration in the way Oracle has OCP. EnterpriseDB (EDB) offers PostgreSQL certifications that include security as a topic, and the PostgreSQL community itself maintains the [Postgres Security documentation](https://www.postgresql.org/docs/current/security.html).
+There's no formal vendor certification for PostgreSQL administration in the way Oracle has OCP. EnterpriseDB (EDB) offers PostgreSQL certifications that include security as a topic, and the PostgreSQL community itself maintains the [Postgres Security documentation](https://www.postgresql.org/support/security/).
 
 ## §7 — What a defender does
 
@@ -541,7 +541,7 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 
 - **NIST SP 800-53 Rev. 5**: <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>. The federal control catalog (latest release 5.2.0, August 2025). IA-5(7) is the direct mapping for embedded credentials.
 - **NIST Cybersecurity Framework 2.0**: <https://csrc.nist.gov/pubs/cswp/29/the-nist-cybersecurity-framework-csf-20/final>. Published February 2024. PR.AA / PR.DS / DE.CM are the relevant function/category mappings.
-- **AICPA SOC 2 / Trust Services Criteria**: <https://www.aicpa-cima.com/topic/audit-assurance/audit-and-assurance-greater-than-soc-2>. The 2017 criteria, refreshed 2022.
+- **AICPA SOC 2 / Trust Services Criteria**: <https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services>. The 2017 criteria, refreshed 2022.
 - **NAIC Insurance Data Security Model Law**: <https://content.naic.org/sites/default/files/model-law-668.pdf>. The 2017 model with state-by-state adoption status.
 - **NYDFS 23 NYCRR 500 (current text)**: <https://www.dfs.ny.gov/industry_guidance/cybersecurity>. November 2023 amendment is the current version.
 - **GLBA Safeguards Rule (16 CFR Part 314)**: <https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-314>. FTC amendments (December 2021, with notification provision §314.5 effective May 2024).

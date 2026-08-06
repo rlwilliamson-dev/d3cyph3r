@@ -329,7 +329,7 @@ The through-line across all four: SQL injection's prevalence has fallen, but its
 
 **(ISC)² CISSP.** Domain 8 (Software Development Security) — input validation, parameterized queries, and the secure-SDLC controls that catch this class are fundamentals.
 
-**Offensive Security OSWA / OSWE / OSCP.** SQL injection is a core skill across all three. The **OSWA (Web Assessor)** and **OSWE (Web Expert)** exams test exactly this hand-built UNION-extraction workflow; OSCP includes SQLi as a web-app foothold technique. ([OffSec certifications](https://www.offsec.com/courses-and-certifications/))
+**Offensive Security OSWA / OSWE / OSCP.** SQL injection is a core skill across all three. The **OSWA (Web Assessor)** and **OSWE (Web Expert)** exams test exactly this hand-built UNION-extraction workflow; OSCP includes SQLi as a web-app foothold technique. ([OffSec certifications](https://www.offsec.com/courses/))
 
 **EC-Council CEH v13.** Module 15 (SQL Injection) is a dedicated module covering error-based, UNION-based, and blind SQLi plus `sqlmap` automation.
 
@@ -341,7 +341,7 @@ The through-line across all four: SQL injection's prevalence has fallen, but its
 
 **Stop returning errors to clients.** Return a generic 500 with a correlation ID; log the detail server-side. Never echo the query, the DB version, or the stack trace to an HTTP response. This closes CWE-209 and removes the attacker's feedback loop.
 
-**Rotate the exposed credential and move it out of the database.** Treat `meridian_dbadmin` / `M3rid14n-DBr00t!2026` as burned the moment it appeared in a query response. Rotate it, then move it into a secrets manager ([AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html), [HashiCorp Vault](https://developer.hashicorp.com/vault/docs/secrets), [GCP Secret Manager](https://cloud.google.com/secret-manager/docs), [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview)). Credentials never belong in a database row an injection can read.
+**Rotate the exposed credential and move it out of the database.** Treat `meridian_dbadmin` / `M3rid14n-DBr00t!2026` as burned the moment it appeared in a query response. Rotate it, then move it into a secrets manager ([AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html), [HashiCorp Vault](https://developer.hashicorp.com/vault/docs/secrets), [GCP Secret Manager](https://docs.cloud.google.com/secret-manager/docs), [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview)). Credentials never belong in a database row an injection can read.
 
 **Put the subdomain behind the WAF and add rate limiting.** A WAF is *not* a fix for injection — parameterizing is — but it raises the cost of automated discovery (sqlmap is noisy) and rate limiting bounds bulk extraction. Defense in depth, layered on top of the real fix, never instead of it.
 
@@ -453,7 +453,7 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 
 **Secrets management + SAST**
 
-- [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html) · [HashiCorp Vault](https://developer.hashicorp.com/vault/docs/secrets) · [GCP Secret Manager](https://cloud.google.com/secret-manager/docs) · [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview).
+- [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html) · [HashiCorp Vault](https://developer.hashicorp.com/vault/docs/secrets) · [GCP Secret Manager](https://docs.cloud.google.com/secret-manager/docs) · [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview).
 - [Semgrep](https://semgrep.dev/) · [CodeQL](https://codeql.github.com/) — SAST tools with SQL-injection rule packs for the CI gate.
 
 **MITRE ATT&CK references**

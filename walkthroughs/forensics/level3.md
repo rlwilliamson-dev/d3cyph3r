@@ -398,7 +398,7 @@ grep -n received mail/02-hutchins-genuine-2026-02-11.eml
 - [MITRE ATT&CK — T1567: Exfiltration Over Web Service](https://attack.mitre.org/techniques/T1567/)
 - [MITRE ATT&CK — T1070: Indicator Removal](https://attack.mitre.org/techniques/T1070/)
 - [M3AAWG — Sender Best Common Practices](https://www.m3aawg.org/published-documents)
-- [Google — Email sender guidelines (authentication requirements for bulk senders)](https://support.google.com/a/answer/81126)
+- [Google — Email sender guidelines (authentication requirements for bulk senders)](https://support.google.com/mail/answer/81126)
 
 ---
 

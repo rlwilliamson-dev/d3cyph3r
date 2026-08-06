@@ -578,8 +578,8 @@ For broader awareness: every fitness app, every social media platform, every "fi
 
 ### GitHub Secret Scanning + tooling
 
-- **GitHub Secret Scanning**: <https://docs.github.com/en/code-security/secret-scanning>. Default-on for public repos since March 2023.
-- **GitHub Push Protection**: <https://docs.github.com/en/code-security/secret-scanning/protecting-pushes-with-secret-scanning>. Free for public repos.
+- **GitHub Secret Scanning**: <https://docs.github.com/en/code-security/how-tos/secure-your-secrets>. Default-on for public repos since March 2023.
+- **GitHub Push Protection**: <https://docs.github.com/en/code-security/concepts/secret-security/push-protection>. Free for public repos.
 - **TruffleHog**: <https://github.com/trufflesecurity/trufflehog>. Open-source pre-push / CI scanner. 700+ detectors with verified-credential checks.
 - **GitGuardian**: <https://www.gitguardian.com/>. Commercial alternative with dashboard + continuous monitoring.
 - **Gitleaks**: <https://github.com/gitleaks/gitleaks>. Open-source equivalent of TruffleHog's core scanning. (Note: project is now in feature-complete / maintenance mode — security patches only — with the maintainer pivoting to a successor project.)
@@ -603,12 +603,12 @@ For broader awareness: every fitness app, every social media platform, every "fi
 - **AWS IAM Access Key best practices**: <https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html>. Includes "do not embed access keys in code."
 - **AWS GuardDuty**: <https://aws.amazon.com/guardduty/>. The CredentialExfiltration finding families.
 - **AWS CloudTrail**: <https://aws.amazon.com/cloudtrail/>. For post-exposure API call audit.
-- **AWS Security Token Service (STS)**: <https://docs.aws.amazon.com/STS/latest/APIReference/welcome.html>. The temporary-credential alternative to long-lived IAM access keys.
+- **AWS Security Token Service (STS)**: <https://docs.aws.amazon.com/STS/latest/APIReference/>. The temporary-credential alternative to long-lived IAM access keys.
 
 ### Incident references
 
 - **Uber 2014/2016 breaches — Krebs on Security retrospective**: <https://krebsonsecurity.com/?s=uber>. Brian Krebs's archive includes the 2014 incident (AWS-keys-in-GitHub) and the 2016 follow-on.
-- **Toyota October 2022 disclosure (T-Connect)**: <https://global.toyota/en/newsroom/corporate/38911867.html>. Toyota's official disclosure of the T-Connect source-code exposure. (A separate Toyota May 2023 disclosure — the ~2.15M-customer vehicle-location leak — is sometimes conflated with this one and has different mechanics.)
+- **Toyota October 2022 disclosure (T-Connect)**: <https://blog.gitguardian.com/toyota-accidently-exposed-a-secret-key-publicly-on-github-for-five-years/>. Technical writeup of the T-Connect source-code exposure; Toyota's own notice is no longer online. (A separate Toyota May 2023 disclosure — the ~2.15M-customer vehicle-location leak — is sometimes conflated with this one and has different mechanics.)
 - **Mercedes-Benz January 2024 (RedHunt Labs writeup)**: <https://redhuntlabs.com/blog/mercedes-benz-source-code-at-risk-github-token-mishap-sparks-major-security-concerns/>. The PAT-in-public-repo finding.
 - **Wiz Microsoft AI Research September 2023 writeup**: <https://www.wiz.io/blog/38-terabytes-of-private-data-accidentally-exposed-by-microsoft-ai-researchers>. The 38TB Azure SAS exposure.
 - **Sysdig EmeraldWhale campaign writeup (October 2024)**: <https://www.sysdig.com/blog/emeraldwhale>. Documents continuous scraping of exposed Git configuration files — ~15,000 cloud credentials harvested in a single campaign.

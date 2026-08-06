@@ -496,7 +496,7 @@ The account-level summary reports that the AWS account **root user** has a long-
 - AWS — [Generate least-privilege policies from CloudTrail activity](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html)
 - AWS — [Root user best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/root-user-best-practices.html)
 - CIS — [AWS Foundations Benchmark](https://www.cisecurity.org/benchmark/amazon_web_services)
-- NIST — [SP 800-53 Rev. 5 (AC-6 Least Privilege)](https://csrc.nist.gov/projects/risk-management/sp800-53-controls/release-search#!/control?version=5.1&number=AC-6)
+- NIST — [SP 800-53 Rev. 5 (AC-6 Least Privilege)](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final)
 - NIST — [Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework)
 - MITRE ATT&CK — [T1078.004 Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/)
 - MITRE — [CWE-269: Improper Privilege Management](https://cwe.mitre.org/data/definitions/269.html)

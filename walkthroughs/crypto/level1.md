@@ -387,7 +387,7 @@ NIST Special Publication 800-53 Revision 5 (the federal control catalog; widely 
 
 **OWASP API Security Top 10 (2023) — API2: Broken Authentication.** OWASP's API-specific Top 10 (last updated in 2023) covers JWT misuse explicitly. The category description names alg:none confusion, weak HMAC secrets, and missing token-revocation infrastructure as the most common manifestations.
 
-**OWASP JWT Cheat Sheet.** A focused defender-side reference, currently published as the Java-flavored *JSON Web Token for Java Cheat Sheet* (<https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html>). Equivalent Node.js / Python versions have been requested in OWASP's cheat-sheet backlog (issue #1176) but haven't been written. Contains the explicit guidance: "Always specify the algorithm to use to verify the signature." The language-agnostic complement is OWASP's WSTG chapter on testing JSON Web Tokens (<https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/10-Testing_JSON_Web_Tokens>).
+**OWASP JWT Cheat Sheet.** A focused defender-side reference (<https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html>). It began life as a Java-specific sheet and has since been generalised, so the guidance now reads language-agnostically. Contains the explicit instruction: "Always specify the algorithm to use to verify the signature." The language-agnostic complement is OWASP's WSTG chapter on testing JSON Web Tokens (<https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/10-Testing_JSON_Web_Tokens>).
 
 ### RFCs
 
@@ -668,16 +668,16 @@ For JWT specifically, **always pass the `algorithms` parameter on every `verify(
 ### Compliance frameworks
 
 - **PCI-DSS v4.0.1 full text** (PCI Security Standards Council): <https://www.pcisecuritystandards.org/document_library/>. Free registration required. The Requirement 6 and 8 sections cover authentication and secure coding directly.
-- **NIST SP 800-53 Rev. 5**: <https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final>. The IA, SC, AC, and AU control families cover the controls cited above.
+- **NIST SP 800-53 Rev. 5**: <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>. The IA, SC, AC, and AU control families cover the controls cited above.
 - **OWASP Top 10 (2025)**: <https://owasp.org/Top10/>. The current edition.
 - **OWASP API Security Top 10 (2023)**: <https://owasp.org/API-Security/editions/2023/en/0x00-header/>. The API-focused companion. Last updated in 2023; the 2025 cycle is in draft.
-- **OWASP JWT Cheat Sheet** (Java edition; equivalent versions for other languages): <https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html>.
+- **OWASP JWT Cheat Sheet**: <https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html>.
 
 ### Tools
 
 - **`jwt_tool`** (ticarpi): <https://github.com/ticarpi/jwt_tool>. The defacto JWT-attack toolkit. Supports alg:none confusion, RS→HS key confusion, jku/x5u injection, HMAC-secret brute-force, kid injection, and several other patterns.
 - **`hashcat`** mode 16500 (JWT HS256): <https://hashcat.net/wiki/doku.php?id=example_hashes>. Brute-force JWT HMAC secrets on GPU.
-- **jwt.io** (Auth0): <https://jwt.io>. Browser-based JWT decoder. Useful for ad-hoc inspection; do NOT paste tokens from production systems into the public site (the site does not transmit the token off-machine in modern versions, but the discipline is "decode locally").
+- **jwt.io** (Auth0): <https://www.jwt.io/>. Browser-based JWT decoder. Useful for ad-hoc inspection; do NOT paste tokens from production systems into the public site (the site does not transmit the token off-machine in modern versions, but the discipline is "decode locally").
 - **Semgrep registry — JWT rules**: <https://semgrep.dev/r/?q=jwt>. Community-maintained static-analysis rules for the JWT misconfiguration patterns.
 - **Sigma rules — JWT detections**: <https://github.com/SigmaHQ/sigma>. Search the repo for `jwt` or `alg`.
 

@@ -448,7 +448,7 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 *Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 - [HIPAA Security Rule — 45 CFR Part 164, Subpart C (HHS)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C)
-- [HHS Office for Civil Rights — Breach Portal ("Wall of Shame")](https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf)
+- [HHS Office for Civil Rights — Breach Portal ("Wall of Shame")](https://ocrportal.hhs.gov/ocr/breach/breach_frontpage.jsf)
 - [HITECH Act — Subtitle D, Privacy (HHS Summary)](https://www.hhs.gov/hipaa/for-professionals/special-topics/hitech-act-enforcement-interim-final-rule/index.html)
 - [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final)
 - [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final)
@@ -464,9 +464,9 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 - [MITRE ATT&CK — T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/)
 - [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/)
 - [HHS HPH-CPGs (Healthcare and Public Health Cybersecurity Performance Goals)](https://hphcyber.hhs.gov/performance-goals.html)
-- [Universal Health Services September 2020 ransomware — 8-K filing (direct)](https://www.sec.gov/Archives/edgar/data/0000352915/000156459020044863/uhs-8k_20200927.htm)
+- [Universal Health Services September 2020 ransomware — 8-K filing (direct)](https://www.sec.gov/Archives/edgar/data/352915/000156459020044863/uhs-8k_20200927.htm)
 - [Universal Health Services SEC filings index (EDGAR)](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000352915&type=8-K)
-- [Change Healthcare February 2024 cyberattack — UnitedHealth Group 8-K filing (SEC, Feb 22 2024)](https://www.sec.gov/Archives/edgar/data/0000731766/000073176624000045/unh-20240221.htm)
+- [Change Healthcare February 2024 cyberattack — UnitedHealth Group 8-K filing (SEC, Feb 22 2024)](https://www.sec.gov/Archives/edgar/data/731766/000073176624000045/unh-20240221.htm)
 - [GDI Foundation — MongoDB ransom-attack campaign coverage (2017)](https://gdi.foundation/)
 - [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
 - [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach)

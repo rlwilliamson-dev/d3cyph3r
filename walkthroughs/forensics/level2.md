@@ -272,13 +272,13 @@ Browser-artifact forensics has been pivotal in several high-profile cases over t
 
 **Casey Anthony (2008-2011).** [The Caylee Anthony case](https://en.wikipedia.org/wiki/Death_of_Caylee_Anthony) introduced an enduring controversy in browser forensics. The prosecution alleged that Casey Anthony had searched for "chloroform" 84 times on the family computer; the defense argued (and a forensic analyst later confirmed, post-trial) that the searches had actually been performed once — the count came from a tool that double-counted browser-history records. The case is a teaching reference because it shows the asymmetry from the other direction: forensic tools can mis-report what a database contains if the analyst doesn't verify the underlying schema. Anthony was acquitted of the murder charges; the chloroform-search forensic error is part of why.
 
-**Paige Thompson / Capital One (2019).** [Capital One's 2019 breach](https://en.wikipedia.org/wiki/2019_Capital_One_data_breach) — 100 million customer records exfiltrated by a former AWS engineer — was investigated in part through Thompson's browser and chat artifacts. Her Slack-channel posts and GitHub gist activity (also stored in SQLite-backed application databases) provided the timeline the DOJ used at trial. Thompson was convicted in 2022.
+**Paige Thompson / Capital One (2019).** [Capital One's 2019 breach](https://www.justice.gov/usao-wdwa/united-states-v-paige-thompson) — 100 million customer records exfiltrated by a former AWS engineer — was investigated in part through Thompson's browser and chat artifacts. Her Slack-channel posts and GitHub gist activity (also stored in SQLite-backed application databases) provided the timeline the DOJ used at trial. Thompson was convicted in 2022.
 
-**Cambridge Analytica (2018).** Not a criminal investigation per se, but the [FTC's 2019 settlement with Facebook](https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions) leaned on the discoverability of browser-history data via data-broker arrangements. Facebook had access to user browsing activity beyond the Facebook domain via Like-button beacons and Pixel integrations; that activity was stored, queryable, and ultimately the subject of a $5B penalty.
+**Cambridge Analytica (2018).** Not a criminal investigation per se, but the [FTC's 2019 settlement with Facebook](https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions-facebook) leaned on the discoverability of browser-history data via data-broker arrangements. Facebook had access to user browsing activity beyond the Facebook domain via Like-button beacons and Pixel integrations; that activity was stored, queryable, and ultimately the subject of a $5B penalty.
 
 **Strava heatmap (2018).** [Not a browser case, but parallel discipline.](https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases) Strava published an aggregate global heatmap of user activity derived from its mobile-app activity database (also SQLite-backed under iOS / Android). The heatmap inadvertently revealed the locations of U.S. military installations in Iraq, Syria, and Afghanistan because the only people running in those locations were the personnel. The lesson is identical to the browser-DB lesson: persistent activity logs exist for a feature reason (the user wants to see their own runs); the forensic / OSINT side benefits from the same persistence.
 
-**Mobile-forensics paradigm broadly.** The Cellebrite UFED and GrayKey product lines, which dominate the mobile-forensics market, are essentially SQLite parsers at their core. iOS app data, Android app data, and the OS-level databases on both platforms — all SQLite, all queryable. A 2024 Cellebrite product update specifically advertised improved WAL-recovery for [iOS Messages.app](https://cellebrite.com/en/cellebrite-pathfinder/) — the same forensic discipline, scaled to mobile.
+**Mobile-forensics paradigm broadly.** The Cellebrite UFED and GrayKey product lines, which dominate the mobile-forensics market, are essentially SQLite parsers at their core. iOS app data, Android app data, and the OS-level databases on both platforms — all SQLite, all queryable. Cellebrite's [UFED](https://cellebrite.com/en/products/cellebrite-inseyets/ufed/) extraction line is built around recovering and parsing exactly these databases, write-ahead logs included — the same forensic discipline, scaled to mobile.
 
 The thread running through all these cases is the same: SQLite is the universal user-activity ledger across modern computing, and the forensic implications follow from that.
 
@@ -290,7 +290,7 @@ The forensic side of this engagement sits inside a stack of overlapping framewor
 
 ### NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response
 
-[NIST SP 800-86](https://csrc.nist.gov/publications/detail/sp/800-86/final) (published 2006, final / still current as of May 2026 — there is no Rev. 2 and the document remains the canonical U.S. government reference for the forensic process). §3 lays out a four-phase model: collection → examination → analysis → reporting. The examination phase (§3.3) explicitly covers "data sources" and names browser activity records as one of the canonical sources, alongside file-system metadata, memory artifacts, network logs, and operating-system event logs. The 800-86 framing of "preserve the original, work on a verified copy, document each step" is precisely the discipline the `chain-of-custody.txt` baseline and the pre/post hash comparison are modeling in this level.
+[NIST SP 800-86](https://csrc.nist.gov/pubs/sp/800/86/final) (published 2006, final / still current as of May 2026 — there is no Rev. 2 and the document remains the canonical U.S. government reference for the forensic process). §3 lays out a four-phase model: collection → examination → analysis → reporting. The examination phase (§3.3) explicitly covers "data sources" and names browser activity records as one of the canonical sources, alongside file-system metadata, memory artifacts, network logs, and operating-system event logs. The 800-86 framing of "preserve the original, work on a verified copy, document each step" is precisely the discipline the `chain-of-custody.txt` baseline and the pre/post hash comparison are modeling in this level.
 
 The document is 121 pages and worth reading end-to-end if you're going to work in incident response. The §3.3 examination section is the closest thing to a single-source reference for what you just did in the solve.
 
@@ -374,17 +374,17 @@ Forensic curricula align tightly to the techniques this level demonstrates. A no
 
 **GIAC GCFA (Certified Forensic Analyst).** [SANS FOR508: Advanced Incident Response, Threat Hunting, and Digital Forensics](https://www.sans.org/cyber-security-courses/advanced-incident-response-threat-hunting-training/) is the upstream course; [GCFA](https://www.giac.org/certifications/certified-forensic-analyst-gcfa/) is broader-scoped than GCFE — endpoint forensics in general, with browser artifacts as one source among many. Comparable rigor; broader surface.
 
-**EC-Council CHFI (Computer Hacking Forensic Investigator).** [CHFI](https://www.eccouncil.org/programs/computer-hacking-forensic-investigator-chfi/) is the vendor-neutral cert most often required by U.S. federal agencies under [DoD 8570 / 8140](https://public.cyber.mil/cw/cwmp/). Browser DBs feature in the artifact-collection domain. Less rigorous than GCFE on the SQL formation side; broader coverage of legal procedure.
+**EC-Council CHFI (Computer Hacking Forensic Investigator).** [CHFI](https://www.eccouncil.org/train-certify/computer-hacking-forensic-investigator-chfi-north-america/) is the vendor-neutral cert most often required by U.S. federal agencies under [DoD 8140](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodm/814003p.pdf). Browser DBs feature in the artifact-collection domain. Less rigorous than GCFE on the SQL formation side; broader coverage of legal procedure.
 
-**CompTIA Security+ (SY0-701).** [Security+](https://www.comptia.org/certifications/security) Domain 4 (Security Operations) covers digital-forensics fundamentals including "data sources" — browser artifacts are explicitly named. Sec+ is the entry-level reference; if you're doing security work and don't have it, the test is two hours and forty-five questions and worth the morning to take.
+**CompTIA Security+ (SY0-701).** [Security+](https://www.comptia.org/en-us/certifications/security/) Domain 4 (Security Operations) covers digital-forensics fundamentals including "data sources" — browser artifacts are explicitly named. Sec+ is the entry-level reference; if you're doing security work and don't have it, the test is two hours and forty-five questions and worth the morning to take.
 
-**CompTIA CySA+ (CS0-003).** [CySA+](https://www.comptia.org/certifications/cybersecurity-analyst) covers forensic analysis within the broader security-operations role; browser-artifact handling is one section. Intermediate-level cert.
+**CompTIA CySA+ (CS0-003).** [CySA+](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/) covers forensic analysis within the broader security-operations role; browser-artifact handling is one section. Intermediate-level cert.
 
 **(ISC)² SSCP / CISSP.** [SSCP](https://www.isc2.org/Certifications/SSCP) and [CISSP](https://www.isc2.org/Certifications/CISSP) cover digital forensics at the policy / process level rather than the SQL / artifact level. The frameworks discussed in §5 above are the SSCP / CISSP vocabulary.
 
 **AccessData ACE / Magnet AX200 / Magnet AXIOM Certified Examiner (MCE).** Tool-specific certs. ACE is for FTK; the Magnet certs are for AXIOM (the dominant commercial browser-forensics tool in mobile + endpoint work). All three test on the same underlying schemas this level uses; they differ on the toolchain.
 
-**SANS-CERT FOR585 (Smartphone Forensic Analysis In-Depth).** [FOR585](https://www.sans.org/cyber-security-courses/smartphone-forensic-analysis-in-depth/) is the deep-dive course on mobile forensics, which is approximately 80% SQLite parsing in practice. If you're going to do iOS / Android forensic work, this is the course.
+**SANS-CERT FOR585 (Smartphone Forensic Analysis In-Depth).** [FOR585](https://www.sans.org/cyber-security-courses/advanced-smartphone-mobile-device-forensics) is the deep-dive course on mobile forensics, which is approximately 80% SQLite parsing in practice. If you're going to do iOS / Android forensic work, this is the course.
 
 The pattern across all of these: SQL formation against SQLite-backed application databases is the workhorse skill. Tools (FTK, EnCase, AXIOM, Cellebrite, Autopsy) automate the heavy lifting, but the analyst who can compose the queries directly is the one who can answer questions the tool didn't anticipate.
 
@@ -539,7 +539,7 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 
 ### Foundational documents
 
-- [NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/publications/detail/sp/800-86/final). The canonical U.S. government reference for the forensic process; §3.3 is the closest single-source reference for what this level demonstrates.
+- [NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/pubs/sp/800/86/final). The canonical U.S. government reference for the forensic process; §3.3 is the closest single-source reference for what this level demonstrates.
 - [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information in Nonfederal Systems and Organizations](https://csrc.nist.gov/pubs/sp/800/171/r3/final). The CUI control set Polaris is operating under; the AU family is the relevant subset.
 - [ISO/IEC 27037:2012 — Guidelines for identification, collection, acquisition and preservation of digital evidence](https://www.iso.org/standard/44381.html). International equivalent to 800-86; covers the same four-phase model.
 - [ISO/IEC 27042:2015 — Guidelines for the analysis and interpretation of digital evidence](https://www.iso.org/standard/44406.html). Companion document to 27037.
@@ -551,7 +551,7 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 - [DoDI 5205.16 — DoD Insider Threat Program](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520516p.pdf). Parent directive (reissued as an Instruction Dec 20, 2024; previously DoDD) for cleared-contractor insider-threat programs.
 - [DoDI 5200.48 — Controlled Unclassified Information](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520048p.PDF). DoD implementation of the CUI program (browser-only PDF at WHS).
 - [National Archives CUI Program](https://www.archives.gov/cui). Cross-government program landing; canonical reference for the CUI Marking Handbook and category index.
-- [DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting](https://www.acquisition.gov/dfars/252.204-7012-safeguarding-covered-defense-information-and-cyber-incident-reporting.). 72-hour reporting clock authority.
+- [DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting](https://www.ecfr.gov/current/title-48/chapter-2/subchapter-H/part-252/subpart-252.2/section-252.204-7012.). 72-hour reporting clock authority.
 - [DoD CMMC Final Rule (2024)](https://dodcio.defense.gov/CMMC/). CMMC Level 2 assessment objectives.
 
 ### Technical references
@@ -572,25 +572,25 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 
 - [GIAC GCFE — Certified Forensic Examiner](https://www.giac.org/certifications/certified-forensic-examiner-gcfe/) + [SANS FOR500](https://www.sans.org/cyber-security-courses/windows-forensic-analysis/)
 - [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa/) + [SANS FOR508](https://www.sans.org/cyber-security-courses/advanced-incident-response-threat-hunting-training/)
-- [SANS FOR585 — Smartphone Forensic Analysis In-Depth](https://www.sans.org/cyber-security-courses/smartphone-forensic-analysis-in-depth/)
-- [EC-Council CHFI](https://www.eccouncil.org/programs/computer-hacking-forensic-investigator-chfi/)
-- [CompTIA Security+ (SY0-701)](https://www.comptia.org/certifications/security)
-- [CompTIA CySA+ (CS0-003)](https://www.comptia.org/certifications/cybersecurity-analyst)
+- [SANS FOR585 — Smartphone Forensic Analysis In-Depth](https://www.sans.org/cyber-security-courses/advanced-smartphone-mobile-device-forensics)
+- [EC-Council CHFI](https://www.eccouncil.org/train-certify/computer-hacking-forensic-investigator-chfi-north-america/)
+- [CompTIA Security+ (SY0-701)](https://www.comptia.org/en-us/certifications/security/)
+- [CompTIA CySA+ (CS0-003)](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/)
 
 ### Practitioner blogs + case studies
 
 - [13Cubed YouTube channel](https://www.youtube.com/@13cubed). Long-running forensic-tutorial channel; SQLite browser-DB recovery is a recurring topic.
 - [Forensic Focus](https://www.forensicfocus.com/). Community of practice for digital-forensic examiners; the article archive is searchable by topic.
 - [SANS DFIR Blog](https://www.sans.org/blog/?focus-area=digital-forensics-incident-response). Authoritative source for current research.
-- [Magnet Forensics Research](https://www.magnetforensics.com/blog/). Vendor blog but technically substantive; AXIOM team writes about new artifact discoveries.
+- [Magnet Forensics Research](https://www.magnetforensics.com/resource-center/). Vendor blog but technically substantive; AXIOM team writes about new artifact discoveries.
 
 ### Real-world cases referenced
 
 - [Murder of Laci Peterson — Wikipedia](https://en.wikipedia.org/wiki/Murder_of_Laci_Peterson). MapQuest browser-history evidence.
 - [Death of Caylee Anthony — Wikipedia](https://en.wikipedia.org/wiki/Death_of_Caylee_Anthony). Browser-history evidence error in the prosecution case.
-- [2019 Capital One data breach — Wikipedia](https://en.wikipedia.org/wiki/2019_Capital_One_data_breach). Paige Thompson conviction (2022).
+- [2019 Capital One data breach — Wikipedia](https://www.justice.gov/usao-wdwa/united-states-v-paige-thompson). Paige Thompson conviction (2022).
 - [Strava heatmap controversy — The Guardian (2018)](https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases). Activity-database persistence at scale.
-- [FTC Facebook 2019 settlement](https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions). Cambridge Analytica fallout.
+- [FTC Facebook 2019 settlement](https://www.ftc.gov/news-events/news/press-releases/2019/07/ftc-imposes-5-billion-penalty-sweeping-new-privacy-restrictions-facebook). Cambridge Analytica fallout.
 
 ### CWE references
 

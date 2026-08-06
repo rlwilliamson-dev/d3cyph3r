@@ -580,7 +580,7 @@ The historical "best practice" of using robots.txt to hide things is the most re
 - [First American Financial Corp. May 2019 data exposure — KrebsOnSecurity](https://krebsonsecurity.com/2019/05/first-american-financial-corp-leaked-hundreds-of-millions-of-title-insurance-records/)
 - [First American — SEC enforcement action settlement (June 2021)](https://www.sec.gov/newsroom/press-releases/2021-102)
 - [MOVEit Transfer CVE-2023-34362 — NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2023-34362)
-- [Progress Software MOVEit advisory](https://www.progress.com/security/moveit-transfer-and-moveit-cloud-vulnerability)
+- [Progress Software MOVEit advisory](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a)
 - [gobuster — directory brute-forcer](https://github.com/OJ/gobuster)
 - [ffuf — fast web fuzzer](https://github.com/ffuf/ffuf)
 - [dirsearch — web path scanner](https://github.com/maurosoria/dirsearch)

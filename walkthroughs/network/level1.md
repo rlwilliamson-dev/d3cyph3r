@@ -682,8 +682,8 @@ None of this changes the solve. It does change how a written-up finding *reads* 
 ### Compliance frameworks
 
 - **HIPAA Security Rule full text (45 CFR Part 164 Subpart C)**: <https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C>.
-- **HHS Office for Civil Rights — Breach Reporting Portal ("Wall of Shame")**: <https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf>. The public list of healthcare breaches affecting 500+ individuals. Useful for sector-trend research and for sanity-checking your own org's exposure relative to peers.
-- **NIST SP 800-53 Rev. 5 — Security and Privacy Controls for Information Systems and Organizations**: <https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final>. The federal control catalog. The most heavily-cited controls for today's finding live in the SC (System and Communications Protection) and AC (Access Control) families.
+- **HHS Office for Civil Rights — Breach Reporting Portal ("Wall of Shame")**: <https://ocrportal.hhs.gov/ocr/breach/breach_frontpage.jsf>. The public list of healthcare breaches affecting 500+ individuals. Useful for sector-trend research and for sanity-checking your own org's exposure relative to peers.
+- **NIST SP 800-53 Rev. 5 — Security and Privacy Controls for Information Systems and Organizations**: <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>. The federal control catalog. The most heavily-cited controls for today's finding live in the SC (System and Communications Protection) and AC (Access Control) families.
 - **CIS Critical Security Controls v8.1**: <https://www.cisecurity.org/controls/v8-1>. The current revision (June 2024). Free download with email registration; the implementation-group mappings are particularly useful for sizing remediation effort against organizational maturity.
 - **OWASP Top 10 (2025)**: <https://owasp.org/Top10/>. The current edition. Compare against the 2021 list when working from older documentation.
 - **OWASP Web Security Testing Guide v4.2**: <https://owasp.org/www-project-web-security-testing-guide/v42/>. The current methodology. DNS enumeration lives in the Information Gathering chapter.

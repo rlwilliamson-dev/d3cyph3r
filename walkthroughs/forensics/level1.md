@@ -384,7 +384,7 @@ description: |
   username field by mistake.
 status: experimental
 references:
-  - https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4625
+  - https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625
 logsource:
   product: windows
   service: security
@@ -482,7 +482,7 @@ For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-e
 - **NIST SP 800-92 — Guide to Computer Security Log Management**: <https://csrc.nist.gov/pubs/sp/800/92/final>. Original 2006 publication; Revision 1 Initial Public Draft published October 11, 2023, public comment closed November 29, 2023, no Final as of May 2026. IPD landing page at <https://csrc.nist.gov/pubs/sp/800/92/r1/ipd>.
 - **NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response**: <https://csrc.nist.gov/pubs/sp/800/86/final>. 2006 publication, still the canonical NIST forensics reference.
 - **NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information**: <https://csrc.nist.gov/pubs/sp/800/171/r3/final>. Published May 2024 (Final). §3.3 is the AU family.
-- **DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting**: <https://www.acquisition.gov/dfars/252.204-7012-safeguarding-covered-defense-information-and-cyber-incident-reporting.>. The (c) paragraph defines the 72-hour reporting clock to DoD; the (e) paragraph requires 90-day media preservation post-incident.
+- **DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting**: <https://www.ecfr.gov/current/title-48/chapter-2/subchapter-H/part-252/subpart-252.2/section-252.204-7012.>. The (c) paragraph defines the 72-hour reporting clock to DoD; the (e) paragraph requires 90-day media preservation post-incident.
 - **NISPOM (32 CFR Part 117) — National Industrial Security Program Operating Manual**: <https://www.ecfr.gov/current/title-32/subtitle-A/chapter-I/subchapter-D/part-117>. §117.8 covers reporting and investigative authorities for cleared contractors.
 - **CMMC Final Rule (32 CFR Part 170)**: <https://www.ecfr.gov/current/title-32/subtitle-A/chapter-I/subchapter-G/part-170>. The 2024 final rule codifying CMMC into regulation. CMMC Assessment Guide at <https://dodcio.defense.gov/CMMC/>.
 - **CIS Critical Security Controls v8.1**: <https://www.cisecurity.org/controls>. Control 8 (Audit Log Management) is the relevant family.
@@ -503,29 +503,29 @@ For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-e
 
 ### Microsoft documentation
 
-- **Advanced Security Audit Policy Settings**: <https://learn.microsoft.com/windows/security/threat-protection/auditing/advanced-security-audit-policy-settings>. The full reference for Windows audit policy subcategories.
-- **Event 4624 (Logon)**: <https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4624>.
-- **Event 4625 (Failed Logon)**: <https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4625>. The reference for SubStatus codes including 0xC0000064 / 0xC000006A.
-- **Event 4663 (Object Access)**: <https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4663>.
-- **Event 4688 (Process Creation)**: <https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4688>. Includes the command-line capture setting.
-- **Windows Event Forwarding for Intrusion Detection**: <https://learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection>.
+- **Advanced Security Audit Policy Settings**: <https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/advanced-security-audit-policy-settings>. The full reference for Windows audit policy subcategories.
+- **Event 4624 (Logon)**: <https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4624>.
+- **Event 4625 (Failed Logon)**: <https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625>. The reference for SubStatus codes including 0xC0000064 / 0xC000006A.
+- **Event 4663 (Object Access)**: <https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4663>.
+- **Event 4688 (Process Creation)**: <https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4688>. Includes the command-line capture setting.
+- **Windows Event Forwarding for Intrusion Detection**: <https://learn.microsoft.com/en-us/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection>.
 
 ### LOLBins / detection tooling
 
 - **LOLBAS Project**: <https://lolbas-project.github.io/>. The catalog of Living-Off-The-Land binaries. certutil entry at <https://lolbas-project.github.io/lolbas/Binaries/Certutil/>.
 - **Sigma rules**: <https://sigmahq.io/>. The portable SIEM detection-rule format. SigmaHQ public ruleset at <https://github.com/SigmaHQ/sigma>.
-- **Sysmon**: <https://learn.microsoft.com/sysinternals/downloads/sysmon>. Microsoft Sysinternals' extended event source for Windows.
+- **Sysmon**: <https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon>. Microsoft Sysinternals' extended event source for Windows.
 - **SwiftOnSecurity Sysmon config**: <https://github.com/SwiftOnSecurity/sysmon-config>. Practitioner-default starter configuration.
 - **Olaf Hartong's sysmon-modular**: <https://github.com/olafhartong/sysmon-modular>. Modular alternative.
 - **EvtxECmd (Eric Zimmerman's EZ Tools)**: <https://ericzimmerman.github.io/>. The reference offline .evtx parser.
 - **Hayabusa**: <https://github.com/Yamato-Security/hayabusa>. Yamato Security's threat-hunting tool with built-in Sigma rules.
 - **Chainsaw**: <https://github.com/WithSecureLabs/chainsaw>. WithSecure Labs' .evtx search tool.
-- **KAPE**: <https://www.kroll.com/en/insights/publications/cyber/kroll-artifact-parser-extractor-kape>. Kroll's triage-collection tool.
+- **KAPE**: <https://www.kroll.com/en/publications/cyber/kroll-artifact-parser-extractor-kape>. Kroll's triage-collection tool.
 
 ### Incident references
 
 - **TJX 2007 breach — Krebs on Security long-form retrospective**: <https://krebsonsecurity.com/?s=TJX>. Brian Krebs's archive of TJX-related posts covers the breach timeline and post-incident forensic findings; the original Senate Permanent Subcommittee on Investigations hearing record at the CHRG-110shrg45225 identifier is no longer reachable via govinfo.
-- **Target 2013 breach — Senate Commerce Committee report (March 2014)**: <https://www.commerce.senate.gov/services/files/24d3c229-4f2f-405d-b8db-a3a67f183883>. Includes process-creation timeline pulled from Windows event logs.
+- **Target 2013 breach — Senate Commerce Committee report (March 2014)**: <https://www.commerce.senate.gov/wp-content/uploads/media/doc/2014%200325%20Target%20Kill%20Chain%20Analysis.pdf>. Includes process-creation timeline pulled from Windows event logs.
 - **Sony Pictures 2014 — FBI update (December 2014)**: <https://www.fbi.gov/news/press-releases/update-on-sony-investigation>. Cites WIPALL anti-forensic event-log destruction.
 - **OPM 2015 — House Oversight Committee report**: <https://oversight.house.gov/wp-content/uploads/2016/09/The-OPM-Data-Breach-How-the-Government-Jeopardized-Our-National-Security-for-More-than-a-Generation.pdf>. Event-log evidence cited throughout.
 - **Mandiant SUNBURST writeup (December 2020)**: <https://cloud.google.com/blog/topics/threat-intelligence/sunburst-additional-technical-details/>. Event-log forensics is a primary detection mechanism. (Mandiant content moved to Google Cloud post-acquisition; original `mandiant.com/resources/blog/...` URL redirects here.)

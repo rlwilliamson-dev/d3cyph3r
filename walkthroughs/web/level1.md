@@ -658,7 +658,7 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 - **FERPA implementing regulations — 34 CFR Part 99**: <https://www.ecfr.gov/current/title-34/subtitle-A/part-99>. The operational compliance text. Sections 99.3, 99.31, 99.32, 99.7 are the most cited for IDOR-style disclosure findings.
 - **Department of Education Privacy Technical Assistance Center (PTAC)**: <https://studentprivacy.ed.gov/>. Notification templates, breach-response guides, FERPA training materials for university administrators.
 - **NIST SP 800-171 Rev. 3**: <https://csrc.nist.gov/pubs/sp/800/171/r3/final>. Published May 2024; the current standard for protecting CUI in non-federal systems.
-- **NIST SP 800-53 Rev. 5**: <https://csrc.nist.gov/publications/detail/sp/800-53/rev-5/final>. The federal control catalog. AC family covers access control.
+- **NIST SP 800-53 Rev. 5**: <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>. The federal control catalog. AC family covers access control.
 
 ### CWE / MITRE ATT&CK
 
@@ -688,7 +688,7 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 
 - **Krebs on Security — "USPS Site Exposed Data on 60 Million Users" (Nov 2018)**: <https://krebsonsecurity.com/2018/11/usps-site-exposed-data-on-60-million-users/>. The original USPS Informed Visibility writeup.
 - **Optus 2022 — OAIC public statement and updates**: <https://www.oaic.gov.au/>. The OAIC's enforcement page tracks the multiple proceedings against Optus across 2022-2025.
-- **T-Mobile 2023 — SEC 8-K disclosure (January 19, 2023)**: <https://www.sec.gov/Archives/edgar/data/0001283699/000119312523010949/d641142d8k.htm>. The official disclosure document.
+- **T-Mobile 2023 — SEC 8-K disclosure (January 19, 2023)**: <https://www.sec.gov/Archives/edgar/data/1283699/000119312523010949/d641142d8k.htm>. The official disclosure document.
 - **HackerOne *Hacker-Powered Security Report* (evergreen landing)**: <https://www.hackerone.com/report/hacker-powered-security>. Industry-wide vulnerability-class frequencies.
 
 ### Detection / static analysis

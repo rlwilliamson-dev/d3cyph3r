@@ -323,9 +323,9 @@ Atlas can produce records showing who else asked.
 
 **Per-service SAN scope.** Each cert covers exactly the hostnames the service actually serves. The argument for wildcards ("we can't predict the next hostname") is the argument against wildcards ("the cert authenticates as hostnames we never thought about"). Mandiant, CrowdStrike, and the [Verizon Data Breach Investigations Report (DBIR)](https://www.verizon.com/business/resources/reports/dbir/) have all noted internal-CA wildcards in lateral-movement post-mortems; the 2025 DBIR calls out cert hygiene as one of the cheaper defender wins.
 
-**Monitor CT logs for your own domain.** crt.sh queries return JSON; [Censys CT-log monitoring](https://search.censys.io/certificates), [SecurityTrails](https://securitytrails.com/), [Cert Spotter](https://sslmate.com/certspotter/), and [Hardenize](https://www.hardenize.com/) all publish services that alert on unexpected issuances. The `marcus-test.atlas.health` entry on 2025-04-22 should have generated an alert in 2025-04. Most organizations don't set this up because it requires a small operational decision about where alerts route; the alternative is finding out about unauthorized issuances when an external party reports them.
+**Monitor CT logs for your own domain.** crt.sh queries return JSON; [Censys CT-log monitoring](https://search.censys.io/), [SecurityTrails](https://securitytrails.com/), [Cert Spotter](https://sslmate.com/certspotter/), and [Hardenize](https://www.hardenize.com/) all publish services that alert on unexpected issuances. The `marcus-test.atlas.health` entry on 2025-04-22 should have generated an alert in 2025-04. Most organizations don't set this up because it requires a small operational decision about where alerts route; the alternative is finding out about unauthorized issuances when an external party reports them.
 
-**Decommissioned hosts get reimaged or torn down, not left at "awaiting reimage."** The MDM-says-dead / firewall-says-alive split is recurring across industries. Close it by coupling MDM state to firewall ACLs: [Tailscale ACLs](https://tailscale.com/kb/1018/acls), [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/), or AWS Security Groups managed by an asset-inventory tool that knows host state. The asset-inventory tool becomes the source of truth; the firewall reads from it.
+**Decommissioned hosts get reimaged or torn down, not left at "awaiting reimage."** The MDM-says-dead / firewall-says-alive split is recurring across industries. Close it by coupling MDM state to firewall ACLs: [Tailscale ACLs](https://tailscale.com/docs/features/access-control/acls), [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/), or AWS Security Groups managed by an asset-inventory tool that knows host state. The asset-inventory tool becomes the source of truth; the firewall reads from it.
 
 **Autoresponders never ship cleartext credentials.** If a mailbox needs to issue a temp cred, it does so through a portal link the requester clicks while authenticated, not via reply-body cleartext. Modern alternatives: Atlassian Jira Service Management's password-reset workflow, [JumpCloud Self-Service](https://jumpcloud.com/) reset, [Okta Workflows](https://www.okta.com/products/workflows/), any IdP-tier reset. The autoresponder pattern is roughly fifteen years out of date and most modern compliance frameworks treat reply-body cleartext credentials as an explicit finding.
 
@@ -436,7 +436,7 @@ The level3 credential — `T3mp-DevopsCI-HD8814!q2` — is in `/var/log/exim/aut
 **Certificate Transparency monitoring + recon**
 
 - [Sectigo crt.sh CT-log search](https://crt.sh/) — public CT-log query interface.
-- [Censys Certificates Search](https://search.censys.io/certificates) — academic + commercial CT-log search.
+- [Censys Certificates Search](https://search.censys.io/) — academic + commercial CT-log search.
 - [Cert Spotter](https://sslmate.com/certspotter/) — open-source CT monitor + SaaS.
 - [SecurityTrails](https://securitytrails.com/) — DNS + CT historical data.
 - [Hardenize](https://www.hardenize.com/) — TLS + DNS hygiene scoring with CT monitoring.
@@ -460,7 +460,7 @@ The level3 credential — `T3mp-DevopsCI-HD8814!q2` — is in `/var/log/exim/aut
 
 - [HIPAA Security Rule (45 CFR Part 164, Subpart C)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C) — §164.312 covers Technical Safeguards.
 - [HIPAA Security Rule NPRM (January 2025)](https://www.federalregister.gov/documents/2025/01/06/2024-30983/hipaa-security-rule-to-strengthen-the-cybersecurity-of-electronic-protected-health-information) — proposed strengthening of encryption requirements (comment period closed March 7, 2025).
-- HHS — [Breach Notification Rule reporting portal](https://ocrportal.hhs.gov/ocr/breach/breach_report.jsf).
+- HHS — [Breach Notification Rule reporting portal](https://ocrportal.hhs.gov/ocr/breach/breach_frontpage.jsf).
 
 **MITRE ATT&CK references**
 

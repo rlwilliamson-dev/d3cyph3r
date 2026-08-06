@@ -430,7 +430,7 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 ### Deleted-isn't-gone + alias attribution (real cases)
 
 - **Truffle Security — "Anyone can Access Deleted and Private Repository Data on GitHub" (CFOR, July 2024)**: <https://trufflesecurity.com/blog/anyone-can-access-deleted-and-private-repo-data-github>.
-- **The Register coverage of the GitHub deleted-data finding (25 July 2024)**: <https://www.theregister.com/2024/07/25/data_from_deleted_github_repos/>.
+- **The Register coverage of the GitHub deleted-data finding (25 July 2024)**: <https://www.theregister.com/security/2024/07/25/data-from-deleted-github-repos-may-not-really-be-deleted/804909>.
 - **Ross Ulbricht / "altoid" deanonymization** (Wikipedia, with the `rossulbricht@gmail.com` forum-post detail): <https://en.wikipedia.org/wiki/Ross_Ulbricht>.
 - **Vice — "If You're Running an Illicit Drug Site, Maybe Don't Use Your Real Email"**: <https://www.vice.com/en/article/irs-found-accused-silk-road-masterminds-email-by-googling-silk-road/>. The IRS investigator's pivot on the reused handle + email.
 - **Strava global heatmap exposure (January 2018)**: <https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases>. The forgotten-footprint / location-leak pattern.
