@@ -338,7 +338,7 @@ Relevant techniques:
 - **T1213 (Data from Information Repositories)** — DB enumeration as the modern equivalent of wiki / SharePoint scrape.[^t1213] Reading the schema, the integrations table, the migration_artifacts table.
 - **T1552 (Unsecured Credentials)** family — broadly applies.[^t1552] The closest sub-technique:
   - **T1552.001 (Credentials In Files)** — database rows are not literally "files" but the technique's intent (credentials stored in unprotected locations accessible via known lookup) applies.[^t1552-001] Some practitioners argue for a separate sub-technique for DB-row credentials; T1552.001 is the closest current ATT&CK match.
-- **T1078.001 (Default Accounts)** — adjacent for the RDS master account scenario.
+- **T1078.001 (Default Accounts)** — adjacent for the RDS master account scenario.[^t1078-001]
 - **T1098 (Account Manipulation)** — what an adversary might do post-compromise.
 
 ## §6 — Cert exam relevance
@@ -541,13 +541,14 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 [^t1213]: [MITRE ATT&CK T1213 — Data from Information Repositories](https://attack.mitre.org/techniques/T1213/).
 [^t1552]: [MITRE ATT&CK T1552 — Unsecured Credentials](https://attack.mitre.org/techniques/T1552/). (parent technique with sub-techniques).
 [^t1552-001]: [MITRE ATT&CK T1552.001 — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
-[^capital-one-2019-senate-testimony]: [Capital One 2019 — Senate testimony and OCC consent order](https://www.senate.gov/). Senate Committee on Banking, Housing, and Urban Affairs hearings. The $80M civil money penalty was issued by the OCC (Office of the Comptroller of the Currency); FFIEC is the parent interagency council and doesn't issue enforcement orders directly.
+[^capital-one-2019-senate-testimony]: [OCC assesses $80 million civil money penalty against Capital One (2020)](https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html). The penalty was issued by the OCC, the Office of the Comptroller of the Currency; FFIEC is the parent interagency council and does not issue enforcement orders directly.
 [^moveit-transfer-2023-cl0p-cisa]: [MOVEit Transfer 2023 (CL0P) — CISA advisory](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a). The June 2023 CISA + FBI joint advisory.
 [^snowflake-customer-compromises-2024-mandiant]: [Snowflake customer compromises 2024 — Mandiant writeup](https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion/). The UNC5537 threat-actor attribution.
 [^verizon-dbir-2026-latest-edition]: [Verizon DBIR 2026 (latest edition as of the review date)](https://www.verizon.com/business/resources/reports/dbir/).
 [^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
 [^cert-ccsp]: [ISC2 CCSP — certification exam outline](https://www.isc2.org/certifications/ccsp/ccsp-certification-exam-outline).
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^t1078-001]: [MITRE ATT&CK — T1078.001: Valid Accounts: Default Accounts](https://attack.mitre.org/techniques/T1078/001/).
 
 ### Further reading
 
@@ -563,4 +564,4 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 - [HashiCorp Vault (alternative to Secrets Manager for multi-cloud / on-prem)](https://developer.hashicorp.com/vault).
 - [PostgreSQL pgaudit project](https://www.pgaudit.org/). The community-maintained source for the extension RDS runs.
 - [PostgreSQL security documentation (vulnerability reporting + advisories)](https://www.postgresql.org/support/security/).
-- [For configuration-side topics (authentication, encryption, row-level security), see the specific subsection pages](https://www.postgresql.org/docs/current/auth-methods.html).
+- [PostgreSQL — authentication methods](https://www.postgresql.org/docs/current/auth-methods.html). The configuration-side reference for authentication, encryption and row-level security.

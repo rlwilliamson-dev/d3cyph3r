@@ -172,7 +172,7 @@ Today's finding looks like a single bad query response. It's actually a five-fai
 
 `atlas-default-2025` is a vendor default. Marcus admitted to it in a Q1 2025 quarterly review and said the rotation would happen "next sprint." Five sprints later, it was still live. This is CWE-1392, *Use of Default Credentials*.[^cwe-1392] It's the cleanest possible weakness — the system shipped with a credential, the documentation flagged that the credential needed to be changed, the team intended to change it, the change never happened.
 
-CWE-1392 is the more specific successor to the broader and longer-running CWE-798 (*Use of Hard-coded Credentials*). MITRE distinguishes the two: hard-coded credentials are baked into source code or compiled binaries by developers; default credentials ship with the product and are documented as needing to be changed by the operator. The mitigation is the same on the operator side either way — change the value, prove the change took, audit periodically. But the responsibility shifts. Hard-coded credentials are a vendor failure; default credentials are an operator failure to follow vendor guidance.
+CWE-1392 is the more specific successor to the broader and longer-running CWE-798 (*Use of Hard-coded Credentials*).[^cwe-798] MITRE distinguishes the two: hard-coded credentials are baked into source code or compiled binaries by developers; default credentials ship with the product and are documented as needing to be changed by the operator. The mitigation is the same on the operator side either way — change the value, prove the change took, audit periodically. But the responsibility shifts. Hard-coded credentials are a vendor failure; default credentials are an operator failure to follow vendor guidance.
 
 Default credentials remain one of the most common findings in real-world penetration tests, despite being one of the easiest weaknesses to fix.
 
@@ -180,7 +180,7 @@ Default credentials remain one of the most common findings in real-world penetra
 
 A vendor-provisioned service account should not have `/bin/bash` as its login shell. Atlas's database provisioning template created `dbadmin` as a postgres-operations service account; somebody (a junior engineer, six months ago, per the change history) replaced the default `/sbin/nologin` shell with `/bin/bash` to enable interactive debugging during an upgrade and never reverted the change.
 
-This is CWE-732, *Incorrect Permission Assignment for Critical Resource* — the same weakness that drove the level1@linux puzzle.[^cwe-732] Different surface (login shell configuration rather than file mode), same underlying anti-pattern: a permission was loosened for a one-time legitimate reason and never tightened back down. The MITRE entry for CWE-732 carries the "ALLOWED-WITH-REVIEW" mapping status — meaning it's a valid weakness ID but is frequently misused for authorization weaknesses (which actually belong under CWE-862 / CWE-863). For our finding here, CWE-732 fits cleanly: the explicit permission to log in interactively was set wrong for a service account.
+This is CWE-732, *Incorrect Permission Assignment for Critical Resource* — the same weakness that drove the level1@linux puzzle.[^cwe-732] Different surface (login shell configuration rather than file mode), same underlying anti-pattern: a permission was loosened for a one-time legitimate reason and never tightened back down. The MITRE entry for CWE-732 carries the "ALLOWED-WITH-REVIEW" mapping status — meaning it's a valid weakness ID but is frequently misused for authorization weaknesses (which actually belong under CWE-862 / CWE-863).[^cwe-863] For our finding here, CWE-732 fits cleanly: the explicit permission to log in interactively was set wrong for a service account.
 
 ### Failure 3: The DNS server allowed AXFR from any source (CWE-306)
 
@@ -208,7 +208,7 @@ This is the sticky-account anti-pattern, well-documented in IAM literature and e
 
 - **NIST SP 800-53 Rev. 5 AC-2(3)** (*Disable Accounts*) requires accounts to be disabled when no longer needed.[^nist-800-53]
 - **CIS Critical Security Controls v8.1 Control 5.3** (*Disable Dormant Accounts*) is the same requirement, phrased operationally.[^cis-critical-security-controls-v8]
-- **NIST SP 800-63B-4** (*Digital Identity Guidelines: Authentication and Authenticator Management*, July 2025 — supersedes the 2017 edition) covers the full account lifecycle including credential deprovisioning. (The 2017 edition was titled "Authentication and Lifecycle Management"; the Rev 4 retitle reflects the broader scope.)
+- **NIST SP 800-63B-4** (*Digital Identity Guidelines: Authentication and Authenticator Management*, July 2025 — supersedes the 2017 edition) covers the full account lifecycle including credential deprovisioning.[^nist-800-63b] (The 2017 edition was titled "Authentication and Lifecycle Management"; the Rev 4 retitle reflects the broader scope.)
 
 The pattern fails the same way at every organization that has ever set up a temporary access path: the access gets created with the best of intentions, an expiration date gets discussed in passing, no automated mechanism enforces the expiration, the people who set it up move on or forget, and the account remains live indefinitely. The IAM-platform answer (CyberArk PAM, BeyondTrust Privileged Identity, HashiCorp Vault with TTL-bound dynamic secrets) exists precisely because spreadsheets-of-expiration-dates don't work.
 
@@ -628,7 +628,7 @@ traceroute audit-bypass.atlas.internal
 
 What you'll see:
 
-- **`ip addr`** — `eth0` carries staging-db's primary IPv4. The address sits inside Atlas's RFC 1918 internal segment, which is the orthogonal datapoint the AXFR query *didn't* give you. Zone-file enumeration tells you *what hostnames exist*; `ip addr` tells you *where you are in the topology that resolves them*. A real-world auditor wants both.
+- **`ip addr`** — `eth0` carries staging-db's primary IPv4. The address sits inside Atlas's RFC 1918 internal segment, which is the orthogonal datapoint the AXFR query *didn't* give you.[^rfc-1918] Zone-file enumeration tells you *what hostnames exist*; `ip addr` tells you *where you are in the topology that resolves them*. A real-world auditor wants both.
 - **`ip route`** — the default route points at Atlas's internal gateway. Combined with `ip addr`, this is enough to draw a rough segment diagram on the engagement-notes whiteboard: staging-db lives on subnet X, routes outbound through gateway Y, and the AXFR-named internal hosts sit one hop deeper.
 - **`arp -a`** — entries for the gateway and any hosts staging-db has already exchanged packets with. This is post-hoc evidence of which AXFR targets are *reachable in practice* (a Layer-2 ARP entry only forms after a successful ARP request/reply round trip), not just *named in the zone file*. The two sets often differ in real engagements: zone files have stale entries, dev hosts that were decommed but never deregistered, etc.
 - **`nslookup atlas.internal`** — confirms the internal resolver from a different angle than `dig`. If you're documenting findings for an Atlas SRE who's used to nslookup output, having both renderings in the report is small-but-real polish.
@@ -692,6 +692,10 @@ None of this changes the solve. It does change how a written-up finding *reads* 
 [^cert-gsec]: [GIAC GSEC — Security Essentials](https://www.giac.org/certifications/security-essentials-gsec).
 [^cert-gcia]: [GIAC GCIA — Certified Intrusion Analyst](https://www.giac.org/certifications/certified-intrusion-analyst-gcia).
 [^cert-gpen]: [GIAC GPEN — Penetration Tester](https://www.giac.org/certifications/penetration-tester-gpen).
+[^cwe-798]: [CWE-798](https://cwe.mitre.org/data/definitions/798.html).
+[^cwe-863]: [CWE-863](https://cwe.mitre.org/data/definitions/863.html).
+[^rfc-1918]: [RFC 1918 — RFC 1918 - Address Allocation for Private Internets](https://datatracker.ietf.org/doc/html/rfc1918).
+[^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://csrc.nist.gov/pubs/sp/800/63/b/4/final).
 
 ### Further reading
 

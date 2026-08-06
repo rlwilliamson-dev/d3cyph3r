@@ -212,7 +212,7 @@ The reporting clock is the part worth committing to memory, because it is far ti
 
 ### MITRE ATT&CK — where the credential actually lived
 
-**[T1552.001 — Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/)**
+**[T1552.001 — Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/)**[^t1552-001]
 
 The in-game post-mortem names this alongside the sudo abuse, and it is
 worth separating because it describes a different failure. T1548.003 is
@@ -352,6 +352,7 @@ The bonus finds exist to exercise the systemic-root-cause pattern without leavin
 [^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^t1552-001]: [MITRE ATT&CK — T1552.001: Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
 
 ### Further reading
 
@@ -363,7 +364,7 @@ The bonus finds exist to exercise the systemic-root-cause pattern without leavin
 - [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and).
 - [GLBA Safeguards Rule — 16 CFR Part 314 (FTC; nonbank institutions, shown for contrast)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule).
 - [HashiCorp Vault — token management and revocation](https://developer.hashicorp.com/vault/docs/concepts/tokens).
-- [Have I Been Pwned — password-reuse failure mode](https://haveibeenpwned.com/).
+- [Have I Been Pwned — check an address against known breach corpora](https://haveibeenpwned.com/).
 - [visudo(8) — safe sudoers editing](https://man7.org/linux/man-pages/man8/visudo.8.html).
 
 ---

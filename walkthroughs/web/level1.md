@@ -259,7 +259,7 @@ The minimum report content:
 3. **The IDOR extends to legacy system accounts.** Meridian's `M-000xxxx` ID range still contains BluePier-era demo accounts. The student-facing UI hides them; the API does not filter them out. Their records may contain test data or operational metadata that shouldn't be reachable through an unauthorized API path.
 4. **A live service-account credential is published in plain text in a record's `advisor_notes` field.** The BluePier demo account at M-0000001 carries `portal-svc` credential `meridian-portal-svc-2026`. The credential should be rotated and the demo account decommissioned outright.
 5. **The `advisor_notes` field is a free-form text field with no schema constraint.** Anything anyone has ever written into it is recoverable through an IDOR-style query. The advisor_notes contents of other student records may contain similar leftovers from BluePier-era data.
-6. **Session-token observation**: the captured SSO session's `exp` claim decodes to 2036-04-09, ten years out. Long-lived service-account tokens are a separate finding under NIST SP 800-63B-4 §5 *Session Management* — short-lived tokens with proper refresh are the modern standard.
+6. **Session-token observation**: the captured SSO session's `exp` claim decodes to 2036-04-09, ten years out. Long-lived service-account tokens are a separate finding under NIST SP 800-63B-4 §5 *Session Management* — short-lived tokens with proper refresh are the modern standard.[^nist-800-63b]
 
 Send the report to Carlos with general counsel cc'd. He'll have the fix shipped before lunch.
 
@@ -304,7 +304,7 @@ This is the sticky-account anti-pattern documented in NIST SP 800-53 Rev. 5 cont
 
 The `advisor_notes` field exists for human-readable comments — "encouraged to apply to CMU," "recommend tutoring referral." It was used during BluePier's acceptance testing as a place to stash a credential because "it's just a string field, who's going to look at it on a system account?" The fact that the IDOR turned the JSON record into a publicly-recoverable artifact means anything stashed in any such field — across any record — is recoverable in the same way.
 
-This isn't a single CWE. The pattern shape is **CWE-200: Exposure of Sensitive Information to an Unauthorized Actor** (the broad umbrella, currently DISCOURAGED for mapping per the CWE catalog) layered with **CWE-540: Inclusion of Sensitive Information in Source Code** (the literal CWE-540 entry is about source code, but the spirit — "sensitive data should not appear in artifacts whose access control is not credential-grade" — applies). The narrower modern mapping is **CWE-312: Cleartext Storage of Sensitive Information**.[^cwe-312]
+This isn't a single CWE. The pattern shape is **CWE-200: Exposure of Sensitive Information to an Unauthorized Actor** (the broad umbrella, currently DISCOURAGED for mapping per the CWE catalog) layered with **CWE-540: Inclusion of Sensitive Information in Source Code** (the literal CWE-540 entry is about source code, but the spirit — "sensitive data should not appear in artifacts whose access control is not credential-grade" — applies).[^cwe-540][^cwe-200] The narrower modern mapping is **CWE-312: Cleartext Storage of Sensitive Information**.[^cwe-312]
 
 ### The compound effect
 
@@ -672,6 +672,9 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
 [^cert-gwapt]: [GIAC GWAPT — Web Application Penetration Tester](https://www.giac.org/certifications/web-application-penetration-tester-gwapt).
+[^cwe-200]: [CWE-200](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-540]: [CWE-540](https://cwe.mitre.org/data/definitions/540.html).
+[^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://csrc.nist.gov/pubs/sp/800/63/b/4/final).
 
 ### Further reading
 

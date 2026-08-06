@@ -14,7 +14,7 @@ The shell prompt now reads `audit@halton-prod-bastion`. You're logged in as `aud
 
 That cross-use is the first finding before you've run a single command, and Halton volunteered it as the briefing was being scoped. Halton's HBISO (Information Security Office) maintains a public-internal credential-naming standard — document HBPC-2022-014 rev 3 — that mandates *every* production-tier credential follows the pattern `Halton-YYYY-Q#!`. The standard does not require that distinct systems use distinct values. The standard does not promise that the string is reliably rotated. The standard delivers exactly one thing: predictability for auditors checking rotation in a spreadsheet. The trade-off was made knowingly; it is documented in §Rationale of the policy itself. You'll re-encounter that document later in this walkthrough as the second bonus find.
 
-For now, internalize the implication: when Daniel wrote `Halton-2024-Q3!` into a backup env file in November of the year prior, he also wrote the production *bastion's SSH login password* into that file — because the bastion login uses the same string Halton's DB policy mandates. The credential you carry forward today wears two hats. It is database password and shell password simultaneously. That's CWE-521 (Weak Password Requirements) and CWE-262 (Not Using Password Aging) layered on the original CWE-732 / CWE-200 stack from yesterday, and it's why a leak on the staging side traverses cleanly into a shell on the production side.[^cwe-521][^cwe-262][^cwe-732] Walkthroughs of secure-credential design routinely include the phrase "same string different system" as an antipattern; this is what it looks like in the wild.
+For now, internalize the implication: when Daniel wrote `Halton-2024-Q3!` into a backup env file in November of the year prior, he also wrote the production *bastion's SSH login password* into that file — because the bastion login uses the same string Halton's DB policy mandates. The credential you carry forward today wears two hats. It is database password and shell password simultaneously. That's CWE-521 (Weak Password Requirements) and CWE-262 (Not Using Password Aging) layered on the original CWE-732 / CWE-200 stack from yesterday, and it's why a leak on the staging side traverses cleanly into a shell on the production side.[^cwe-521][^cwe-262][^cwe-732] Walkthroughs of secure-credential design routinely include the phrase "same string different system" as an antipattern; this is what it looks like in the wild.[^cwe-200]
 
 Three failures, from yesterday plus this morning, put you at an `audit@halton-prod-bastion` prompt:
 
@@ -393,6 +393,7 @@ The bonus finds exist to let curious players exercise the systemic-root-cause an
 [^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cwe-200]: [CWE-200](https://cwe.mitre.org/data/definitions/200.html).
 
 ### Further reading
 
@@ -400,7 +401,7 @@ The bonus finds exist to let curious players exercise the systemic-root-cause an
 - [MITRE ATT&CK — T1053.003: Scheduled Task/Job: Cron](https://attack.mitre.org/techniques/T1053/003/).
 - [Snowflake (Brad Jones, CISO) — Detecting and Preventing Unauthorized User Access (June 2024 customer advisory)](https://medium.com/snowflake/detecting-and-preventing-unauthorized-user-access-d67be8bd66f6).
 - [CISA Alert — Snowflake Recommends Customers Take Steps to Prevent Unauthorized Access (June 3, 2024)](https://www.cisa.gov/news-events/alerts/2024/06/03/snowflake-recommends-customers-take-steps-prevent-unauthorized-access).
-- [Have I Been Pwned — credential-stuffing impact and the password-reuse failure mode](https://haveibeenpwned.com/).
+- [Have I Been Pwned — check an address against known breach corpora](https://haveibeenpwned.com/).
 - [gitleaks — credential-pattern scanner for logs and filesystems](https://github.com/gitleaks/gitleaks).
 - [trufflehog — credential-pattern scanner with verification](https://github.com/trufflesecurity/trufflehog).
 - [HashiCorp Vault — Getting Started (database secrets engine)](https://developer.hashicorp.com/vault/tutorials/db-credentials/database-secrets).

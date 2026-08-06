@@ -343,7 +343,7 @@ A third technique is relevant on the defender side:
 
 [CWE-539](https://cwe.mitre.org/data/definitions/539.html) is the
 weakness class the recovered session artifact belongs to, and it cuts
-both ways in this level.
+both ways in this level.[^cwe-539]
 
 A persistent cookie survives the browser session by design, which is
 what makes "remember me" work. The cost is that the authentication
@@ -548,6 +548,7 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 [^chrome-enterprise-policy-list]: [Chrome Enterprise policy list](https://chromeenterprise.google/policies/). The catalog defenders should configure.
 [^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
 [^cert-sscp]: [ISC2 SSCP — Systems Security Certified Practitioner](https://www.isc2.org/certifications/sscp).
+[^cwe-539]: [CWE-539](https://cwe.mitre.org/data/definitions/539.html).
 
 ### Further reading
 
@@ -555,7 +556,7 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 - [NISPOM (32 CFR Part 117)](https://www.ecfr.gov/current/title-32/subtitle-A/chapter-I/subchapter-D/part-117). National Industrial Security Program Operating Manual.
 - [DoDI 5205.16 — DoD Insider Threat Program](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520516p.pdf). Parent directive (reissued as an Instruction Dec 20, 2024; previously DoDD) for cleared-contractor insider-threat programs.
 - [DoDI 5200.48 — Controlled Unclassified Information](https://www.esd.whs.mil/Portals/54/Documents/DD/issuances/dodi/520048p.PDF). DoD implementation of the CUI program (browser-only PDF at WHS).
-- [DoD CMMC Final Rule (2024)](https://dodcio.defense.gov/CMMC/). CMMC Level 2 assessment objectives.
+- [CMMC Program final rule — 32 CFR Part 170 (89 FR 83214, 15 October 2024)](https://www.federalregister.gov/documents/2024/10/15/2024-22905/cybersecurity-maturity-model-certification-cmmc-program). Carries the CMMC Level 2 assessment objectives.
 - [Chromium History database schema](https://chromium.googlesource.com/chromium/src/+/main/components/history/). The actual source code that creates the urls / visits / downloads / keyword_search_terms tables you queried.
 - [Chromium Cookies schema](https://chromium.googlesource.com/chromium/src/+/main/net/cookies/). Same for the cookies file.
 - [SQLite documentation](https://www.sqlite.org/docs.html). Authoritative reference for the database format.

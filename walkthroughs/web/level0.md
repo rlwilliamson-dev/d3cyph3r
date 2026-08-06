@@ -316,7 +316,7 @@ The Common Weakness Enumeration catalog has four entries that map to Meridian's 
 
 **CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] The student records themselves. The umbrella weakness for any exposure of sensitive data. Important caveat: CWE-200's MITRE mapping status is currently **Discouraged** — when filing a specific finding, MITRE recommends citing the narrower child weakness instead (here, CWE-548 for the directory listing and CWE-552 for the file-accessibility pattern). CWE-200 remains a CWE Top 25 entry — it sat at #17 on the 2024 edition and #20 on the 2025 edition — but the mapping status is independent of the Top-25 rank: the rank is data-driven (CVE counts), while the Discouraged status reflects MITRE's guidance to use more specific child weaknesses when filing.
 
-**CWE-798 — Use of Hard-coded Credentials.**[^cwe-798] The DB password in `db-creds.txt`. The credential half of the finding. The closely-related **CWE-1392 (Use of Default Credentials)** would apply if `M3rid14n!2023-prod` had been the install-default; here it was the operator-chosen value never rotated, which fits CWE-798 more precisely.
+**CWE-798 — Use of Hard-coded Credentials.**[^cwe-798] The DB password in `db-creds.txt`. The credential half of the finding. The closely-related **CWE-1392 (Use of Default Credentials)** would apply if `M3rid14n!2023-prod` had been the install-default; here it was the operator-chosen value never rotated, which fits CWE-798 more precisely.[^cwe-1392]
 
 ### OWASP Top 10:2025 — A02:2025 (was A05:2021) and A01:2025
 
@@ -332,7 +332,7 @@ The OWASP 2025 recommended mitigations for A02 are: documented hardening procedu
 
 [CWE-668](https://cwe.mitre.org/data/definitions/668.html) is the
 weakness the other two sit inside, and it is the one worth carrying
-away, because it survives every specific fix applied here.
+away, because it survives every specific fix applied here.[^cwe-668]
 
 A control sphere is the boundary within which a resource's access rules
 are meant to apply. `DocumentRoot` is a sphere whose rule is "everything
@@ -579,6 +579,8 @@ The historical "best practice" of using robots.txt to hide things is the most re
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cwe-1392]: [CWE-1392](https://cwe.mitre.org/data/definitions/1392.html).
+[^cwe-668]: [CWE-668](https://cwe.mitre.org/data/definitions/668.html).
 
 ### Further reading
 

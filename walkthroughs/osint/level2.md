@@ -1,6 +1,6 @@
 # level2@osint — The Internet Never Forgets
 
-**Track:** OSINT · **Client:** Veridian Analytics · **Compliance regime:** HIPAA Security Rule (45 CFR Part 164, Subpart C) + HITRUST CSF v11 + NIST SP 800-66 Rev. 2 · **Builds on:** [`level1@osint`](/walkthroughs/#/osint/level1)
+**Track:** OSINT · **Client:** Veridian Analytics · **Compliance regime:** HIPAA Security Rule (45 CFR Part 164, Subpart C) + HITRUST CSF v11 + NIST SP 800-66 Rev.[^nist-800-66] 2 · **Builds on:** [`level1@osint`](/walkthroughs/#/osint/level1)
 
 > ⚠ This page contains the full solve path **and** the breadcrumb credential for `level3@osint`. If you haven't solved `level2@osint` yet, close this tab and come back after. The level's whole point is the moment you realize the "deleted" repo is still readable and the scrubbed handle is still in the archive — reading the writeup first removes it.
 
@@ -247,7 +247,7 @@ The Robots Exclusion Protocol — originally Martijn Koster's 1994 convention �
 - **T1593.002 (Search Engines)** — search-engine-style querying of archived/indexed content for leaked or sensitive material maps here.[^t1593-002]
 - **T1593.001 (Social Media)** — the `sherlock` handle pivot across the alias's platforms.[^t1593-001]
 - **T1589.001 (Gather Victim Identity Information: Credentials)** — both the still-archived AWS key and the pasted Nextcloud password are credentials recovered from open sources.[^t1589-001]
-- **T1552.001 (Unsecured Credentials: Credentials In Files)** and **T1078 (Valid Accounts)** are the post-recon, attacker-side continuations — and the line our scope does not cross.
+- **T1552.001 (Unsecured Credentials: Credentials In Files)** and **T1078 (Valid Accounts)** are the post-recon, attacker-side continuations — and the line our scope does not cross.[^t1552-001]
 
 ### CWE
 
@@ -436,6 +436,8 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
 [^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
+[^t1552-001]: [MITRE ATT&CK — T1552.001: Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
+[^nist-800-66]: [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final).
 
 ### Further reading
 

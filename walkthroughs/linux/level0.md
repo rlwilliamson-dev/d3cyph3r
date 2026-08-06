@@ -260,7 +260,7 @@ The CWE-798 entry has been in the catalog since the early days of CWE (entry cre
 
 Daniel's `creds.txt` is a textbook CWE-798 instance. The credential is in a flat file, with no encryption at rest, in a location readable by anyone on the system. The file is not source code — but CWE-798 explicitly includes configuration files and "any persistent storage" within its scope. The remediation is to use a secrets manager (Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler, etc.) and retrieve credentials at runtime, never store them at rest in flat files.[^aws-secrets-manager-user-guide]
 
-There are related CWEs worth knowing: **CWE-256 (Plaintext Storage of a Password)** is the narrower form specifically about credentials in cleartext; **CWE-312 (Cleartext Storage of Sensitive Information)** is the broader form covering any sensitive data. Auditors and security tools may cite any of the three depending on context. They all map to the same underlying mistake.
+There are related CWEs worth knowing: **CWE-256 (Plaintext Storage of a Password)** is the narrower form specifically about credentials in cleartext; **CWE-312 (Cleartext Storage of Sensitive Information)** is the broader form covering any sensitive data.[^cwe-312][^cwe-256] Auditors and security tools may cite any of the three depending on context. They all map to the same underlying mistake.
 
 ### OWASP Top 10 (2025) — A07: Authentication Failures
 
@@ -498,6 +498,8 @@ The bonus is a small wink at the discipline gap: the same set of commands (`sudo
 [^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
 [^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cwe-256]: [CWE-256](https://cwe.mitre.org/data/definitions/256.html).
+[^cwe-312]: [CWE-312](https://cwe.mitre.org/data/definitions/312.html).
 
 ### Further reading
 

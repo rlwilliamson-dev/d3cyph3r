@@ -148,6 +148,14 @@
 //      Audit BOTH on every walkthrough PR (including small content
 //      edits to an existing walkthrough):
 //        a. The walkthrough itself:
+//             - Run `node tools/verify-citations.mjs <track>/<level>`.
+//               Zero MISMATCH is the bar. This is the check that a
+//               citation points at the page it CLAIMS: check-links only
+//               proves a URL resolves, and a citation reading
+//               "[CWE-250](.../205.html)" resolves perfectly while being
+//               wrong. Read the WEAK list too; that is where a title
+//               over-claiming what a page contains turns up. UNVERIFIED
+//               entries (bot walls, PDFs) need opening by hand.
 //             - Run `node tools/check-links.mjs <track>/<level>`.
 //               Zero DEAD is the bar. Read the MOVED list by hand:
 //               a redirect that lands on a blog home page means the
@@ -321,6 +329,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "2.8.0";
+export const VERSION = "2.9.0";
 
 export const VERSION_DISPLAY = "v" + VERSION;

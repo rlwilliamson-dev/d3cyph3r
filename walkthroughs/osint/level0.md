@@ -289,7 +289,7 @@ The HPH-CPGs are not regulatory mandates in themselves — they are HHS recommen
 
 ### MITRE ATT&CK — reconnaissance as a documented tactic
 
-**[T1591.002 — Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/)**
+**[T1591.002 — Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/)**[^t1591-002]
 
 It is worth noticing that ATT&CK has a whole tactic for what this level
 does. Reconnaissance is not a preamble to the attack; it is part of it,
@@ -485,7 +485,7 @@ The historical lesson is for product designers: **never store password hints in 
 [^norton-lifelock-january-2023-credential]: [Norton LifeLock January 2023 credential-stuffing incident](https://www.bleepingcomputer.com/news/security/nortonlifelock-warns-that-hackers-breached-password-manager-accounts/).
 [^mat-honan-how-apple-and]: [Mat Honan — "How Apple and Amazon Security Flaws Led to My Epic Hacking" — Wired, August 6, 2012](https://www.wired.com/2012/08/apple-amazon-mat-honan-hacking/).
 [^dehashed-paid-breach-corpus-aggregator]: [Dehashed — paid breach-corpus aggregator](https://dehashed.com/).
-[^intelx-breach-data-search-engine]: [IntelX — breach-data search engine](https://intelx.io/).
+[^intelx-breach-data-search-engine]: [Intelligence X (IntelX) — breach-data search engine](https://intelx.io/).
 [^constella-intelligence-executive-protection-threat]: [Constella Intelligence — executive-protection threat intelligence](https://constella.ai/).
 [^spycloud-credential-monitoring-platform]: [SpyCloud — credential-monitoring platform](https://spycloud.com/).
 [^sans-giac-gosi-open-source]: [SANS GIAC GOSI — Open Source Intelligence certification](https://www.giac.org/certifications/open-source-intelligence-gosi/).
@@ -498,6 +498,7 @@ The historical lesson is for product designers: **never store password hints in 
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
 [^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
+[^t1591-002]: [MITRE ATT&CK — T1591.002: Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/).
 
 ### Further reading
 

@@ -197,7 +197,7 @@ Audit evidence for IA-5 includes a credential inventory with rotation timestamps
 
 ### NIST SP 800-57 Part 1 — Recommendation for Key Management
 
-NIST SP 800-57 is the canonical reference for how to actually manage cryptographic keys at every stage of their lifecycle.[^nist-800-57] **Part 1, General**, is now in its **fifth revision (Rev. 5, May 2020)**. Rev. 5 is still current as of this writing; subsequent special publications (SP 800-131A, SP 800-152) reference 800-57 Rev. 5 as the foundation document.[^nist-800-131a]
+NIST SP 800-57 is the canonical reference for how to actually manage cryptographic keys at every stage of their lifecycle.[^nist-800-57] **Part 1, General**, is now in its **fifth revision (Rev. 5, May 2020)**. Rev. 5 is still current as of this writing; subsequent special publications (SP 800-131A, SP 800-152) reference 800-57 Rev.[^nist-800-152] 5 as the foundation document.[^nist-800-131a]
 
 The whole publication is relevant to Vesta's situation, but two sections are particularly instructive for the Theo conversation tomorrow:
 
@@ -425,6 +425,7 @@ This is also the shape of why secret-management migrations stall at most consult
 [^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^nist-800-152]: [SP 800-152 — A Profile for U.S. Federal Cryptographic Key Management Systems](https://csrc.nist.gov/pubs/sp/800/152/final).
 
 ### Further reading
 

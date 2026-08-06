@@ -363,7 +363,7 @@ The relevant techniques:
 
 ### MITRE ATT&CK — the two reconnaissance techniques in play
 
-**[T1589.001 — Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/)**
+**[T1589.001 — Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/)**[^t1589-001]
 
 This is the technique the whole engagement rests on, and ATT&CK's
 placement of it is instructive: it sits in Reconnaissance, before any
@@ -377,7 +377,7 @@ What Veridian *can* control is whether a gathered credential still
 works, which is why the finding converts into rotation and MFA rather
 than into monitoring.
 
-**[T1591.002 — Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/)**
+**[T1591.002 — Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/)**[^t1591-002]
 
 The committed `.env` does more than expose keys. It names the services
 the project integrated with, which is organisational intelligence in its
@@ -539,7 +539,7 @@ For Aaron specifically, the lesson is **executive-protection adjacent**, not cor
 - Marisol's executive-protection vendor (if engaged) will absolutely note this in their threat-model write-up.
 - The remediation is straightforward — Strava → Privacy Controls → "Map Visibility" → set to "Followers Only" or hide identifiable segments — but it requires Aaron to do it; Veridian can't do it for him.
 
-For the project: this is the kind of finding that sits between "out of scope" and "must report." Note it in the engagement report, flag it for Marisol's discretion, and let Veridian's exec-protection vendor pick it up if engaged. The MITRE ATT&CK framework's [T1593.001 — Search Open Websites/Domains: Social Media](https://attack.mitre.org/techniques/T1593/001/) covers the technique from the offensive side; the defender response is **accounts inventory + privacy-default audit** for any named executive in a hostile-attention scenario.
+For the project: this is the kind of finding that sits between "out of scope" and "must report." Note it in the engagement report, flag it for Marisol's discretion, and let Veridian's exec-protection vendor pick it up if engaged. The MITRE ATT&CK framework's [T1593.001 — Search Open Websites/Domains: Social Media](https://attack.mitre.org/techniques/T1593/001/) covers the technique from the offensive side; the defender response is **accounts inventory + privacy-default audit** for any named executive in a hostile-attention scenario.[^t1593-001]
 
 For broader awareness: every fitness app, every social media platform, every "find friends nearby" feature shipping in 2026 is the same shape. The 2018 Strava incident is the named example; the underlying pattern is general.
 
@@ -591,6 +591,9 @@ For broader awareness: every fitness app, every social media platform, every "fi
 [^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
 [^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
 [^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
+[^t1589-001]: [MITRE ATT&CK — T1589.001: Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/).
+[^t1591-002]: [MITRE ATT&CK — T1591.002: Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/).
+[^t1593-001]: [MITRE ATT&CK — T1593.001: Search Open Websites/Domains: Social Media](https://attack.mitre.org/techniques/T1593/001/).
 
 ### Further reading
 

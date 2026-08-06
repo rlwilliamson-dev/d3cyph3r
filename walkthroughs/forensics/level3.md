@@ -206,7 +206,7 @@ The three additions and what each actually covers:
 
 **DKIM** (RFC 6376, an Internet Standard — the highest maturity level in the IETF process) attaches a cryptographic signature over selected headers and the body, verified against a public key in DNS.[^rfc-6376] It proves the domain signed the message and that the signed parts weren't altered. Its blind spot is that an *unsigned* message doesn't fail — `dkim=none` means there was nothing to check.
 
-**DMARC** ties the other two to the visible `From:` domain (**alignment**) and publishes what a receiver should do on failure. It is the piece that closes both blind spots, which is why `dmarc=fail` against `p=REJECT` is the load-bearing header in this level. DMARC was Informational for a decade as RFC 7489; it became Standards Track in May 2026 as **RFC 9989**, with RFC 9990 and RFC 9991 covering aggregate and failure reporting.[^rfc-9989][^rfc-7489] Deployed policies in the wild — including Polaris's — still overwhelmingly reflect the 7489 era.
+**DMARC** ties the other two to the visible `From:` domain (**alignment**) and publishes what a receiver should do on failure. It is the piece that closes both blind spots, which is why `dmarc=fail` against `p=REJECT` is the load-bearing header in this level. DMARC was Informational for a decade as RFC 7489; it became Standards Track in May 2026 as **RFC 9989**, with RFC 9990 and RFC 9991 covering aggregate and failure reporting.[^rfc-9989][^rfc-7489] Deployed policies in the wild — including Polaris's — still overwhelmingly reflect the 7489 era.[^rfc-9991][^rfc-9990]
 
 The `Received:` ordering rule that makes chain reading possible comes from **RFC 5322** (Internet Message Format): each relay prepends its trace field.[^rfc-5322] That single convention is what turns a header block into a timeline.
 
@@ -393,6 +393,8 @@ grep -n received mail/02-hutchins-genuine-2026-02-11.eml
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-gcfa]: [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa).
 [^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
+[^rfc-9990]: [RFC 9990 — RFC 9990 - Domain-Based Message Authentication, Reporting, and Conformance (DMARC) Aggregate Reporting](https://datatracker.ietf.org/doc/html/rfc9990).
+[^rfc-9991]: [RFC 9991 — RFC 9991 - Domain-Based Message Authentication, Reporting, and Conformance (DMARC) Failure Reporting](https://datatracker.ietf.org/doc/html/rfc9991).
 
 ### Further reading
 

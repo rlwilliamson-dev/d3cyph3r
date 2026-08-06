@@ -238,11 +238,11 @@ In level3 you'll assume that identity and discover what an attacker who found th
 
 This level stacks three independent failures, all rooted in the same missing process.
 
-1. **Excessive privilege (CWE-269 / CWE-250).**[^cwe-269] `legacy-deploy-bot` was granted `AdministratorAccess` — full `*:*` — to "unblock the migration." Attaching the broadest possible policy is faster than working out the specific permissions a task needs, so under deadline pressure it is what happens. The grant was never narrowed afterward. `broker-portal-svc` having account-wide IAM read is the same failure in a smaller costume.
+1. **Excessive privilege (CWE-269 / CWE-250).**[^cwe-269] `legacy-deploy-bot` was granted `AdministratorAccess` — full `*:*` — to "unblock the migration."[^cwe-250] Attaching the broadest possible policy is faster than working out the specific permissions a task needs, so under deadline pressure it is what happens. The grant was never narrowed afterward. `broker-portal-svc` having account-wide IAM read is the same failure in a smaller costume.
 
 2. **A dormant credential left enabled (NIST AC-2(3); CIS AWS 2.11).** The bot's access key has not been used since March 2024 but is still `Active`. Organizations heavily staff *granting* access (work stops without it) and barely staff *removing* it (nothing breaks when it's skipped). A credential nobody uses but everybody could is pure risk.
 
-3. **The secret stored in cleartext in a leftover file (CWE-312 / CWE-798).** Five service-account secrets sit in `bootstrap-iam-keys.env` on a shared host, two years after the file's own author wrote "DELETE THIS FILE AFTER CUTOVER." Long-lived static secrets are the credential type most likely to end up somewhere they shouldn't — a git history, a CI log, a backup, a bastion.
+3. **The secret stored in cleartext in a leftover file (CWE-312 / CWE-798).**[^cwe-798][^cwe-312] Five service-account secrets sit in `bootstrap-iam-keys.env` on a shared host, two years after the file's own author wrote "DELETE THIS FILE AFTER CUTOVER." Long-lived static secrets are the credential type most likely to end up somewhere they shouldn't — a git history, a CI log, a backup, a bastion.
 
 The connective tissue is **an identity lifecycle that has a "create" step and no "destroy" step.** The bot was created in thirty seconds and would have taken thirty seconds to delete. What made it dangerous was the two years in between, during which it was nobody's job to notice it. The owner of the teardown, Vikram Shah, left before the migration finished, and the task had no other owner — so least privilege quietly decayed into standing admin.
 
@@ -339,7 +339,7 @@ A dormant administrator key is not dangerous because of what it did. It
 is dangerous because of the sequence it makes available, and the in-game
 post-mortem names that sequence deliberately.
 
-**[T1098.001 — Account Manipulation: Additional Cloud Credentials](https://attack.mitre.org/techniques/T1098/001/)**
+**[T1098.001 — Account Manipulation: Additional Cloud Credentials](https://attack.mitre.org/techniques/T1098/001/)**[^t1098-001]
 
 The first thing an adversary does with admin is stop depending on the
 credential that got them in. Minting a new access key on a *different*
@@ -348,14 +348,14 @@ this is why incident response in cloud environments starts with
 enumerating recently-created credentials rather than with disabling the
 one that was found.
 
-**[T1098.003 — Account Manipulation: Additional Cloud Roles](https://attack.mitre.org/techniques/T1098/003/)**
+**[T1098.003 — Account Manipulation: Additional Cloud Roles](https://attack.mitre.org/techniques/T1098/003/)**[^t1098-003]
 
 Attaching policies or extending trust relationships spreads the
 privilege across identities that individually look unremarkable. A role
 whose trust policy quietly gained an extra principal is far harder to
 spot than a user holding `AdministratorAccess`.
 
-**[T1136.003 — Create Account: Cloud Account](https://attack.mitre.org/techniques/T1136/003/)**
+**[T1136.003 — Create Account: Cloud Account](https://attack.mitre.org/techniques/T1136/003/)**[^t1136-003]
 
 A newly created identity has no history to look anomalous against, and
 in an account that already contains a terminated employee and a
@@ -500,6 +500,12 @@ The account-level summary reports that the AWS account **root user** has a long-
 [^nycrr-500]: [NYDFS 23 NYCRR 500 (Cybersecurity Requirements, amended)](https://www.dfs.ny.gov/industry_guidance/cybersecurity).
 [^cert-ccsp]: [ISC2 CCSP — certification exam outline](https://www.isc2.org/certifications/ccsp/ccsp-certification-exam-outline).
 [^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cwe-250]: [CWE-250](https://cwe.mitre.org/data/definitions/250.html).
+[^cwe-312]: [CWE-312](https://cwe.mitre.org/data/definitions/312.html).
+[^cwe-798]: [CWE-798](https://cwe.mitre.org/data/definitions/798.html).
+[^t1098-001]: [MITRE ATT&CK — T1098.001: Account Manipulation: Additional Cloud Credentials](https://attack.mitre.org/techniques/T1098/001/).
+[^t1098-003]: [MITRE ATT&CK — T1098.003: Account Manipulation: Additional Cloud Roles](https://attack.mitre.org/techniques/T1098/003/).
+[^t1136-003]: [MITRE ATT&CK — T1136.003: Create Account: Cloud Account](https://attack.mitre.org/techniques/T1136/003/).
 
 ### Further reading
 

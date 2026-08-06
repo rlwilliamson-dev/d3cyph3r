@@ -14,13 +14,13 @@ Priya's overnight authorization note in chat: *"Marcus's team rotated `atlas-def
 
 The prompt now reads `audit-svc@audit-bypass:~$`. You're logged in as `audit-svc`, the deprecated Tessera dry-run identity, on a host the asset-management tool says doesn't exist. Yesterday's lesson was about DNS recon producing the internal hostname map. Today's lesson is about TLS cert recon producing the same map — *from inside a single TLS handshake*, plus a cleartext credential delivered to a mailbox the cert's metadata identified, plus a CT-log catalogue of every cert Atlas has ever ordered from a public CA. Three independent disclosure channels, all sourced from cryptographic infrastructure that nobody at Atlas thought was sensitive.
 
-For now, internalize the framing: a certificate is a public document. The TLS handshake REQUIRES the server to hand it to any client that opens a connection. The X.509 spec lets the issuer stuff arbitrary metadata into the cert, and people have been using that capacity as a junk drawer since 1988 (RFC 1422 is the original PEM spec). The defenses against information leakage in certs all reduce to "don't put the information in the cert in the first place" — and Atlas's 2023-vintage internal CA habit, set up by the same DevOps team that runs everything else Marcus signs off on, very much did.
+For now, internalize the framing: a certificate is a public document. The TLS handshake REQUIRES the server to hand it to any client that opens a connection. The X.509 spec lets the issuer stuff arbitrary metadata into the cert, and people have been using that capacity as a junk drawer since 1988 (RFC 1422 is the original PEM spec).[^rfc-1422] The defenses against information leakage in certs all reduce to "don't put the information in the cert in the first place" — and Atlas's 2023-vintage internal CA habit, set up by the same DevOps team that runs everything else Marcus signs off on, very much did.
 
 Three failures, from yesterday plus this morning, put you at an `audit-svc@audit-bypass` prompt:
 
-1. **Yesterday's CWE-200 zone-transfer leak** — `dig atlas.internal AXFR` returned the audit-bypass TXT record's literal credential. Covered in level1.
-2. **Atlas's CWE-1188 default-initialization habit** — the audit-bypass host was set up in 2023 for a vendor engagement and was supposed to be removed at the end of Q4 2024. The "remove me at the end of Q4" reminder was a free-form note in DNS instead of a ticket in an asset-lifecycle tool. The ticket didn't exist. The host still serves.
-3. **Atlas's CWE-547 cert-metadata-as-junk-drawer convention** — the 2023 self-signed cert encodes Atlas's internal infrastructure map in its SAN list AND carries a literal "DELETE BEFORE PROD" reminder in the Organization field that nobody acted on, AND names a service mailbox (`devops-ci@atlas.health`) in the OU field whose autoresponder still ships cleartext credentials in response to password-reset requests.
+1. **Yesterday's CWE-200 zone-transfer leak** — `dig atlas.internal AXFR` returned the audit-bypass TXT record's literal credential.[^cwe-200] Covered in level1.
+2. **Atlas's CWE-1188 default-initialization habit** — the audit-bypass host was set up in 2023 for a vendor engagement and was supposed to be removed at the end of Q4 2024.[^cwe-1188] The "remove me at the end of Q4" reminder was a free-form note in DNS instead of a ticket in an asset-lifecycle tool. The ticket didn't exist. The host still serves.
+3. **Atlas's CWE-547 cert-metadata-as-junk-drawer convention** — the 2023 self-signed cert encodes Atlas's internal infrastructure map in its SAN list AND carries a literal "DELETE BEFORE PROD" reminder in the Organization field that nobody acted on, AND names a service mailbox (`devops-ci@atlas.health`) in the OU field whose autoresponder still ships cleartext credentials in response to password-reset requests.[^cwe-547]
 
 That's the threat model of *getting* to this prompt. The lesson of this level is about what's *in* the cert and what the cert points at.
 
@@ -197,7 +197,7 @@ The log captures three outbound auto-reply bodies from the local exim instance, 
 
 `T3mp-DevopsCI-HD8814!q2`. That's your level3 credential — the temporary password for `devops-ci@devops-ci.atlas.internal`, issued April 9 with 72-hour validity expiring April 12. As of "right now in the engagement timeline" (April 10, 2026) the cred is good for another two days. The autoresponder shipped it in cleartext to the helpdesk noreply address; the local exim instance logged the cleartext to disk; anyone with read access on this host (`audit-svc`, root, anyone in the `adm` group) gets the cred.
 
-That's CWE-532 (Insertion of Sensitive Information into Log File) at the autoresponder layer, layered on top of a separate finding — the autoresponder is *configured* to ship temporary credentials in the reply body in the first place. That's a process-design failure that the SIEM should flag and the helpdesk runbook should never have authorized. The defender section walks through what a modern password-reset flow looks like (portal-link-driven, IdP-mediated, never cleartext-in-email) but the short version is: this autoresponder pattern is roughly fifteen years out of date.
+That's CWE-532 (Insertion of Sensitive Information into Log File) at the autoresponder layer, layered on top of a separate finding — the autoresponder is *configured* to ship temporary credentials in the reply body in the first place.[^cwe-532] That's a process-design failure that the SIEM should flag and the helpdesk runbook should never have authorized. The defender section walks through what a modern password-reset flow looks like (portal-link-driven, IdP-mediated, never cleartext-in-email) but the short version is: this autoresponder pattern is roughly fifteen years out of date.
 
 ### Step 7: Document scope, return to lobby
 
@@ -213,7 +213,7 @@ The lesson the level teaches in one sentence: **a TLS cert is metadata-rich publ
 
 The longer version has two stacked layers.
 
-**Layer one — cert metadata as inventory.** X.509 (the cert format) was designed in 1988 by ITU-T to carry identity attestations for X.500 directory entries. The SAN extension was added in 1999 (RFC 2459) and broadened over the next decade because the original CN-based naming was insufficient for the multi-host TLS deployments the web demanded. The SAN list lets one cert authoritatively cover multiple hostnames, which is operationally cheap; the side effect is that the cert is now a list of every hostname the operator intended to cover. For internal CAs and self-signed certs, "intended to cover" usually means "every hostname I could think of when I generated the cert" — which produces the kitchen-sink SAN lists that mirror the internal hostname inventory.
+**Layer one — cert metadata as inventory.** X.509 (the cert format) was designed in 1988 by ITU-T to carry identity attestations for X.500 directory entries. The SAN extension was added in 1999 (RFC 2459) and broadened over the next decade because the original CN-based naming was insufficient for the multi-host TLS deployments the web demanded.[^rfc-2459] The SAN list lets one cert authoritatively cover multiple hostnames, which is operationally cheap; the side effect is that the cert is now a list of every hostname the operator intended to cover. For internal CAs and self-signed certs, "intended to cover" usually means "every hostname I could think of when I generated the cert" — which produces the kitchen-sink SAN lists that mirror the internal hostname inventory.
 
 **Layer two — cert metadata as ID document.** RFC 5280 makes the Subject's distinguished-name fields free-form: C (country), ST (state), L (locality), O (organization), OU (organizational unit), CN (common name), plus email-address attributes. People have been using OU as a free-form note field since the 1990s. Atlas's habit is to put a service email there; other organizations put departmental notes, internal ticket IDs, deployment dates, build numbers. Anything in the Subject is permanent for the cert's lifetime; cert metadata is operational documentation that survives every deploy that doesn't include a cert rotation.
 
@@ -449,6 +449,12 @@ The level3 credential — `T3mp-DevopsCI-HD8814!q2` — is in `/var/log/exim/aut
 [^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
+[^cwe-200]: [CWE-200](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-1188]: [CWE-1188](https://cwe.mitre.org/data/definitions/1188.html).
+[^cwe-547]: [CWE-547](https://cwe.mitre.org/data/definitions/547.html).
+[^cwe-532]: [CWE-532](https://cwe.mitre.org/data/definitions/532.html).
+[^rfc-1422]: [RFC 1422 — RFC 1422 - Privacy Enhancement for Internet Electronic Mail: Part II: Certificate-Based Key Management](https://datatracker.ietf.org/doc/html/rfc1422).
+[^rfc-2459]: [RFC 2459 — RFC 2459 - Internet X.509 Public Key Infrastructure Certificate and CRL Profile](https://datatracker.ietf.org/doc/html/rfc2459).
 
 ### Further reading
 

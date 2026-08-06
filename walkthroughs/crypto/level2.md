@@ -29,7 +29,7 @@ You used the `vesta-admin-handoff-2026` token from yesterday's JWT decode to ssh
 Three failures stack here. Each one alone would be a finding; together they produce an instant-Phase-2-remediation conversation.
 
 1. **Yesterday's CWE-347 alg:none JWT** — covered in level1; produced the cred that landed you on this box.
-2. **Theo's choice of MD5 unsalted** — modern GPUs hash MD5 at ~50 billion/s. Against the 14M-entry rockyou wordlist that's roughly 300 microseconds of compute. The "hash" provides zero work-factor protection (CWE-916, the canonical CWE for this exact failure mode).
+2.[^cwe-347] **Theo's choice of MD5 unsalted** — modern GPUs hash MD5 at ~50 billion/s. Against the 14M-entry rockyou wordlist that's roughly 300 microseconds of compute. The "hash" provides zero work-factor protection (CWE-916, the canonical CWE for this exact failure mode).
 3.[^cwe-916] **Theo's password reuse** — the four hashes that crack all share the same plaintext. One plaintext gates the admin login, the prod-DB account, the AES backup encryption key, and the S3 read-only service. Rotating one means rotating four (CWE-521 + CWE-262, plus PCI-DSS v4.0 §8.3 explicitly).[^cwe-521][^cwe-262]
 
 Priya, briefing you in chat as you SSH'd in: *"hash-id, then john. Read the FULL john output — the QSA call wants the exact number of cracked hashes and the exact plaintexts. Multiple labels with the same plaintext is the finding Saanvi's going to lead with. The aes-backup label specifically — Theo encrypted last quarter's payment-card token backup with that password. If the plaintext is in the crackable set, the encrypted backup is functionally plaintext from a PCI standpoint."* That's your scope.
@@ -186,7 +186,7 @@ The longer version has three stacked layers.
 - **Argon2id** — winner of the Password Hashing Competition (2013-2015), specified in [RFC 9106](https://datatracker.ietf.org/doc/html/rfc9106). Tunable parameters: iterations, memory cost (Argon2 is memory-hard, meaning the attacker has to allocate significant RAM per guess, which negates GPU parallelism), parallelism. Default 2025-era starting parameters: 2-3 iterations, 64 MiB memory, parallelism 1. The named recommendation in NIST SP 800-63B-4 §5.1.1.2 and OWASP ASVS V2.4.[^nist-800-63b][^owasp-asvs]
 - **scrypt** — older (2009), memory-hard. Parameters: N (CPU/memory cost), r (block size), p (parallelism). Used by Dogecoin, Litecoin, and (historically) some KDF libraries.
 - **bcrypt** — older still (1999), based on Blowfish. Cost-factor parameter (`$2b$12$...` is cost 12). Not memory-hard, but the cost factor is well-understood and the function is mature. Widely deployed (Django, Laravel, Spring Security, Ruby's `BCrypt::Password`).
-- **PBKDF2** — oldest (RFC 2898, 2000; updated in [RFC 8018, 2017](https://datatracker.ietf.org/doc/html/rfc8018)). Not memory-hard. Used because it's FIPS-approved and required for some federal compliance contexts ([the PBKDF2 Wikipedia entry summarising NIST SP 800-132](https://en.wikipedia.org/wiki/PBKDF2) is the federal recommendation).
+- **PBKDF2** — oldest (RFC 2898, 2000; updated in [RFC 8018, 2017](https://datatracker.ietf.org/doc/html/rfc8018)).[^rfc-2898] Not memory-hard. Used because it's FIPS-approved and required for some federal compliance contexts ([the PBKDF2 Wikipedia entry summarising NIST SP 800-132](https://en.wikipedia.org/wiki/PBKDF2) is the federal recommendation).
 
 All four use a per-password salt (a random 16-32 byte value stored alongside the hash output) so that identical plaintexts hash to distinct outputs. The salt defeats rainbow-table attacks (which precompute hash→plaintext mappings for common passwords) AND defeats john's bulk-cracking parallelism (each guess has to be hashed independently against the target's salt).
 
@@ -427,6 +427,8 @@ The level3 credential — `TheoVesta!1` — is the AES backup encryption passwor
 [^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
+[^cwe-347]: [CWE-347](https://cwe.mitre.org/data/definitions/347.html).
+[^rfc-2898]: [RFC 2898 — RFC 2898 - PKCS #5: Password-Based Cryptography Specification Version 2.0](https://datatracker.ietf.org/doc/html/rfc2898).
 
 ### Further reading
 

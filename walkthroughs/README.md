@@ -180,6 +180,40 @@ more than one link, a marker inside a definition, and a
 defined-but-never-cited source all fail `tools/build-walkthroughs.mjs`.
 Nothing is written when they do.
 
+It also enforces the **other direction**: an identifier named in the
+prose with no source anywhere in §9 fails the build. That covers CWE,
+CVE, ATT&CK sub-technique, RFC and NIST SP numbers, which each have a
+canonical per-identifier page, so "named but unsourced" is a fact
+rather than an opinion.
+
+Both directions matter and they are not the same check. Verifying only
+that every listed source gets used says nothing about whether every
+claim has a source — which is how 53 identifiers ended up asserted in
+prose with nothing to look them up by.
+
+### Verifying the destination, not just the status code
+
+```bash
+node tools/verify-citations.mjs                 # whole corpus
+node tools/verify-citations.mjs linux/level3    # one walkthrough
+```
+
+`check-links` answers "does this URL resolve", which is weaker than it
+sounds. A citation reading `[CWE-250 — ...](.../205.html)` resolves
+perfectly and is wrong. So does one pointing at a vendor's homepage
+instead of the document it names.
+
+This fetches each page and requires the thing the citation *claims* to
+actually appear there: the identifier if the title carries one (a
+CWE-250 page says "CWE-250" and no other page does), otherwise a
+majority of the title's distinctive words. Anything it cannot read —
+bot walls, PDFs, JavaScript-rendered pages — is reported as UNVERIFIED
+rather than guessed at, and those need a human to open them.
+
+Run it on every walkthrough PR. Zero MISMATCH is the bar; read the WEAK
+list, since that is where a title that over-claims what a page contains
+shows up.
+
 ### §7.5 Optional exploration — author guide (v1.10.0)
 
 Every shipped level has at least one `bonusFinds` entry that fires

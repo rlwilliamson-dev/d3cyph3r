@@ -459,7 +459,7 @@ crisis in addition to a disclosure.
 
 **[T1567.002 — Exfiltration to Cloud Storage](https://attack.mitre.org/techniques/T1567/002/)**
 closes the loop: cloud storage is also where data *leaves*, over TLS, to
-a service indistinguishable from legitimate traffic.
+a service indistinguishable from legitimate traffic.[^t1567-002]
 
 The reason to enumerate these in a report is that "a bucket is public"
 invites the response "so we made it private." The technique chain is the
@@ -639,10 +639,10 @@ The CIS AWS Foundations Benchmark addresses this from the *audited* side: separa
 
 [^nist-800-53]: [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final).
 [^nist-cybersecurity-framework-2-0]: [NIST Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework).
-[^cis-aws-foundations-benchmark-current]: [CIS AWS Foundations Benchmark (current release v7.0.0; AWS Security Hub's managed standard still implements v5.0.0)](https://www.cisecurity.org/benchmark/amazon_web_services).
+[^cis-aws-foundations-benchmark-current]: [CIS AWS Foundations Benchmark](https://www.cisecurity.org/benchmark/amazon_web_services). Current release v7.0.0; AWS Security Hub's managed standard still implements v5.0.0.
 [^iso-27017]: [ISO/IEC 27017:2015 — Code of practice for cloud services](https://www.iso.org/standard/43757.html).
 [^owasp-cloud-native-application-security]: [OWASP Cloud-Native Application Security Top 10 (GitHub canonical — 2022 edition)](https://github.com/OWASP/Cloud-Native-Application-Security-Top-10).
-[^cwe-200]: [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (MITRE flags as "Discouraged" for direct vulnerability mapping; CWE-732 is the preferred citation for this scenario)](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-200]: [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/200.html). MITRE flags this entry as "Discouraged" for direct vulnerability mapping; CWE-732 is the preferred citation for this scenario.
 [^cwe-732]: [CWE-732 — Incorrect Permission Assignment for Critical Resource](https://cwe.mitre.org/data/definitions/732.html).
 [^cwe-285]: [CWE-285 — Improper Authorization](https://cwe.mitre.org/data/definitions/285.html).
 [^cwe-798]: [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html).
@@ -660,6 +660,7 @@ The CIS AWS Foundations Benchmark addresses this from the *audited* side: separa
 [^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^t1567-002]: [MITRE ATT&CK — T1567.002: Exfiltration Over Web Service: Exfiltration to Cloud Storage](https://attack.mitre.org/techniques/T1567/002/).
 
 ### Further reading
 

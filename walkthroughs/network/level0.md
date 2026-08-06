@@ -254,7 +254,7 @@ The Common Weakness Enumeration — MITRE's catalog of software weakness pattern
 
 **CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] The umbrella weakness. The Atlas Health database is the sensitive information; the unauthorized actor is any entity outside Atlas's authorized user population. CWE-200 has been in the catalog since the early days of the CWE program and is consistently in MITRE's annual Top 25 Most Dangerous Software Weaknesses.
 
-**CWE-668 — Exposure of Resource to Wrong Sphere.**[^cwe-668] The conceptual weakness in this finding: a resource (the database) is exposed to a network sphere (the open internet) that should not have access to it. CWE-668 is the parent of more specific weaknesses including CWE-200 (sensitive data) and CWE-749 (exposed dangerous functions). MITRE now flags CWE-668 as **"Discouraged" for mapping real-world vulnerabilities** — it's too high-level a catch-all for compliance-grade citations. It remains useful as an awareness reference and as the conceptual hierarchy parent; for an actual vulnerability writeup the more specific child weakness (CWE-200 here) is the preferred citation.
+**CWE-668 — Exposure of Resource to Wrong Sphere.**[^cwe-668] The conceptual weakness in this finding: a resource (the database) is exposed to a network sphere (the open internet) that should not have access to it. CWE-668 is the parent of more specific weaknesses including CWE-200 (sensitive data) and CWE-749 (exposed dangerous functions).[^cwe-749] MITRE now flags CWE-668 as **"Discouraged" for mapping real-world vulnerabilities** — it's too high-level a catch-all for compliance-grade citations. It remains useful as an awareness reference and as the conceptual hierarchy parent; for an actual vulnerability writeup the more specific child weakness (CWE-200 here) is the preferred citation.
 
 **CWE-1392 — Use of Default Credentials.**[^cwe-1392] The credential half of the finding. The database is operating with a default credential (`atlas-default-2025`) that should have been changed at provisioning time and was not. CWE-1392 is the modern, narrowly-scoped successor to the older "default credentials" patterns — it specifically addresses the case where a product or system ships with a known-default authenticator that the operator failed to change. The closely-related **CWE-798 (Use of Hard-coded Credentials)** would also be cited if the credential were *baked into the product* rather than configured by the operator; in this case the operator chose `atlas-default-2025` themselves at install time, which fits CWE-1392 more precisely.[^cwe-798]
 
@@ -461,7 +461,7 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 [^hhs-hph-cpgs-healthcare-and]: [HHS HPH-CPGs (Healthcare and Public Health Cybersecurity Performance Goals)](https://hphcyber.hhs.gov/performance-goals.html).
 [^universal-health-services-september-2020]: [Universal Health Services September 2020 ransomware — 8-K filing (direct)](https://www.sec.gov/Archives/edgar/data/352915/000156459020044863/uhs-8k_20200927.htm).
 [^universal-health-services-sec-filings]: [Universal Health Services SEC filings index (EDGAR)](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000352915&type=8-K).
-[^gdi-foundation-mongodb-ransom-attack]: [GDI Foundation — MongoDB ransom-attack campaign coverage (2017)](https://gdi.foundation/).
+[^gdi-foundation-mongodb-ransom-attack]: [Massive wave of MongoDB ransom attacks makes 26,000 new victims (BleepingComputer, 2017)](https://www.bleepingcomputer.com/news/security/massive-wave-of-mongodb-ransom-attacks-makes-26-000-new-victims/). Contemporaneous coverage of the campaign GDI Foundation researchers documented.
 [^ibm-cost-of-a-data]: [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach).
 [^censys-internet-wide-scanner]: [Censys — internet-wide scanner](https://search.censys.io/).
 [^hashicorp-boundary-just-in-time]: [HashiCorp Boundary — just-in-time bastion](https://developer.hashicorp.com/boundary).
@@ -471,6 +471,7 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cwe-749]: [CWE-749](https://cwe.mitre.org/data/definitions/749.html).
 
 ### Further reading
 

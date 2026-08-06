@@ -8,7 +8,7 @@
 
 ## §1 — The setup
 
-When you left the lobby at the end of `level0@crypto`, Vesta Retail had a tidy little incident on its hands. You'd filed the finding: Theo's commit moved the production payment-card-processor API key into a base64-encoded file and called it protection. Saanvi, Vesta's CTO, took the report, scheduled the rotation for the next change window (Friday), and Theo had a friendly, well-handled pre-meeting with Priya — Driftwood's senior consultant on the Vesta engagement. Theo, to his credit, took the news the way you want junior engineers to take this kind of news: he asked questions, wrote down the answers, and started reading RFC 4648 the same afternoon.
+When you left the lobby at the end of `level0@crypto`, Vesta Retail had a tidy little incident on its hands. You'd filed the finding: Theo's commit moved the production payment-card-processor API key into a base64-encoded file and called it protection. Saanvi, Vesta's CTO, took the report, scheduled the rotation for the next change window (Friday), and Theo had a friendly, well-handled pre-meeting with Priya — Driftwood's senior consultant on the Vesta engagement. Theo, to his credit, took the news the way you want junior engineers to take this kind of news: he asked questions, wrote down the answers, and started reading RFC 4648 the same afternoon.[^rfc-4648]
 
 It was at the end of that conversation that he mentioned, almost in passing, a second project.
 
@@ -212,7 +212,7 @@ Today's finding looks like a single missing argument on a single function call. 
 
 This is CWE-347, *Improper Verification of Cryptographic Signature*.[^cwe-347] The catalog entry describes the weakness as "the product does not verify, or incorrectly verifies, the cryptographic signature for data." The application's verification step exists; it returns success; the success has no cryptographic meaning. The signature was never checked.
 
-CWE-347 is the canonical weakness ID for signature-verification failures, with MITRE mapping status ALLOWED. It isn't currently on the CWE Top 25 list (the Top 25 entries that most often fire on JWT misconfigurations are CWE-287 *Improper Authentication* and CWE-863 *Incorrect Authorization*, both Top-25 regulars).[^cwe-287] The CWE-347 pattern persists at internet scale because JWT-based authentication has spread far faster than the operational knowledge of how to verify JWTs safely. Every framework's quickstart guide shows the two-argument `verify` call; the three-argument options pattern is documented but routinely omitted.
+CWE-347 is the canonical weakness ID for signature-verification failures, with MITRE mapping status ALLOWED. It isn't currently on the CWE Top 25 list (the Top 25 entries that most often fire on JWT misconfigurations are CWE-287 *Improper Authentication* and CWE-863 *Incorrect Authorization*, both Top-25 regulars).[^cwe-287] The CWE-347 pattern persists at internet scale because JWT-based authentication has spread far faster than the operational knowledge of how to verify JWTs safely.[^cwe-863] Every framework's quickstart guide shows the two-argument `verify` call; the three-argument options pattern is documented but routinely omitted.
 
 The disclosure that introduced the JWT-library community to the alg:none and RS→HS attack families was Tim McLean's March 2015 Auth0 blog post, *"Critical vulnerabilities in JSON Web Token libraries."*[^tim-mclean-critical-vulnerabilities-in] McLean was an independent security researcher at the time; the post was a guest piece. The disclosure was tracked across multiple per-library CVE assignments — **CVE-2015-2951** for the php-jwt alg:none case, **CVE-2015-9235** for the node-jsonwebtoken RS→HS key-confusion case, and similar per-library numbers for the rest.[^cve-2015-2951][^cve-2015-9235] The libraries patched, mostly by changing the default behavior to reject alg:none in the absence of an explicit whitelist. The vulnerability is back the moment any operator passes an empty array as `algorithms`, manually allows `none`, uses an older library version, or — most commonly — writes new code that doesn't pass an options object at all.
 
@@ -224,7 +224,7 @@ JWT payloads are not confidential. RFC 7519 is explicit on this: the payload is 
 
 Most production deployments of JWTs use the JWS form. Most JWT tutorials demonstrate the JWS form. Many engineers learn that the JWT is "encoded" and reach the incorrect conclusion that it's also "encrypted." It isn't. Anything in a JWT payload is readable by anyone who holds the token, anyone who can pull the token from a log, anyone who intercepts the network call, and anyone who sees the token in a debug dump.
 
-This sub-failure maps to **CWE-540** *Inclusion of Sensitive Information in Source Code* (in spirit; the literal CWE-540 entry is source code, but the principle "sensitive data should not be placed in artifacts whose access control is not credential-grade" carries through).[^cwe-540] The narrower mapping is to the broader CWE-200 family, with the standard caveat that CWE-200 carries a "Discouraged for mapping" status in the current MITRE catalog.
+This sub-failure maps to **CWE-540** *Inclusion of Sensitive Information in Source Code* (in spirit; the literal CWE-540 entry is source code, but the principle "sensitive data should not be placed in artifacts whose access control is not credential-grade" carries through).[^cwe-540] The narrower mapping is to the broader CWE-200 family, with the standard caveat that CWE-200 carries a "Discouraged for mapping" status in the current MITRE catalog.[^cwe-200]
 
 ### Failure 3: The admin-API log captures Authorization headers (CWE-532)
 
@@ -333,7 +333,7 @@ The Auth0 security blog has published several writeups over the years tracking w
 
 JWT misconfigurations rarely make front-page news on their own — they tend to be one finding among many in a larger breach disclosure. Recent named incidents where JWT-class issues played a documented role include:
 
-- **Atlassian Confluence (CVE-2022-26134, June 2022)**: a server-side template injection (technically an OGNL injection) in Confluence Data Center and Server allowed unauthenticated RCE. Volexity discovered and disclosed the vulnerability during a Memorial Day incident response. The disclosure itself isn't a JWT story (the documented post-exploitation included BEHINDER implants and JSP webshells, not token forgery) — it's included here to contrast: pre-auth RCE is the catastrophic-but-rare initial-access vector; broken JWT verification is the small-but-routine version of "an attacker can act as an admin without being one." Both end in the same place; only one requires a discovered RCE.
+- **Atlassian Confluence (CVE-2022-26134, June 2022)**: a server-side template injection (technically an OGNL injection) in Confluence Data Center and Server allowed unauthenticated RCE.[^cve-2022-26134] Volexity discovered and disclosed the vulnerability during a Memorial Day incident response. The disclosure itself isn't a JWT story (the documented post-exploitation included BEHINDER implants and JSP webshells, not token forgery) — it's included here to contrast: pre-auth RCE is the catastrophic-but-rare initial-access vector; broken JWT verification is the small-but-routine version of "an attacker can act as an admin without being one." Both end in the same place; only one requires a discovered RCE.
 - **Okta support-system breach (October 2023)**: Okta (not Auth0 — Auth0's own support system was explicitly reported unaffected) disclosed that an attacker had abused a service account in the support-case-management system. The initial-access vector was credentials saved by an Okta employee to a personal Google account. HAR files in support cases contained session tokens which were used to hijack five customer sessions. The shape that maps to today's level: a service-account credential ended up where it shouldn't have, and session-token material captured in support-case artifacts was reusable. The general pattern — credentials and tokens in the wrong artifact — is the same shape as Theo's `handoff_token` claim in a JWT payload.
 - **Various HackerOne disclosures**: HackerOne's public bug-bounty platform has hundreds of disclosed JWT-related vulnerabilities across well-known vendors. Search the platform for `alg:none` or `jwt` for the current list. The recurring pattern is "the vendor's authentication library was correctly configured for the main API but a secondary admin endpoint was using the same library with a different (vulnerable) configuration." Theo's pattern.
 
@@ -536,10 +536,10 @@ The Sigma project publishes community-maintained SIEM detection rules — clone 
 
 Current `jsonwebtoken` (v9.x+) rejects alg:none by default even without explicit whitelisting. The library introduced this change in v9.0.0 after a sequence of CVEs in v8.x:
 
-- **CVE-2022-23539** — Insecure key-type handling in `jwt.verify()` (the `secretOrPublicKey` confusion variant).
-- **CVE-2022-23540** — Default algorithm handling permitted alg:none acceptance under specific configurations.
+- **CVE-2022-23539** — Insecure key-type handling in `jwt.verify()` (the `secretOrPublicKey` confusion variant).[^cve-2022-23539]
+- **CVE-2022-23540** — Default algorithm handling permitted alg:none acceptance under specific configurations.[^cve-2022-23540]
 
-Both were addressed in v9.0.0. (A third CVE, CVE-2022-23529, was initially assigned in the same advisory but was subsequently REJECTED by Mitre in January 2023 — don't carry it forward as a citation.) If Vesta's `package-lock.json` pins to v8.x or earlier, that's a separate finding requiring an upgrade plus regression testing. Equivalent legacy-version findings exist for PyJWT (pre-2.0), `node-jose` (CVE-2018-0114), and various other libraries.[^cve-2018-0114]
+Both were addressed in v9.0.0. (A third CVE, CVE-2022-23529, was initially assigned in the same advisory but was subsequently REJECTED by Mitre in January 2023 — don't carry it forward as a citation.) If Vesta's `package-lock.json` pins to v8.x or earlier, that's a separate finding requiring an upgrade plus regression testing.[^cve-2022-23529] Equivalent legacy-version findings exist for PyJWT (pre-2.0), `node-jose` (CVE-2018-0114), and various other libraries.[^cve-2018-0114]
 
 ### 7. Authentication-platform retrofit
 
@@ -614,7 +614,7 @@ The credential chain works without this section. The level seeds one hidden bonu
 - **Library popularity is a useful signal for maintenance, security-review attention, and supply-chain risk.** A library with one million weekly downloads has more eyes on it than one with a thousand. CVEs in popular libraries get filed faster, patched faster, and disclosed publicly faster. There's a real reason to prefer popular libraries on those grounds.
 - **Library popularity is *not* a signal that you've configured the library correctly.** Theo's bug isn't in `jsonwebtoken`; it's in his two-argument call to `jwt.verify()` that omits the algorithms whitelist. The library's default for the omitted whitelist accepts `alg:none` for backwards compatibility with old code. Theo would have hit the same bug with any of the popular JWT libraries in 2026 — the configuration-default surface is broadly similar across the ecosystem.
 
-The pattern in real consulting work: *the library is rarely the bug; the integration is*. The CWE-1188 ("Insecure Default Initialization of Resource") and CWE-1188-adjacent insecure-default findings drive a substantial fraction of real-world JWT bypasses, OAuth misconfigurations, S3 bucket leaks, and TLS-context misconfigurations. The fix is rarely "switch libraries"; the fix is usually "audit the integration."
+The pattern in real consulting work: *the library is rarely the bug; the integration is*. The CWE-1188 ("Insecure Default Initialization of Resource") and CWE-1188-adjacent insecure-default findings drive a substantial fraction of real-world JWT bypasses, OAuth misconfigurations, S3 bucket leaks, and TLS-context misconfigurations.[^cwe-1188] The fix is rarely "switch libraries"; the fix is usually "audit the integration."
 
 For JWT specifically, **always pass the `algorithms` parameter on every `verify()` call.** Modern versions of `jsonwebtoken` (9.x+) have made this stricter, but Theo's pinned dependency may not be on 9.x, and even on 9.x the configuration discipline is what saves you, not the version. Pin behavior, not version.
 
@@ -649,9 +649,9 @@ For JWT specifically, **always pass the `algorithms` parameter on every `verify(
 [^cwe-532]: [CWE-532: Insertion of Sensitive Information into Log File](https://cwe.mitre.org/data/definitions/532.html). The secrets-in-logs finding.
 [^cwe-540]: [CWE-540: Inclusion of Sensitive Information in Source Code](https://cwe.mitre.org/data/definitions/540.html). Useful framing for the JWT-payload-as-credential-envelope sub-pattern.
 [^tim-mclean-critical-vulnerabilities-in]: [Tim McLean, "Critical vulnerabilities in JSON Web Token libraries" (Auth0 blog guest post, March 2015)](https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/). The original alg:none and RS→HS disclosure; a decade later still the canonical reference for the algorithm-confusion family. McLean was an independent researcher at the time.
-[^cve-2015-2951]: [CVE-2015-2951 (Mitre)](https://www.cve.org/CVERecord?id=CVE-2015-2951). The php-jwt alg:none variant from McLean's disclosure — `jwt_tool` and most tooling cite this CVE for alg:none.
-[^cve-2015-9235]: [CVE-2015-9235 (Mitre)](https://www.cve.org/CVERecord?id=CVE-2015-9235). The node-jsonwebtoken RS→HS key-confusion variant from the same disclosure.
-[^cve-2018-0114]: [CVE-2018-0114 (Mitre)](https://www.cve.org/CVERecord?id=CVE-2018-0114). The node-jose embedded-`jwk` key-injection disclosure (Cisco).
+[^cve-2015-2951]: [CVE-2015-2951 (NVD)](https://nvd.nist.gov/vuln/detail/CVE-2015-2951). The php-jwt alg:none variant from McLean's disclosure — `jwt_tool` and most tooling cite this CVE for alg:none.
+[^cve-2015-9235]: [CVE-2015-9235 (NVD)](https://nvd.nist.gov/vuln/detail/CVE-2015-9235). The node-jsonwebtoken RS→HS key-confusion variant from the same disclosure.
+[^cve-2018-0114]: [CVE-2018-0114 (NVD)](https://nvd.nist.gov/vuln/detail/CVE-2018-0114). The node-jose embedded-`jwk` key-injection disclosure (Cisco).
 [^pci-dss-v4-0-1]: [PCI-DSS v4.0.1 full text (PCI Security Standards Council)](https://www.pcisecuritystandards.org/document_library/). Free registration required. The Requirement 6 and 8 sections cover authentication and secure coding directly.
 [^nist-800-53]: [NIST SP 800-53 Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). The IA, SC, AC, and AU control families cover the controls cited above.
 [^owasp-top-10-2025]: [OWASP Top 10 (2025)](https://owasp.org/Top10/). The current edition.
@@ -665,6 +665,14 @@ For JWT specifically, **always pass the `algorithms` parameter on every `verify(
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
 [^cert-gwapt]: [GIAC GWAPT — Web Application Penetration Tester](https://www.giac.org/certifications/web-application-penetration-tester-gwapt).
+[^cwe-863]: [CWE-863](https://cwe.mitre.org/data/definitions/863.html).
+[^cwe-200]: [CWE-200](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-1188]: [CWE-1188](https://cwe.mitre.org/data/definitions/1188.html).
+[^cve-2022-26134]: [CVE-2022-26134 (NVD)](https://nvd.nist.gov/vuln/detail/CVE-2022-26134).
+[^cve-2022-23539]: [CVE-2022-23539 (NVD)](https://nvd.nist.gov/vuln/detail/CVE-2022-23539).
+[^cve-2022-23540]: [CVE-2022-23540 (NVD)](https://nvd.nist.gov/vuln/detail/CVE-2022-23540).
+[^cve-2022-23529]: [CVE-2022-23529 (NVD)](https://nvd.nist.gov/vuln/detail/CVE-2022-23529).
+[^rfc-4648]: [RFC 4648 — RFC 4648 - The Base16, Base32, and Base64 Data Encodings](https://datatracker.ietf.org/doc/html/rfc4648).
 
 ### Further reading
 

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-08-06
+
+**Every citation now has to point at the page it claims.** v2.7.0 and v2.8.0 checked that each listed source got used. Nothing checked the reverse — that each claim had a source — or that a link went where it said it did. Both gaps are now closed and enforced.
+
+No gameplay changes.
+
+### Added
+
+- **`tools/verify-citations.mjs`.** Fetches each cited page and requires the thing the citation claims to actually appear there: the identifier when the title carries one, otherwise a majority of its distinctive words. A citation reading `[CWE-250 — ...](.../205.html)` resolves perfectly and is wrong, and a status code cannot tell the difference. Pages it cannot read — bot walls, PDFs, JavaScript-rendered documents — are reported as unverified rather than assumed good.
+- **53 sources for identifiers that had none.** CWE-863, CVE-2022-26134, T1098.001, RFC 4648 and 49 others were named in prose with nothing to look them up by. Every generated URL was fetched and required to contain its identifier before being written down, because a mistyped CWE number produces a real page about a different weakness.
+- **A build gate on the missing direction.** An identifier named in prose with no source in §9 now fails the build. "Every source is used" and "every claim has a source" are different properties; only the first was ever checked.
+
+### Fixed
+
+- **19 citations that resolved but misled.** Two pointed at homepages standing in for documents: Capital One's Senate testimony and OCC consent order went to senate.gov, and the MongoDB ransom campaign coverage to gdi.foundation. Five had connective prose as their link text — "The catalog of Living-Off-The-Land binaries. certutil entry at" — left behind when multi-source entries were split. Six buried an annotation inside the link title, one of them 308 characters long. Three CVE records pointed at a client-rendered page whose text no reader or checker can search.
+- **A source keyed as something it is not.** One entry was keyed `cve-2020-5741` but pointed at a LastPass disclosure that never names the CVE — its own title said so. It is now two sources: the disclosure, and the CVE record.
+- **The CMMC final rule.** Cited to a program landing page rather than the rule; it is 32 CFR Part 170, published at 89 FR 83214 on 15 October 2024.
+
 ## [2.8.0] - 2026-08-06
 
 **Frameworks and certifications now cite their sources, and the corpus has been re-audited end to end.** v2.7.0 added citations but placed each source at its first mention, which is the academic convention and turned out to be the wrong one here: the sections that make the checkable claims restate a standard the introduction already named in passing, so the marker landed in the introduction and the claims got nothing. Blast radius had zero citations across all 24 walkthroughs. Cert exam relevance had nine.
@@ -4018,7 +4036,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.5.0...v2.6.0

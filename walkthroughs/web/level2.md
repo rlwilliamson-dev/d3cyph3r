@@ -8,7 +8,7 @@
 
 ## §1 — The setup
 
-Day three at Meridian State University. The level1 finding — Carlos's transcript endpoint handing out any student's record to any logged-in user (an IDOR / CWE-639) — closed the same afternoon. Carlos shipped the one-line ownership check, deleted the BluePier-era demo account that had been leaking a service credential through its `advisor_notes` field, and self-reported to Cedarwood Mutual (the cyber-insurance carrier) before Priya finished drafting the language. Two findings in two days, both remediated inside the audit window. Carlos is the easiest client Driftwood has.
+Day three at Meridian State University. The level1 finding — Carlos's transcript endpoint handing out any student's record to any logged-in user (an IDOR / CWE-639) — closed the same afternoon.[^cwe-639] Carlos shipped the one-line ownership check, deleted the BluePier-era demo account that had been leaking a service credential through its `advisor_notes` field, and self-reported to Cedarwood Mutual (the cyber-insurance carrier) before Priya finished drafting the language. Two findings in two days, both remediated inside the audit window. Carlos is the easiest client Driftwood has.
 
 While cleaning up the demo account, Carlos recovered the service credential it had been leaking — `portal-svc` / `meridian-portal-svc-2026` — and, on a hunch, checked the catalog webapp host. The same key was sitting in that host's `authorized_keys`. BluePier had wired one service account across multiple hosts back in 2021 and nobody ever pulled it apart. That credential reuse is the third finding of the engagement; note it for the writeup. It's also how you get a shell on the catalog host:
 
@@ -460,6 +460,7 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
 [^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
+[^cwe-639]: [CWE-639](https://cwe.mitre.org/data/definitions/639.html).
 
 ### Further reading
 

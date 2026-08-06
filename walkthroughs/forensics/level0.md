@@ -502,7 +502,7 @@ For the project: when you train forensic examiners, train them on every EXIF fie
 [^ftk-imager-free-disk-imaging]: [FTK Imager — Free disk-imaging tool from AccessData](https://www.exterro.com/digital-forensics-software/ftk-imager).
 [^vice-december-3-2012-we]: [Vice — December 3, 2012: "We are with John McAfee right now, suckers." (the EXIF-revealed McAfee photograph)](https://www.vice.com/en/article/we-are-with-john-mcafee-right-now-suckers/).
 [^fbi-san-antonio-field-office]: [FBI San Antonio Field Office — Press release on Ochoa sentencing (August 2012)](https://archives.fbi.gov/archives/sanantonio/press-releases/2012/galveston-man-sentenced-to-federal-prison-for-computer-hacking).
-[^dennis-rader-btk-killer-wikipedia]: [Dennis Rader / BTK Killer — Wikipedia (consolidated reference; the original Wichita Eagle coverage from Feb 26, 2005 may no longer resolve at its original URL)](https://en.wikipedia.org/wiki/Dennis_Rader).
+[^dennis-rader-btk-killer-wikipedia]: [Dennis Rader / BTK Killer](https://en.wikipedia.org/wiki/Dennis_Rader). Consolidated reference; the original Wichita Eagle coverage from 26 February 2005 may no longer resolve at its original URL.
 [^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 
@@ -513,8 +513,8 @@ For the project: when you train forensic examiners, train them on every EXIF fie
 - [DCSA — Defense Counterintelligence and Security Agency](https://www.dcsa.mil/).
 - [EXIF Specification — JEITA CP-3451 (Exchangeable Image File Format)](https://www.jeita.or.jp/cgi-bin/standard_e/list.cgi?cateid=1&subcateid=4).
 - [exiftool — Phil Harvey's perl-based EXIF reader (de facto reference implementation)](https://exiftool.org/).
-- [mat2 — Metadata anonymization toolkit (upstream archived 2024-2025; still functional but unmaintained — distro-packaged forks may continue)](https://0xacab.org/jvoisin/mat2).
-- [Wired — 2012 coverage: "Anonymous Hacker Caught After Posting Girlfriend's Boobs Online" (Higinio O. Ochoa III case)](https://en.wikipedia.org/wiki/Higinio_Ochoa).
+- [mat2 — metadata anonymisation toolkit](https://0xacab.org/jvoisin/mat2). Upstream archived 2024-2025; still functional but unmaintained, and distro-packaged forks may continue.
+- [Higinio Ochoa — the EXIF-GPS deanonymisation case (2012)](https://en.wikipedia.org/wiki/Higinio_Ochoa). Wired's contemporaneous coverage is no longer online at its original URL.
 - [GIAC GCFE — Certified Forensic Examiner](https://www.giac.org/certifications/certified-forensic-examiner-gcfe/).
 - [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa/).
 - [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih/).

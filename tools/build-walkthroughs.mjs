@@ -492,6 +492,62 @@ function readingTime(words) {
 // sources that were actually used rather than a pile of links that
 // accumulate because deleting one feels like losing something.
 
+// Identifiers a reader can look up, and which therefore must resolve to
+// a source somewhere in §9. Deliberately limited to unambiguous ones:
+// each has a canonical, per-identifier page, so "named but unsourced"
+// is a fact rather than an opinion.
+const CITABLE_IDS = [
+  [/\bCWE-(\d+)\b/g, (m) => `CWE-${m[1]}`],
+  [/\bCVE-(\d{4})-(\d{4,7})\b/g, (m) => `CVE-${m[1]}-${m[2]}`],
+  [/\bT(\d{4})\.(\d{3})\b/g, (m) => `T${m[1]}.${m[2]}`],
+  [/\bRFC\s?(\d{3,5})\b/g, (m) => `RFC ${m[1]}`],
+  [/\bSP\s?800-(\d+[A-Za-z]?)\b/g, (m) => `SP 800-${m[1]}`],
+];
+
+/**
+ * Identifiers the prose names that §9 never lists.
+ *
+ * Code is excluded: a `CWE-79` inside a command transcript or a config
+ * dump is sample data, not a claim the walkthrough is making.
+ *
+ * Matching against §9 is done on several spellings of the same
+ * identifier because publishers disagree with each other. MITRE writes
+ * "T1548.003" in prose and "T1548/003" in a URL; NIST writes "SP
+ * 800-53" and "800/53". A citation is present if any spelling appears.
+ */
+function uncitedIdentifiers(md, label) {
+  const nineAt = md.search(/^## .*Further reading/m);
+  if (nineAt < 0) return [];
+
+  const body = md
+    .slice(0, nineAt)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`\n]*`/g, " ");
+  const nine = md.slice(nineAt);
+
+  const missing = new Set();
+  for (const [re, fmt] of CITABLE_IDS) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(body))) {
+      const id = fmt(m);
+      const spellings = [
+        id,
+        id.replace(".", "/"),
+        id.replace(/^SP /, ""),
+        id.replace(/\s/g, ""),
+      ];
+      if (!spellings.some((s) => nine.includes(s))) missing.add(id);
+    }
+  }
+
+  if (!missing.size) return [];
+  return [
+    `  ${label}: names ${[...missing].sort().join(", ")} in the prose but ` +
+      `lists no source for ${missing.size === 1 ? "it" : "them"} in §9`,
+  ];
+}
+
 // Placeholder swapped for the rendered reference list after parsing.
 //
 // Position, not string surgery on the output: markdown rendering moves
@@ -808,6 +864,21 @@ function renderMarkdown(md, label = "") {
       );
     }
   }
+
+  // The OTHER direction: a claim that names a source nobody can look up.
+  //
+  // Everything above verifies that each listed source gets used. That is
+  // only half the relationship, and checking only that half is how 53
+  // identifiers ended up named in prose with no source anywhere in the
+  // walkthrough — CWE-863, CVE-2022-26134, T1098.001, RFC 4648 and the
+  // rest were simply asserted. Both properties matter and they are not
+  // the same: "every source is used" says nothing about "every claim has
+  // a source".
+  //
+  // Scoped to identifiers because those are unambiguous. A reader who
+  // meets "CWE-863" can reasonably expect a link; prose claims need
+  // editorial judgement and stay out of the build.
+  problems.push(...uncitedIdentifiers(md, label));
   if (defs.size && html.includes(REFS_TOKEN)) {
     problems.push(`  ${label}: internal error, the reference-list anchor survived rendering`);
   }
