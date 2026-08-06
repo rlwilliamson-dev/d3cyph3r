@@ -8,13 +8,13 @@
 
 ## §1 — The setup
 
-Veridian Analytics is one of Driftwood's healthcare-vertical clients — a mid-sized healthcare-analytics SaaS company, roughly 250 engineers, founded in 2018, headquartered in Boston with a smaller R&D office in Cambridge. They process claims and outcomes data on behalf of insurance carriers and provider networks, which makes them a **HIPAA Business Associate** under signed Business Associate Agreements with each customer. PHI handling is in scope across their entire production environment. They layer **HITRUST CSF v11** on top for the customer-facing assurance their insurance-carrier customers require — a HITRUST certification is the price of admission to most major-payer vendor contracts in the healthcare-analytics market.
+Veridian Analytics is one of Driftwood's healthcare-vertical clients — a mid-sized healthcare-analytics SaaS company, roughly 250 engineers, founded in 2018, headquartered in Boston with a smaller R&D office in Cambridge. They process claims and outcomes data on behalf of insurance carriers and provider networks, which makes them a **HIPAA Business Associate** under signed Business Associate Agreements with each customer. PHI handling is in scope across their entire production environment. They layer **HITRUST CSF v11** on top for the customer-facing assurance their insurance-carrier customers require — a HITRUST certification is the price of admission to most major-payer vendor contracts in the healthcare-analytics market.[^hitrust-csf-v11-hitrust-alliance]
 
 Veridian came to Driftwood about fourteen months ago for HITRUST CSF readiness work — they were preparing for their first formal assessment ahead of a major payer-customer renewal that required it. We helped them through gap remediation and the assessment itself; they passed and validated certification in May. The engagement has since shifted to general security partnership: their internal security team is two people, and they call us for anything that exceeds in-house bandwidth.
 
 OSINT and executive-protection work is a smaller but growing piece of Driftwood's practice. Healthcare and life-sciences clients pull us in when a clinical or commercial executive attracts public attention — favorable, unfavorable, or simply *visible* — and the General Counsel's office wants a baseline read on the executive's public footprint before the situation develops further.
 
-You're on Driftwood's OSINT-engagement workstation, logged in as `intel` — the shared service account the recon team uses for client-side intelligence work. The host is set up for open-source-intelligence lookups: breach-corpus aggregators, certificate transparency tooling, certificate-issuance monitoring, IP-geolocation services, and the canonical `hibp` (Have I Been Pwned) interface plus the paid corpus-enrichment layer that surfaces cracked-hash recoveries.
+You're on Driftwood's OSINT-engagement workstation, logged in as `intel` — the shared service account the recon team uses for client-side intelligence work. The host is set up for open-source-intelligence lookups: breach-corpus aggregators, certificate transparency tooling, certificate-issuance monitoring, IP-geolocation services, and the canonical `hibp` (Have I Been Pwned) interface plus the paid corpus-enrichment layer that surfaces cracked-hash recoveries.[^have-i-been-pwned-hibp]
 
 Today's case opened on Friday afternoon. Marisol Vega, Veridian's General Counsel, emailed Priya. The trigger: Veridian's newly-hired Chief Medical Officer, **Dr. Aaron Hines**, has surfaced in an open-letter campaign organized by a patient-advocacy group called the "Trial Transparency Action Network." The letter, posted to Substack on 2026-05-08 and co-signed by 41 listed individuals (mostly patient-advocacy figures plus three bioethics academics), concerns a Phase III oncology-adjuvant trial Aaron's team ran at his previous employer, Helix Therapeutics, between 2021 and 2023. The trial — HLX-204 — is alleged in the letter to have had methodologically opaque adverse-event reporting. Aaron is named.
 
@@ -41,7 +41,7 @@ intel@osint:~$ cat engagement-notes.md
 intel@osint:~$ cat subject-brief.txt
 ```
 
-The engagement notes establish the regulatory frame (HIPAA Business Associate, HITRUST CSF v11, MA 201 CMR 17.00 for the Massachusetts-headquartered data security regulation, NIST 800-66 Rev. 2 as the HIPAA implementation guide), the client context (Veridian, Marisol, the Trial Transparency Action Network letter, the LinkedIn DM), and the **scope discipline** — what is and isn't authorized for today's lookup.
+The engagement notes establish the regulatory frame (HIPAA Business Associate, HITRUST CSF v11, MA 201 CMR 17.00 for the Massachusetts-headquartered data security regulation, NIST 800-66 Rev. 2 as the HIPAA implementation guide), the client context (Veridian, Marisol, the Trial Transparency Action Network letter, the LinkedIn DM), and the **scope discipline** — what is and isn't authorized for today's lookup.[^nist-800-66]
 
 The subject-brief is the formal artifact: Case ID `VER-EXP-2026-002`, Aaron's biographical summary (Boston University Medical School MD 2009, MGH residency, Beth Israel Deaconess fellowship, marathon runner, recreational sailor), and the **single in-scope email address**: `aaron.hines.md@gmail.com`. It also explicitly names the out-of-scope work email (`ahines@veridian-analytics.com`) with a *do not query* instruction.
 
@@ -95,7 +95,7 @@ This is the part that wouldn't happen in a real engagement (because we just said
 ### If you got stuck
 
 - If `hibp aaron.hines.md@gmail.com` returned no results, double-check the email — `aaron.hines.md@gmail.com` (with the `.md` suffix in the local part). The lookup is case-insensitive but typo-sensitive.
-- If the output didn't show cleartext password values in the description fields, you may be looking at the public HIBP free-tier output; the paid corpus enrichment is what surfaces cracked-hash recoveries. In real engagements, paid services like Dehashed, IntelX, Constella Intelligence, and SpyCloud are the layer that produces the cleartext-recovery view of the breach corpora. D3CYPH3R simulates the enriched output to mirror what a real OSINT engagement workstation produces.
+- If the output didn't show cleartext password values in the description fields, you may be looking at the public HIBP free-tier output; the paid corpus enrichment is what surfaces cracked-hash recoveries. In real engagements, paid services like Dehashed, IntelX, Constella Intelligence, and SpyCloud are the layer that produces the cleartext-recovery view of the breach corpora.[^dehashed-paid-breach-corpus-aggregator][^intelx-breach-data-search-engine][^constella-intelligence-executive-protection-threat][^spycloud-credential-monitoring-platform] D3CYPH3R simulates the enriched output to mirror what a real OSINT engagement workstation produces.
 - If you went straight from the lookup to `ssh level1@osint` without reading `subject-brief.txt` first, the lesson of this level is the *scope discipline* — the brief is the artifact that proves the lookup was authorized. In an audit setting, the order of operations matters as much as the result.
 
 ## §3 — The vulnerability
@@ -149,7 +149,7 @@ Three named, well-documented incidents where credential reuse — recovered from
 
 ### 23andMe — October 2023
 
-In early October 2023, attackers used credential stuffing against the genetic-testing service 23andMe, accessing approximately 14,000 user accounts directly. The compromise itself was unremarkable in scale — credential-stuffing attacks of that magnitude happen daily across the consumer internet. What made the 23andMe case notable was the *secondary blast radius*: 23andMe's relative-sharing features, which let users opt into sharing limited genetic data with relatives in the service's database, meant that the ~14,000 directly-compromised accounts gave the attackers access to data fragments for approximately **6.9 million additional users** — roughly **5.5 million** via DNA Relatives profiles plus another **1.4 million** via Family Tree profiles — who had shared with the compromised accounts.
+In early October 2023, attackers used credential stuffing against the genetic-testing service 23andMe, accessing approximately 14,000 user accounts directly.[^23andme-credential-stuffing-breach-23andme] The compromise itself was unremarkable in scale — credential-stuffing attacks of that magnitude happen daily across the consumer internet. What made the 23andMe case notable was the *secondary blast radius*: 23andMe's relative-sharing features, which let users opt into sharing limited genetic data with relatives in the service's database, meant that the ~14,000 directly-compromised accounts gave the attackers access to data fragments for approximately **6.9 million additional users** — roughly **5.5 million** via DNA Relatives profiles plus another **1.4 million** via Family Tree profiles — who had shared with the compromised accounts.
 
 23andMe confirmed the breach publicly on October 6, 2023. Investigation took until December for the company to begin notifying affected users. The exposed data included names, profile photos, ancestry-percentage breakdowns, locations, and (in some cases) DNA segment information — the kind of personal data that is uniquely sensitive because it does not change and cannot be rotated. Class-action litigation followed; 23andMe initially settled the consolidated cases for **$30 million in September 2024**, a figure subsequently revised upward to **$50 million** with final court approval on **January 30, 2026**, post-bankruptcy. The company filed for Chapter 11 bankruptcy in March 2025, citing the breach's financial and reputational impact as a contributing factor.
 
@@ -159,7 +159,7 @@ For Aaron's threat model, if `BostonStrong#2013` was reused on a healthcare-port
 
 ### Norton LifeLock — January 2023
 
-In early January 2023, Gen Digital (then Norton LifeLock's parent company) disclosed that approximately **6,450 customer accounts** had been compromised in a credential-stuffing attack between December 1, 2022 and December 12, 2022. The attackers used credentials previously exposed in third-party breaches to log into Norton LifeLock customers' accounts. For accounts that had reused passwords across the prior breach and the Norton LifeLock service, the attackers gained access to whatever was stored there — which, for some customers, included **Norton Password Manager vaults**.
+In early January 2023, Gen Digital (then Norton LifeLock's parent company) disclosed that approximately **6,450 customer accounts** had been compromised in a credential-stuffing attack between December 1, 2022 and December 12, 2022.[^norton-lifelock-january-2023-credential] The attackers used credentials previously exposed in third-party breaches to log into Norton LifeLock customers' accounts. For accounts that had reused passwords across the prior breach and the Norton LifeLock service, the attackers gained access to whatever was stored there — which, for some customers, included **Norton Password Manager vaults**.
 
 The irony is the lesson. **Norton LifeLock is the identity-monitoring product.** Its customers were people who had specifically paid for a service designed to alert them to identity-theft risks. The product's premise was that consumers could outsource the vigilance — let LifeLock do the watching. And the consumers' own personal accounts, on the LifeLock product itself, were compromised because they had reused passwords across other services. The product couldn't protect them from their own credential hygiene.
 
@@ -169,7 +169,7 @@ For Aaron specifically, the parallel is the breadth of services where reused cre
 
 ### Mat Honan — "Epic hacking" — August 2012
 
-In August 2012, *Wired* writer Mat Honan published an extended account of an attack against his digital life. The attacker, motivated by a desire to take over his three-letter Twitter handle (`@mat`), executed a chain of compromises that took roughly an hour to complete:
+In August 2012, *Wired* writer Mat Honan published an extended account of an attack against his digital life.[^mat-honan-how-apple-and] The attacker, motivated by a desire to take over his three-letter Twitter handle (`@mat`), executed a chain of compromises that took roughly an hour to complete:
 
 1. Looked up Honan's billing address from publicly-available property records.
 2. Called Amazon customer service, used the billing address plus other publicly-derivable details to add a credit card to Honan's account.
@@ -192,7 +192,7 @@ The in-game post-mortem cites eight framework controls. Each is expanded below.
 
 ### NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management
 
-NIST Special Publication 800-63B, currently at **Revision 4** (finalized 2025; supersedes Rev. 3), defines the federal-government baseline for authenticator selection, authentication-event handling, and credential lifecycle management. Rev. 4 introduced significant changes from Rev. 3 — a minimum-length recommendation increased from 8 characters to 15 for memorized secrets, formalization of phishing-resistant authenticators (FIDO2/passkeys as the recommended path), and explicit elimination of forced periodic rotation absent evidence of compromise.
+NIST Special Publication 800-63B, currently at **Revision 4** (finalized 2025; supersedes Rev. 3), defines the federal-government baseline for authenticator selection, authentication-event handling, and credential lifecycle management.[^nist-800-63b][^nist-800-63b-nist-4] Rev. 4 introduced significant changes from Rev. 3 — a minimum-length recommendation increased from 8 characters to 15 for memorized secrets, formalization of phishing-resistant authenticators (FIDO2/passkeys as the recommended path), and explicit elimination of forced periodic rotation absent evidence of compromise.
 
 Three sections apply directly to Aaron's case:
 
@@ -208,7 +208,7 @@ Audit evidence for 800-63B-4 compliance includes a documented authenticator poli
 
 ### HIPAA Security Rule — 45 CFR Part 164, Subpart C
 
-The HIPAA Security Rule (45 CFR Part 164, Subpart C) defines the technical safeguards for protecting electronic protected health information (ePHI). Veridian is a HIPAA Business Associate by virtue of processing PHI on behalf of its insurance-carrier and provider-network customers. The Security Rule applies to every Veridian system that touches PHI, and — by extension — to the credentials used to access those systems.
+The HIPAA Security Rule (45 CFR Part 164, Subpart C) defines the technical safeguards for protecting electronic protected health information (ePHI).[^cfr-45-164] Veridian is a HIPAA Business Associate by virtue of processing PHI on behalf of its insurance-carrier and provider-network customers. The Security Rule applies to every Veridian system that touches PHI, and — by extension — to the credentials used to access those systems.
 
 Three sections bear on Aaron's case:
 
@@ -242,7 +242,7 @@ Veridian uses 800-66 Rev. 2 as the operating-procedural reference for HIPAA comp
 
 ### CIS Critical Security Controls v8.1 — Controls 5, 6, 14
 
-The Center for Internet Security publishes the CIS Critical Security Controls, currently at **version 8.1** (published 2024). Three controls apply to Aaron's case:
+The Center for Internet Security publishes the CIS Critical Security Controls, currently at **version 8.1** (published 2024).[^cis-critical-security-controls-v8] Three controls apply to Aaron's case:
 
 **Control 5 — Account Management.** Including safeguard 5.4 (use unique passwords per account). The control's plain reading targets organizational accounts, but the principle extends to the personal-account ecosystem when those personal accounts have crossover-risk with organizational systems. For Aaron, 5.4 is the safeguard whose violation is the headline finding.
 
@@ -252,7 +252,7 @@ The Center for Internet Security publishes the CIS Critical Security Controls, c
 
 ### OWASP Top 10:2025 — A07:2025 Authentication Failures
 
-The OWASP Top 10:2025 edition is the current standard. A07:2025 — Authentication Failures (renamed from "Identification and Authentication Failures" in the 2021 edition; slot unchanged) — covers the application-layer weaknesses that enable credential-stuffing attacks: permitting brute-force attempts, permitting credential stuffing, ineffective credential recovery, missing or ineffective multi-factor authentication, default or weak passwords, exposing session identifiers in URLs.
+The OWASP Top 10:2025 edition is the current standard. A07:2025 — Authentication Failures (renamed from "Identification and Authentication Failures" in the 2021 edition; slot unchanged) — covers the application-layer weaknesses that enable credential-stuffing attacks: permitting brute-force attempts, permitting credential stuffing, ineffective credential recovery, missing or ineffective multi-factor authentication, default or weak passwords, exposing session identifiers in URLs.[^owasp-a07-2025]
 
 The 2025 edition's reshuffle moved Security Misconfiguration up to A02 (from A05 in 2021) and added two new categories — Software Supply Chain Failures at A03, and Mishandling of Exceptional Conditions at A10. Cryptographic Failures moved down to A04. Authentication Failures held its A07 slot but got a slight renaming.
 
@@ -262,11 +262,11 @@ For Aaron's case, A07:2025's most-relevant content is the credential-stuffing pr
 
 The Common Weakness Enumeration catalog has three entries that apply to Aaron's case:
 
-**CWE-521 — Weak Password Requirements.** The application allows a password that does not satisfy modern strength requirements. `BostonStrong#2013` would actually satisfy many length-and-character-class checks (15 characters, mixed case, digits, symbol) — but those checks miss the more relevant weakness, which is that the password appears in published breach corpora. Modern CWE-521 mitigation includes breach-list screening, not just complexity checking.
+**CWE-521 — Weak Password Requirements.**[^cwe-521] The application allows a password that does not satisfy modern strength requirements. `BostonStrong#2013` would actually satisfy many length-and-character-class checks (15 characters, mixed case, digits, symbol) — but those checks miss the more relevant weakness, which is that the password appears in published breach corpora. Modern CWE-521 mitigation includes breach-list screening, not just complexity checking.
 
-**CWE-262 — Not Using Password Aging.** The legacy weakness pattern — a password that is never rotated. Modern guidance (800-63B-4) has actually *deprecated* forced periodic rotation absent evidence of compromise; the current best practice is *event-driven rotation*, where rotation is triggered by a credential's appearance in a new breach corpus or by a suspicious-login event. The CWE-262 entry remains useful as the historical reference but should be read with the modern context.
+**CWE-262 — Not Using Password Aging.**[^cwe-262] The legacy weakness pattern — a password that is never rotated. Modern guidance (800-63B-4) has actually *deprecated* forced periodic rotation absent evidence of compromise; the current best practice is *event-driven rotation*, where rotation is triggered by a credential's appearance in a new breach corpus or by a suspicious-login event. The CWE-262 entry remains useful as the historical reference but should be read with the modern context.
 
-**CWE-309 — Use of Password System for Primary Authentication.** A more recent weakness flagging the *category* of password-only authentication as itself a vulnerability in 2024+. The mitigation is multi-factor authentication, ideally phishing-resistant. For Aaron's high-value accounts, password-only authentication is the underlying weakness that makes any credential-corpus exposure exploitable.
+**CWE-309 — Use of Password System for Primary Authentication.** A more recent weakness flagging the *category* of password-only authentication as itself a vulnerability in 2024+.[^cwe-309] The mitigation is multi-factor authentication, ideally phishing-resistant. For Aaron's high-value accounts, password-only authentication is the underlying weakness that makes any credential-corpus exposure exploitable.
 
 ### MA 201 CMR 17.04 — Massachusetts Data Security Regulation
 
@@ -278,7 +278,7 @@ For Aaron specifically, Massachusetts residence (Brookline) means 201 CMR 17.00 
 
 ### HHS HPH-CPGs — Healthcare and Public Health Cybersecurity Performance Goals
 
-The Department of Health and Human Services published the **Healthcare and Public Health Cybersecurity Performance Goals (HPH-CPGs)** in 2024, with subsequent updates through 2025-2026. The CPGs are tiered into *Essential Goals* (the baseline expected of every healthcare entity) and *Enhanced Goals* (the more advanced controls for larger or higher-risk entities).
+The Department of Health and Human Services published the **Healthcare and Public Health Cybersecurity Performance Goals (HPH-CPGs)** in 2024, with subsequent updates through 2025-2026.[^hhs-healthcare-and-public-health] The CPGs are tiered into *Essential Goals* (the baseline expected of every healthcare entity) and *Enhanced Goals* (the more advanced controls for larger or higher-risk entities).
 
 Two Essential Goals apply to Aaron's case:
 
@@ -347,7 +347,7 @@ CompTIA CySA+ — CS0-003 was the legacy exam revision (in market since June 202
 
 ### SANS GOSI — GIAC Open Source Intelligence
 
-SANS GIAC's **GOSI** certification is the formal OSINT-discipline cert from the GIAC family. The exam covers the breach-corpus aggregator ecosystem (HIBP, Dehashed, IntelX, Constella, SpyCloud), identity-pivoting techniques (sherlock, Maigret, the public-records lookup pattern), the broader OSINT-tradecraft toolkit, and — importantly for engagement work — the *reporting and scope discipline* that turns OSINT findings into client-deliverable briefs.
+SANS GIAC's **GOSI** certification is the formal OSINT-discipline cert from the GIAC family.[^sans-giac-gosi-open-source] The exam covers the breach-corpus aggregator ecosystem (HIBP, Dehashed, IntelX, Constella, SpyCloud), identity-pivoting techniques (sherlock, Maigret, the public-records lookup pattern), the broader OSINT-tradecraft toolkit, and — importantly for engagement work — the *reporting and scope discipline* that turns OSINT findings into client-deliverable briefs.
 
 The Veridian engagement is the textbook GOSI exam scenario: defined scope (single subject, single email), defined output (a finding-not-conclusion brief delivered to the engagement's authorizing counsel), explicit OOS items (family members, organizational accounts, active testing). GOSI candidates are tested on the discipline of *staying inside the scope even when the lookup surfaces tempting follow-up threads.*
 
@@ -395,7 +395,7 @@ The Veridian scenario is not theoretical. Every defender working at a healthcare
 
 **1. Deliver the finding to Marisol, in writing, with care for tone.** The deliverable is a brief: the lookup methodology, the corpora checked, the date and authorization, the five breaches Aaron's address appears in, the two-corpus cleartext match, the reuse-inference framing, and explicit out-of-scope statements ("we did not query Veridian-domain accounts; we did not active-test the recovered credential; we did not enumerate family members"). Marisol takes the brief, writes the version that reaches Aaron, makes the decision about executive-protection escalation. The forensic examiner's contribution is the small, exact data point — not the conclusion about what Veridian should do.
 
-**2. For Aaron specifically.** Enroll every account he holds in 2FA where available, with the preference order: FIDO2 hardware key (Yubikey 5, Titan) or platform passkey for the high-value accounts; TOTP authenticator app (Microsoft Authenticator, Google Authenticator, Authy) for everything else; SMS only as a last-resort fallback (and never as the *only* second factor — SMS is itself vulnerable to SIM-swap attacks). Migrate to a password manager (1Password, Bitwarden, Dashlane — any of them) and generate unique random passwords for every account. Rotate any password that contains a publicly-derivable token like `Boston*`, `Marathon*`, `Brookline*` — these get enumerated automatically by credential-stuffing rule-mutators. For high-impact accounts (primary email, financial, healthcare portals), enable login-anomaly notifications and review the login history monthly.
+**2. For Aaron specifically.** Enroll every account he holds in 2FA where available, with the preference order: FIDO2 hardware key (Yubikey 5, Titan) or platform passkey for the high-value accounts; TOTP authenticator app (Microsoft Authenticator, Google Authenticator, Authy) for everything else; SMS only as a last-resort fallback (and never as the *only* second factor — SMS is itself vulnerable to SIM-swap attacks). Migrate to a password manager (1Password, Bitwarden, Dashlane — any of them) and generate unique random passwords for every account.[^1password-password-manager-consumer-business][^bitwarden-open-source-password-manager] Rotate any password that contains a publicly-derivable token like `Boston*`, `Marathon*`, `Brookline*` — these get enumerated automatically by credential-stuffing rule-mutators. For high-impact accounts (primary email, financial, healthcare portals), enable login-anomaly notifications and review the login history monthly.
 
 **3. For Veridian.** Standardize personal-exposure checks as part of every executive-hire onboarding cycle. The cost is modest (~$50-200 per check via paid corpus-enrichment services, or free with HIBP plus internal effort), and the value is the baseline that catches the Aaron-class finding before the hire shows up to a board meeting. For privileged Veridian-domain accounts (CMO, CFO, CTO, CEO, CISO, GC, COO), enforce phishing-resistant MFA — don't accept OTP-only on those tiers. Subscribe to a continuous-monitoring service for executive personal addresses (Constella Intelligence, Recorded Future, SpyCloud, Have I Been Pwned's enterprise tier) so the manual lookup we just did becomes a daily automated alert.
 
@@ -469,39 +469,42 @@ The historical lesson is for product designers: **never store password hints in 
 
 *Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
-- [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html)
-- [NIST SP 800-63B-4 (CSRC pub page)](https://csrc.nist.gov/pubs/sp/800/63/b/4/final)
-- [HIPAA Security Rule — 45 CFR Part 164, Subpart C (HHS)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C)
-- [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final)
-- [HITRUST CSF v11 (HITRUST Alliance)](https://hitrustalliance.net/hitrust-framework)
-- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
-- [OWASP Top 10:2025 — A07:2025 Authentication Failures (deep link)](https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/)
-- [CWE-521 — Weak Password Requirements](https://cwe.mitre.org/data/definitions/521.html)
-- [CWE-262 — Not Using Password Aging](https://cwe.mitre.org/data/definitions/262.html)
-- [CWE-309 — Use of Password System for Primary Authentication](https://cwe.mitre.org/data/definitions/309.html)
-- [MITRE ATT&CK — T1589.001: Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/)
-- [MITRE ATT&CK — T1593: Search Open Websites/Domains](https://attack.mitre.org/techniques/T1593/)
-- [MITRE ATT&CK — T1110.004: Credential Stuffing](https://attack.mitre.org/techniques/T1110/004/)
-- [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/)
-- [MITRE ATT&CK — T1078.004: Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/)
-- [Have I Been Pwned (HIBP)](https://haveibeenpwned.com/)
-- [HIBP Pwned Passwords API (k-anonymity, free)](https://haveibeenpwned.com/Passwords)
-- [Massachusetts 201 CMR 17.00 — Standards for the Protection of Personal Information](https://www.mass.gov/regulations/201-CMR-1700-standards-for-the-protection-of-personal-information-of-residents-of-the-commonwealth)
-- [HHS Healthcare and Public Health Cybersecurity Performance Goals (HPH-CPGs)](https://hphcyber.hhs.gov/)
-- [23andMe credential-stuffing breach — 23andMe customer notice (October 2023)](https://www.23andme.org/blog/articles/addressing-data-security-concerns/)
-- [23andMe settlement filing — In re 23andMe Inc. Customer Data Security Breach Litigation (Sept 2024)](https://www.courtlistener.com/docket/68160775/in-re-23andme-inc-customer-data-security-breach-litigation/)
-- [Norton LifeLock January 2023 credential-stuffing incident](https://www.bleepingcomputer.com/news/security/nortonlifelock-warns-that-hackers-breached-password-manager-accounts/)
-- [Mat Honan — "How Apple and Amazon Security Flaws Led to My Epic Hacking" — Wired, August 6, 2012](https://www.wired.com/2012/08/apple-amazon-mat-honan-hacking/)
-- [Dehashed — paid breach-corpus aggregator](https://dehashed.com/)
-- [IntelX — breach-data search engine](https://intelx.io/)
-- [Constella Intelligence — executive-protection threat intelligence](https://constella.ai/)
-- [SpyCloud — credential-monitoring platform](https://spycloud.com/)
-- [SANS GIAC GOSI — Open Source Intelligence certification](https://www.giac.org/certifications/open-source-intelligence-gosi/)
-- [SANS SEC497 — Practical Open-Source Intelligence (OSINT) — effectively replaced SEC487](https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/)
-- [1Password — password manager (consumer + business)](https://1password.com/)
-- [Bitwarden — open-source password manager](https://bitwarden.com/)
-- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
-- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach)
+[^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html).
+[^nist-800-63b-nist-4]: [NIST SP 800-63B-4 (CSRC pub page)](https://csrc.nist.gov/pubs/sp/800/63/b/4/final).
+[^cfr-45-164]: [HIPAA Security Rule — 45 CFR Part 164, Subpart C (HHS)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C).
+[^nist-800-66]: [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final).
+[^hitrust-csf-v11-hitrust-alliance]: [HITRUST CSF v11 (HITRUST Alliance)](https://hitrustalliance.net/hitrust-framework).
+[^cis-critical-security-controls-v8]: [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
+[^owasp-a07-2025]: [OWASP Top 10:2025 — A07:2025 Authentication Failures (deep link)](https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/).
+[^cwe-521]: [CWE-521 — Weak Password Requirements](https://cwe.mitre.org/data/definitions/521.html).
+[^cwe-262]: [CWE-262 — Not Using Password Aging](https://cwe.mitre.org/data/definitions/262.html).
+[^cwe-309]: [CWE-309 — Use of Password System for Primary Authentication](https://cwe.mitre.org/data/definitions/309.html).
+[^have-i-been-pwned-hibp]: [Have I Been Pwned (HIBP)](https://haveibeenpwned.com/).
+[^hhs-healthcare-and-public-health]: [HHS Healthcare and Public Health Cybersecurity Performance Goals (HPH-CPGs)](https://hphcyber.hhs.gov/).
+[^23andme-credential-stuffing-breach-23andme]: [23andMe credential-stuffing breach — 23andMe customer notice (October 2023)](https://www.23andme.org/blog/articles/addressing-data-security-concerns/).
+[^norton-lifelock-january-2023-credential]: [Norton LifeLock January 2023 credential-stuffing incident](https://www.bleepingcomputer.com/news/security/nortonlifelock-warns-that-hackers-breached-password-manager-accounts/).
+[^mat-honan-how-apple-and]: [Mat Honan — "How Apple and Amazon Security Flaws Led to My Epic Hacking" — Wired, August 6, 2012](https://www.wired.com/2012/08/apple-amazon-mat-honan-hacking/).
+[^dehashed-paid-breach-corpus-aggregator]: [Dehashed — paid breach-corpus aggregator](https://dehashed.com/).
+[^intelx-breach-data-search-engine]: [IntelX — breach-data search engine](https://intelx.io/).
+[^constella-intelligence-executive-protection-threat]: [Constella Intelligence — executive-protection threat intelligence](https://constella.ai/).
+[^spycloud-credential-monitoring-platform]: [SpyCloud — credential-monitoring platform](https://spycloud.com/).
+[^sans-giac-gosi-open-source]: [SANS GIAC GOSI — Open Source Intelligence certification](https://www.giac.org/certifications/open-source-intelligence-gosi/).
+[^1password-password-manager-consumer-business]: [1Password — password manager (consumer + business)](https://1password.com/).
+[^bitwarden-open-source-password-manager]: [Bitwarden — open-source password manager](https://bitwarden.com/).
+
+### Further reading
+
+- [MITRE ATT&CK — T1589.001: Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/).
+- [MITRE ATT&CK — T1593: Search Open Websites/Domains](https://attack.mitre.org/techniques/T1593/).
+- [MITRE ATT&CK — T1110.004: Credential Stuffing](https://attack.mitre.org/techniques/T1110/004/).
+- [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/).
+- [MITRE ATT&CK — T1078.004: Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/).
+- [HIBP Pwned Passwords API (k-anonymity, free)](https://haveibeenpwned.com/Passwords).
+- [Massachusetts 201 CMR 17.00 — Standards for the Protection of Personal Information](https://www.mass.gov/regulations/201-CMR-1700-standards-for-the-protection-of-personal-information-of-residents-of-the-commonwealth).
+- [23andMe settlement filing — In re 23andMe Inc. Customer Data Security Breach Litigation (Sept 2024)](https://www.courtlistener.com/docket/68160775/in-re-23andme-inc-customer-data-security-breach-litigation/).
+- [SANS SEC497 — Practical Open-Source Intelligence (OSINT) — effectively replaced SEC487](https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/).
+- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/).
+- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach).
 
 ---
 

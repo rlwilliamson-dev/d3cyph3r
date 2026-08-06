@@ -24,7 +24,7 @@ Dana's question to Driftwood, verbatim from the call: *"Before I take this to HR
 
 The scope is narrow. Driftwood is not being asked to determine whether Reed did something improper inside Bay 4 — the badge log establishes that he was there; the *why* is Dana's question to answer through Polaris's formal Insider Threat Program process. Driftwood is being asked one thing: does the photograph's metadata corroborate Reed's account of where he was Saturday morning?
 
-This is a particular kind of engagement. Reed is a real person with a real career and a real clearance. The forensic finding will land in a way that affects an HR conversation, possibly a Defense Counterintelligence and Security Agency (DCSA) notification, possibly a referral to the FBI under 18 U.S.C. § 1832. Driftwood's contribution is a *finding*, not a *conclusion* — what the metadata says, captured in language a judicial proceeding could survive. Dana writes conclusions. We write findings.
+This is a particular kind of engagement. Reed is a real person with a real career and a real clearance. The forensic finding will land in a way that affects an HR conversation, possibly a Defense Counterintelligence and Security Agency (DCSA) notification, possibly a referral to the FBI under 18 U.S.C. § 1832.[^18-u-s-c-1832] Driftwood's contribution is a *finding*, not a *conclusion* — what the metadata says, captured in language a judicial proceeding could survive. Dana writes conclusions. We write findings.
 
 What you don't know yet, walking in, is that the EXIF metadata on `soccer-field.jpg` places the photograph eight months in the past and approximately a thousand miles south of where Reed said he was.
 
@@ -39,7 +39,7 @@ secops@forensics:~$ cat engagement-notes.md
 secops@forensics:~$ cat case-summary.txt
 ```
 
-The engagement notes establish the regulatory frame (CMMC Level 2, DFARS 252.204-7012 with its 72-hour-from-discovery reporting clock to DC3, NIST 800-171 Rev. 3 as the operating reference, NISPOM 32 CFR Part 117 for the cleared-facility specifics), the client context (Polaris, Dana, the badge-log anomaly), the subject (Reed, his role, his clearance), and the scoping discipline ("we are not being asked to determine whether Reed actually entered Bay 4 to do something improper... the photo is a separate question").
+The engagement notes establish the regulatory frame (CMMC Level 2, DFARS 252.204-7012 with its 72-hour-from-discovery reporting clock to DC3, NIST 800-171 Rev. 3 as the operating reference, NISPOM 32 CFR Part 117 for the cleared-facility specifics), the client context (Polaris, Dana, the badge-log anomaly), the subject (Reed, his role, his clearance), and the scoping discipline ("we are not being asked to determine whether Reed actually entered Bay 4 to do something improper... the photo is a separate question").[^nist-800-171][^cfr-32-117]
 
 The case summary file is more formal — the kind of document that gets attached to Polaris's Insider Threat Program case file. Case ID, subject identifiers, badge data, the timestamp of Reed's photo, the SHA-256 of the artifact, and Polaris IT's attestation that M365 transit preserved the file. The summary also flags the **next engagement** (workstation forensic image, password `POL-IIS-2026-0007-handoff`) — which is the breadcrumb for `level1@forensics` but explicitly out of today's scope.
 
@@ -144,7 +144,7 @@ There are two analytical lenses on this case, and both matter.
 
 This is not technically a *vulnerability* in any system Polaris owns. It is, instead, an exposure of how much modern devices reveal about their users — and that exposure, when the user has reason to want privacy, becomes an asymmetric advantage for the investigator. The forensic discipline assumes the subject doesn't know what their devices say about them.
 
-**Lens 2 — From Polaris's perspective: the formal investigation runs on procedural rails.** The badge-log audit that surfaced the anomaly is the **`AC` / `AU` family of NIST 800-171 Rev. 3** working as designed (specifically `03.14.06` System Monitoring and `03.14.07` Unauthorized Use Detection). The forensic examination Driftwood performs is the **incident-handling capability under `03.06.01`** working as designed. The chain-of-custody preservation is `03.06.02`. The decision Dana takes from the finding sits under Polaris's Insider Threat Program — which is itself a NITTF (National Insider Threat Task Force) minimum-standards requirement for any cleared contractor.
+**Lens 2 — From Polaris's perspective: the formal investigation runs on procedural rails.** The badge-log audit that surfaced the anomaly is the **`AC` / `AU` family of NIST 800-171 Rev. 3** working as designed (specifically `03.14.06` System Monitoring and `03.14.07` Unauthorized Use Detection). The forensic examination Driftwood performs is the **incident-handling capability under `03.06.01`** working as designed. The chain-of-custody preservation is `03.06.02`. The decision Dana takes from the finding sits under Polaris's Insider Threat Program — which is itself a NITTF (National Insider Threat Task Force) minimum-standards requirement for any cleared contractor.[^nittf-national-insider-threat-task]
 
 What's *missing* — and what Polaris's CISO should consider after the case closes — is preventive layering. Polaris had detective controls (badge log + audit cadence + forensic capability via Driftwood). It did not have, for example: a documented *second-person rule* requiring two-cleared-personnel access to Bay 4 after hours; an automated correlation between badge events and workstation activity (which would have surfaced whether Reed used systems in Bay 4 during the 96-minute window); or training that explicitly told cleared personnel that their personal-device photographs are forensically inspectable when used as evidence in an internal investigation. The case's value to Polaris's program is not just the finding on Reed's photo — it's the institutional question of which additional controls would have caught the underlying activity earlier.
 
@@ -191,7 +191,7 @@ Three named, well-documented cases where embedded metadata in a digital artifact
 
 ### John McAfee — Guatemala, December 2012
 
-In November 2012, antivirus-software founder John McAfee was being sought by Belize police for questioning in connection with the murder of his neighbor in Belize. McAfee fled the country, evading capture for weeks, and began posting to his personal blog about his life on the run. In early December 2012, two journalists from Vice magazine — Robert King and Rocco Castoro — traveled with McAfee briefly and published an article on December 3, 2012, accompanied by a photograph captioned in part: "We are with John McAfee right now, suckers."
+In November 2012, antivirus-software founder John McAfee was being sought by Belize police for questioning in connection with the murder of his neighbor in Belize. McAfee fled the country, evading capture for weeks, and began posting to his personal blog about his life on the run. In early December 2012, two journalists from Vice magazine — Robert King and Rocco Castoro — traveled with McAfee briefly and published an article on December 3, 2012, accompanied by a photograph captioned in part: "We are with John McAfee right now, suckers."[^vice-december-3-2012-we]
 
 The photograph was a self-portrait of McAfee and Castoro. It was published to Vice's website at full resolution, with its EXIF metadata intact — Vice's editorial workflow did not strip the metadata before publication. Within hours, *third-party readers* extracted the GPS coordinates from the EXIF data and geolocated the photograph to **Río Dulce, Guatemala** — early reporting cited a swimming pool near a Ranchón Mary restaurant in Parque Nacional Río Dulce, and follow-on analysis commonly identifies the location as the Nana Juana Hotel Marina nearby. McAfee was arrested by Guatemalan authorities in Guatemala City on **December 5, 2012** for illegal entry from Belize.
 
@@ -203,7 +203,7 @@ For the Reed case at Polaris, the structural parallel is exact. Both subjects us
 
 Earlier in 2012, in February and March, Higinio O. Ochoa III — a hacker operating under the handle "w0rmer" associated with the Anonymous-linked CabinCr3w collective — defaced or compromised several US police-department websites and posted the results to Twitter under the handle `@AnonW0rmer`. In one of those posts, on March 24, 2012, Ochoa included a photograph: a woman's torso, holding a sheet of paper with the message "PwNd by w0rmer & CabinCr3w <3 u BiTch's!"
 
-The photograph carried EXIF GPS metadata pinpointing the location of the woman holding the sign — Ochoa's girlfriend — to a residence in **Wantirna South, Victoria, Australia**. Within days, the FBI had cross-referenced the location to known Anonymous-linked aliases and identified the girlfriend. Within additional weeks, they had identified Ochoa himself, working as a software engineer in Galveston, Texas. The FBI arrested Ochoa on **March 20, 2012**. He pleaded guilty in July 2012 to one count of accessing a protected computer without authorization and was sentenced in **August 2012 to 27 months in federal prison plus three years of supervised release**, with $14,062.17 in restitution.
+The photograph carried EXIF GPS metadata pinpointing the location of the woman holding the sign — Ochoa's girlfriend — to a residence in **Wantirna South, Victoria, Australia**. Within days, the FBI had cross-referenced the location to known Anonymous-linked aliases and identified the girlfriend. Within additional weeks, they had identified Ochoa himself, working as a software engineer in Galveston, Texas. The FBI arrested Ochoa on **March 20, 2012**. He pleaded guilty in July 2012 to one count of accessing a protected computer without authorization and was sentenced in **August 2012 to 27 months in federal prison plus three years of supervised release**, with $14,062.17 in restitution.[^fbi-san-antonio-field-office]
 
 The Ochoa case is the OPSEC-failure case for the hacker subculture. It produced a now-canonical maxim in security-research circles: "if you're going to post a picture of your girlfriend, scrub the EXIF first." More broadly, the case is the parallel for any scenario where a subject who is *highly motivated to remain anonymous* is identified through metadata they didn't think to remove. Ochoa was technically sophisticated — he was successfully compromising police websites — and he still made the metadata mistake. The lesson scales: technical sophistication does not protect against OPSEC mistakes; only deliberate, comprehensive process does.
 
@@ -213,7 +213,7 @@ For Reed at Polaris, the relevance is the *technical-sophistication-doesn't-help
 
 The BTK ("Bind, Torture, Kill") murders began in Wichita, Kansas in 1974 and continued, with multi-year quiet periods, into the early 2000s. The killer, who taunted police and local media with letters and packages, was never identified through the murders themselves. In 2004 and 2005, BTK re-emerged after a decade of silence, sending new communications. In early 2005, Rader sent the Wichita police a communication asking whether a floppy disk could be electronically traced. The police ran a classified ad in the *Wichita Eagle* telling him it could not — a deliberate ruse. Rader subsequently sent a floppy disk, which Wichita PD forensic examiner Randy Stone (with FBI assistance) examined.
 
-The floppy contained a deleted Microsoft Word document. The document's embedded metadata — fields the Word application writes by default into every saved file — included the author name "Dennis" and a reference to "Christ Lutheran Church" in the document's properties. The investigators cross-referenced the church's records against parishioners named Dennis. They identified **Dennis Rader**, a 59-year-old compliance officer for the city of Park City, Kansas, and longtime president of the church council at Christ Lutheran. The metadata recovery and subsequent investigation led to Rader's arrest on February 25, 2005. He pleaded guilty on June 27, 2005 to ten counts of first-degree murder and is currently serving ten consecutive life sentences.
+The floppy contained a deleted Microsoft Word document. The document's embedded metadata — fields the Word application writes by default into every saved file — included the author name "Dennis" and a reference to "Christ Lutheran Church" in the document's properties. The investigators cross-referenced the church's records against parishioners named Dennis. They identified **Dennis Rader**, a 59-year-old compliance officer for the city of Park City, Kansas, and longtime president of the church council at Christ Lutheran.[^dennis-rader-btk-killer-wikipedia] The metadata recovery and subsequent investigation led to Rader's arrest on February 25, 2005. He pleaded guilty on June 27, 2005 to ten counts of first-degree murder and is currently serving ten consecutive life sentences.
 
 The BTK case is the canonical document-metadata-OPSEC-failure case in modern American law enforcement. It is also, instructively, a case where the suspect *explicitly asked* whether the disk's communication channel was traceable, was told (incorrectly, as it turned out) that floppy disks were safe, and continued. The lesson of the case is two-fold: every digital artifact carries metadata that its creator may not be aware of; and the *adversary's confidence in their OPSEC* is not a substitute for the actual OPSEC. Rader believed the disk was safe. The Microsoft Word document's properties pane said otherwise.
 
@@ -225,7 +225,7 @@ The in-game post-mortem cites six framework controls. Each is expanded below: wh
 
 ### NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response
 
-NIST SP 800-86, published in August 2006, remains the canonical federal-government reference for procedurally-sound digital forensics in an enterprise / incident-response context. It has not been formally revised since publication — which is unusual for a NIST guide of its age, but reflects how foundational its procedural model is rather than how dated its tooling advice has become. The procedural framework holds; the tooling references have been overtaken by every commercial forensics product released in the intervening twenty years.
+NIST SP 800-86, published in August 2006, remains the canonical federal-government reference for procedurally-sound digital forensics in an enterprise / incident-response context.[^nist-800-86] It has not been formally revised since publication — which is unusual for a NIST guide of its age, but reflects how foundational its procedural model is rather than how dated its tooling advice has become. The procedural framework holds; the tooling references have been overtaken by every commercial forensics product released in the intervening twenty years.
 
 Four sections of SP 800-86 bear directly on the Reed case:
 
@@ -282,7 +282,7 @@ Audit evidence for NISPOM compliance includes the contractor's Facility Security
 
 ### CIS Critical Security Controls v8.1 — Control 17 and Control 14
 
-The Center for Internet Security publishes the CIS Critical Security Controls, currently at **version 8.1** (published 2024). Two controls apply to the Reed case:
+The Center for Internet Security publishes the CIS Critical Security Controls, currently at **version 8.1** (published 2024).[^cis-critical-security-controls-v8] Two controls apply to the Reed case:
 
 **Control 17 — Incident Response Management.** Establishes the foundation for institutional forensic capability. Safeguards 17.1 (designate personnel for incident response), 17.2 (define contact information for incident-response personnel), 17.3 (establish reporting procedures for incidents), and 17.4 (document incident-response procedures) collectively describe the institutional readiness that makes the Reed-case examination possible. Polaris's arrangement with Driftwood is the practical instantiation of 17.1's "designated personnel" clause — for a small org without in-house forensics, the designated personnel can be a contracted partner under a documented retainer agreement.
 
@@ -292,9 +292,9 @@ The Center for Internet Security publishes the CIS Critical Security Controls, c
 
 The Common Weakness Enumeration catalog has two entries that apply to the Reed case, both with an unusual twist: they apply *to the subject*, not to a defended system.
 
-**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.** The umbrella weakness pattern. In the standard CWE-200 framing, an organization unintentionally exposes its information to outsiders. In the Reed case, the inverted framing applies: *Reed* unintentionally exposed his own location and timestamp information to *Dana* (and through Dana, to Polaris's investigation process) by reusing a metadata-bearing artifact. CWE-200 covers this case too — the weakness pattern is "information was exposed in a context where the exposure was not authorized by the information's owner."
+**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] The umbrella weakness pattern. In the standard CWE-200 framing, an organization unintentionally exposes its information to outsiders. In the Reed case, the inverted framing applies: *Reed* unintentionally exposed his own location and timestamp information to *Dana* (and through Dana, to Polaris's investigation process) by reusing a metadata-bearing artifact. CWE-200 covers this case too — the weakness pattern is "information was exposed in a context where the exposure was not authorized by the information's owner."
 
-**CWE-359 — Exposure of Private Personal Information.** A more specific weakness covering personal information specifically. Reed's GPS coordinates and timestamp are personal information about Reed; the artifact's exposure of those values to a third party (Dana) is the CWE-359 pattern.
+**CWE-359 — Exposure of Private Personal Information.** A more specific weakness covering personal information specifically.[^cwe-359] Reed's GPS coordinates and timestamp are personal information about Reed; the artifact's exposure of those values to a third party (Dana) is the CWE-359 pattern.
 
 Both CWEs are unusual to cite from the *defender's* side of an insider-threat investigation, but they capture the asymmetric advantage modern forensic technique provides: the subject's own information-handling practices produce the evidence trail.
 
@@ -363,7 +363,7 @@ The GIAC Certified Forensic Analyst is the more advanced forensics certification
 
 For the Reed case, GCFA-level depth becomes relevant in the *next* engagement — the workstation forensic image (`level1@forensics`). The GCFE-level work of extracting the photograph's EXIF metadata is necessary but not sufficient for the full investigation; the GCFA-level work of building a timeline that cross-references badge events, workstation activity, file-system changes, and external-communication metadata is what produces the institutional narrative Dana ultimately writes.
 
-GCFA candidates are expected to be fluent with tools like **The Sleuth Kit**, **Autopsy**, **FTK Imager** and **FTK**, **EnCase**, **Volatility** for memory forensics, **Plaso/log2timeline** for super-timeline construction, and the SANS DFIR poster collection generally. The exam includes a substantial practical component.
+GCFA candidates are expected to be fluent with tools like **The Sleuth Kit**, **Autopsy**, **FTK Imager** and **FTK**, **EnCase**, **Volatility** for memory forensics, **Plaso/log2timeline** for super-timeline construction, and the SANS DFIR poster collection generally.[^sans-dfir-digital-forensics-and][^the-sleuth-kit-autopsy-open][^ftk-imager-free-disk-imaging] The exam includes a substantial practical component.
 
 ### GIAC GCIH — Certified Incident Handler
 
@@ -489,32 +489,35 @@ For the project: when you train forensic examiners, train them on every EXIF fie
 
 *Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
-- [NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/pubs/sp/800/86/final)
-- [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information](https://csrc.nist.gov/pubs/sp/800/171/r3/final)
-- [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final)
-- [CMMC Program — DoD Cybersecurity Maturity Model Certification](https://dodcio.defense.gov/CMMC/)
-- [NISPOM — 32 CFR Part 117 (eCFR)](https://www.ecfr.gov/current/title-32/subtitle-A/chapter-I/subchapter-D/part-117)
-- [DCSA — Defense Counterintelligence and Security Agency](https://www.dcsa.mil/)
-- [NITTF — National Insider Threat Task Force](https://archive.dni.gov/index.php/ncsc-how-we-work/ncsc-nittf)
-- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
-- [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (MITRE flags as "Discouraged" for direct vulnerability mapping; cited here for conceptual familiarity — the more-specific CWE-359 is the preferred citation)](https://cwe.mitre.org/data/definitions/200.html)
-- [CWE-359 — Exposure of Private Personal Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/359.html)
-- [18 U.S.C. § 1832 — Theft of Trade Secrets (Cornell)](https://www.law.cornell.edu/uscode/text/18/1832)
-- [EXIF Specification — JEITA CP-3451 (Exchangeable Image File Format)](https://www.jeita.or.jp/cgi-bin/standard_e/list.cgi?cateid=1&subcateid=4)
-- [SANS DFIR — Digital Forensics and Incident Response (community resources)](https://www.sans.org/cyber-security-courses?focus-area=digital-forensics-incident-response)
-- [exiftool — Phil Harvey's perl-based EXIF reader (de facto reference implementation)](https://exiftool.org/)
-- [mat2 — Metadata anonymization toolkit (upstream archived 2024-2025; still functional but unmaintained — distro-packaged forks may continue)](https://0xacab.org/jvoisin/mat2)
-- [The Sleuth Kit + Autopsy — Open-source forensic toolkit](https://www.sleuthkit.org/)
-- [FTK Imager — Free disk-imaging tool from AccessData](https://www.exterro.com/digital-forensics-software/ftk-imager)
-- [Vice — December 3, 2012: "We are with John McAfee right now, suckers." (the EXIF-revealed McAfee photograph)](https://www.vice.com/en/article/we-are-with-john-mcafee-right-now-suckers/)
-- [Wired — 2012 coverage: "Anonymous Hacker Caught After Posting Girlfriend's Boobs Online" (Higinio O. Ochoa III case)](https://en.wikipedia.org/wiki/Higinio_Ochoa)
-- [FBI San Antonio Field Office — Press release on Ochoa sentencing (August 2012)](https://archives.fbi.gov/archives/sanantonio/press-releases/2012/galveston-man-sentenced-to-federal-prison-for-computer-hacking)
-- [Dennis Rader / BTK Killer — Wikipedia (consolidated reference; the original Wichita Eagle coverage from Feb 26, 2005 may no longer resolve at its original URL)](https://en.wikipedia.org/wiki/Dennis_Rader)
-- [GIAC GCFE — Certified Forensic Examiner](https://www.giac.org/certifications/certified-forensic-examiner-gcfe/)
-- [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa/)
-- [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih/)
-- [EC-Council CHFI — Computer Hacking Forensic Investigator](https://www.eccouncil.org/train-certify/computer-hacking-forensic-investigator-chfi-north-america/)
-- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
+[^nist-800-86]: [NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/pubs/sp/800/86/final).
+[^nist-800-171]: [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information](https://csrc.nist.gov/pubs/sp/800/171/r3/final).
+[^cfr-32-117]: [NISPOM — 32 CFR Part 117 (eCFR)](https://www.ecfr.gov/current/title-32/subtitle-A/chapter-I/subchapter-D/part-117).
+[^nittf-national-insider-threat-task]: [NITTF — National Insider Threat Task Force](https://archive.dni.gov/index.php/ncsc-how-we-work/ncsc-nittf).
+[^cis-critical-security-controls-v8]: [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
+[^cwe-200]: [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (MITRE flags as "Discouraged" for direct vulnerability mapping; cited here for conceptual familiarity — the more-specific CWE-359 is the preferred citation)](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-359]: [CWE-359 — Exposure of Private Personal Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/359.html).
+[^18-u-s-c-1832]: [18 U.S.C. § 1832 — Theft of Trade Secrets (Cornell)](https://www.law.cornell.edu/uscode/text/18/1832).
+[^sans-dfir-digital-forensics-and]: [SANS DFIR — Digital Forensics and Incident Response (community resources)](https://www.sans.org/cyber-security-courses?focus-area=digital-forensics-incident-response).
+[^the-sleuth-kit-autopsy-open]: [The Sleuth Kit + Autopsy — Open-source forensic toolkit](https://www.sleuthkit.org/).
+[^ftk-imager-free-disk-imaging]: [FTK Imager — Free disk-imaging tool from AccessData](https://www.exterro.com/digital-forensics-software/ftk-imager).
+[^vice-december-3-2012-we]: [Vice — December 3, 2012: "We are with John McAfee right now, suckers." (the EXIF-revealed McAfee photograph)](https://www.vice.com/en/article/we-are-with-john-mcafee-right-now-suckers/).
+[^fbi-san-antonio-field-office]: [FBI San Antonio Field Office — Press release on Ochoa sentencing (August 2012)](https://archives.fbi.gov/archives/sanantonio/press-releases/2012/galveston-man-sentenced-to-federal-prison-for-computer-hacking).
+[^dennis-rader-btk-killer-wikipedia]: [Dennis Rader / BTK Killer — Wikipedia (consolidated reference; the original Wichita Eagle coverage from Feb 26, 2005 may no longer resolve at its original URL)](https://en.wikipedia.org/wiki/Dennis_Rader).
+
+### Further reading
+
+- [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final).
+- [CMMC Program — DoD Cybersecurity Maturity Model Certification](https://dodcio.defense.gov/CMMC/).
+- [DCSA — Defense Counterintelligence and Security Agency](https://www.dcsa.mil/).
+- [EXIF Specification — JEITA CP-3451 (Exchangeable Image File Format)](https://www.jeita.or.jp/cgi-bin/standard_e/list.cgi?cateid=1&subcateid=4).
+- [exiftool — Phil Harvey's perl-based EXIF reader (de facto reference implementation)](https://exiftool.org/).
+- [mat2 — Metadata anonymization toolkit (upstream archived 2024-2025; still functional but unmaintained — distro-packaged forks may continue)](https://0xacab.org/jvoisin/mat2).
+- [Wired — 2012 coverage: "Anonymous Hacker Caught After Posting Girlfriend's Boobs Online" (Higinio O. Ochoa III case)](https://en.wikipedia.org/wiki/Higinio_Ochoa).
+- [GIAC GCFE — Certified Forensic Examiner](https://www.giac.org/certifications/certified-forensic-examiner-gcfe/).
+- [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa/).
+- [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih/).
+- [EC-Council CHFI — Computer Hacking Forensic Investigator](https://www.eccouncil.org/train-certify/computer-hacking-forensic-investigator-chfi-north-america/).
+- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/).
 
 ---
 

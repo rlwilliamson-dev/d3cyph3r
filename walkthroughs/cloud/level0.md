@@ -10,7 +10,7 @@
 
 Coverline Insurance is one of Driftwood's insurtech clients — a mid-sized property and casualty carrier specializing in small-business policies (general liability, commercial auto, workers' compensation, business-owners' policies). They run roughly 150 engineers, were founded in 2019, and are headquartered in Hartford, Connecticut with a satellite office in Austin. They sell direct *and* white-label their product to roughly 40 regional insurance carriers — which is the part of their business model that drives the regulatory posture you're about to encounter. **Every carrier customer contractually requires Coverline's most recent SOC 2 Type II report before they'll resell.** No SOC 2 = no carrier-customer renewals = no business.
 
-State-insurance regs add layers on top of SOC 2. The **NAIC Insurance Data Security Model Law** has been adopted in roughly 25 of the states Coverline operates in — codifying risk assessment, written information security program, third-party service-provider oversight, and incident notification within 72 hours to the state insurance commissioner. **NYDFS 23 NYCRR 500** applies because Coverline is licensed in New York, layering on annual penetration testing, biannual vulnerability assessments, MFA for privileged accounts, encryption requirements, and its own 72-hour breach-notification clock. **GLBA Safeguards Rule** applies because insurance is a Title V financial activity; the FTC's 2023-effective amendments added MFA, encryption, written incident response plans, and qualified-individual designation requirements. **State-by-state breach-notification laws** make 50 jurisdictions a concern for any incident touching customer NPI.
+State-insurance regs add layers on top of SOC 2. The **NAIC Insurance Data Security Model Law** has been adopted in roughly 25 of the states Coverline operates in — codifying risk assessment, written information security program, third-party service-provider oversight, and incident notification within 72 hours to the state insurance commissioner.[^naic-insurance-data-security-model] **NYDFS 23 NYCRR 500** applies because Coverline is licensed in New York, layering on annual penetration testing, biannual vulnerability assessments, MFA for privileged accounts, encryption requirements, and its own 72-hour breach-notification clock.[^nycrr-500] **GLBA Safeguards Rule** applies because insurance is a Title V financial activity; the FTC's 2023-effective amendments added MFA, encryption, written incident response plans, and qualified-individual designation requirements. **State-by-state breach-notification laws** make 50 jurisdictions a concern for any incident touching customer NPI.
 
 Coverline came to Driftwood about eighteen months ago for SOC 2 readiness work — they were preparing for their first formal Type II audit and wanted a security partner who could help through readiness, gap remediation, and the audit fieldwork. They passed the first Type II cleanly. The ongoing engagement has shifted to general security partnership: third-party risk assessments, the annual penetration test, an incident-response retainer, and — when Coverline's internal team can't take on a piece without slipping their primary roadmap — audit-cycle gap-filling.
 
@@ -275,13 +275,13 @@ Three named, well-documented S3-misconfiguration breaches. Each was a major indu
 
 In March 2019, an attacker — Paige Thompson, a former AWS engineer operating under the handle "erratic" — exploited a misconfigured Web Application Firewall on a Capital One server-side application to perform a Server-Side Request Forgery (SSRF) attack. The SSRF allowed the attacker to query the AWS Instance Metadata Service from the WAF's perspective, retrieve the EC2 instance's temporary IAM credentials, and use those credentials to enumerate and download data from Capital One's S3 buckets. The exfiltrated data covered approximately **106 million credit-card applications** across the US and Canada, including names, addresses, dates of birth, self-reported income, credit scores, payment histories, and approximately 140,000 US Social Security numbers + 80,000 linked bank-account numbers.
 
-Capital One disclosed the breach publicly on July 29, 2019. Thompson was arrested the same week. She was convicted in 2022 on multiple counts including wire fraud and computer fraud. (The Ninth Circuit vacated her original sentence in March 2025 as substantively unreasonable; resentencing in November 2025 imposed time-served plus five years of supervised release including three years home confinement, 250 hours of community service, with the $40.7M restitution preserved.) The regulatory cascade for Capital One was unprecedented: the Office of the Comptroller of the Currency assessed an **$80 million civil money penalty** in August 2020 — the first major federal-banking-regulator fine for a cloud-misconfiguration incident. The Federal Reserve's separate 2020 enforcement action against Capital One — concerning the same cloud-migration risk-assessment deficiencies — was terminated in 2023 without additional penalty after Capital One demonstrated remediation. Consumer class-action litigation added approximately **$190 million** in settlement payments in late 2022.
+Capital One disclosed the breach publicly on July 29, 2019. Thompson was arrested the same week. She was convicted in 2022 on multiple counts including wire fraud and computer fraud. (The Ninth Circuit vacated her original sentence in March 2025 as substantively unreasonable; resentencing in November 2025 imposed time-served plus five years of supervised release including three years home confinement, 250 hours of community service, with the $40.7M restitution preserved.) The regulatory cascade for Capital One was unprecedented: the Office of the Comptroller of the Currency assessed an **$80 million civil money penalty** in August 2020 — the first major federal-banking-regulator fine for a cloud-misconfiguration incident. The Federal Reserve's separate 2020 enforcement action against Capital One — concerning the same cloud-migration risk-assessment deficiencies — was terminated in 2023 without additional penalty after Capital One demonstrated remediation.[^federal-reserve-terminates-capital-one] Consumer class-action litigation added approximately **$190 million** in settlement payments in late 2022.
 
 The Capital One breach is the canonical AWS cloud-security case study in every modern curriculum. The specific technical chain — WAF SSRF → IMDS credential retrieval → S3 enumeration — drove industry-wide changes: AWS shipped **Instance Metadata Service Version 2 (IMDSv2)** with mandatory token-based authentication, multiple cloud-security configuration frameworks added explicit checks for IMDSv1 usage, and IMDS-credential-as-attack-vector training became standard in every cloud-security cert. The lesson Coverline's situation directly inherits from Capital One: **a single misconfiguration in the cloud-infrastructure layer can produce regulator action measured in tens of millions of dollars.** Coverline's exposure is smaller in scale but qualitatively identical in shape.
 
 ### Accenture — September 2017
 
-In September 2017, security firm UpGuard discovered four publicly-accessible Amazon S3 buckets owned by Accenture, one of the largest IT-consulting firms in the world. The buckets — labeled `acp-deployment`, `acp-software`, `acp-ssl`, and `acpcollector` — contained Accenture's internal cloud-platform infrastructure: API authentication credentials, certificates and private keys, plaintext passwords, decryption keys, customer data, and one bucket containing approximately 137 GB of data including offline backups of database snapshots. Anyone who guessed the bucket names (or used an S3-enumeration tool) could download the contents.
+In September 2017, security firm UpGuard discovered four publicly-accessible Amazon S3 buckets owned by Accenture, one of the largest IT-consulting firms in the world.[^upguard-accenture-s3-buckets-exposure] The buckets — labeled `acp-deployment`, `acp-software`, `acp-ssl`, and `acpcollector` — contained Accenture's internal cloud-platform infrastructure: API authentication credentials, certificates and private keys, plaintext passwords, decryption keys, customer data, and one bucket containing approximately 137 GB of data including offline backups of database snapshots. Anyone who guessed the bucket names (or used an S3-enumeration tool) could download the contents.
 
 Accenture remediated within hours of UpGuard's responsible-disclosure notification. The exposure window — by Accenture's account — was approximately one day; by UpGuard's analysis, it had likely been multi-week. No specific customer data exfiltration was confirmed publicly. Accenture's own statement framed the incident as a "test environment" misconfiguration; UpGuard's analysis disputed that characterization given the production-grade credential material in the buckets. Either reading produces the same conclusion: the misconfiguration was structural, and the remediation required no novel technology — just enabling Block Public Access on the buckets that should have been private from the start.
 
@@ -291,7 +291,7 @@ For Driftwood specifically, the Accenture parallel is the reputational dimension
 
 ### US Voter Records / Deep Root Analytics — June 2017
 
-In June 2017, UpGuard discovered an Amazon S3 bucket owned by Deep Root Analytics — a political-data firm contracted by the Republican National Committee for the 2016 US presidential campaign — containing personal information for approximately **198 million American voters.** The exposed data included voters' names, dates of birth, home and mailing addresses, phone numbers, registered party affiliations, self-reported racial demographics, and modeled voter-preference data assembled from polling and consumer-data sources. The bucket was configured for public read access. No password, no authentication, no restriction by source IP.
+In June 2017, UpGuard discovered an Amazon S3 bucket owned by Deep Root Analytics — a political-data firm contracted by the Republican National Committee for the 2016 US presidential campaign — containing personal information for approximately **198 million American voters.**[^upguard-deep-root-analytics-rnc] The exposed data included voters' names, dates of birth, home and mailing addresses, phone numbers, registered party affiliations, self-reported racial demographics, and modeled voter-preference data assembled from polling and consumer-data sources. The bucket was configured for public read access. No password, no authentication, no restriction by source IP.
 
 The exposure was estimated to cover approximately 61% of the US population at the time. Multiple class-action lawsuits followed, with the lead case (Tatum v. Deep Root Analytics) settling for an undisclosed amount in 2021. The RNC's response framed the incident as a contractor failure; Deep Root's response acknowledged the misconfiguration and described an immediate remediation. The regulatory environment for political-data exposures was — and remains — patchier than for financial or healthcare data, which is part of why the case settled without a large publicized fine. But the scale itself is the lesson: **one misconfigured bucket exposed personal information on more than half the US adult population.**
 
@@ -299,7 +299,7 @@ For Coverline, the parallel is the structural-scale dimension. Coverline's claim
 
 ## §5 — Frameworks, deep dive
 
-The in-game post-mortem cites ten framework controls. Each is expanded below. Cloud is the broadest framework surface of any track because every layer of the modern cloud-security regulatory stack applies simultaneously — SOC 2 for the customer-facing assurance, NIST 800-53 for the federal-control baseline, NIST CSF 2.0 for the cybersecurity-program framing, CIS for the configuration baseline, ISO 27017 for the international cloud-specific standard, OWASP for the application-security frame, CWE for the vulnerability taxonomy, plus the insurance-vertical regulations (NAIC, NYDFS) and the financial-services backstop (GLBA).
+The in-game post-mortem cites ten framework controls. Each is expanded below. Cloud is the broadest framework surface of any track because every layer of the modern cloud-security regulatory stack applies simultaneously — SOC 2 for the customer-facing assurance, NIST 800-53 for the federal-control baseline, NIST CSF 2.0 for the cybersecurity-program framing, CIS for the configuration baseline, ISO 27017 for the international cloud-specific standard, OWASP for the application-security frame, CWE for the vulnerability taxonomy, plus the insurance-vertical regulations (NAIC, NYDFS) and the financial-services backstop (GLBA).[^nist-800-53]
 
 ### SOC 2 Trust Services Criteria — CC6.1, CC6.6, CC6.7, CC7.1
 
@@ -313,7 +313,7 @@ Four CC controls apply directly to Coverline's finding:
 
 **CC6.7 — Transmission and Movement of Information.** *"The entity restricts the transmission, movement, and removal of information to authorized internal and external users and processes."* This applies to data movement *into* and *out of* the bucket. Bucket policies should restrict the source of incoming uploads (typically to specific application IAM roles) and the destination of outgoing reads (typically to authenticated principals). The `coverline-claims-uploads-prod` bucket appears to have no such restrictions — the listing succeeds without authentication.
 
-**CC7.1 — Detection of Security Events.** *"To meet its objectives, the entity uses detection and monitoring procedures to identify security events..."* This is the missing piece in Coverline's posture. Coverline had the *policy* (production buckets shall not allow anonymous public access); they didn't have the *detection*. AWS Config managed rules (`s3-bucket-public-read-prohibited`, `s3-bucket-public-write-prohibited`), AWS Macie, and AWS Trusted Advisor's "S3 Bucket Permissions" check are the standard detection-layer controls that close the CC7.1 gap.
+**CC7.1 — Detection of Security Events.** *"To meet its objectives, the entity uses detection and monitoring procedures to identify security events..."* This is the missing piece in Coverline's posture. Coverline had the *policy* (production buckets shall not allow anonymous public access); they didn't have the *detection*. AWS Config managed rules (`s3-bucket-public-read-prohibited`, `s3-bucket-public-write-prohibited`), AWS Macie, and AWS Trusted Advisor's "S3 Bucket Permissions" check are the standard detection-layer controls that close the CC7.1 gap.[^aws-config-managed-rule-s3][^aws-macie-sensitive-data-discovery]
 
 Audit evidence for SOC 2 includes the documented policy, the technical control implementation (the bucket policies, the BPA settings, the Config rules), and — crucially — *the evidence trail proving the policy is verified in practice over the audit period.* The "no documented evidence trail" finding the audit firm delivered is what made this exercise a deliverable rather than an internal task.
 
@@ -331,7 +331,7 @@ NIST SP 800-53, currently at **Revision 5 with Release 5.2.0 published August 27
 
 ### NIST Cybersecurity Framework 2.0 — PR.AA, PR.DS, DE.CM
 
-The **NIST Cybersecurity Framework 2.0** was published in February 2024, replacing the 2018 v1.1. CSF 2.0 is the most-cited cybersecurity-program framework in the US private sector; it provides a common vocabulary for risk-management discussions between security teams, executives, and board members. CSF 2.0 added a new **Govern** function (joining the existing Identify, Protect, Detect, Respond, Recover functions) to explicitly cover organizational governance over cybersecurity.
+The **NIST Cybersecurity Framework 2.0** was published in February 2024, replacing the 2018 v1.1.[^nist-cybersecurity-framework-2-0] CSF 2.0 is the most-cited cybersecurity-program framework in the US private sector; it provides a common vocabulary for risk-management discussions between security teams, executives, and board members. CSF 2.0 added a new **Govern** function (joining the existing Identify, Protect, Detect, Respond, Recover functions) to explicitly cover organizational governance over cybersecurity.
 
 Three CSF 2.0 sub-categories apply to Coverline:
 
@@ -343,7 +343,7 @@ Three CSF 2.0 sub-categories apply to Coverline:
 
 ### CIS AWS Foundations Benchmark v7.0.0 — §3.1.1 through §3.1.4 (S3)
 
-The Center for Internet Security publishes the **CIS AWS Foundations Benchmark**, a prescriptive configuration baseline for AWS accounts — specific, opinionated recommendations that map to the broader CIS Controls. The current release is **v7.0.0** (April 2026), which reorganized the sections: **Section 3 now covers Storage**, with subsection **3.1 covering S3 specifically** (in v5.0.0 and earlier, S3 lived in §2.1.x). One operational caveat worth knowing: **AWS Security Hub's managed CIS standard still tops out at v5.0.0**, so the findings you see in the Security Hub console will report the older §2.1.x numbering for these same controls.
+The Center for Internet Security publishes the **CIS AWS Foundations Benchmark**, a prescriptive configuration baseline for AWS accounts — specific, opinionated recommendations that map to the broader CIS Controls.[^cis-aws-foundations-benchmark-current] The current release is **v7.0.0** (April 2026), which reorganized the sections: **Section 3 now covers Storage**, with subsection **3.1 covering S3 specifically** (in v5.0.0 and earlier, S3 lived in §2.1.x). One operational caveat worth knowing: **AWS Security Hub's managed CIS standard still tops out at v5.0.0**, so the findings you see in the Security Hub console will report the older §2.1.x numbering for these same controls.
 
 Four sub-controls in §3.1 apply to Coverline's situation:
 
@@ -356,7 +356,7 @@ Audit evidence for the CIS AWS Foundations Benchmark is typically generated auto
 
 ### ISO/IEC 27017:2015 — Code of Practice for Cloud Services
 
-**ISO/IEC 27017:2015** is the international standard for information-security controls specifically for cloud services. It extends ISO/IEC 27002 (the general information-security controls standard) with cloud-specific guidance. ISO 27017 is often cited in international customer contracts as the cloud-vertical analog of the ISO 27001 information-security-management standard.
+**ISO/IEC 27017:2015** is the international standard for information-security controls specifically for cloud services.[^iso-27017] It extends ISO/IEC 27002 (the general information-security controls standard) with cloud-specific guidance. ISO 27017 is often cited in international customer contracts as the cloud-vertical analog of the ISO 27001 information-security-management standard.
 
 Three controls apply to Coverline's case:
 
@@ -366,7 +366,7 @@ Three controls apply to Coverline's case:
 
 ### OWASP Cloud-Native Top 10 — CNAS-1, CNAS-2, CNAS-5
 
-The **OWASP Cloud-Native Application Security Top 10** is a separate document from the better-known OWASP Top 10 (which we covered in level0@crypto and level0@web). The Cloud-Native Top 10 was first published in 2022 and addresses the security weaknesses specific to cloud-native application architectures. The project site repo was archived in April 2025 and the main project repo was archived on November 24, 2025; the 2022 edition remains the canonical reference, with no updated edition published as of audit date.
+The **OWASP Cloud-Native Application Security Top 10** is a separate document from the better-known OWASP Top 10 (which we covered in level0@crypto and level0@web).[^owasp-cloud-native-application-security] The Cloud-Native Top 10 was first published in 2022 and addresses the security weaknesses specific to cloud-native application architectures. The project site repo was archived in April 2025 and the main project repo was archived on November 24, 2025; the 2022 edition remains the canonical reference, with no updated edition published as of audit date.
 
 Three categories apply to Coverline:
 
@@ -380,15 +380,15 @@ Three categories apply to Coverline:
 
 The Common Weakness Enumeration catalog has five entries that map to Coverline's finding:
 
-**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.** The headline. The claims-bucket exposure of NPI is the textbook CWE-200 instance. Note: CWE-200 is flagged as "Discouraged" by MITRE for direct vulnerability mapping in 2026 — it's the conceptual umbrella, but for a CVE-mapped finding the more-specific child (here, CWE-732) is the preferred citation. The in-game post-mortem cites CWE-200 for conceptual coverage, which is appropriate for player-facing pedagogy.
+**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] The headline. The claims-bucket exposure of NPI is the textbook CWE-200 instance. Note: CWE-200 is flagged as "Discouraged" by MITRE for direct vulnerability mapping in 2026 — it's the conceptual umbrella, but for a CVE-mapped finding the more-specific child (here, CWE-732) is the preferred citation.[^cwe-732] The in-game post-mortem cites CWE-200 for conceptual coverage, which is appropriate for player-facing pedagogy.
 
 **CWE-732 — Incorrect Permission Assignment for Critical Resource.** The bucket-policy / Public Access Block misconfiguration. This is the more-specific CVE-mappable citation for the Coverline finding. The Public Access Block setting being off is exactly the "incorrect permission assignment" CWE-732 captures.
 
-**CWE-285 — Improper Authorization.** The public bucket authorizes the wrong principals (every principal). The control should restrict to a defined set of authorized requesters; it doesn't.
+**CWE-285 — Improper Authorization.**[^cwe-285] The public bucket authorizes the wrong principals (every principal). The control should restrict to a defined set of authorized requesters; it doesn't.
 
-**CWE-798 — Use of Hard-coded Credentials.** The RDS master password embedded in `migrate-rds.sh`. Same weakness pattern as level0@crypto's API key, applied to a database credential.
+**CWE-798 — Use of Hard-coded Credentials.**[^cwe-798] The RDS master password embedded in `migrate-rds.sh`. Same weakness pattern as level0@crypto's API key, applied to a database credential.
 
-**CWE-540 — Inclusion of Sensitive Information in Source Code.** The script is the source-controlled artifact. CWE-540 is a more recent CWE (added to the catalog in the 2019-era expansion) that specifically addresses sensitive data committed to source-controlled artifacts; it's the right citation for the operational-script-with-credential pattern.
+**CWE-540 — Inclusion of Sensitive Information in Source Code.**[^cwe-540] The script is the source-controlled artifact. CWE-540 is a more recent CWE (added to the catalog in the 2019-era expansion) that specifically addresses sensitive data committed to source-controlled artifacts; it's the right citation for the operational-script-with-credential pattern.
 
 ### NAIC Insurance Data Security Model Law (2017)
 
@@ -415,7 +415,7 @@ Six sections apply to Coverline:
 
 ### GLBA Safeguards Rule — 16 CFR Part 314 (FTC amendments effective 2023)
 
-The **Gramm-Leach-Bliley Act** governs financial institutions' protection of customer information. The FTC implements GLBA's information-security requirements via the **Safeguards Rule** (16 CFR Part 314), which was substantially amended in December 2021 with enforcement effective June 2023. The 2023 amendments raised the bar significantly: required MFA for any individual accessing customer information, encryption of customer information at rest and in transit, written incident response plans, designation of a "Qualified Individual" responsible for the information-security program, and breach notification to the FTC for events affecting 500+ consumers.
+The **Gramm-Leach-Bliley Act** governs financial institutions' protection of customer information. The FTC implements GLBA's information-security requirements via the **Safeguards Rule** (16 CFR Part 314), which was substantially amended in December 2021 with enforcement effective June 2023.[^cfr-16-314] The 2023 amendments raised the bar significantly: required MFA for any individual accessing customer information, encryption of customer information at rest and in transit, written incident response plans, designation of a "Qualified Individual" responsible for the information-security program, and breach notification to the FTC for events affecting 500+ consumers.
 
 Coverline is subject to GLBA because insurance is a Title V financial activity. The Safeguards Rule applies to Coverline directly and to Coverline's service providers (Driftwood being one).
 
@@ -637,36 +637,39 @@ The CIS AWS Foundations Benchmark addresses this from the *audited* side: separa
 
 *Last reviewed: June 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
-- [AICPA SOC 2 Trust Services Criteria — 2017 framework with 2022 revisions](https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services)
-- [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final)
-- [NIST Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework)
-- [CIS AWS Foundations Benchmark (current release v7.0.0; AWS Security Hub's managed standard still implements v5.0.0)](https://www.cisecurity.org/benchmark/amazon_web_services)
-- [ISO/IEC 27017:2015 — Code of practice for cloud services](https://www.iso.org/standard/43757.html)
-- [OWASP Cloud-Native Application Security Top 10 (GitHub canonical — 2022 edition)](https://github.com/OWASP/Cloud-Native-Application-Security-Top-10)
-- [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (MITRE flags as "Discouraged" for direct vulnerability mapping; CWE-732 is the preferred citation for this scenario)](https://cwe.mitre.org/data/definitions/200.html)
-- [CWE-732 — Incorrect Permission Assignment for Critical Resource](https://cwe.mitre.org/data/definitions/732.html)
-- [CWE-285 — Improper Authorization](https://cwe.mitre.org/data/definitions/285.html)
-- [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html)
-- [CWE-540 — Inclusion of Sensitive Information in Source Code](https://cwe.mitre.org/data/definitions/540.html)
-- [NAIC Insurance Data Security Model Law (#668)](https://content.naic.org/sites/default/files/model-law-668.pdf)
-- [NYDFS 23 NYCRR 500 — Cybersecurity Requirements (2017, amended November 2023)](https://www.dfs.ny.gov/industry_guidance/cybersecurity)
-- [GLBA Safeguards Rule — 16 CFR Part 314](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
-- [MITRE ATT&CK — T1530: Data from Cloud Storage Object](https://attack.mitre.org/techniques/T1530/)
-- [MITRE ATT&CK — T1602: Data from Configuration Repository](https://attack.mitre.org/techniques/T1602/)
-- [MITRE ATT&CK — T1078.004: Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/)
-- [MITRE ATT&CK — T1213: Data from Information Repositories](https://attack.mitre.org/techniques/T1213/)
-- [MITRE ATT&CK — T1580: Cloud Infrastructure Discovery](https://attack.mitre.org/techniques/T1580/)
-- [AWS S3 Block Public Access — User Guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html)
-- [AWS Config managed rule — s3-bucket-public-read-prohibited](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-public-read-prohibited.html)
-- [AWS Macie — Sensitive data discovery](https://aws.amazon.com/macie/)
-- [AWS Security Hub — Centralized security findings](https://aws.amazon.com/security-hub/)
-- [AWS IAM Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html)
-- [Capital One 2019 breach — OCC consent order ($80M penalty, August 2020)](https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html)
-- [Federal Reserve terminates Capital One enforcement action (2023)](https://www.cybersecuritydive.com/news/fed-ends-capital-one-breach-action/686970/)
-- [UpGuard — Accenture S3 buckets exposure (September 2017)](https://www.upguard.com/breaches/cloud-leak-accenture)
-- [UpGuard — Deep Root Analytics / RNC voter data exposure (June 2017)](https://www.upguard.com/breaches/the-rnc-files)
-- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
-- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach)
+[^nist-800-53]: [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final).
+[^nist-cybersecurity-framework-2-0]: [NIST Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework).
+[^cis-aws-foundations-benchmark-current]: [CIS AWS Foundations Benchmark (current release v7.0.0; AWS Security Hub's managed standard still implements v5.0.0)](https://www.cisecurity.org/benchmark/amazon_web_services).
+[^iso-27017]: [ISO/IEC 27017:2015 — Code of practice for cloud services](https://www.iso.org/standard/43757.html).
+[^owasp-cloud-native-application-security]: [OWASP Cloud-Native Application Security Top 10 (GitHub canonical — 2022 edition)](https://github.com/OWASP/Cloud-Native-Application-Security-Top-10).
+[^cwe-200]: [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor (MITRE flags as "Discouraged" for direct vulnerability mapping; CWE-732 is the preferred citation for this scenario)](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-732]: [CWE-732 — Incorrect Permission Assignment for Critical Resource](https://cwe.mitre.org/data/definitions/732.html).
+[^cwe-285]: [CWE-285 — Improper Authorization](https://cwe.mitre.org/data/definitions/285.html).
+[^cwe-798]: [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html).
+[^cwe-540]: [CWE-540 — Inclusion of Sensitive Information in Source Code](https://cwe.mitre.org/data/definitions/540.html).
+[^naic-insurance-data-security-model]: [NAIC Insurance Data Security Model Law (#668)](https://content.naic.org/sites/default/files/model-law-668.pdf).
+[^nycrr-500]: [NYDFS 23 NYCRR 500 — Cybersecurity Requirements (2017, amended November 2023)](https://www.dfs.ny.gov/industry_guidance/cybersecurity).
+[^cfr-16-314]: [GLBA Safeguards Rule — 16 CFR Part 314](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule).
+[^aws-config-managed-rule-s3]: [AWS Config managed rule — s3-bucket-public-read-prohibited](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-public-read-prohibited.html).
+[^aws-macie-sensitive-data-discovery]: [AWS Macie — Sensitive data discovery](https://aws.amazon.com/macie/).
+[^federal-reserve-terminates-capital-one]: [Federal Reserve terminates Capital One enforcement action (2023)](https://www.cybersecuritydive.com/news/fed-ends-capital-one-breach-action/686970/).
+[^upguard-accenture-s3-buckets-exposure]: [UpGuard — Accenture S3 buckets exposure (September 2017)](https://www.upguard.com/breaches/cloud-leak-accenture).
+[^upguard-deep-root-analytics-rnc]: [UpGuard — Deep Root Analytics / RNC voter data exposure (June 2017)](https://www.upguard.com/breaches/the-rnc-files).
+
+### Further reading
+
+- [AICPA SOC 2 Trust Services Criteria — 2017 framework with 2022 revisions](https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services).
+- [MITRE ATT&CK — T1530: Data from Cloud Storage Object](https://attack.mitre.org/techniques/T1530/).
+- [MITRE ATT&CK — T1602: Data from Configuration Repository](https://attack.mitre.org/techniques/T1602/).
+- [MITRE ATT&CK — T1078.004: Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/).
+- [MITRE ATT&CK — T1213: Data from Information Repositories](https://attack.mitre.org/techniques/T1213/).
+- [MITRE ATT&CK — T1580: Cloud Infrastructure Discovery](https://attack.mitre.org/techniques/T1580/).
+- [AWS S3 Block Public Access — User Guide](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html).
+- [AWS Security Hub — Centralized security findings](https://aws.amazon.com/security-hub/).
+- [AWS IAM Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html).
+- [Capital One 2019 breach — OCC consent order ($80M penalty, August 2020)](https://www.occ.gov/news-issuances/news-releases/2020/nr-occ-2020-101.html).
+- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/).
+- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach).
 
 ---
 

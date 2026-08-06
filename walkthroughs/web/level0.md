@@ -16,7 +16,7 @@ You're on Driftwood's web-audit workstation, logged in as `secops` — the share
 
 Carlos came on as Meridian's in-house web developer eight months ago. Before him, Meridian outsourced the public web stack to BluePier Digital — a Bay Area agency that built the current site in 2021. The relationship ended in 2024 after a contract dispute about scope and final invoicing. Carlos has been finding leftover work-product files since he started: zipped deploy artifacts, draft content, a couple of `.env` files in places they shouldn't have been. He told Priya verbatim: *"There's definitely more I haven't found. I've been doing this solo. If you're going to scan the site I'd rather you find what's left now than have the insurance carrier find it later."*
 
-Meridian is **FERPA-covered.** The Family Educational Rights and Privacy Act (20 U.S.C. § 1232g; 34 CFR Part 99) applies to "education records" containing personally-identifiable information about currently-enrolled or formerly-enrolled students. FERPA is a different beast from HIPAA or PCI-DSS — it has no fine schedule. The enforcement mechanism is *"the federal government can withdraw your funding,"* which is existential for a public university. Meridian's annual Federal Student Aid (FSA) reporting includes a compliance attestation. A documented student-record exposure does not stay private; it becomes part of the next attestation cycle and creates a federal-funding risk.
+Meridian is **FERPA-covered.** The Family Educational Rights and Privacy Act (20 U.S.C. § 1232g; 34 CFR Part 99) applies to "education records" containing personally-identifiable information about currently-enrolled or formerly-enrolled students.[^cfr-34-99] FERPA is a different beast from HIPAA or PCI-DSS — it has no fine schedule. The enforcement mechanism is *"the federal government can withdraw your funding,"* which is existential for a public university. Meridian's annual Federal Student Aid (FSA) reporting includes a compliance attestation. A documented student-record exposure does not stay private; it becomes part of the next attestation cycle and creates a federal-funding risk.
 
 What you don't know yet, walking in, is that BluePier left a `/backup/` directory under DocumentRoot of Meridian's production web server with Apache's default `mod_autoindex` enabled, containing — among other things — a CSV of 4,217 student records from 2023 and a plaintext database credential the agency itself flagged for rotation and never rotated.
 
@@ -175,7 +175,7 @@ You're now inside Meridian's webapp context, holding a live database credential 
 ### If you got stuck
 
 - If `curl https://www.meridian.edu/backup/` returned an HTML page that didn't look like a directory listing, double-check the trailing slash. Some web servers require it; some don't. The game treats `/backup` and `/backup/` interchangeably.
-- If the gobuster output didn't include `/backup`, you may have run a wordlist that didn't contain that path. The game's built-in gobuster uses a curated common-paths list that includes `/backup`; in real engagements, the SecLists wordlist `directory-list-2.3-medium.txt` is the workhorse.
+- If the gobuster output didn't include `/backup`, you may have run a wordlist that didn't contain that path. The game's built-in gobuster uses a curated common-paths list that includes `/backup`; in real engagements, the SecLists wordlist `directory-list-2.3-medium.txt` is the workhorse.[^seclists-curated-wordlists-for-security]
 - If `cat backup/db-creds.txt` instead of `curl https://www.meridian.edu/backup/db-creds.txt` — the difference is that this is a web audit, not a filesystem audit. You're standing outside the server with `curl`, not inside it with `cat`. The whole point of the finding is that the file is reachable *over HTTP*.
 
 ## §3 — The vulnerability
@@ -244,15 +244,15 @@ For higher-education specifically, the Maricopa breach is the canonical case stu
 
 ### First American Financial Corporation — May 2019
 
-On May 24, 2019, security journalist Brian Krebs reported that First American Financial Corporation — one of the largest title-insurance providers in the United States — had a website-design flaw that exposed approximately **885 million mortgage transaction records** dating back to 2003. The exposed records included Social Security numbers, driver's license images, wire-transfer receipts, mortgage documents, and tax records. The mechanism was an Insecure Direct Object Reference (IDOR) vulnerability: the document URLs were sequential integers, and any user who legitimately accessed one document could increment or decrement the number in the URL and access any other document. No authentication was required.
+On May 24, 2019, security journalist Brian Krebs reported that First American Financial Corporation — one of the largest title-insurance providers in the United States — had a website-design flaw that exposed approximately **885 million mortgage transaction records** dating back to 2003.[^first-american-financial-corp-may] The exposed records included Social Security numbers, driver's license images, wire-transfer receipts, mortgage documents, and tax records. The mechanism was an Insecure Direct Object Reference (IDOR) vulnerability: the document URLs were sequential integers, and any user who legitimately accessed one document could increment or decrement the number in the URL and access any other document. No authentication was required.
 
-The First American breach is the largest known data exposure by record count from a single misconfigured web application. The SEC opened an enforcement action against First American, settled in June 2021 for $487,616 — the SEC's first enforcement action specifically targeting a registrant's disclosure controls relating to a cybersecurity vulnerability. The New York Department of Financial Services also opened an action and ultimately negotiated a separate settlement.
+The First American breach is the largest known data exposure by record count from a single misconfigured web application. The SEC opened an enforcement action against First American, settled in June 2021 for $487,616 — the SEC's first enforcement action specifically targeting a registrant's disclosure controls relating to a cybersecurity vulnerability.[^first-american-sec-enforcement-action] The New York Department of Financial Services also opened an action and ultimately negotiated a separate settlement.
 
 The parallel to Meridian is the mechanism: **predictable URLs to sensitive content, no authentication, no access control beyond URL obscurity.** First American's URLs were sequential integer document IDs; Meridian's URL is the literal string `/backup/students_export_2023.csv`. The underlying weakness category is the same — the server is publishing sensitive content at URLs that happen to be discoverable, and the discoverability is the entire vulnerability. The First American incident also made clear, regulatorily, that "we didn't intend for it to be public" is not a defense — once data is reachable from the internet without authentication, the regulatory frame treats it as published.
 
 ### MOVEit Transfer / Cl0p — May–June 2023
 
-On May 31, 2023, Progress Software disclosed a critical SQL injection vulnerability in its MOVEit Transfer file-transfer product (tracked as CVE-2023-34362, CVSS 9.8). The Cl0p ransomware affiliate group had been actively exploiting the vulnerability for at least four days before disclosure, exfiltrating data from MOVEit instances across thousands of customer organizations. By the time the incident response cycle stabilized in late 2023, MOVEit-related disclosures had been filed by approximately **2,700 organizations affecting more than 93 million individuals** — a figure that continued to grow as additional downstream disclosures landed through 2024.
+On May 31, 2023, Progress Software disclosed a critical SQL injection vulnerability in its MOVEit Transfer file-transfer product (tracked as CVE-2023-34362, CVSS 9.8).[^cve-2023-34362][^progress-software-moveit-advisory] The Cl0p ransomware affiliate group had been actively exploiting the vulnerability for at least four days before disclosure, exfiltrating data from MOVEit instances across thousands of customer organizations. By the time the incident response cycle stabilized in late 2023, MOVEit-related disclosures had been filed by approximately **2,700 organizations affecting more than 93 million individuals** — a figure that continued to grow as additional downstream disclosures landed through 2024.
 
 The MOVEit cascade is the canonical modern example of *vendor-driven mass exposure* in the United States. Among the affected organizations were the Oregon Department of Transportation (3.5 million records), the Louisiana Office of Motor Vehicles (6 million records), Colorado State University, the University of Rochester, the New York City Department of Education (45,000 students), and dozens of other state and local government agencies and educational institutions. The exposed data crossed every regulatory regime — FERPA for the schools, HIPAA for the healthcare organizations, GLBA for the banks, state breach-notification laws for everyone.
 
@@ -278,7 +278,7 @@ Audit evidence for FERPA compliance includes a documented privacy policy disclos
 
 ### NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information in Non-Federal Systems
 
-NIST Special Publication 800-171, currently at **Revision 3** (finalized May 2024; supersedes Rev. 2), defines the security requirements for protecting Controlled Unclassified Information (CUI) when it resides in non-federal systems. While FERPA is the primary regulatory frame for Meridian, NIST 800-171 is the *operational* control framework most US universities map to for federal-data handling. Meridian's federal student aid records arguably qualify as CUI; even where they don't, NIST 800-171 is the de facto control baseline for the higher-ed sector.
+NIST Special Publication 800-171, currently at **Revision 3** (finalized May 2024; supersedes Rev. 2), defines the security requirements for protecting Controlled Unclassified Information (CUI) when it resides in non-federal systems.[^nist-800-171] While FERPA is the primary regulatory frame for Meridian, NIST 800-171 is the *operational* control framework most US universities map to for federal-data handling. Meridian's federal student aid records arguably qualify as CUI; even where they don't, NIST 800-171 is the de facto control baseline for the higher-ed sector.
 
 Rev. 3 introduced a new control-numbering format (e.g., `03.01.20` for what was `3.1.20` in Rev. 2) and reorganized several control families. Two controls apply directly to Meridian's finding:
 
@@ -290,7 +290,7 @@ Audit evidence for NIST 800-171 Rev. 3 compliance includes a System Security Pla
 
 ### NIST SP 800-53 Rev. 5 — AC-3, SC-7, CM-6
 
-NIST 800-53 Rev. 5 (with the most recent minor update being 5.2.0 in August 2025) is the comprehensive control catalog underlying NIST 800-171 and many other frameworks. Three controls apply to Meridian's finding:
+NIST 800-53 Rev. 5 (with the most recent minor update being 5.2.0 in August 2025) is the comprehensive control catalog underlying NIST 800-171 and many other frameworks.[^nist-800-53] Three controls apply to Meridian's finding:
 
 **AC-3 — Access Enforcement.** The information system must enforce approved authorizations for logical access to information and system resources. Autoindex output on a directory of sensitive content enforces no access control — the server's default behavior is to return the listing to any requester. The bar for AC-3 compliance is "the system actively enforces an authorization decision," not "the system happens to serve content by default."
 
@@ -300,7 +300,7 @@ NIST 800-53 Rev. 5 (with the most recent minor update being 5.2.0 in August 2025
 
 ### CIS Critical Security Controls v8.1 — Safeguards 4.1 and 4.8
 
-The Center for Internet Security publishes the CIS Critical Security Controls, currently at **version 8.1** (published 2024). Two safeguards apply to Meridian's finding:
+The Center for Internet Security publishes the CIS Critical Security Controls, currently at **version 8.1** (published 2024).[^cis-critical-security-controls-v8] Two safeguards apply to Meridian's finding:
 
 **4.1 — Establish and Maintain a Secure Configuration Process.** Establish and maintain a process for configuring enterprise assets, including software and operating systems, with security-relevant settings. The autoindex-off setting is a baseline-configuration item that should be applied automatically at server provisioning — Ansible, Chef, Puppet, Terraform with cloud-init, or equivalent. Meridian's web server was apparently configured manually (or by BluePier two years ago and never refreshed); 4.1 captures the configuration-as-code remediation.
 
@@ -310,21 +310,21 @@ The Center for Internet Security publishes the CIS Critical Security Controls, c
 
 The Common Weakness Enumeration catalog has four entries that map to Meridian's finding:
 
-**CWE-548 — Exposure of Information Through Directory Listing.** The precise pattern in autoindex. The CWE entry specifies exactly this scenario: a server configured to render a directory listing for any URL that resolves to a directory without an index file, exposing the directory's contents to anyone who knows or guesses the URL.
+**CWE-548 — Exposure of Information Through Directory Listing.**[^cwe-548] The precise pattern in autoindex. The CWE entry specifies exactly this scenario: a server configured to render a directory listing for any URL that resolves to a directory without an index file, exposing the directory's contents to anyone who knows or guesses the URL.
 
-**CWE-552 — Files or Directories Accessible to External Parties.** The underlying weakness: artifacts under DocumentRoot. CWE-552 captures the more general pattern — sensitive files placed where they are accessible to parties who should not have access. It is the parent weakness to CWE-548 and applies to Meridian's finding even with autoindex disabled, because the underlying artifacts would still be accessible at their guessable URLs.
+**CWE-552 — Files or Directories Accessible to External Parties.**[^cwe-552] The underlying weakness: artifacts under DocumentRoot. CWE-552 captures the more general pattern — sensitive files placed where they are accessible to parties who should not have access. It is the parent weakness to CWE-548 and applies to Meridian's finding even with autoindex disabled, because the underlying artifacts would still be accessible at their guessable URLs.
 
-**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.** The student records themselves. The umbrella weakness for any exposure of sensitive data. Important caveat: CWE-200's MITRE mapping status is currently **Discouraged** — when filing a specific finding, MITRE recommends citing the narrower child weakness instead (here, CWE-548 for the directory listing and CWE-552 for the file-accessibility pattern). CWE-200 remains a CWE Top 25 entry — it sat at #17 on the 2024 edition and #20 on the 2025 edition — but the mapping status is independent of the Top-25 rank: the rank is data-driven (CVE counts), while the Discouraged status reflects MITRE's guidance to use more specific child weaknesses when filing.
+**CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] The student records themselves. The umbrella weakness for any exposure of sensitive data. Important caveat: CWE-200's MITRE mapping status is currently **Discouraged** — when filing a specific finding, MITRE recommends citing the narrower child weakness instead (here, CWE-548 for the directory listing and CWE-552 for the file-accessibility pattern). CWE-200 remains a CWE Top 25 entry — it sat at #17 on the 2024 edition and #20 on the 2025 edition — but the mapping status is independent of the Top-25 rank: the rank is data-driven (CVE counts), while the Discouraged status reflects MITRE's guidance to use more specific child weaknesses when filing.
 
-**CWE-798 — Use of Hard-coded Credentials.** The DB password in `db-creds.txt`. The credential half of the finding. The closely-related **CWE-1392 (Use of Default Credentials)** would apply if `M3rid14n!2023-prod` had been the install-default; here it was the operator-chosen value never rotated, which fits CWE-798 more precisely.
+**CWE-798 — Use of Hard-coded Credentials.**[^cwe-798] The DB password in `db-creds.txt`. The credential half of the finding. The closely-related **CWE-1392 (Use of Default Credentials)** would apply if `M3rid14n!2023-prod` had been the install-default; here it was the operator-chosen value never rotated, which fits CWE-798 more precisely.
 
 ### OWASP Top 10:2025 — A02:2025 (was A05:2021) and A01:2025
 
-The current OWASP Top 10 edition is **OWASP Top 10:2025**, finalized in January 2026. Two categories apply to Meridian's finding:
+The current OWASP Top 10 edition is **OWASP Top 10:2025**, finalized in January 2026.[^owasp-top-10-2025] Two categories apply to Meridian's finding:
 
-**A02:2025 — Security Misconfiguration.** Promoted from A05:2021 in the 2025 reshuffle, this category covers improperly configured permissions on cloud services, files, and directories; unnecessary features enabled or installed (open ports, services, accounts, privileges); default accounts and passwords still enabled; missing or misconfigured security headers; verbose error messages revealing internal state. **Autoindex left on, robots.txt listing sensitive paths, working files under DocumentRoot** — all three of Meridian's failure modes — are explicit named examples in A02:2025's category description.
+**A02:2025 — Security Misconfiguration.**[^owasp-a02-2025] Promoted from A05:2021 in the 2025 reshuffle, this category covers improperly configured permissions on cloud services, files, and directories; unnecessary features enabled or installed (open ports, services, accounts, privileges); default accounts and passwords still enabled; missing or misconfigured security headers; verbose error messages revealing internal state. **Autoindex left on, robots.txt listing sensitive paths, working files under DocumentRoot** — all three of Meridian's failure modes — are explicit named examples in A02:2025's category description.
 
-**A01:2025 — Broken Access Control.** Unchanged from the 2021 edition's top slot. Covers any case where access controls fail to restrict authenticated and unauthenticated users to authorized resources. The Meridian records are accessible to anyone who guesses (or, via robots.txt, doesn't even need to guess) the path. The category includes a named sub-pattern for *accessing resources via predictable URLs* — Meridian's `/backup/students_export_2023.csv` is the textbook example.
+**A01:2025 — Broken Access Control.**[^owasp-a01-2025] Unchanged from the 2021 edition's top slot. Covers any case where access controls fail to restrict authenticated and unauthenticated users to authorized resources. The Meridian records are accessible to anyone who guesses (or, via robots.txt, doesn't even need to guess) the path. The category includes a named sub-pattern for *accessing resources via predictable URLs* — Meridian's `/backup/students_export_2023.csv` is the textbook example.
 
 The OWASP 2025 recommended mitigations for A02 are: documented hardening procedures applied identically across environments (Ansible/Terraform/etc., enforced in CI/CD), automated configuration scanning (tools that detect autoindex-on, weak ciphers, missing security headers), and explicit configuration baselines reviewed at least annually. For A01: deny by default, validate authorization at every request, log access-control failures and alert on them.
 
@@ -479,7 +479,7 @@ The Meridian scenario is not theoretical. Every defender working on a public-fac
 
 **5. Fix the robots.txt.** Remove every sensitive path from robots.txt. The right way to keep something off the public internet is to not publish it; the right way to keep it out of search engines is the same. A robots.txt should list paths that are legitimately public-facing but you don't want indexed (e.g., search-result pages, infinite-scroll endpoints, login pages); it should never list sensitive paths.
 
-**6. Notify the affected students.** FERPA does not have a hard breach-notification clock like HIPAA's 60 days, but the Department of Education's Privacy Technical Assistance Center (PTAC) expects affected students to be notified "in a reasonable time" and publishes a notification template. Coordinate with Meridian's general counsel; the federal financial-aid attestation is annual and a documented exposure must be disclosed in the next cycle.
+**6. Notify the affected students.** FERPA does not have a hard breach-notification clock like HIPAA's 60 days, but the Department of Education's Privacy Technical Assistance Center (PTAC) expects affected students to be notified "in a reasonable time" and publishes a notification template.[^privacy-technical-assistance-center-ptac] Coordinate with Meridian's general counsel; the federal financial-aid attestation is annual and a documented exposure must be disclosed in the next cycle.
 
 **7. Continuous Attack-Surface Management (EASM).** Modern external-attack-surface tools — Censys ASM, Microsoft Defender External ASM, Detectify, Tenable Attack Surface Management, Bishop Fox CAST, Cobalt Strike's Cobalt PtaaS, Palo Alto Cortex Xpanse — run continuous gobuster-equivalent scans against your own public footprint and alert on changes. The Meridian finding is the kind of issue these tools surface in their first scan against any new customer. The cost is modest at the institutional scale; the value is the difference between Meridian's 22-month detection window and an hours-long one.
 
@@ -557,36 +557,39 @@ The historical "best practice" of using robots.txt to hide things is the most re
 
 *Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
-- [FERPA — 20 U.S.C. § 1232g (US Code text)](https://www.law.cornell.edu/uscode/text/20/1232g)
-- [FERPA Regulations — 34 CFR Part 99 (eCFR)](https://www.ecfr.gov/current/title-34/subtitle-A/part-99)
-- [Privacy Technical Assistance Center (PTAC) — US Department of Education](https://studentprivacy.ed.gov/)
-- [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information](https://csrc.nist.gov/pubs/sp/800/171/r3/final)
-- [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final)
-- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
-- [CIS Apache HTTP Server Benchmark](https://www.cisecurity.org/benchmark/apache_http_server)
-- [CWE-548 — Exposure of Information Through Directory Listing](https://cwe.mitre.org/data/definitions/548.html)
-- [CWE-552 — Files or Directories Accessible to External Parties](https://cwe.mitre.org/data/definitions/552.html)
-- [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/200.html)
-- [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html)
-- [OWASP Top 10:2025](https://owasp.org/Top10/2025/)
-- [OWASP Top 10:2025 — A02:2025 Security Misconfiguration (deep link)](https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/)
-- [OWASP Top 10:2025 — A01:2025 Broken Access Control (deep link)](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/)
-- [MITRE ATT&CK — T1083: File and Directory Discovery](https://attack.mitre.org/techniques/T1083/)
-- [MITRE ATT&CK — T1595.003: Active Scanning: Wordlist Scanning](https://attack.mitre.org/techniques/T1595/003/)
-- [MITRE ATT&CK — T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/)
-- [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/)
-- [Apache HTTP Server — mod_autoindex documentation](https://httpd.apache.org/docs/2.4/mod/mod_autoindex.html)
-- [Maricopa Community Colleges 2013 data breach — Hagens Berman class-action case summary](https://www.hbsslaw.com/cases/maricopa-county-community-colleges-district-data-breach)
-- [First American Financial Corp. May 2019 data exposure — KrebsOnSecurity](https://krebsonsecurity.com/2019/05/first-american-financial-corp-leaked-hundreds-of-millions-of-title-insurance-records/)
-- [First American — SEC enforcement action settlement (June 2021)](https://www.sec.gov/newsroom/press-releases/2021-102)
-- [MOVEit Transfer CVE-2023-34362 — NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2023-34362)
-- [Progress Software MOVEit advisory](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a)
-- [gobuster — directory brute-forcer](https://github.com/OJ/gobuster)
-- [ffuf — fast web fuzzer](https://github.com/ffuf/ffuf)
-- [dirsearch — web path scanner](https://github.com/maurosoria/dirsearch)
-- [SecLists — Curated wordlists for security testing](https://github.com/danielmiessler/SecLists)
-- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/)
-- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach)
+[^cfr-34-99]: [FERPA Regulations — 34 CFR Part 99 (eCFR)](https://www.ecfr.gov/current/title-34/subtitle-A/part-99).
+[^privacy-technical-assistance-center-ptac]: [Privacy Technical Assistance Center (PTAC) — US Department of Education](https://studentprivacy.ed.gov/).
+[^nist-800-171]: [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information](https://csrc.nist.gov/pubs/sp/800/171/r3/final).
+[^nist-800-53]: [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final).
+[^cis-critical-security-controls-v8]: [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
+[^cwe-548]: [CWE-548 — Exposure of Information Through Directory Listing](https://cwe.mitre.org/data/definitions/548.html).
+[^cwe-552]: [CWE-552 — Files or Directories Accessible to External Parties](https://cwe.mitre.org/data/definitions/552.html).
+[^cwe-200]: [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/200.html).
+[^cwe-798]: [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html).
+[^owasp-top-10-2025]: [OWASP Top 10:2025](https://owasp.org/Top10/2025/).
+[^owasp-a02-2025]: [OWASP Top 10:2025 — A02:2025 Security Misconfiguration (deep link)](https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/).
+[^owasp-a01-2025]: [OWASP Top 10:2025 — A01:2025 Broken Access Control (deep link)](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/).
+[^first-american-financial-corp-may]: [First American Financial Corp. May 2019 data exposure — KrebsOnSecurity](https://krebsonsecurity.com/2019/05/first-american-financial-corp-leaked-hundreds-of-millions-of-title-insurance-records/).
+[^first-american-sec-enforcement-action]: [First American — SEC enforcement action settlement (June 2021)](https://www.sec.gov/newsroom/press-releases/2021-102).
+[^cve-2023-34362]: [MOVEit Transfer CVE-2023-34362 — NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2023-34362).
+[^progress-software-moveit-advisory]: [Progress Software MOVEit advisory](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a).
+[^seclists-curated-wordlists-for-security]: [SecLists — Curated wordlists for security testing](https://github.com/danielmiessler/SecLists).
+
+### Further reading
+
+- [FERPA — 20 U.S.C. § 1232g (US Code text)](https://www.law.cornell.edu/uscode/text/20/1232g).
+- [CIS Apache HTTP Server Benchmark](https://www.cisecurity.org/benchmark/apache_http_server).
+- [MITRE ATT&CK — T1083: File and Directory Discovery](https://attack.mitre.org/techniques/T1083/).
+- [MITRE ATT&CK — T1595.003: Active Scanning: Wordlist Scanning](https://attack.mitre.org/techniques/T1595/003/).
+- [MITRE ATT&CK — T1190: Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/).
+- [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/).
+- [Apache HTTP Server — mod_autoindex documentation](https://httpd.apache.org/docs/2.4/mod/mod_autoindex.html).
+- [Maricopa Community Colleges 2013 data breach — Hagens Berman class-action case summary](https://www.hbsslaw.com/cases/maricopa-county-community-colleges-district-data-breach).
+- [gobuster — directory brute-forcer](https://github.com/OJ/gobuster).
+- [ffuf — fast web fuzzer](https://github.com/ffuf/ffuf).
+- [dirsearch — web path scanner](https://github.com/maurosoria/dirsearch).
+- [Verizon Data Breach Investigations Report (DBIR) — annual](https://www.verizon.com/business/resources/reports/dbir/).
+- [IBM Cost of a Data Breach Report — annual](https://www.ibm.com/reports/data-breach).
 
 ---
 

@@ -10,7 +10,7 @@
 
 Day four of the Reed Connolly case at Polaris Defense Systems. Yesterday you queried the browser artifacts recovered from Reed's seized workstation and found an authenticated session cookie for his personal Gmail, timestamped 02:47 on Saturday morning — roughly seven hours before the 09:42 badge-in at Bay 4.
 
-That cookie did **not** get used to log into anything. This matters, and the level says so out loud in `subpoena-return.txt`. What the artifact did was identify *which account* to name in legal process. Sgt. Chen served a preservation request under 18 U.S.C. § 2703(f), a court order under § 2703(d) followed, and Google produced the mailbox contents. You are working from that production. An investigator who replays a seized session cookie to browse a suspect's live mailbox has contaminated the evidence and probably committed an offense; the discipline of going through process is part of the job, not paperwork around it.
+That cookie did **not** get used to log into anything. This matters, and the level says so out loud in `subpoena-return.txt`. What the artifact did was identify *which account* to name in legal process. Sgt. Chen served a preservation request under 18 U.S.C. § 2703(f), a court order under § 2703(d) followed, and Google produced the mailbox contents.[^18-u-s-c-2703] You are working from that production. An investigator who replays a seized session cookie to browse a suspect's live mailbox has contaminated the evidence and probably committed an offense; the discipline of going through process is part of the job, not paperwork around it.
 
 Overnight, the case changed shape. Reed's counsel produced an email they say authorizes everything — Larry Hutchins, Director of Programs, telling Reed to take the project drive home for the weekend. Hutchins says he never wrote it.
 
@@ -196,19 +196,19 @@ ir-audit@polaris-ir:~$ exit
 
 ## §3 — The vulnerability
 
-The weakness class is **CWE-290: Authentication Bypass by Spoofing** — asserting an identity in a field nothing authenticates.
+The weakness class is **CWE-290: Authentication Bypass by Spoofing** — asserting an identity in a field nothing authenticates.[^cwe-290]
 
 SMTP was specified for a network where every host was known and trusted, and it carries that assumption structurally. The `From:` header has no cryptographic or protocol relationship to the account that submitted the message; it is display text. Anyone with a mail client can put any name and address in it. That is not a bug in an implementation — it is the design, and it is why every countermeasure here is a later addition layered on top.
 
 The three additions and what each actually covers:
 
-**SPF** (RFC 7208, Proposed Standard) publishes in DNS which servers may send for a domain. Its blind spot is that it validates the **envelope** sender, not the `From:` header the human reads — so a message can pass SPF while displaying someone else's name entirely.
+**SPF** (RFC 7208, Proposed Standard) publishes in DNS which servers may send for a domain.[^rfc-7208] Its blind spot is that it validates the **envelope** sender, not the `From:` header the human reads — so a message can pass SPF while displaying someone else's name entirely.
 
-**DKIM** (RFC 6376, an Internet Standard — the highest maturity level in the IETF process) attaches a cryptographic signature over selected headers and the body, verified against a public key in DNS. It proves the domain signed the message and that the signed parts weren't altered. Its blind spot is that an *unsigned* message doesn't fail — `dkim=none` means there was nothing to check.
+**DKIM** (RFC 6376, an Internet Standard — the highest maturity level in the IETF process) attaches a cryptographic signature over selected headers and the body, verified against a public key in DNS.[^rfc-6376] It proves the domain signed the message and that the signed parts weren't altered. Its blind spot is that an *unsigned* message doesn't fail — `dkim=none` means there was nothing to check.
 
-**DMARC** ties the other two to the visible `From:` domain (**alignment**) and publishes what a receiver should do on failure. It is the piece that closes both blind spots, which is why `dmarc=fail` against `p=REJECT` is the load-bearing header in this level. DMARC was Informational for a decade as RFC 7489; it became Standards Track in May 2026 as **RFC 9989**, with RFC 9990 and RFC 9991 covering aggregate and failure reporting. Deployed policies in the wild — including Polaris's — still overwhelmingly reflect the 7489 era.
+**DMARC** ties the other two to the visible `From:` domain (**alignment**) and publishes what a receiver should do on failure. It is the piece that closes both blind spots, which is why `dmarc=fail` against `p=REJECT` is the load-bearing header in this level. DMARC was Informational for a decade as RFC 7489; it became Standards Track in May 2026 as **RFC 9989**, with RFC 9990 and RFC 9991 covering aggregate and failure reporting.[^rfc-9989][^rfc-7489] Deployed policies in the wild — including Polaris's — still overwhelmingly reflect the 7489 era.
 
-The `Received:` ordering rule that makes chain reading possible comes from **RFC 5322** (Internet Message Format): each relay prepends its trace field. That single convention is what turns a header block into a timeline.
+The `Received:` ordering rule that makes chain reading possible comes from **RFC 5322** (Internet Message Format): each relay prepends its trace field.[^rfc-5322] That single convention is what turns a header block into a timeline.
 
 There is also a non-technical dimension here that changes the character of the case. Up through yesterday this was a data-handling incident. Producing a fabricated exculpatory document is a different category of act, and fabricating evidence is generally a separate offense from the underlying conduct. **That determination belongs to counsel, not to the analyst.** Your deliverable states what the artifacts show; it does not characterize intent or recommend charges. Analysts who editorialize in a forensic report hand the other side something to attack that isn't the evidence.
 
@@ -249,7 +249,7 @@ argument left open in the previous level.
 
 **Business Email Compromise is the industrial-scale version of exactly this.** The FBI's Internet Crime Complaint Center puts BEC losses at **$2.94B (2023), $2.77B (2024), and $3.05B (2025)** — the most financially destructive enterprise-targeted category, with per-complaint losses averaging over $120,000 and the large majority of funds moving by wire or ACH. Every one of those incidents begins the way this level does: a recipient believes a `From:` header.
 
-**Facebook and Google, 2013–2015.** Evaldas Rimasauskas, a Lithuanian national, incorporated a company sharing a name with Quanta Computer — a real Taiwanese hardware supplier both companies did business with — then sent fraudulent invoices from spoofed domains. The scheme took in **more than $120 million** (roughly $99M from Facebook, $23M from Google) before it was caught. He pleaded guilty in 2019, was sentenced to five years, and was ordered to forfeit nearly $50M and pay over $26M in restitution; both companies recovered most or all of the funds. Two sophisticated technology companies, with excellent security teams, paid nine figures because the invoices *looked* like they came from a known supplier. If it can happen there, "our staff would notice" is not a control.
+**Facebook and Google, 2013–2015.** Evaldas Rimasauskas, a Lithuanian national, incorporated a company sharing a name with Quanta Computer — a real Taiwanese hardware supplier both companies did business with — then sent fraudulent invoices from spoofed domains.[^doj-lithuanian-man-sentenced-for] The scheme took in **more than $120 million** (roughly $99M from Facebook, $23M from Google) before it was caught. He pleaded guilty in 2019, was sentenced to five years, and was ordered to forfeit nearly $50M and pay over $26M in restitution; both companies recovered most or all of the funds. Two sophisticated technology companies, with excellent security teams, paid nine figures because the invoices *looked* like they came from a known supplier. If it can happen there, "our staff would notice" is not a control.
 
 **The forwarding problem.** The most instructive counter-example is mundane: legitimate mail fails SPF all the time. A message forwarded by a mailing list or an auto-forward rule arrives from a server the original domain never authorized, and SPF fails on perfectly genuine mail. This is precisely why the known-good comparison in §2 step 4 isn't optional ceremony. An analyst who treats every `spf=fail` as fraud will generate false accusations at a steady clip — and will be correctly torn apart by anyone competent on cross-examination.
 
@@ -259,11 +259,11 @@ argument left open in the previous level.
 
 **The email authentication RFCs**, in the order you should read them: **RFC 5322** (Internet Message Format — the header block and the prepend rule), **RFC 7208** (SPF), **RFC 6376** (DKIM), and **RFC 9989** (DMARC, obsoleting RFC 7489, with RFC 9990 and RFC 9991 for reporting).
 
-**NIST SP 800-177 Rev. 1 — Trustworthy Email** is the consolidated federal guidance on deploying all three. It's the document to cite when you need to argue internally for moving from `p=none` to enforcement, because it makes the recommendation in a form procurement and compliance functions recognize.
+**NIST SP 800-177 Rev. 1 — Trustworthy Email** is the consolidated federal guidance on deploying all three.[^nist-800-177] It's the document to cite when you need to argue internally for moving from `p=none` to enforcement, because it makes the recommendation in a form procurement and compliance functions recognize.
 
-**NIST SP 800-86 — Integrating Forensic Techniques into Incident Response** is the methodology backdrop for the whole forensics track: collection, examination, analysis, reporting. Its central discipline — that conclusions must be reproducible from preserved artifacts by someone who wasn't there — is exactly what the known-good comparison and the timestamp normalization serve.
+**NIST SP 800-86 — Integrating Forensic Techniques into Incident Response** is the methodology backdrop for the whole forensics track: collection, examination, analysis, reporting.[^nist-800-86] Its central discipline — that conclusions must be reproducible from preserved artifacts by someone who wasn't there — is exactly what the known-good comparison and the timestamp normalization serve.
 
-**NIST SP 800-171 Rev. 3 / CMMC** governs Polaris because it handles Controlled Unclassified Information. The relevant families for the control-side finding: **3.1.3** (control the flow of CUI), **3.1.20** (limit connection to and use of external systems — the personal Gmail account and the external file-drop service are both this), and the **3.3.x** audit and accountability requirements that made the badge, VPN, and endpoint records available to correlate against. CMMC Level 2 assessment maps to these practices directly, and a defense contractor's certification status is a contractual, revenue-bearing question — which is why Polaris's response is not merely an HR matter.
+**NIST SP 800-171 Rev. 3 / CMMC** governs Polaris because it handles Controlled Unclassified Information.[^nist-800-171] The relevant families for the control-side finding: **3.1.3** (control the flow of CUI), **3.1.20** (limit connection to and use of external systems — the personal Gmail account and the external file-drop service are both this), and the **3.3.x** audit and accountability requirements that made the badge, VPN, and endpoint records available to correlate against. CMMC Level 2 assessment maps to these practices directly, and a defense contractor's certification status is a contractual, revenue-bearing question — which is why Polaris's response is not merely an HR matter.
 
 **Stored Communications Act, 18 U.S.C. § 2701 et seq.** is the legal machinery in the background. § 2703(f) preservation requests freeze provider-held data while process is obtained; § 2703(d) orders and warrants compel production. The analyst-relevant point: provider-held content is generally not something an investigator may reach on their own initiative, and possessing a session token does not create authority to use it.
 
@@ -377,28 +377,31 @@ grep -n received mail/02-hutchins-genuine-2026-02-11.eml
 
 *Last reviewed: July 2026. RFC status, statutory citations, and incident figures verified against current canonical sources as of this date — note in particular that RFC 7489 (DMARC) was obsoleted by RFC 9989/9990/9991 in May 2026. Report stale links via the project's GitHub issues tracker.*
 
-- [CWE-290 — Authentication Bypass by Spoofing](https://cwe.mitre.org/data/definitions/290.html)
-- [RFC 5322 — Internet Message Format](https://datatracker.ietf.org/doc/html/rfc5322)
-- [RFC 7208 — Sender Policy Framework (SPF)](https://datatracker.ietf.org/doc/html/rfc7208)
-- [RFC 6376 — DomainKeys Identified Mail (DKIM), Internet Standard](https://datatracker.ietf.org/doc/html/rfc6376)
-- [RFC 9989 — DMARC (obsoletes RFC 7489)](https://datatracker.ietf.org/doc/rfc9989/)
-- [RFC 7489 — DMARC (obsoleted; the decade of deployed policy reflects this document)](https://datatracker.ietf.org/doc/rfc7489/)
-- [dmarc.org — Summary of Changes in DMARCbis](https://dmarc.org/2025/12/summary-of-changes-in-dmarcbis/)
-- [NIST SP 800-177 Rev. 1 — Trustworthy Email](https://csrc.nist.gov/pubs/sp/800/177/r1/final)
-- [NIST SP 800-86 — Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/pubs/sp/800/86/final)
-- [NIST SP 800-171 Rev. 3 — Protecting CUI in Nonfederal Systems](https://csrc.nist.gov/pubs/sp/800/171/r3/final)
-- [CMMC — DoD Chief Information Officer program page](https://dodcio.defense.gov/CMMC/)
-- [18 U.S.C. § 2703 — Required disclosure of customer communications or records](https://www.law.cornell.edu/uscode/text/18/2703)
-- [FBI IC3 — 2025 Internet Crime Report](https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf)
-- [FBI IC3 — Business Email Compromise public service announcement](https://www.ic3.gov/PSA/2024/PSA240911)
-- [DOJ — Lithuanian man sentenced for $120M business email compromise (Rimasauskas)](https://www.justice.gov/usao-sdny/pr/lithuanian-man-sentenced-5-years-prison-theft-over-120-million-fraudulent-business)
-- [FBI — Ringleader of Business Email Compromise Scheme Sentenced](https://www.fbi.gov/news/stories/ringleader-of-business-email-compromise-scheme-sentenced-012820)
-- [MITRE ATT&CK — T1114: Email Collection](https://attack.mitre.org/techniques/T1114/)
-- [MITRE ATT&CK — T1534: Internal Spearphishing](https://attack.mitre.org/techniques/T1534/)
-- [MITRE ATT&CK — T1567: Exfiltration Over Web Service](https://attack.mitre.org/techniques/T1567/)
-- [MITRE ATT&CK — T1070: Indicator Removal](https://attack.mitre.org/techniques/T1070/)
-- [M3AAWG — Sender Best Common Practices](https://www.m3aawg.org/published-documents)
-- [Google — Email sender guidelines (authentication requirements for bulk senders)](https://support.google.com/mail/answer/81126)
+[^cwe-290]: [CWE-290 — Authentication Bypass by Spoofing](https://cwe.mitre.org/data/definitions/290.html).
+[^rfc-5322]: [RFC 5322 — Internet Message Format](https://datatracker.ietf.org/doc/html/rfc5322).
+[^rfc-7208]: [RFC 7208 — Sender Policy Framework (SPF)](https://datatracker.ietf.org/doc/html/rfc7208).
+[^rfc-6376]: [RFC 6376 — DomainKeys Identified Mail (DKIM), Internet Standard](https://datatracker.ietf.org/doc/html/rfc6376).
+[^rfc-9989]: [RFC 9989 — DMARC (obsoletes RFC 7489)](https://datatracker.ietf.org/doc/rfc9989/).
+[^rfc-7489]: [RFC 7489 — DMARC (obsoleted; the decade of deployed policy reflects this document)](https://datatracker.ietf.org/doc/rfc7489/).
+[^nist-800-177]: [NIST SP 800-177 Rev. 1 — Trustworthy Email](https://csrc.nist.gov/pubs/sp/800/177/r1/final).
+[^nist-800-86]: [NIST SP 800-86 — Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/pubs/sp/800/86/final).
+[^nist-800-171]: [NIST SP 800-171 Rev. 3 — Protecting CUI in Nonfederal Systems](https://csrc.nist.gov/pubs/sp/800/171/r3/final).
+[^18-u-s-c-2703]: [18 U.S.C. § 2703 — Required disclosure of customer communications or records](https://www.law.cornell.edu/uscode/text/18/2703).
+[^doj-lithuanian-man-sentenced-for]: [DOJ — Lithuanian man sentenced for $120M business email compromise (Rimasauskas)](https://www.justice.gov/usao-sdny/pr/lithuanian-man-sentenced-5-years-prison-theft-over-120-million-fraudulent-business).
+
+### Further reading
+
+- [dmarc.org — Summary of Changes in DMARCbis](https://dmarc.org/2025/12/summary-of-changes-in-dmarcbis/).
+- [CMMC — DoD Chief Information Officer program page](https://dodcio.defense.gov/CMMC/).
+- [FBI IC3 — 2025 Internet Crime Report](https://www.ic3.gov/AnnualReport/Reports/2025_IC3Report.pdf).
+- [FBI IC3 — Business Email Compromise public service announcement](https://www.ic3.gov/PSA/2024/PSA240911).
+- [FBI — Ringleader of Business Email Compromise Scheme Sentenced](https://www.fbi.gov/news/stories/ringleader-of-business-email-compromise-scheme-sentenced-012820).
+- [MITRE ATT&CK — T1114: Email Collection](https://attack.mitre.org/techniques/T1114/).
+- [MITRE ATT&CK — T1534: Internal Spearphishing](https://attack.mitre.org/techniques/T1534/).
+- [MITRE ATT&CK — T1567: Exfiltration Over Web Service](https://attack.mitre.org/techniques/T1567/).
+- [MITRE ATT&CK — T1070: Indicator Removal](https://attack.mitre.org/techniques/T1070/).
+- [M3AAWG — Sender Best Common Practices](https://www.m3aawg.org/published-documents).
+- [Google — Email sender guidelines (authentication requirements for bulk senders)](https://support.google.com/mail/answer/81126).
 
 ---
 

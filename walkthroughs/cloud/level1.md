@@ -10,7 +10,7 @@
 
 When the lobby spun you out of `level0@cloud` last Friday afternoon, Coverline Insurance had a clean SOC 2 audit deliverable on its desk — five rows of "MATCHES EXPECTATION" and one row of "DEVIATION — see finding memo." The deviation was `coverline-claims-uploads-prod`: a bucket the worksheet said was private, the unauthenticated probe said wasn't, and the contents said held three Q1 2024 claim files with NPI plus a 2023 region-cutover migration script with a hardcoded RDS master password (`Cl41ms-Pr0d-M4st3r-2024`). Containment happened within the hour — bucket Public Access Block enabled, bucket policy updated to deny all principals except the claims-app role, S3 server-access logs and CloudTrail data events pulled for the full ~30-month exposure window from bucket creation through Friday 16:42 ET.
 
-Containment closed the gap; it didn't close the question. Coverline's CISO (Sloane Becker) convened the IR triage call Saturday morning with Jordan Nguyen (Sr. Director, Cloud Infrastructure), the in-house GC, and Coverline's outside counsel. The question on the table was the breach-notification math: what to disclose, to whom, on what timeline. NAIC §6, NYDFS 23 NYCRR 500.17(a), the GLBA Safeguards 16 CFR 314.5 notification provision (effective May 2024 for events affecting 500+ consumers), and the 50-state breach-notification patchwork all key off the same triggering determination — that NPI was accessed or acquired by an unauthorized person, or that there's a reasonable belief it was. The determination clock is Coverline's to start; the notification clocks tick from there.
+Containment closed the gap; it didn't close the question. Coverline's CISO (Sloane Becker) convened the IR triage call Saturday morning with Jordan Nguyen (Sr. Director, Cloud Infrastructure), the in-house GC, and Coverline's outside counsel. The question on the table was the breach-notification math: what to disclose, to whom, on what timeline. NAIC §6, NYDFS 23 NYCRR 500.17(a), the GLBA Safeguards 16 CFR 314.5 notification provision (effective May 2024 for events affecting 500+ consumers), and the 50-state breach-notification patchwork all key off the same triggering determination — that NPI was accessed or acquired by an unauthorized person, or that there's a reasonable belief it was.[^nycrr-500][^cfr-16-314] The determination clock is Coverline's to start; the notification clocks tick from there.
 
 Outside counsel's pull-string by Sunday afternoon was specific: before the RDS master credential gets rotated, Driftwood enumerates the database. If the master credential opens secondary credentials stashed in row data — the universal "we'll move it to Secrets Manager later" anti-pattern — those secondary credentials extend the exposure window and the notification scope. If the database contains records of unauthorized access during the exposure window, that's the determination-trigger right there. If anything else suggests the breach is bigger than "three Q1 2024 claims + a credential to one production database," counsel wants to know before the notifications go out, not after.
 
@@ -104,7 +104,7 @@ cloudsec@cloud:~$ psql -d coverline_claims "SELECT * FROM integrations"
 (5 rows)
 ```
 
-Two things matter here. **First**, every active integration references its credentials via `secrets-manager:<name>` pointers rather than embedding the credential in the row. Coverline IS using AWS Secrets Manager for current credential storage. The pattern is correct; the table is well-designed.
+Two things matter here. **First**, every active integration references its credentials via `secrets-manager:<name>` pointers rather than embedding the credential in the row. Coverline IS using AWS Secrets Manager for current credential storage.[^aws-secrets-manager] The pattern is correct; the table is well-designed.
 
 **Second**, integration INT-002 (broker-portal) points at `secrets-manager:broker-portal-prod`. Remember that name — it will become important in the next table.
 
@@ -196,7 +196,7 @@ Plus the negative scope: did NOT run any INSERT / UPDATE / DELETE / DROP / ALTER
 
 Two vulnerabilities, one finding pattern.
 
-The structural vulnerability is **credentials stored in database row values** — the modern equivalent of credentials in source-control config files, but with a different storage medium and a similar persistence model. The primary CWE mapping is **CWE-798 (Use of Hard-Coded Credentials)**: database rows are functionally "hard-coded" because the credential is stored in a fixed, cleartext location accessible via a known SQL lookup. **CWE-540 (Inclusion of Sensitive Information in Source Code)** applies if you treat the database schema + content as part of the source-controlled application state (which most DevOps practices do — schema migrations live in source, the data accumulates around them). **CWE-312 (Cleartext Storage of Sensitive Information)** applies to the storage form: the `credential_value` column is a plain VARCHAR with no application-layer encryption.
+The structural vulnerability is **credentials stored in database row values** — the modern equivalent of credentials in source-control config files, but with a different storage medium and a similar persistence model. The primary CWE mapping is **CWE-798 (Use of Hard-Coded Credentials)**: database rows are functionally "hard-coded" because the credential is stored in a fixed, cleartext location accessible via a known SQL lookup.[^cwe-798] **CWE-540 (Inclusion of Sensitive Information in Source Code)** applies if you treat the database schema + content as part of the source-controlled application state (which most DevOps practices do — schema migrations live in source, the data accumulates around them).[^cwe-540] **CWE-312 (Cleartext Storage of Sensitive Information)** applies to the storage form: the `credential_value` column is a plain VARCHAR with no application-layer encryption.[^cwe-312]
 
 The exposure mechanism that makes this particularly persistent is the credential's lifecycle isolation from its purpose. The credential was created for a specific narrow task (the 2024 region cutover); the task completed; the credential remained in the database because nothing in the deployment pipeline enforces a TTL. The intent was correct — the `ttl_expires_at` column on the `migration_artifacts` table explicitly named the expected cleanup date. The execution failed — no scheduled job actually queries `WHERE ttl_expires_at < NOW()` and drops the rows. The design acknowledged the risk; the implementation didn't close the loop.
 
@@ -241,7 +241,7 @@ thing examined.
 
 Database row-value credential leakage is less publicized than source-control credential leakage but happens at comparable rates. A non-exhaustive tour:
 
-**Capital One (March 2019, disclosed July 2019).** The Capital One breach (~106 million records, $80M OCC consent order — the Office of the Comptroller of the Currency was the enforcement agency; FFIEC is the parent interagency council and doesn't issue orders directly) is most famous for the SSRF-into-IMDSv1 entry vector, but the post-compromise lateral movement leveraged credentials stored in S3 bucket configurations and in CloudFormation templates left in source. Paige Thompson was convicted in 2022; the Ninth Circuit vacated her original sentence in March 2025, and November 2025 resentencing imposed time-served plus five years supervised release (three years home confinement) and 250 hours of community service, with the $40.7M restitution preserved. The Capital One Senate testimony cited multiple credential-storage anti-patterns surfacing post-acquisition; the case is a recurring case study in cloud-security curricula precisely because the technical fault chain involves multiple credential-handling layers, each of which should have been caught independently.
+**Capital One (March 2019, disclosed July 2019).**[^capital-one-2019-senate-testimony] The Capital One breach (~106 million records, $80M OCC consent order — the Office of the Comptroller of the Currency was the enforcement agency; FFIEC is the parent interagency council and doesn't issue orders directly) is most famous for the SSRF-into-IMDSv1 entry vector, but the post-compromise lateral movement leveraged credentials stored in S3 bucket configurations and in CloudFormation templates left in source. Paige Thompson was convicted in 2022; the Ninth Circuit vacated her original sentence in March 2025, and November 2025 resentencing imposed time-served plus five years supervised release (three years home confinement) and 250 hours of community service, with the $40.7M restitution preserved. The Capital One Senate testimony cited multiple credential-storage anti-patterns surfacing post-acquisition; the case is a recurring case study in cloud-security curricula precisely because the technical fault chain involves multiple credential-handling layers, each of which should have been caught independently.
 
 **Microsoft (October 2019).** Microsoft's BlueKeep / DejaBlue patching cycle exposed a different version of the same anti-pattern: SCCM (System Center Configuration Manager) databases at multiple enterprise customers contained service-account credentials in cleartext rows. The credentials were used by the configuration-management agents to enroll endpoints; SCCM's schema stored them in plain text by default. Mandiant's IR engagements through 2019-2020 found dozens of customers with exposed SCCM databases — the database itself didn't need to be misconfigured to be exposed; an SCCM admin compromise produced full-fleet credential exfiltration.
 
@@ -249,11 +249,11 @@ Database row-value credential leakage is less publicized than source-control cre
 
 **Microsoft Power Apps (August 2021).** UpGuard disclosed that Microsoft Power Apps portals shipped with a default configuration that exposed table data publicly via OData APIs. Multiple enterprise customers, including American Airlines, Ford, and the Indiana Department of Health, had Power Apps tables containing credentials, PII, and operational data publicly accessible. Microsoft changed the default to private in late 2021. The relevant lesson here is that "the database is private because the application is private" is a brittle assumption.
 
-**MOVEit Transfer (May 2023).** The CL0P ransomware group exploited an SQL injection vulnerability in Progress Software's MOVEit Transfer product to access MOVEit's internal database. The database stored credentials for the various transfer integrations MOVEit mediates — SFTP, S3, Azure Blob — in cleartext rows. Once CL0P had the database, they had every integration credential. The downstream exfiltration affected approximately 2,700+ organizations and ~93 million records (CISA's broader estimate puts the population at 3,000+ US, 8,000+ globally). The mitigation pattern: applications that mediate credentials for downstream systems should store those credentials in dedicated secret stores, not in their own operational databases.
+**MOVEit Transfer (May 2023).**[^moveit-transfer-2023-cl0p-cisa] The CL0P ransomware group exploited an SQL injection vulnerability in Progress Software's MOVEit Transfer product to access MOVEit's internal database. The database stored credentials for the various transfer integrations MOVEit mediates — SFTP, S3, Azure Blob — in cleartext rows. Once CL0P had the database, they had every integration credential. The downstream exfiltration affected approximately 2,700+ organizations and ~93 million records (CISA's broader estimate puts the population at 3,000+ US, 8,000+ globally). The mitigation pattern: applications that mediate credentials for downstream systems should store those credentials in dedicated secret stores, not in their own operational databases.
 
-**Snowflake customer compromises (May-June 2024).** The Snowflake customer breaches (Ticketmaster ~560M, AT&T ~110M, Santander ~30M, others) showed a related pattern in the opposite direction. The Snowflake instances themselves weren't breached; individual Snowflake customer accounts were accessed using credentials harvested from infostealer malware on customer-side workstations. The credentials were valid Snowflake user passwords; many of the affected accounts lacked MFA. The lesson: a database's security is bounded by the security of the credentials that access it, and credentials accumulate in places (browser password stores, developer machines, CI configurations) outside the database's own control.
+**Snowflake customer compromises (May-June 2024).**[^snowflake-customer-compromises-2024-mandiant] The Snowflake customer breaches (Ticketmaster ~560M, AT&T ~110M, Santander ~30M, others) showed a related pattern in the opposite direction. The Snowflake instances themselves weren't breached; individual Snowflake customer accounts were accessed using credentials harvested from infostealer malware on customer-side workstations. The credentials were valid Snowflake user passwords; many of the affected accounts lacked MFA. The lesson: a database's security is bounded by the security of the credentials that access it, and credentials accumulate in places (browser password stores, developer machines, CI configurations) outside the database's own control.
 
-**The recurring "Verizon DBIR credential" finding.** Every annual DBIR since approximately 2016 has identified credentials as a top breach-vector category. The 2025 DBIR (covering Nov 2023-Oct 2024 data) reported stolen credentials as the #1 initial-access vector at 22% of breaches in its report period; the 2026 edition (May 2026) tracked vulnerability exploitation taking #1 at 31% for the first time, with credential abuse falling to ~13% behind phishing. The compounding effect of "credentials leaked in one place are usable in many places" is one of the DBIR's most-cited findings year over year.
+**The recurring "Verizon DBIR credential" finding.**[^verizon-dbir-2026-latest-edition] Every annual DBIR since approximately 2016 has identified credentials as a top breach-vector category. The 2025 DBIR (covering Nov 2023-Oct 2024 data) reported stolen credentials as the #1 initial-access vector at 22% of breaches in its report period; the 2026 edition (May 2026) tracked vulnerability exploitation taking #1 at 31% for the first time, with credential abuse falling to ~13% behind phishing. The compounding effect of "credentials leaked in one place are usable in many places" is one of the DBIR's most-cited findings year over year.
 
 What unites these cases is the structural similarity to today's finding: databases accumulate credentials over time because operational tasks require credentials and the path of least resistance is "put it in a row." The defensive posture is to redirect that path of least resistance through a dedicated secret store (Secrets Manager, Parameter Store, Vault) so the database never sees a cleartext credential in the first place. Application code reads from the secret store at runtime; the secret never persists in the operational data.
 
@@ -305,7 +305,7 @@ The PostgreSQL-specific hardening guide is maintained per PostgreSQL major versi
 - **CWE-798 (Use of Hard-Coded Credentials)** — primary mapping. Database rows with cleartext credential values are "hard-coded" in the sense the CWE intends (fixed location, retrievable via known lookup). Mapping status is **Allowed-with-Review**. Note: CWE-798 was on the CWE Top 25 list every year 2021-2024 but MITRE's methodology change in 2025 (removed normalization to abstract weaknesses) dropped CWE-798 off the published Top 25 — it remains a frequently-encountered Base-level weakness in practitioner reporting.
 - **CWE-540 (Inclusion of Sensitive Information in Source Code)** — applies if you treat DB schema + content as source.
 - **CWE-312 (Cleartext Storage of Sensitive Information)** — the rows are stored in plaintext VARCHAR columns.
-- **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — umbrella parent. Note: CWE-200's mapping status is **Discouraged** in current MITRE guidance — cite the more specific CWE-798 / CWE-540 / CWE-312 for direct mappings.
+- **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — umbrella parent.[^cwe-200] Note: CWE-200's mapping status is **Discouraged** in current MITRE guidance — cite the more specific CWE-798 / CWE-540 / CWE-312 for direct mappings.
 
 ### NAIC Insurance Data Security Model Law (2017)
 
@@ -334,10 +334,10 @@ Applies because insurance is a Title V financial activity. The FTC's amended Saf
 
 Relevant techniques:
 
-- **T1078 (Valid Accounts)** — using the leaked RDS master credential to authenticate. Same technique as the level0 finding's downstream exposure.
-- **T1213 (Data from Information Repositories)** — DB enumeration as the modern equivalent of wiki / SharePoint scrape. Reading the schema, the integrations table, the migration_artifacts table.
-- **T1552 (Unsecured Credentials)** family — broadly applies. The closest sub-technique:
-  - **T1552.001 (Credentials In Files)** — database rows are not literally "files" but the technique's intent (credentials stored in unprotected locations accessible via known lookup) applies. Some practitioners argue for a separate sub-technique for DB-row credentials; T1552.001 is the closest current ATT&CK match.
+- **T1078 (Valid Accounts)** — using the leaked RDS master credential to authenticate.[^t1078] Same technique as the level0 finding's downstream exposure.
+- **T1213 (Data from Information Repositories)** — DB enumeration as the modern equivalent of wiki / SharePoint scrape.[^t1213] Reading the schema, the integrations table, the migration_artifacts table.
+- **T1552 (Unsecured Credentials)** family — broadly applies.[^t1552] The closest sub-technique:
+  - **T1552.001 (Credentials In Files)** — database rows are not literally "files" but the technique's intent (credentials stored in unprotected locations accessible via known lookup) applies.[^t1552-001] Some practitioners argue for a separate sub-technique for DB-row credentials; T1552.001 is the closest current ATT&CK match.
 - **T1078.001 (Default Accounts)** — adjacent for the RDS master account scenario.
 - **T1098 (Account Manipulation)** — what an adversary might do post-compromise.
 
@@ -408,8 +408,8 @@ Three parallel remediation tracks: Coverline today, Coverline this quarter, and 
 - **Audit every production database for credentials stored in row values.** Targeted SQL queries against columns named like `password`, `secret`, `credential`, `token`, `key`, `api_*`; entropy-based row-content scanners (a custom Lambda with a Shannon-entropy detector against varchar columns is sufficient).
 - **Migrate all in-flight credentials to AWS Secrets Manager.** Enable automatic rotation on every secret. Drop the "migration fallback" pattern as architectural policy — Secrets Manager is the only source of truth, the rest is technical debt to be eliminated.
 - **Adopt IAM Database Authentication for RDS where feasible.** Application-tier code uses temporary IAM tokens rather than long-lived passwords; rotations become structural. The IAM-database-auth feature has been GA for PostgreSQL and MySQL on RDS since 2018; adoption is bounded only by application-side support, which is universal in modern frameworks.
-- **Enable AWS Database Activity Streams** on production Aurora clusters (and on RDS for Oracle / SQL Server where applicable; Database Activity Streams supports Aurora MySQL/PostgreSQL plus RDS for Oracle and SQL Server — but *not* RDS for PostgreSQL/MySQL). Real-time audit of every query, with source IP, query text, and result row count.
-- **Enable AWS GuardDuty RDS Protection.** Surfaces anomalous DB authentication patterns including suspicious source locations and credential-misuse signals. GA for Aurora since March 2023; RDS for PostgreSQL support added later.
+- **Enable AWS Database Activity Streams** on production Aurora clusters (and on RDS for Oracle / SQL Server where applicable; Database Activity Streams supports Aurora MySQL/PostgreSQL plus RDS for Oracle and SQL Server — but *not* RDS for PostgreSQL/MySQL).[^aws-database-activity-streams] Real-time audit of every query, with source IP, query text, and result row count.
+- **Enable AWS GuardDuty RDS Protection.**[^aws-guardduty-rds-protection] Surfaces anomalous DB authentication patterns including suspicious source locations and credential-misuse signals. GA for Aurora since March 2023; RDS for PostgreSQL support added later.
 
 ### For Coverline's user-lifecycle process
 
@@ -528,46 +528,36 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 
 *Last reviewed: June 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
-### AWS-specific
+[^aws-secrets-manager]: [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/). The primary AWS-native secret store with automatic rotation for RDS and other services.
+[^aws-database-activity-streams]: [AWS Database Activity Streams](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.html). Real-time DB query audit (Aurora MySQL/PostgreSQL, RDS for Oracle, RDS for SQL Server).
+[^aws-guardduty-rds-protection]: [AWS GuardDuty RDS Protection](https://docs.aws.amazon.com/guardduty/latest/ug/rds-protection.html). Anomaly detection for DB authentication.
+[^nycrr-500]: [NYDFS 23 NYCRR 500 (current text)](https://www.dfs.ny.gov/industry_guidance/cybersecurity). November 2023 amendment is the current version.
+[^cfr-16-314]: [GLBA Safeguards Rule (16 CFR Part 314)](https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-314). FTC amendments (December 2021, with notification provision §314.5 effective May 2024).
+[^cwe-798]: [CWE-798: Use of Hard-Coded Credentials](https://cwe.mitre.org/data/definitions/798.html). Allowed-with-Review.
+[^cwe-540]: [CWE-540: Inclusion of Sensitive Information in Source Code](https://cwe.mitre.org/data/definitions/540.html).
+[^cwe-312]: [CWE-312: Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
+[^cwe-200]: [CWE-200: Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html). Mapping-Discouraged.
+[^t1078]: [MITRE ATT&CK T1078 — Valid Accounts](https://attack.mitre.org/techniques/T1078/).
+[^t1213]: [MITRE ATT&CK T1213 — Data from Information Repositories](https://attack.mitre.org/techniques/T1213/).
+[^t1552]: [MITRE ATT&CK T1552 — Unsecured Credentials](https://attack.mitre.org/techniques/T1552/). (parent technique with sub-techniques).
+[^t1552-001]: [MITRE ATT&CK T1552.001 — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
+[^capital-one-2019-senate-testimony]: [Capital One 2019 — Senate testimony and OCC consent order](https://www.senate.gov/). Senate Committee on Banking, Housing, and Urban Affairs hearings. The $80M civil money penalty was issued by the OCC (Office of the Comptroller of the Currency); FFIEC is the parent interagency council and doesn't issue enforcement orders directly.
+[^moveit-transfer-2023-cl0p-cisa]: [MOVEit Transfer 2023 (CL0P) — CISA advisory](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a). The June 2023 CISA + FBI joint advisory.
+[^snowflake-customer-compromises-2024-mandiant]: [Snowflake customer compromises 2024 — Mandiant writeup](https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion/). The UNC5537 threat-actor attribution.
+[^verizon-dbir-2026-latest-edition]: [Verizon DBIR 2026 (latest edition as of the review date)](https://www.verizon.com/business/resources/reports/dbir/).
 
-- **AWS Secrets Manager**: <https://aws.amazon.com/secrets-manager/>. The primary AWS-native secret store with automatic rotation for RDS and other services.
-- **AWS Systems Manager Parameter Store**: <https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html>. The cheaper alternative for non-RDS secrets.
-- **AWS RDS IAM Database Authentication**: <https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html>. The static-password-free authentication mode for RDS PostgreSQL and MySQL.
-- **AWS Database Activity Streams**: <https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.html>. Real-time DB query audit (Aurora MySQL/PostgreSQL, RDS for Oracle, RDS for SQL Server).
-- **AWS GuardDuty RDS Protection**: <https://docs.aws.amazon.com/guardduty/latest/ug/rds-protection.html>. Anomaly detection for DB authentication.
-- **PostgreSQL pgaudit extension on RDS**: <https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.pgaudit.html>. Source-IP-capable PostgreSQL audit logging.
+### Further reading
 
-### Standards documents
-
-- **NIST SP 800-53 Rev. 5**: <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>. The federal control catalog (latest release 5.2.0, August 2025). IA-5(7) is the direct mapping for embedded credentials.
-- **NIST Cybersecurity Framework 2.0**: <https://csrc.nist.gov/pubs/cswp/29/the-nist-cybersecurity-framework-csf-20/final>. Published February 2024. PR.AA / PR.DS / DE.CM are the relevant function/category mappings.
-- **AICPA SOC 2 / Trust Services Criteria**: <https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services>. The 2017 criteria, refreshed 2022.
-- **NAIC Insurance Data Security Model Law**: <https://content.naic.org/sites/default/files/model-law-668.pdf>. The 2017 model with state-by-state adoption status.
-- **NYDFS 23 NYCRR 500 (current text)**: <https://www.dfs.ny.gov/industry_guidance/cybersecurity>. November 2023 amendment is the current version.
-- **GLBA Safeguards Rule (16 CFR Part 314)**: <https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-314>. FTC amendments (December 2021, with notification provision §314.5 effective May 2024).
-- **CIS AWS Foundations Benchmark**: <https://www.cisecurity.org/benchmark/amazon_web_services>. v7.0.0 is the current release (S3 in §3.1, IAM in §2); AWS Security Hub's managed standard still implements v5.0.0, so console findings show the older §2.1.x / §1.x numbering.
-- **CIS PostgreSQL Benchmark**: <https://www.cisecurity.org/benchmark/postgresql>. Per-version hardening guides for v15, v16, and v17 (plus historical versions for legacy estates).
-
-### CWE / MITRE ATT&CK
-
-- **CWE-798: Use of Hard-Coded Credentials**: <https://cwe.mitre.org/data/definitions/798.html>. Allowed-with-Review.
-- **CWE-540: Inclusion of Sensitive Information in Source Code**: <https://cwe.mitre.org/data/definitions/540.html>.
-- **CWE-312: Cleartext Storage of Sensitive Information**: <https://cwe.mitre.org/data/definitions/312.html>.
-- **CWE-200: Exposure of Sensitive Information**: <https://cwe.mitre.org/data/definitions/200.html>. Mapping-Discouraged.
-- **MITRE ATT&CK T1078 — Valid Accounts**: <https://attack.mitre.org/techniques/T1078/>.
-- **MITRE ATT&CK T1213 — Data from Information Repositories**: <https://attack.mitre.org/techniques/T1213/>.
-- **MITRE ATT&CK T1552 — Unsecured Credentials**: <https://attack.mitre.org/techniques/T1552/> (parent technique with sub-techniques).
-- **MITRE ATT&CK T1552.001 — Credentials In Files**: <https://attack.mitre.org/techniques/T1552/001/>.
-
-### Detection / monitoring tooling
-
-- **HashiCorp Vault** (alternative to Secrets Manager for multi-cloud / on-prem): <https://developer.hashicorp.com/vault>.
-- **PostgreSQL pgaudit project**: <https://www.pgaudit.org/>. The community-maintained source for the extension RDS runs.
-- **PostgreSQL security documentation (vulnerability reporting + advisories)**: <https://www.postgresql.org/support/security/>. For configuration-side topics (authentication, encryption, row-level security), see the specific subsection pages — <https://www.postgresql.org/docs/current/auth-methods.html>, <https://www.postgresql.org/docs/current/ddl-rowsecurity.html>, <https://www.postgresql.org/docs/current/encryption-options.html>.
-
-### Incident references
-
-- **Capital One 2019 — Senate testimony and OCC consent order**: <https://www.senate.gov/>. Senate Committee on Banking, Housing, and Urban Affairs hearings. The $80M civil money penalty was issued by the OCC (Office of the Comptroller of the Currency); FFIEC is the parent interagency council and doesn't issue enforcement orders directly.
-- **MOVEit Transfer 2023 (CL0P) — CISA advisory**: <https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a>. The June 2023 CISA + FBI joint advisory.
-- **Snowflake customer compromises 2024 — Mandiant writeup**: <https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion/>. The UNC5537 threat-actor attribution.
-- **Verizon DBIR 2026** (latest edition as of the review date): <https://www.verizon.com/business/resources/reports/dbir/>.
+- [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html). The cheaper alternative for non-RDS secrets.
+- [AWS RDS IAM Database Authentication](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html). The static-password-free authentication mode for RDS PostgreSQL and MySQL.
+- [PostgreSQL pgaudit extension on RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.pgaudit.html). Source-IP-capable PostgreSQL audit logging.
+- [NIST SP 800-53 Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). The federal control catalog (latest release 5.2.0, August 2025). IA-5(7) is the direct mapping for embedded credentials.
+- [NIST Cybersecurity Framework 2.0](https://csrc.nist.gov/pubs/cswp/29/the-nist-cybersecurity-framework-csf-20/final). Published February 2024. PR.AA / PR.DS / DE.CM are the relevant function/category mappings.
+- [AICPA SOC 2 / Trust Services Criteria](https://www.aicpa-cima.com/resources/landing/system-and-organization-controls-soc-suite-of-services). The 2017 criteria, refreshed 2022.
+- [NAIC Insurance Data Security Model Law](https://content.naic.org/sites/default/files/model-law-668.pdf). The 2017 model with state-by-state adoption status.
+- [CIS AWS Foundations Benchmark](https://www.cisecurity.org/benchmark/amazon_web_services). v7.0.0 is the current release (S3 in §3.1, IAM in §2); AWS Security Hub's managed standard still implements v5.0.0, so console findings show the older §2.1.x / §1.x numbering.
+- [CIS PostgreSQL Benchmark](https://www.cisecurity.org/benchmark/postgresql). Per-version hardening guides for v15, v16, and v17 (plus historical versions for legacy estates).
+- [HashiCorp Vault (alternative to Secrets Manager for multi-cloud / on-prem)](https://developer.hashicorp.com/vault).
+- [PostgreSQL pgaudit project](https://www.pgaudit.org/). The community-maintained source for the extension RDS runs.
+- [PostgreSQL security documentation (vulnerability reporting + advisories)](https://www.postgresql.org/support/security/).
+- [For configuration-side topics (authentication, encryption, row-level security), see the specific subsection pages](https://www.postgresql.org/docs/current/auth-methods.html).

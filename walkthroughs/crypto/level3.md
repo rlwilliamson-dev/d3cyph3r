@@ -171,11 +171,11 @@ vesta-admin@backup:~$ exit
 
 Three CWEs, and the way they interact is the lesson.
 
-**CWE-326: Inadequate Encryption Strength.** This one is routinely misread as "they used a weak cipher." Vesta didn't. AES-256-CBC has no practical break. The *effective* strength of an encryption scheme is bounded by the weakest link in the chain — cipher, mode, key derivation, key entropy, key handling — and here the binding constraint is key entropy. A key derived from a password that appears in `rockyou.txt` has, for practical purposes, the strength of that wordlist lookup. Writing "AES-256" in the architecture diagram describes one link and tells you nothing about the other four.
+**CWE-326: Inadequate Encryption Strength.**[^cwe-326] This one is routinely misread as "they used a weak cipher." Vesta didn't. AES-256-CBC has no practical break. The *effective* strength of an encryption scheme is bounded by the weakest link in the chain — cipher, mode, key derivation, key entropy, key handling — and here the binding constraint is key entropy. A key derived from a password that appears in `rockyou.txt` has, for practical purposes, the strength of that wordlist lookup. Writing "AES-256" in the architecture diagram describes one link and tells you nothing about the other four.
 
-**CWE-522: Insufficiently Protected Credentials.** `make-backup.sh` passes the passphrase with `-k 'TheoVesta!1'`, and the script sits in the same directory as the ciphertext it protects, on the same host, world-readable. Anyone who can read the backup can read its key. The encryption converts a confidentiality problem into a key-management problem, and then the key management hands the problem straight back. There's a second, subtler exposure in the same line: a passphrase on a command line appears in the process table (`ps`) while the job runs and in shell history if a human ever runs it by hand.
+**CWE-522: Insufficiently Protected Credentials.**[^cwe-522] `make-backup.sh` passes the passphrase with `-k 'TheoVesta!1'`, and the script sits in the same directory as the ciphertext it protects, on the same host, world-readable. Anyone who can read the backup can read its key. The encryption converts a confidentiality problem into a key-management problem, and then the key management hands the problem straight back. There's a second, subtler exposure in the same line: a passphrase on a command line appears in the process table (`ps`) while the job runs and in shell history if a human ever runs it by hand.
 
-**CWE-311 / CWE-312: Missing Encryption / Cleartext Storage of Sensitive Information.** The decrypted contents, and — separately — the restore configuration appended to the dump in plaintext, which carries the HSM unwrap credential. That block is a credential for the *actual* key store, sitting inside a file whose protection is a cracked password. The key hierarchy is inverted: the weakly-protected thing contains the credential to the strongly-protected thing.
+**CWE-311 / CWE-312: Missing Encryption / Cleartext Storage of Sensitive Information.**[^cwe-311][^cwe-312] The decrypted contents, and — separately — the restore configuration appended to the dump in plaintext, which carries the HSM unwrap credential. That block is a credential for the *actual* key store, sitting inside a file whose protection is a cracked password. The key hierarchy is inverted: the weakly-protected thing contains the credential to the strongly-protected thing.
 
 **And the one that isn't a CWE at all.** The CVV retention is not a software weakness; it is a prohibited practice. PCI-DSS 3.3.1 forbids storing sensitive authentication data after authorization *even if encrypted*, and it applies everywhere the data lands — databases, logs, and backups alike. No control makes it acceptable. This distinction — between "data that needs protecting" and "data you may not keep" — is the single most common conceptual error auditors encounter, and it is exactly the error Theo made when he concluded that encrypting the export resolved the question.
 
@@ -218,7 +218,7 @@ password reuse that made the passphrase recoverable in the first place.
 
 ## §4 — Real-world parallels
 
-**LastPass (2022) — the canonical encrypted-backup failure.** In a two-stage intrusion, attackers first took source code and technical documentation from a development environment, then compromised a senior DevOps engineer's home computer, obtained credentials from it, and exfiltrated backups of customer password vaults. The vaults were encrypted; LastPass's initial messaging leaned on that fact. The problem was underneath it. Vault keys are derived from the user's master password with PBKDF2-SHA-256, and while LastPass raised the default iteration count to 100,100 in 2018, **it did not apply that change retroactively** — so a large population of legacy accounts was still at 5,000 iterations when the backups walked out the door. Once an attacker holds the ciphertext, all defenses are offline: they guess as fast as their hardware allows, forever, with no rate limiting and no lockout. In 2025 LastPass settled a class action for $24.5 million, and reporting has linked large cryptocurrency thefts to credentials recovered from those vaults.
+**LastPass (2022) — the canonical encrypted-backup failure.**[^lastpass-notice-of-recent-security] In a two-stage intrusion, attackers first took source code and technical documentation from a development environment, then compromised a senior DevOps engineer's home computer, obtained credentials from it, and exfiltrated backups of customer password vaults. The vaults were encrypted; LastPass's initial messaging leaned on that fact. The problem was underneath it. Vault keys are derived from the user's master password with PBKDF2-SHA-256, and while LastPass raised the default iteration count to 100,100 in 2018, **it did not apply that change retroactively** — so a large population of legacy accounts was still at 5,000 iterations when the backups walked out the door. Once an attacker holds the ciphertext, all defenses are offline: they guess as fast as their hardware allows, forever, with no rate limiting and no lockout. In 2025 LastPass settled a class action for $24.5 million, and reporting has linked large cryptocurrency thefts to credentials recovered from those vaults.
 
 The structural lesson maps onto Vesta almost line for line: an encrypted archive left the perimeter, and everything that decided the outcome — passphrase entropy, KDF work factor, whether old material was ever re-keyed — had been settled long beforehand. Once the ciphertext is out, you cannot improve any of those things retroactively.
 
@@ -237,11 +237,11 @@ The structural lesson maps onto Vesta almost line for line: an encrypted archive
 - **8.3.6 / 8.6.3** — Password and passphrase strength requirements, including for credentials used by systems and applications. `TheoVesta!1` fails on content, and its use across four systems compounds it.
 - **12.x** — Governing policies must exist *and be followed*. VES-SEC-004 already prohibits everything found in this level, and its annual review is overdue. A control gap is a gap; a documented control the organization did not follow is a program problem, and QSAs treat the second far more seriously.
 
-**NIST SP 800-57 Part 1 Rev. 5** (Recommendation for Key Management, May 2020) is the canonical reference for the lifecycle Theo skipped. Its foundational principle here: keys must be protected at least as strongly as the data they protect, and stored separately from it.
+**NIST SP 800-57 Part 1 Rev. 5** (Recommendation for Key Management, May 2020) is the canonical reference for the lifecycle Theo skipped.[^nist-800-57] Its foundational principle here: keys must be protected at least as strongly as the data they protect, and stored separately from it.
 
-**NIST SP 800-132** (Recommendation for Password-Based Key Derivation) specifies PBKDF2 and states the constraint this level is built on — a password-based key inherits the entropy of the password. Iteration count raises the cost per guess; it does not manufacture entropy that was never present.
+**NIST SP 800-132** (Recommendation for Password-Based Key Derivation) specifies PBKDF2 and states the constraint this level is built on — a password-based key inherits the entropy of the password.[^nist-800-132] Iteration count raises the cost per guess; it does not manufacture entropy that was never present.
 
-**OWASP Top 10:2025 — A04: Cryptographic Failures.** The category was renumbered from A02 in the 2021 edition; when citing it in a client deliverable, use the current A04 designation. It exists for exactly this shape of finding: correct primitive, failed key management. (The related weakness set also covers exposed keys and secrets, deprecated algorithms, and missing encryption at rest and in transit.)
+**OWASP Top 10:2025 — A04: Cryptographic Failures.**[^owasp-top-10-2025-a04] The category was renumbered from A02 in the 2021 edition; when citing it in a client deliverable, use the current A04 designation. It exists for exactly this shape of finding: correct primitive, failed key management. (The related weakness set also covers exposed keys and secrets, deprecated algorithms, and missing encryption at rest and in transit.)
 
 ### MITRE ATT&CK — what the recovered password reaches
 
@@ -368,31 +368,34 @@ The bonus finds exist to exercise the schema-reading and key-tracing habits with
 
 *Last reviewed: July 2026. External standards versions, requirement numbers, and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
-- [CWE-326 — Inadequate Encryption Strength](https://cwe.mitre.org/data/definitions/326.html)
-- [CWE-522 — Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html)
-- [CWE-311 — Missing Encryption of Sensitive Data](https://cwe.mitre.org/data/definitions/311.html)
-- [CWE-312 — Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html)
-- [CWE-916 — Use of Password Hash With Insufficient Computational Effort](https://cwe.mitre.org/data/definitions/916.html)
-- [PCI DSS v4.0.1 (PCI Security Standards Council document library)](https://www.pcisecuritystandards.org/document_library/)
-- [PCI SSC — Summary of Changes, PCI DSS v3.2.1 to v4.0](https://listings.pcisecuritystandards.org/documents/PCI-DSS-v3-2-1-to-v4-0-Summary-of-Changes-r1.pdf)
-- [NIST SP 800-57 Part 1 Rev. 5 — Recommendation for Key Management](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final)
-- [NIST SP 800-132 — Recommendation for Password-Based Key Derivation](https://csrc.nist.gov/pubs/sp/800/132/final)
-- [NIST FIPS 197 — Advanced Encryption Standard (AES)](https://csrc.nist.gov/pubs/fips/197/final)
-- [OWASP Top 10:2025 — A04: Cryptographic Failures](https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/)
-- [OWASP Cheat Sheet — Cryptographic Storage](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
-- [OWASP Cheat Sheet — Key Management](https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html)
-- [OpenSSL — `openssl-enc` manual page](https://docs.openssl.org/master/man1/openssl-enc/)
-- [OpenSSL — `EVP_BytesToKey` (the legacy single-iteration derivation)](https://docs.openssl.org/1.0.2/man3/EVP_BytesToKey/)
-- [LastPass — Notice of Recent Security Incident (December 2022 update)](https://blog.lastpass.com/posts/notice-of-recent-security-incident)
-- [Wikipedia — 2022 LastPass data breach](https://en.wikipedia.org/wiki/2022_LastPass_data_breach)
-- [Almost Secure (Wladimir Palant) — LastPass breach: the significance of these password iterations](https://palant.info/2022/12/28/lastpass-breach-the-significance-of-these-password-iterations/)
-- [Krebs on Security — Feds Link $150M Cyberheist to 2022 LastPass Hacks](https://krebsonsecurity.com/2025/03/feds-link-150m-cyberheist-to-2022-lastpass-hacks/)
-- [Schneier on Security — Cryptographic Blunders Revealed by Adobe's Password Leak](https://www.schneier.com/blog/archives/2013/11/cryptographic_b.html)
-- [Have I Been Pwned — Adobe (2013) breach record](https://haveibeenpwned.com/Breach/Adobe)
-- [MITRE ATT&CK — T1552.001: Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/)
-- [MITRE ATT&CK — T1560.001: Archive Collected Data: Archive via Utility](https://attack.mitre.org/techniques/T1560/001/)
-- [HashiCorp Vault — envelope encryption / transit secrets engine](https://developer.hashicorp.com/vault/docs/secrets/transit)
-- [AWS KMS — envelope encryption concepts](https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html)
+[^cwe-326]: [CWE-326 — Inadequate Encryption Strength](https://cwe.mitre.org/data/definitions/326.html).
+[^cwe-522]: [CWE-522 — Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html).
+[^cwe-311]: [CWE-311 — Missing Encryption of Sensitive Data](https://cwe.mitre.org/data/definitions/311.html).
+[^cwe-312]: [CWE-312 — Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
+[^nist-800-57]: [NIST SP 800-57 Part 1 Rev. 5 — Recommendation for Key Management](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final).
+[^nist-800-132]: [NIST SP 800-132 — Recommendation for Password-Based Key Derivation](https://csrc.nist.gov/pubs/sp/800/132/final).
+[^owasp-top-10-2025-a04]: [OWASP Top 10:2025 — A04: Cryptographic Failures](https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/).
+[^lastpass-notice-of-recent-security]: [LastPass — Notice of Recent Security Incident (December 2022 update)](https://blog.lastpass.com/posts/notice-of-recent-security-incident).
+
+### Further reading
+
+- [CWE-916 — Use of Password Hash With Insufficient Computational Effort](https://cwe.mitre.org/data/definitions/916.html).
+- [PCI DSS v4.0.1 (PCI Security Standards Council document library)](https://www.pcisecuritystandards.org/document_library/).
+- [PCI SSC — Summary of Changes, PCI DSS v3.2.1 to v4.0](https://listings.pcisecuritystandards.org/documents/PCI-DSS-v3-2-1-to-v4-0-Summary-of-Changes-r1.pdf).
+- [NIST FIPS 197 — Advanced Encryption Standard (AES)](https://csrc.nist.gov/pubs/fips/197/final).
+- [OWASP Cheat Sheet — Cryptographic Storage](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html).
+- [OWASP Cheat Sheet — Key Management](https://cheatsheetseries.owasp.org/cheatsheets/Key_Management_Cheat_Sheet.html).
+- [OpenSSL — `openssl-enc` manual page](https://docs.openssl.org/master/man1/openssl-enc/).
+- [OpenSSL — `EVP_BytesToKey` (the legacy single-iteration derivation)](https://docs.openssl.org/1.0.2/man3/EVP_BytesToKey/).
+- [Wikipedia — 2022 LastPass data breach](https://en.wikipedia.org/wiki/2022_LastPass_data_breach).
+- [Almost Secure (Wladimir Palant) — LastPass breach: the significance of these password iterations](https://palant.info/2022/12/28/lastpass-breach-the-significance-of-these-password-iterations/).
+- [Krebs on Security — Feds Link $150M Cyberheist to 2022 LastPass Hacks](https://krebsonsecurity.com/2025/03/feds-link-150m-cyberheist-to-2022-lastpass-hacks/).
+- [Schneier on Security — Cryptographic Blunders Revealed by Adobe's Password Leak](https://www.schneier.com/blog/archives/2013/11/cryptographic_b.html).
+- [Have I Been Pwned — Adobe (2013) breach record](https://haveibeenpwned.com/Breach/Adobe).
+- [MITRE ATT&CK — T1552.001: Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
+- [MITRE ATT&CK — T1560.001: Archive Collected Data: Archive via Utility](https://attack.mitre.org/techniques/T1560/001/).
+- [HashiCorp Vault — envelope encryption / transit secrets engine](https://developer.hashicorp.com/vault/docs/secrets/transit).
+- [AWS KMS — envelope encryption concepts](https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html).
 
 ---
 

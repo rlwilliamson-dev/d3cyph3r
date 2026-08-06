@@ -18,7 +18,7 @@ Priya did not respond with the enthusiasm Theo expected. Instead she asked him t
 
 The legal frame for what you're about to do is the same as yesterday's. Saanvi authorized a controlled use of the live API key (the one Theo base64-encoded — still unrotated until Friday) for a one-time blast-radius check. Today's check uses that authorization to ssh into the payment-deploy service host, where the admin-API access logs are mirrored for observability. Your prompt reads `vesta-deploy@crypto:~$`. The same rules of engagement apply: read what's there, document what you find, don't pivot, don't forge anything, get out.
 
-Vesta Retail's compliance regime is PCI-DSS v4.0.1. They're a Level 2 merchant (1M–6M transactions/year, scaled up from Level 3 in 2024), which means an annual self-attested SAQ D and a Qualified Security Assessor on-site review every other year. The next QSA review is six weeks out. The admin API in question is in scope for that review because it calls the secret-rotation machinery for the cardholder-data environment — anything that authenticates a caller into actions on the CDE is, by definition, in scope for the authentication requirements (Req 8) and the secure-coding requirements (Req 6.2).
+Vesta Retail's compliance regime is PCI-DSS v4.0.1.[^pci-dss-v4-0-1] They're a Level 2 merchant (1M–6M transactions/year, scaled up from Level 3 in 2024), which means an annual self-attested SAQ D and a Qualified Security Assessor on-site review every other year. The next QSA review is six weeks out. The admin API in question is in scope for that review because it calls the secret-rotation machinery for the cardholder-data environment — anything that authenticates a caller into actions on the CDE is, by definition, in scope for the authentication requirements (Req 8) and the secure-coding requirements (Req 6.2).
 
 What you don't know yet, walking in, is that Theo's "quick token-based auth" rejects almost nothing. Any caller — authenticated or not, employee or attacker — can craft a JWT that says `role: admin`, set the algorithm header to `none`, and Theo's verification middleware will accept it as if it were properly signed and authorized.
 
@@ -117,7 +117,7 @@ vesta-deploy@crypto:~$ cat admin-access.log
 
 Three things to notice before you decode anything.
 
-**First**: the log is debug-level verbose. It records the full `Authorization` header value, including the JWT itself. This is its own finding — debug logging that captures auth headers means anyone with read access to the log can replay any token in it. The fact that this log exists in this form, accessible from a payment-deploy host, is CWE-532 (Insertion of Sensitive Information into Log File) and a violation of PCI-DSS Requirement 10.3.1 (read access to audit logs is limited to those with a job-related need) and 10.3.2 (audit logs are protected from modification).
+**First**: the log is debug-level verbose. It records the full `Authorization` header value, including the JWT itself. This is its own finding — debug logging that captures auth headers means anyone with read access to the log can replay any token in it. The fact that this log exists in this form, accessible from a payment-deploy host, is CWE-532 (Insertion of Sensitive Information into Log File) and a violation of PCI-DSS Requirement 10.3.1 (read access to audit logs is limited to those with a job-related need) and 10.3.2 (audit logs are protected from modification).[^cwe-532]
 
 **Second**: the `verify-middleware loaded (jsonwebtoken @ default options)` line at startup is a tell. The library was loaded with no global options object. If the application code also calls `jwt.verify()` without an options object — and it does, you just read it — then nothing is constraining which algorithms will be accepted.
 
@@ -171,7 +171,7 @@ The **payload** is the claim set. It carries `role: admin`, `scope: "*"`, and `a
 
 The **signature segment** is empty. The decoder flags it; the access log records the application accepting it; the middleware code makes both observations consistent.
 
-The **expiration** is ten years out (2036-04-09). Long-lived service tokens are themselves a finding under modern token-management guidance (NIST SP 800-63B-4 §5 *Session Management* covers session-token lifecycle and refresh patterns), but the primary finding here is the missing signature verification.
+The **expiration** is ten years out (2036-04-09). Long-lived service tokens are themselves a finding under modern token-management guidance (NIST SP 800-63B-4 §5 *Session Management* covers session-token lifecycle and refresh patterns), but the primary finding here is the missing signature verification.[^nist-800-63b]
 
 ### Step 6: Document and stop
 
@@ -210,21 +210,21 @@ Today's finding looks like a single missing argument on a single function call. 
 
 `jwt.verify(token, secret)` without an algorithms whitelist allows the JWT's own `alg` header to dictate what verification means. A token with `alg: HS256` is verified against the shared secret as HMAC-SHA256. A token with `alg: RS256` is verified against a public key as RSA-SHA256. A token with `alg: none` is "verified" by skipping the signature check entirely — the verifier reads the payload, trusts the claims, and returns success.
 
-This is CWE-347, *Improper Verification of Cryptographic Signature*. The catalog entry describes the weakness as "the product does not verify, or incorrectly verifies, the cryptographic signature for data." The application's verification step exists; it returns success; the success has no cryptographic meaning. The signature was never checked.
+This is CWE-347, *Improper Verification of Cryptographic Signature*.[^cwe-347] The catalog entry describes the weakness as "the product does not verify, or incorrectly verifies, the cryptographic signature for data." The application's verification step exists; it returns success; the success has no cryptographic meaning. The signature was never checked.
 
-CWE-347 is the canonical weakness ID for signature-verification failures, with MITRE mapping status ALLOWED. It isn't currently on the CWE Top 25 list (the Top 25 entries that most often fire on JWT misconfigurations are CWE-287 *Improper Authentication* and CWE-863 *Incorrect Authorization*, both Top-25 regulars). The CWE-347 pattern persists at internet scale because JWT-based authentication has spread far faster than the operational knowledge of how to verify JWTs safely. Every framework's quickstart guide shows the two-argument `verify` call; the three-argument options pattern is documented but routinely omitted.
+CWE-347 is the canonical weakness ID for signature-verification failures, with MITRE mapping status ALLOWED. It isn't currently on the CWE Top 25 list (the Top 25 entries that most often fire on JWT misconfigurations are CWE-287 *Improper Authentication* and CWE-863 *Incorrect Authorization*, both Top-25 regulars).[^cwe-287] The CWE-347 pattern persists at internet scale because JWT-based authentication has spread far faster than the operational knowledge of how to verify JWTs safely. Every framework's quickstart guide shows the two-argument `verify` call; the three-argument options pattern is documented but routinely omitted.
 
-The disclosure that introduced the JWT-library community to the alg:none and RS→HS attack families was Tim McLean's March 2015 Auth0 blog post, *"Critical vulnerabilities in JSON Web Token libraries."* McLean was an independent security researcher at the time; the post was a guest piece. The disclosure was tracked across multiple per-library CVE assignments — **CVE-2015-2951** for the php-jwt alg:none case, **CVE-2015-9235** for the node-jsonwebtoken RS→HS key-confusion case, and similar per-library numbers for the rest. The libraries patched, mostly by changing the default behavior to reject alg:none in the absence of an explicit whitelist. The vulnerability is back the moment any operator passes an empty array as `algorithms`, manually allows `none`, uses an older library version, or — most commonly — writes new code that doesn't pass an options object at all.
+The disclosure that introduced the JWT-library community to the alg:none and RS→HS attack families was Tim McLean's March 2015 Auth0 blog post, *"Critical vulnerabilities in JSON Web Token libraries."*[^tim-mclean-critical-vulnerabilities-in] McLean was an independent security researcher at the time; the post was a guest piece. The disclosure was tracked across multiple per-library CVE assignments — **CVE-2015-2951** for the php-jwt alg:none case, **CVE-2015-9235** for the node-jsonwebtoken RS→HS key-confusion case, and similar per-library numbers for the rest.[^cve-2015-2951][^cve-2015-9235] The libraries patched, mostly by changing the default behavior to reject alg:none in the absence of an explicit whitelist. The vulnerability is back the moment any operator passes an empty array as `algorithms`, manually allows `none`, uses an older library version, or — most commonly — writes new code that doesn't pass an options object at all.
 
 ### Failure 2: The token payload contains a live credential (the JWT-as-confidential-envelope mistake)
 
 The JWT payload carries `handoff_token: "vesta-admin-handoff-2026"`. Whoever wrote that claim treated the JWT as a confidential envelope — a place where a credential could be "carried" alongside the role and scope claims, presumably to avoid a separate secret-management workflow for the handoff.
 
-JWT payloads are not confidential. RFC 7519 is explicit on this: the payload is base64url-encoded, which is reversible by anyone in possession of the token. The signed-token variant (JWS, RFC 7515) provides *integrity* — you can't change the claims without invalidating the signature — but not *confidentiality*. For confidentiality, the spec requires JWE (JSON Web Encryption, RFC 7516), which is a separate, more complex envelope.
+JWT payloads are not confidential. RFC 7519 is explicit on this: the payload is base64url-encoded, which is reversible by anyone in possession of the token.[^rfc-7519] The signed-token variant (JWS, RFC 7515) provides *integrity* — you can't change the claims without invalidating the signature — but not *confidentiality*.[^rfc-7515] For confidentiality, the spec requires JWE (JSON Web Encryption, RFC 7516), which is a separate, more complex envelope.[^rfc-7516]
 
 Most production deployments of JWTs use the JWS form. Most JWT tutorials demonstrate the JWS form. Many engineers learn that the JWT is "encoded" and reach the incorrect conclusion that it's also "encrypted." It isn't. Anything in a JWT payload is readable by anyone who holds the token, anyone who can pull the token from a log, anyone who intercepts the network call, and anyone who sees the token in a debug dump.
 
-This sub-failure maps to **CWE-540** *Inclusion of Sensitive Information in Source Code* (in spirit; the literal CWE-540 entry is source code, but the principle "sensitive data should not be placed in artifacts whose access control is not credential-grade" carries through). The narrower mapping is to the broader CWE-200 family, with the standard caveat that CWE-200 carries a "Discouraged for mapping" status in the current MITRE catalog.
+This sub-failure maps to **CWE-540** *Inclusion of Sensitive Information in Source Code* (in spirit; the literal CWE-540 entry is source code, but the principle "sensitive data should not be placed in artifacts whose access control is not credential-grade" carries through).[^cwe-540] The narrower mapping is to the broader CWE-200 family, with the standard caveat that CWE-200 carries a "Discouraged for mapping" status in the current MITRE catalog.
 
 ### Failure 3: The admin-API log captures Authorization headers (CWE-532)
 
@@ -255,7 +255,7 @@ The mitigation tracks each failure independently:
 - For failure 2: move the handoff token to a real secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.). Rotate the current value. The JWT payload contains claims about the session; it does not contain other credentials.
 - For failure 3: redact `Authorization` headers in the log pipeline. The application should never log the header value directly; if debug logging is needed, write only `"Authorization: Bearer <REDACTED>"`.
 
-Each fix is mechanical. The discipline that prevents the next instance is the same in all three cases: the engineer writing the code understands what the library actually does when called without the safety arguments. RFC 8725 — JSON Web Token Best Current Practices — is the document you would print and hand to Theo.
+Each fix is mechanical. The discipline that prevents the next instance is the same in all three cases: the engineer writing the code understands what the library actually does when called without the safety arguments. RFC 8725 — JSON Web Token Best Current Practices — is the document you would print and hand to Theo.[^rfc-8725]
 
 ## §3.5 — Blast radius
 
@@ -303,7 +303,7 @@ In late 2014, independent security researcher Tim McLean was reviewing several p
 
 Both attacks were published in McLean's March 2015 guest post on the Auth0 blog, *"Critical vulnerabilities in JSON Web Token libraries."* The disclosure was tracked across multiple per-library CVE assignments rather than a single multi-library CVE — **CVE-2015-2951** for the php-jwt alg:none variant, **CVE-2015-9235** for the node-jsonwebtoken RS→HS confusion, and similar per-library numbers for the rest. The libraries patched, mostly by changing default behavior to reject alg:none when no algorithm is whitelisted. McLean's blog post is, a decade later, still the canonical reference for the algorithm-confusion family of attacks.
 
-The lesson from the McLean disclosure is the lesson Theo's middleware demonstrates: the original sin of JWT verification is letting unauthenticated input (the token header) dictate verification behavior. Every modern best-practice document — RFC 8725, the OWASP JWT cheat sheet, the OAuth 2.0 Security BCP — recommends the same defense: the verifier specifies what algorithms are acceptable; the token's claim is checked against that list and rejected if it doesn't match.
+The lesson from the McLean disclosure is the lesson Theo's middleware demonstrates: the original sin of JWT verification is letting unauthenticated input (the token header) dictate verification behavior. Every modern best-practice document — RFC 8725, the OWASP JWT cheat sheet, the OAuth 2.0 Security BCP — recommends the same defense: the verifier specifies what algorithms are acceptable; the token's claim is checked against that list and rejected if it doesn't match.[^owasp-jwt-cheat-sheet]
 
 ### Thread 2: Key-injection attacks — CVE-2018-0114 and the jku/x5u family
 
@@ -315,7 +315,7 @@ JWTs can carry their verification key in the token itself, or specify it by refe
 
 The intended use case for the URL-fetching variants: a multi-tenant identity provider issues tokens signed with per-tenant keys; the header includes a URL the verifier can use to fetch the right public key. The intended security model: the verifier restricts fetches to a trusted domain (or doesn't honor these headers at all and resolves keys from a configured trust store).
 
-The vulnerability class: a library that trusts the token's claimed verification key. **CVE-2018-0114** is the canonical disclosure here — Cisco's `node-jose` library accepted a `jwk` header (embedded public key) and verified the signature against the attacker-supplied key. The attack: strip the original signature, embed your own public key in the header, sign with the matching private key, send. The verifier validates against the key the attacker provided.
+The vulnerability class: a library that trusts the token's claimed verification key. **CVE-2018-0114** is the canonical disclosure here — Cisco's `node-jose` library accepted a `jwk` header (embedded public key) and verified the signature against the attacker-supplied key.[^cve-2018-0114] The attack: strip the original signature, embed your own public key in the header, sign with the matching private key, send. The verifier validates against the key the attacker provided.
 
 The `jku` / `x5u` URL-fetching variants are related but distinct attacks tracked under their own per-library CVEs over the years. The shared pattern is the same: any header field that lets the token influence the choice of verification key is a vector unless the verifier strictly constrains it.
 
@@ -347,7 +347,7 @@ The post-mortem at the bottom of the level (`lessons-learned.md`) walks through 
 
 **CWE-347: Improper Verification of Cryptographic Signature.** The primary weakness for the alg:none failure. The catalog entry describes the weakness as "the product does not verify, or incorrectly verifies, the cryptographic signature for data." MITRE mapping status: **ALLOWED** — it's a valid weakness ID for analytics and reporting. CWE-347 is the canonical ID for JWT signature-verification failures even though it isn't currently on the CWE Top 25 — the Top 25 weaknesses most often fired on JWT findings are CWE-287 *Improper Authentication* and CWE-863 *Incorrect Authorization*.
 
-**CWE-345: Insufficient Verification of Data Authenticity.** The parent weakness in the CWE hierarchy. Use when the specific failure mechanism (signature verification, MAC verification, etc.) isn't the point being made; CWE-347 is the narrower fit when the failure is specifically about a cryptographic signature.
+**CWE-345: Insufficient Verification of Data Authenticity.**[^cwe-345] The parent weakness in the CWE hierarchy. Use when the specific failure mechanism (signature verification, MAC verification, etc.) isn't the point being made; CWE-347 is the narrower fit when the failure is specifically about a cryptographic signature.
 
 **CWE-287: Improper Authentication.** The umbrella authentication-bypass weakness. Map this when the question is "the wrong people got authenticated"; map CWE-347 when the question is "the signature verification step is broken."
 
@@ -369,7 +369,7 @@ The current revision of the Payment Card Industry Data Security Standard (releas
 
 ### NIST SP 800-53 Rev. 5
 
-NIST Special Publication 800-53 Revision 5 (the federal control catalog; widely cited outside federal scope as the most comprehensive controls reference).
+NIST Special Publication 800-53 Revision 5 (the federal control catalog; widely cited outside federal scope as the most comprehensive controls reference).[^nist-800-53]
 
 **IA-2 — Identification and Authentication (Organizational Users).** The system must uniquely identify and authenticate users. Accepting alg:none tokens defeats this control because the "identity" claimed by the token is not actually verified.
 
@@ -381,11 +381,11 @@ NIST Special Publication 800-53 Revision 5 (the federal control catalog; widely 
 
 ### OWASP
 
-**OWASP Top 10 (2025) — A07: Authentication Failures.** The umbrella category for authentication-related vulnerabilities. The 2025 edition retained the A07 slot from the 2021 edition; the category was renamed (from "Identification and Authentication Failures" in 2021 to simply "Authentication Failures" in 2025) but the substance is the same. JWT-specific failures are named in the category description.
+**OWASP Top 10 (2025) — A07: Authentication Failures.**[^owasp-top-10-2025] The umbrella category for authentication-related vulnerabilities. The 2025 edition retained the A07 slot from the 2021 edition; the category was renamed (from "Identification and Authentication Failures" in 2021 to simply "Authentication Failures" in 2025) but the substance is the same. JWT-specific failures are named in the category description.
 
 **OWASP Top 10 (2025) — A02: Security Misconfiguration.** Applies to the missing algorithms whitelist as a misuse of an otherwise-correctly-implemented JWT library. The 2025 reshuffle moved Security Misconfiguration up from A05 (in the 2021 list) to A02 (in 2025).
 
-**OWASP API Security Top 10 (2023) — API2: Broken Authentication.** OWASP's API-specific Top 10 (last updated in 2023) covers JWT misuse explicitly. The category description names alg:none confusion, weak HMAC secrets, and missing token-revocation infrastructure as the most common manifestations.
+**OWASP API Security Top 10 (2023) — API2: Broken Authentication.**[^owasp-api-security-top-10] OWASP's API-specific Top 10 (last updated in 2023) covers JWT misuse explicitly. The category description names alg:none confusion, weak HMAC secrets, and missing token-revocation infrastructure as the most common manifestations.
 
 **OWASP JWT Cheat Sheet.** A focused defender-side reference (<https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html>). It began life as a Java-specific sheet and has since been generalised, so the guidance now reads language-agnostically. Contains the explicit instruction: "Always specify the algorithm to use to verify the signature." The language-agnostic complement is OWASP's WSTG chapter on testing JSON Web Tokens (<https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/10-Testing_JSON_Web_Tokens>).
 
@@ -470,7 +470,7 @@ token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error)
 })
 ```
 
-**Audit the codebase.** A regex like `jwt\.verify\([^,]+,[^,]+\)` (Node.js) or `jwt\.decode\([^,]+,[^,]+\)` without `algorithms=` (Python) catches the two-argument form. Every hit is a finding. Static-analysis tools like Semgrep and CodeQL have community-maintained rule packs for the JWT-misconfiguration patterns; the Semgrep registry at <https://semgrep.dev/r/> has searchable rules for `javascript.jsonwebtoken`, `python.pyjwt`, and others.
+**Audit the codebase.** A regex like `jwt\.verify\([^,]+,[^,]+\)` (Node.js) or `jwt\.decode\([^,]+,[^,]+\)` without `algorithms=` (Python) catches the two-argument form. Every hit is a finding. Static-analysis tools like Semgrep and CodeQL have community-maintained rule packs for the JWT-misconfiguration patterns; the Semgrep registry at <https://semgrep.dev/r/> has searchable rules for `javascript.jsonwebtoken`, `python.pyjwt`, and others.[^semgrep-registry-jwt-rules]
 
 ### 2. Reject alg:none unconditionally
 
@@ -638,49 +638,34 @@ For JWT specifically, **always pass the `algorithms` parameter on every `verify(
 
 *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
-### Standards documents
+[^rfc-7519]: [RFC 7519 — JSON Web Token (JWT)](https://datatracker.ietf.org/doc/html/rfc7519). The foundational JWT specification. Section 4 covers claims; Section 6 covers unsecured JWTs (alg:none); Section 7 covers creating and validating tokens.
+[^rfc-7515]: [RFC 7515 — JSON Web Signature (JWS)](https://datatracker.ietf.org/doc/html/rfc7515). The signature-format spec underlying JWT. Section 5 covers signing and verification procedures.
+[^rfc-7516]: [RFC 7516 — JSON Web Encryption (JWE)](https://datatracker.ietf.org/doc/html/rfc7516). The encryption variant. Use JWE (not JWS) when you need the payload to be confidential.
+[^rfc-8725]: [RFC 8725 — JSON Web Token Best Current Practices](https://datatracker.ietf.org/doc/html/rfc8725). The BCP document specifically for JWT security. Section 3 is the operational meat — read 3.1 through 3.12 in order.
+[^nist-800-63b]: [NIST SP 800-63B Rev. 4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://csrc.nist.gov/pubs/sp/800/63/b/4/final). Published July 2025; supersedes the 2017 edition. Covers token lifecycle, authenticator selection, AAL tiering.
+[^cwe-347]: [CWE-347: Improper Verification of Cryptographic Signature](https://cwe.mitre.org/data/definitions/347.html). The primary weakness for JWT alg:none and signature-skipping patterns.
+[^cwe-345]: [CWE-345: Insufficient Verification of Data Authenticity](https://cwe.mitre.org/data/definitions/345.html). The parent weakness.
+[^cwe-287]: [CWE-287: Improper Authentication](https://cwe.mitre.org/data/definitions/287.html). The umbrella authentication-bypass weakness.
+[^cwe-532]: [CWE-532: Insertion of Sensitive Information into Log File](https://cwe.mitre.org/data/definitions/532.html). The secrets-in-logs finding.
+[^cwe-540]: [CWE-540: Inclusion of Sensitive Information in Source Code](https://cwe.mitre.org/data/definitions/540.html). Useful framing for the JWT-payload-as-credential-envelope sub-pattern.
+[^tim-mclean-critical-vulnerabilities-in]: [Tim McLean, "Critical vulnerabilities in JSON Web Token libraries" (Auth0 blog guest post, March 2015)](https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/). The original alg:none and RS→HS disclosure; a decade later still the canonical reference for the algorithm-confusion family. McLean was an independent researcher at the time.
+[^cve-2015-2951]: [CVE-2015-2951 (Mitre)](https://www.cve.org/CVERecord?id=CVE-2015-2951). The php-jwt alg:none variant from McLean's disclosure — `jwt_tool` and most tooling cite this CVE for alg:none.
+[^cve-2015-9235]: [CVE-2015-9235 (Mitre)](https://www.cve.org/CVERecord?id=CVE-2015-9235). The node-jsonwebtoken RS→HS key-confusion variant from the same disclosure.
+[^cve-2018-0114]: [CVE-2018-0114 (Mitre)](https://www.cve.org/CVERecord?id=CVE-2018-0114). The node-jose embedded-`jwk` key-injection disclosure (Cisco).
+[^pci-dss-v4-0-1]: [PCI-DSS v4.0.1 full text (PCI Security Standards Council)](https://www.pcisecuritystandards.org/document_library/). Free registration required. The Requirement 6 and 8 sections cover authentication and secure coding directly.
+[^nist-800-53]: [NIST SP 800-53 Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). The IA, SC, AC, and AU control families cover the controls cited above.
+[^owasp-top-10-2025]: [OWASP Top 10 (2025)](https://owasp.org/Top10/). The current edition.
+[^owasp-api-security-top-10]: [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x00-header/). The API-focused companion. Last updated in 2023; the 2025 cycle is in draft.
+[^owasp-jwt-cheat-sheet]: [OWASP JWT Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html).
+[^semgrep-registry-jwt-rules]: [Semgrep registry — JWT rules](https://semgrep.dev/r/?q=jwt). Community-maintained static-analysis rules for the JWT misconfiguration patterns.
 
-- **RFC 7519 — JSON Web Token (JWT)**: <https://datatracker.ietf.org/doc/html/rfc7519>. The foundational JWT specification. Section 4 covers claims; Section 6 covers unsecured JWTs (alg:none); Section 7 covers creating and validating tokens.
-- **RFC 7515 — JSON Web Signature (JWS)**: <https://datatracker.ietf.org/doc/html/rfc7515>. The signature-format spec underlying JWT. Section 5 covers signing and verification procedures.
-- **RFC 7516 — JSON Web Encryption (JWE)**: <https://datatracker.ietf.org/doc/html/rfc7516>. The encryption variant. Use JWE (not JWS) when you need the payload to be confidential.
-- **RFC 8725 — JSON Web Token Best Current Practices**: <https://datatracker.ietf.org/doc/html/rfc8725>. The BCP document specifically for JWT security. Section 3 is the operational meat — read 3.1 through 3.12 in order.
-- **OAuth 2.0 Security Best Current Practice (RFC 9700)**: <https://datatracker.ietf.org/doc/html/rfc9700>. The 2025 BCP for OAuth 2.0 (replaces the older draft-ietf-oauth-security-topics). Relevant because JWT is the dominant OAuth 2.0 access-token format.
-- **NIST SP 800-63B Rev. 4 — Digital Identity Guidelines: Authentication and Authenticator Management**: <https://csrc.nist.gov/pubs/sp/800/63/b/4/final>. Published July 2025; supersedes the 2017 edition. Covers token lifecycle, authenticator selection, AAL tiering.
+### Further reading
 
-### CWE / MITRE ATT&CK
-
-- **CWE-347: Improper Verification of Cryptographic Signature**: <https://cwe.mitre.org/data/definitions/347.html>. The primary weakness for JWT alg:none and signature-skipping patterns.
-- **CWE-345: Insufficient Verification of Data Authenticity**: <https://cwe.mitre.org/data/definitions/345.html>. The parent weakness.
-- **CWE-287: Improper Authentication**: <https://cwe.mitre.org/data/definitions/287.html>. The umbrella authentication-bypass weakness.
-- **CWE-532: Insertion of Sensitive Information into Log File**: <https://cwe.mitre.org/data/definitions/532.html>. The secrets-in-logs finding.
-- **CWE-540: Inclusion of Sensitive Information in Source Code**: <https://cwe.mitre.org/data/definitions/540.html>. Useful framing for the JWT-payload-as-credential-envelope sub-pattern.
-- **MITRE ATT&CK T1550.001 — Use Alternate Authentication Material: Application Access Token**: <https://attack.mitre.org/techniques/T1550/001/>.
-- **MITRE ATT&CK T1078 — Valid Accounts**: <https://attack.mitre.org/techniques/T1078/>.
-- **MITRE ATT&CK T1212 — Exploitation for Credential Access**: <https://attack.mitre.org/techniques/T1212/>.
-
-### Original disclosures and reference posts
-
-- **Tim McLean, "Critical vulnerabilities in JSON Web Token libraries"** (Auth0 blog guest post, March 2015): <https://auth0.com/blog/critical-vulnerabilities-in-json-web-token-libraries/>. The original alg:none and RS→HS disclosure; a decade later still the canonical reference for the algorithm-confusion family. McLean was an independent researcher at the time.
-- **CVE-2015-2951** (Mitre): <https://www.cve.org/CVERecord?id=CVE-2015-2951>. The php-jwt alg:none variant from McLean's disclosure — `jwt_tool` and most tooling cite this CVE for alg:none.
-- **CVE-2015-9235** (Mitre): <https://www.cve.org/CVERecord?id=CVE-2015-9235>. The node-jsonwebtoken RS→HS key-confusion variant from the same disclosure.
-- **CVE-2018-0114** (Mitre): <https://www.cve.org/CVERecord?id=CVE-2018-0114>. The node-jose embedded-`jwk` key-injection disclosure (Cisco).
-
-### Compliance frameworks
-
-- **PCI-DSS v4.0.1 full text** (PCI Security Standards Council): <https://www.pcisecuritystandards.org/document_library/>. Free registration required. The Requirement 6 and 8 sections cover authentication and secure coding directly.
-- **NIST SP 800-53 Rev. 5**: <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>. The IA, SC, AC, and AU control families cover the controls cited above.
-- **OWASP Top 10 (2025)**: <https://owasp.org/Top10/>. The current edition.
-- **OWASP API Security Top 10 (2023)**: <https://owasp.org/API-Security/editions/2023/en/0x00-header/>. The API-focused companion. Last updated in 2023; the 2025 cycle is in draft.
-- **OWASP JWT Cheat Sheet**: <https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html>.
-
-### Tools
-
-- **`jwt_tool`** (ticarpi): <https://github.com/ticarpi/jwt_tool>. The defacto JWT-attack toolkit. Supports alg:none confusion, RS→HS key confusion, jku/x5u injection, HMAC-secret brute-force, kid injection, and several other patterns.
-- **`hashcat`** mode 16500 (JWT HS256): <https://hashcat.net/wiki/doku.php?id=example_hashes>. Brute-force JWT HMAC secrets on GPU.
-- **jwt.io** (Auth0): <https://www.jwt.io/>. Browser-based JWT decoder. Useful for ad-hoc inspection; do NOT paste tokens from production systems into the public site (the site does not transmit the token off-machine in modern versions, but the discipline is "decode locally").
-- **Semgrep registry — JWT rules**: <https://semgrep.dev/r/?q=jwt>. Community-maintained static-analysis rules for the JWT misconfiguration patterns.
-- **Sigma rules — JWT detections**: <https://github.com/SigmaHQ/sigma>. Search the repo for `jwt` or `alg`.
-
-### Background / depth
-
-- **Auth0 — "JWT Handbook"** (free e-book): historically published as a free download; check Auth0's resources page for the current location. ~100 pages of JWT operational depth.
+- [OAuth 2.0 Security Best Current Practice (RFC 9700)](https://datatracker.ietf.org/doc/html/rfc9700). The 2025 BCP for OAuth 2.0 (replaces the older draft-ietf-oauth-security-topics). Relevant because JWT is the dominant OAuth 2.0 access-token format.
+- [MITRE ATT&CK T1550.001 — Use Alternate Authentication Material: Application Access Token](https://attack.mitre.org/techniques/T1550/001/).
+- [MITRE ATT&CK T1078 — Valid Accounts](https://attack.mitre.org/techniques/T1078/).
+- [MITRE ATT&CK T1212 — Exploitation for Credential Access](https://attack.mitre.org/techniques/T1212/).
+- [`jwt_tool` (ticarpi)](https://github.com/ticarpi/jwt_tool). The defacto JWT-attack toolkit. Supports alg:none confusion, RS→HS key confusion, jku/x5u injection, HMAC-secret brute-force, kid injection, and several other patterns.
+- [`hashcat` mode 16500 (JWT HS256)](https://hashcat.net/wiki/doku.php?id=example_hashes). Brute-force JWT HMAC secrets on GPU.
+- [jwt.io (Auth0)](https://www.jwt.io/). Browser-based JWT decoder. Useful for ad-hoc inspection; do NOT paste tokens from production systems into the public site (the site does not transmit the token off-machine in modern versions, but the discipline is "decode locally").
+- [Sigma rules — JWT detections](https://github.com/SigmaHQ/sigma). Search the repo for `jwt` or `alg`.

@@ -24,7 +24,7 @@ Three failures, from yesterday plus this morning, put you at an `audit-svc@audit
 
 That's the threat model of *getting* to this prompt. The lesson of this level is about what's *in* the cert and what the cert points at.
 
-Priya, briefing you in chat as you SSH'd in: *"Walk Apache's config. Read the cert. The SAN list will tell you what this host was set up to BELIEVE it serves; the real serving behavior is whatever Apache's vhost config says, which is much less. The cert's OU field is non-standard — RFC 5280 calls OU optional and free-form. Atlas's CA habit was apparently to stuff an internal service email in there. Look at what THAT mailbox has been doing — `/var/log/exim/autoresponder.log` on this host captures the local exim instance's outbound replies. Yes, this host runs its OWN exim instance. That's the kind of thing nobody decommissions a 'deprecated' host over."* That's your scope.
+Priya, briefing you in chat as you SSH'd in: *"Walk Apache's config. Read the cert. The SAN list will tell you what this host was set up to BELIEVE it serves; the real serving behavior is whatever Apache's vhost config says, which is much less. The cert's OU field is non-standard — RFC 5280 calls OU optional and free-form.[^rfc-5280] Atlas's CA habit was apparently to stuff an internal service email in there. Look at what THAT mailbox has been doing — `/var/log/exim/autoresponder.log` on this host captures the local exim instance's outbound replies. Yes, this host runs its OWN exim instance. That's the kind of thing nobody decommissions a 'deprecated' host over."* That's your scope.
 
 Cross-track foreshadowing: Polaris Defense's Reed Connolly investigation surfaced a structurally identical pattern — a "decommissioned" forensic-bench VLAN that wasn't actually decommissioned still allowed traffic the asset-inventory tool said couldn't reach it. Different industry, same MDM-says-dead / firewall-says-alive split. The lobby's structure where you can walk these tracks in any order is real; the *narrative* is also real — they're a shared Driftwood book of business, in chronological flow.
 
@@ -91,7 +91,7 @@ Three observations before you've even opened the cert file.
 
 **Observation three: the Subject's `OU=` field carries an email address — `devops-ci@atlas.health`.** RFC 5280 specifies the X.500 name attribute types and explicitly allows free-form OU values; in practice, organizations use OU for departmental names (`Sales`, `IT-Operations`, `Engineering`). Atlas's habit is to stuff an internal service email in there instead. The mailbox at that address is, per Priya's note, the autoresponder we'll be reading shortly.
 
-The `New, TLSv1.2` line is also worth noting. Apache 2.4 default config on a 2023-vintage host won't necessarily have TLS 1.3 enabled (Apache's SSL config defaults vary by distribution and were progressively tightened across 2.4.x point releases). TLS 1.2 is still acceptable under NIST SP 800-52 Rev 2 §3.1 (the recommended TLS configuration), but the Forum's drift toward TLS-1.3-only baselines means a 2023-vintage TLS 1.2 endpoint is increasingly an audit finding by itself.
+The `New, TLSv1.2` line is also worth noting. Apache 2.4 default config on a 2023-vintage host won't necessarily have TLS 1.3 enabled (Apache's SSL config defaults vary by distribution and were progressively tightened across 2.4.x point releases). TLS 1.2 is still acceptable under NIST SP 800-52 Rev 2 §3.1 (the recommended TLS configuration), but the Forum's drift toward TLS-1.3-only baselines means a 2023-vintage TLS 1.2 endpoint is increasingly an audit finding by itself.[^nist-800-52]
 
 ### Step 4: openssl x509 — the full cert dump
 
@@ -133,7 +133,7 @@ Certificate:
 
 Five facts in one command output.
 
-**Fact one: the validity is 10 years.** Not-Before is January 12, 2023. Not-After is January 12, 2033. The CA/Browser Forum baseline requirements have been progressively tightening server-cert lifetimes — 825 days (2018), 398 days (2020), with a phased reduction toward 47 days being voted forward in 2025 for completion by 2029. A 10-year self-signed cert is an order of magnitude over the modern public-CA baseline. Internal CAs aren't *required* to mirror the Forum's baseline, but the longer the cert lifetime the larger the blast radius of any single private-key compromise — which is exactly what NIST SP 800-57 Part 1 Rev 5 §5.3.6 (cryptoperiod selection) is saying when it warns against unbounded cryptoperiods.
+**Fact one: the validity is 10 years.** Not-Before is January 12, 2023. Not-After is January 12, 2033. The CA/Browser Forum baseline requirements have been progressively tightening server-cert lifetimes — 825 days (2018), 398 days (2020), with a phased reduction toward 47 days being voted forward in 2025 for completion by 2029. A 10-year self-signed cert is an order of magnitude over the modern public-CA baseline. Internal CAs aren't *required* to mirror the Forum's baseline, but the longer the cert lifetime the larger the blast radius of any single private-key compromise — which is exactly what NIST SP 800-57 Part 1 Rev 5 §5.3.6 (cryptoperiod selection) is saying when it warns against unbounded cryptoperiods.[^nist-800-57]
 
 **Fact two: the SAN list documents Atlas's internal infrastructure.** Twenty entries. Every host you discovered in yesterday's AXFR plus several you didn't — `helpdesk-ticket.atlas.internal`, `tessera-bridge.atlas.internal`, `devops-ci.atlas.internal`, the entire PHI tier (`phi-warehouse`, `pacs-imaging`, `ehr-fhir`). The Subject Alternative Name extension exists so a single cert can authoritatively cover multiple hostnames the operator intends to serve. Whoever issued this cert *enumerated every hostname they wanted it to cover*. That enumeration is now in the cert. Anyone who TCP-connects to :443 on this host gets the enumeration in the handshake.
 
@@ -166,7 +166,7 @@ patientportal-uat.atlas.health     Let's Encrypt (R3)                 2024-06-14
 
 Nine entries. Three of them are smoking guns.
 
-**`staging.atlas.health` issued 2025-09-08.** Marcus told us in level0 (and on the Q1 2026 quarterly call) that staging was VPN-only "as of Q1 2026." That's not actually true — Atlas requested a Let's Encrypt cert for `staging.atlas.health` in September 2025, which means Atlas wanted public-CA validation of a hostname that's supposed to be VPN-only. Either the VPN-only claim was always aspirational, or somebody at Atlas requested a cert for a hostname they shouldn't have. Either way, the CT log catalogued the fact that `staging.atlas.health` *exists* and is operated by Atlas. CT logs are append-only by design (RFC 6962 §3); the fact can't be unpublished.
+**`staging.atlas.health` issued 2025-09-08.** Marcus told us in level0 (and on the Q1 2026 quarterly call) that staging was VPN-only "as of Q1 2026." That's not actually true — Atlas requested a Let's Encrypt cert for `staging.atlas.health` in September 2025, which means Atlas wanted public-CA validation of a hostname that's supposed to be VPN-only. Either the VPN-only claim was always aspirational, or somebody at Atlas requested a cert for a hostname they shouldn't have. Either way, the CT log catalogued the fact that `staging.atlas.health` *exists* and is operated by Atlas. CT logs are append-only by design (RFC 6962 §3); the fact can't be unpublished.[^rfc-6962]
 
 **`tessera-bridge.atlas.health` issued 2025-09-12.** Yesterday's TXT-record date plus four days. Tessera was a vendor engagement we kept hearing about from the leftover credentials and dry-run notes. The CT log catalogued the fact that Atlas requested a public cert for a Tessera-themed hostname five months ago. GoDaddy issued it (a different CA than the modern Let's Encrypt issuances — GoDaddy was Atlas's pre-2024 CA of choice). The cert tells us the engagement was real and produced public-facing infrastructure that nobody told us about.
 
@@ -219,7 +219,7 @@ The longer version has two stacked layers.
 
 Stack the two layers and you get Atlas's audit-bypass cert: a 10-year metadata document that names every internal host plus a free-form mailbox plus a literal "DELETE BEFORE PROD" reminder — and the metadata is encoded in a way that every TLS-aware tool from `openssl` to `curl -v` to `nmap --script ssl-cert` reads correctly.
 
-Certificate Transparency makes this worse for public-facing certs. RFC 6962 (2013) and its successor RFC 9162 (December 2021) require CAs in browser-trusted root programs to log every issued cert to public append-only CT logs; the major browser vendors enforce this for new certs (Chrome since 2018, Apple since 2021, Mozilla gating new certs starting 2024). crt.sh, run by Sectigo, is the public query interface over the aggregate CT log feed. Any cert any browser-trusted CA has issued for a domain you control is in those logs forever. Revoking the cert doesn't unpublish the log entry. Rotating the cert doesn't unpublish the log entry. The CT log is the permanent record of every hostname any cert ever covered.
+Certificate Transparency makes this worse for public-facing certs. RFC 6962 (2013) and its successor RFC 9162 (December 2021) require CAs in browser-trusted root programs to log every issued cert to public append-only CT logs; the major browser vendors enforce this for new certs (Chrome since 2018, Apple since 2021, Mozilla gating new certs starting 2024). crt.sh, run by Sectigo, is the public query interface over the aggregate CT log feed.[^rfc-9162] Any cert any browser-trusted CA has issued for a domain you control is in those logs forever. Revoking the cert doesn't unpublish the log entry. Rotating the cert doesn't unpublish the log entry. The CT log is the permanent record of every hostname any cert ever covered.
 
 The defenses against all of this are mature and documented; nobody at Atlas applied them.
 
@@ -287,7 +287,7 @@ Atlas can produce records showing who else asked.
 
 **RFC 6962 — Certificate Transparency.** June 2013 publication ([IETF datatracker](https://datatracker.ietf.org/doc/html/rfc6962)) — the protocol that introduced append-only CT logs as the cryptographic record of every public-CA-issued cert. The follow-up RFC 9162 ("Certificate Transparency Version 2.0") was published December 2021. CT is what makes `staging.atlas.health`'s 2025-09-08 cert permanently public.
 
-**HIPAA Security Rule (45 CFR Part 164, Subpart C).** §164.312(e)(2)(ii) — encryption is required for ePHI in transit when deemed reasonable and appropriate. TLS termination with a self-signed 10-year cert nobody validates downstream meets the literal control while failing the spirit. §164.312(b) — audit controls. Atlas's autoresponder shipping cleartext credentials should have been flagged by audit controls; it wasn't, because the audit controls don't extend to exim auto-reply behavior on hosts the asset-management tool says don't exist. The 2024 HIPAA Security Rule NPRM proposes [stronger explicit encryption requirements](https://www.federalregister.gov/documents/2025/01/06/2024-30983/hipaa-security-rule-to-strengthen-the-cybersecurity-of-electronic-protected-health-information) (published January 6, 2025; comment period closed March 7, 2025); if the NPRM finalizes, "encryption appropriate to address known threats" becomes a near-mandatory baseline.
+**HIPAA Security Rule (45 CFR Part 164, Subpart C).** §164.312(e)(2)(ii) — encryption is required for ePHI in transit when deemed reasonable and appropriate.[^cfr-45-164] TLS termination with a self-signed 10-year cert nobody validates downstream meets the literal control while failing the spirit. §164.312(b) — audit controls. Atlas's autoresponder shipping cleartext credentials should have been flagged by audit controls; it wasn't, because the audit controls don't extend to exim auto-reply behavior on hosts the asset-management tool says don't exist. The 2024 HIPAA Security Rule NPRM proposes [stronger explicit encryption requirements](https://www.federalregister.gov/documents/2025/01/06/2024-30983/hipaa-security-rule-to-strengthen-the-cybersecurity-of-electronic-protected-health-information) (published January 6, 2025; comment period closed March 7, 2025); if the NPRM finalizes, "encryption appropriate to address known threats" becomes a near-mandatory baseline.
 
 **HITECH Act + Breach Notification Rule (45 CFR Part 164, Subpart D).** Breaches of ePHI must be reported to HHS Office for Civil Rights within 60 days; breaches affecting 500+ individuals trigger media notification under §164.408. Atlas's cert leakage doesn't directly disclose PHI, but the SAN list catalogues the PHI-tier hostnames (`phi-warehouse`, `pacs-imaging`, `ehr-fhir`), which is reconnaissance enabling future PHI access. The breach notification clock starts on *discovery*; Driftwood discovering this on April 10 starts Atlas's clock April 10 if PHI access is determined to have occurred.
 
@@ -401,7 +401,7 @@ Both bonus finds trigger on the same `openssl x509 -text -noout -in /etc/apache2
 
 1. **TLS certs are public documents the server hands to every client.** Don't put information in them you don't want disclosed. The Subject's distinguished-name fields, the SAN list, the Extensions section — all are readable by anyone who can TCP-connect to the server.
 
-2. **Self-signed leaf certs aren't a vulnerability in themselves, but they signal an unmanaged CA process.** Production environments should run an internal CA (Vault PKI / step-ca / AWS Private CA) with a proper issuance pipeline that knows about cert lifetime, hostname scope, and host lifecycle.
+2. **Self-signed leaf certs aren't a vulnerability in themselves, but they signal an unmanaged CA process.** Production environments should run an internal CA (Vault PKI / step-ca / AWS Private CA) with a proper issuance pipeline that knows about cert lifetime, hostname scope, and host lifecycle.[^aws-private-certificate-authority]
 
 3. **Wildcard certs are blast-radius multipliers.** One private key authenticates as the entire wildcarded zone. NIST SP 800-52 Rev 2 §3.1.3 warns against the pattern; the modern automation tooling makes per-hostname issuance cheap.
 
@@ -421,49 +421,53 @@ The level3 credential — `T3mp-DevopsCI-HD8814!q2` — is in `/var/log/exim/aut
 
 **TLS cert hygiene and modern PKI**
 
-- [NIST SP 800-52 Rev 2](https://csrc.nist.gov/pubs/sp/800/52/r2/final) — Guidelines for TLS Implementations (August 2019).
-- [NIST SP 800-57 Part 1 Rev 5](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final) — Recommendation for Key Management Part 1 (May 2020).
-- [RFC 5280](https://datatracker.ietf.org/doc/html/rfc5280) — Internet X.509 Public Key Infrastructure Certificate and CRL Profile (May 2008).
-- [RFC 6962](https://datatracker.ietf.org/doc/html/rfc6962) — Certificate Transparency (June 2013).
-- [RFC 9162](https://datatracker.ietf.org/doc/html/rfc9162) — Certificate Transparency Version 2.0 (December 2021).
-- [Mozilla Server-Side TLS Configuration Generator](https://ssl-config.mozilla.org/) — modern / intermediate / old profiles for Apache, nginx, HAProxy, Caddy.
-- [CA/Browser Forum Baseline Requirements](https://cabforum.org/baseline-requirements/) — public-CA issuance baseline.
-- [HashiCorp Vault PKI Secrets Engine](https://developer.hashicorp.com/vault/docs/secrets/pki) — internal-CA tooling.
-- [Smallstep step-ca](https://smallstep.com/docs/step-ca/) — internal-CA tooling with ACME.
-- [cert-manager](https://cert-manager.io) — Kubernetes-native cert automation.
-- [AWS Private Certificate Authority](https://docs.aws.amazon.com/privateca/latest/userguide/) — managed internal CA.
 
 **Certificate Transparency monitoring + recon**
 
-- [Sectigo crt.sh CT-log search](https://crt.sh/) — public CT-log query interface.
-- [Censys Certificates Search](https://search.censys.io/) — academic + commercial CT-log search.
-- [Cert Spotter](https://sslmate.com/certspotter/) — open-source CT monitor + SaaS.
-- [SecurityTrails](https://securitytrails.com/) — DNS + CT historical data.
-- [Hardenize](https://www.hardenize.com/) — TLS + DNS hygiene scoring with CT monitoring.
-- Patrik Hudak — [subdomain-takeover primer](https://0xpatrik.com/subdomain-takeover/) (the canonical class-of-vuln reference).
 
 **Real-world cases**
 
-- Mandiant — [UNC5537 / Snowflake 2024 advisory](https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion).
-- Mozilla — [Fraudulent Google.com Certificate (August 2011 DigiNotar post)](https://blog.mozilla.org/security/2011/08/29/fraudulent-google-com-certificate/) and [DigiNotar removal follow-up (September 2011)](https://blog.mozilla.org/security/2011/09/02/diginotar-removal-follow-up/).
-- Wikipedia — [DigiNotar consolidated case study](https://en.wikipedia.org/wiki/DigiNotar).
-- Wikipedia — [Sony Pictures hack 2014](https://en.wikipedia.org/wiki/Sony_Pictures_hack) (the original US-CERT TA14-353A advisory now circulates as a PDF in archives).
-- SpecterOps — [Certified Pre-Owned: Active Directory Certificate Services attack surface](https://specterops.io/blog/2021/06/17/certified-pre-owned/) by Will Schroeder and Lee Christensen.
 
 **OWASP and CIS**
 
-- [OWASP Top 10:2025](https://owasp.org/Top10/) — A02 Security Misconfiguration, A04 Cryptographic Failures.
-- [OWASP Transport Layer Protection Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html) — modern TLS configuration guide.
-- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/cis-controls-list) — Controls 3.10, 4.6, 12.5 covered above.
 
 **HIPAA + healthcare-vertical**
 
-- [HIPAA Security Rule (45 CFR Part 164, Subpart C)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C) — §164.312 covers Technical Safeguards.
-- [HIPAA Security Rule NPRM (January 2025)](https://www.federalregister.gov/documents/2025/01/06/2024-30983/hipaa-security-rule-to-strengthen-the-cybersecurity-of-electronic-protected-health-information) — proposed strengthening of encryption requirements (comment period closed March 7, 2025).
-- HHS — [Breach Notification Rule reporting portal](https://ocrportal.hhs.gov/ocr/breach/breach_frontpage.jsf).
 
 **MITRE ATT&CK references**
 
+[^nist-800-52]: [NIST SP 800-52 Rev 2](https://csrc.nist.gov/pubs/sp/800/52/r2/final). — Guidelines for TLS Implementations (August 2019).
+[^nist-800-57]: [NIST SP 800-57 Part 1 Rev 5](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final). — Recommendation for Key Management Part 1 (May 2020).
+[^rfc-5280]: [RFC 5280](https://datatracker.ietf.org/doc/html/rfc5280). — Internet X.509 Public Key Infrastructure Certificate and CRL Profile (May 2008).
+[^rfc-6962]: [RFC 6962](https://datatracker.ietf.org/doc/html/rfc6962). — Certificate Transparency (June 2013).
+[^rfc-9162]: [RFC 9162](https://datatracker.ietf.org/doc/html/rfc9162). — Certificate Transparency Version 2.0 (December 2021).
+[^aws-private-certificate-authority]: [AWS Private Certificate Authority](https://docs.aws.amazon.com/privateca/latest/userguide/). — managed internal CA.
+[^cfr-45-164]: [HIPAA Security Rule (45 CFR Part 164, Subpart C)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C). — §164.312 covers Technical Safeguards.
+
+### Further reading
+
+- [Mozilla Server-Side TLS Configuration Generator](https://ssl-config.mozilla.org/). — modern / intermediate / old profiles for Apache, nginx, HAProxy, Caddy.
+- [CA/Browser Forum Baseline Requirements](https://cabforum.org/baseline-requirements/). — public-CA issuance baseline.
+- [HashiCorp Vault PKI Secrets Engine](https://developer.hashicorp.com/vault/docs/secrets/pki). — internal-CA tooling.
+- [Smallstep step-ca](https://smallstep.com/docs/step-ca/). — internal-CA tooling with ACME.
+- [cert-manager](https://cert-manager.io). — Kubernetes-native cert automation.
+- [Sectigo crt.sh CT-log search](https://crt.sh/). — public CT-log query interface.
+- [Censys Certificates Search](https://search.censys.io/). — academic + commercial CT-log search.
+- [Cert Spotter](https://sslmate.com/certspotter/). — open-source CT monitor + SaaS.
+- [SecurityTrails](https://securitytrails.com/). — DNS + CT historical data.
+- [Hardenize](https://www.hardenize.com/). — TLS + DNS hygiene scoring with CT monitoring.
+- [Patrik Hudak subdomain-takeover primer](https://0xpatrik.com/subdomain-takeover/). (the canonical class-of-vuln reference).
+- [Mandiant UNC5537 / Snowflake 2024 advisory](https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion).
+- [Mozilla Fraudulent Google.com Certificate (August 2011 DigiNotar post)](https://blog.mozilla.org/security/2011/08/29/fraudulent-google-com-certificate/).
+- [DigiNotar removal follow-up (September 2011)](https://blog.mozilla.org/security/2011/09/02/diginotar-removal-follow-up/).
+- [Wikipedia DigiNotar consolidated case study](https://en.wikipedia.org/wiki/DigiNotar).
+- [Wikipedia Sony Pictures hack 2014](https://en.wikipedia.org/wiki/Sony_Pictures_hack). (the original US-CERT TA14-353A advisory now circulates as a PDF in archives).
+- [SpecterOps Certified Pre-Owned: Active Directory Certificate Services attack surface](https://specterops.io/blog/2021/06/17/certified-pre-owned/). by Will Schroeder and Lee Christensen.
+- [OWASP Top 10:2025](https://owasp.org/Top10/). — A02 Security Misconfiguration, A04 Cryptographic Failures.
+- [OWASP Transport Layer Protection Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html). — modern TLS configuration guide.
+- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/cis-controls-list). — Controls 3.10, 4.6, 12.5 covered above.
+- [HIPAA Security Rule NPRM (January 2025)](https://www.federalregister.gov/documents/2025/01/06/2024-30983/hipaa-security-rule-to-strengthen-the-cybersecurity-of-electronic-protected-health-information). — proposed strengthening of encryption requirements (comment period closed March 7, 2025).
+- [HHS Breach Notification Rule reporting portal](https://ocrportal.hhs.gov/ocr/breach/breach_frontpage.jsf).
 - [T1596.003 — Search Open Technical Databases: Digital Certificates](https://attack.mitre.org/techniques/T1596/003/).
 - [T1590.001 — Gather Victim Network Information: Domain Properties](https://attack.mitre.org/techniques/T1590/001/).
 - [T1190 — Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/).

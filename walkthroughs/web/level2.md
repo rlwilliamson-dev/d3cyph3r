@@ -65,7 +65,7 @@ router.get("/api/search", async (req, res) => {
   ...
 ```
 
-The `"..." + q + "..."` concatenation is the entire bug. The search term `q` is glued into the middle of a string literal in the SQL. Whatever characters `q` contains become part of the query. The `catch` block at the bottom of the handler returns the raw database error and the constructed `sql` string to the client — a second finding (CWE-209) you'll see fire in a moment.
+The `"..." + q + "..."` concatenation is the entire bug. The search term `q` is glued into the middle of a string literal in the SQL. Whatever characters `q` contains become part of the query. The `catch` block at the bottom of the handler returns the raw database error and the constructed `sql` string to the client — a second finding (CWE-209) you'll see fire in a moment.[^cwe-209]
 
 `deploy-notes.md` is the most important file you'll read. It establishes the blast radius before you've sent a single request:
 
@@ -231,13 +231,13 @@ The `?` is a placeholder. The database driver sends the query template and the p
 
 BluePier's handler did the opposite — string concatenation — and three failures stacked on top of it:
 
-**Failure one — string-concatenated SQL (CWE-89).** The root cause. `"...LIKE '%" + q + "%'"`. Everything in §2 follows from this one line. It is the single most-documented web vulnerability in history, on the OWASP Top 10 in some form since the list's inception.
+**Failure one — string-concatenated SQL (CWE-89).**[^cwe-89] The root cause. `"...LIKE '%" + q + "%'"`. Everything in §2 follows from this one line. It is the single most-documented web vulnerability in history, on the OWASP Top 10 in some form since the list's inception.
 
 **Failure two — verbose errors in production (CWE-209).** The handler's `catch` block returned the raw DB error and the constructed query to the client. That hands an attacker the backend identity, the query shape, and a live feedback loop for payload development. Error detail belongs in server-side logs; clients get a generic "something went wrong."
 
-**Failure three — an over-privileged, shared database account (CWE-250).** The public catalog connects with a user that can read every table in the portal schema, including FERPA records. A read-only account scoped to `courses` would have turned a catastrophic injection into a nuisance — you'd have broken the query and reached nothing worth reaching. Least privilege is the difference between "one table leaked" and "the whole institution leaked."
+**Failure three — an over-privileged, shared database account (CWE-250).**[^cwe-250] The public catalog connects with a user that can read every table in the portal schema, including FERPA records. A read-only account scoped to `courses` would have turned a catastrophic injection into a nuisance — you'd have broken the query and reached nothing worth reaching. Least privilege is the difference between "one table leaked" and "the whole institution leaked."
 
-And the prize compounds a fourth: **the DB-admin credential stored in plaintext in a database table (CWE-312 / CWE-522).** Credentials belong in a secrets manager, never in a row an injection can read.
+And the prize compounds a fourth: **the DB-admin credential stored in plaintext in a database table (CWE-312 / CWE-522).**[^cwe-312][^cwe-522] Credentials belong in a secrets manager, never in a row an injection can read.
 
 A note on the threat landscape. In the [OWASP Top 10:2025](https://owasp.org/Top10/), Injection sits at **A05** — it dropped from A03:2021 (and from #1 in the 2013/2017 editions). That decline is real and it's good news: parameterized queries and ORMs are now the framework default, so classic SQLi is genuinely less common than it was a decade ago. But "less common" is not "gone," and when it lands the impact is total — as MOVEit (§4) demonstrated in 2023. Meridian's catalog is exactly the kind of code that slips through: a 2021 hand-built query, inherited and never rewritten, on a subdomain nobody re-reviewed.
 
@@ -306,7 +306,7 @@ The through-line across all four: SQL injection's prevalence has fallen, but its
 
 **OWASP Web Security Testing Guide (WSTG).** The offensive-side reference: WSTG-INPV-05 (Testing for SQL Injection) documents the exact methodology this level walks — error-based probing, UNION-based extraction, `information_schema` enumeration. ([OWASP WSTG](https://owasp.org/www-project-web-security-testing-guide/))
 
-**NIST SP 800-53 Rev. 5.**
+**NIST SP 800-53 Rev. 5.**[^nist-800-53]
 - **SI-10 (Information Input Validation)** — the control directly addressing injection: validate/neutralize input before it reaches an interpreter.
 - **SI-11 (Error Handling)** — reveal as little as possible in error messages; the verbose error violates this directly.
 - **AC-6 (Least Privilege)** — the catalog's database account had far more access than its function required.
@@ -432,41 +432,50 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 
 **SQL injection — learn + prevent**
 
-- [PortSwigger Web Security Academy — SQL injection](https://portswigger.net/web-security/sql-injection) — the best free hands-on labs, including UNION attacks and information_schema enumeration.
-- [OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html) — the canonical defender reference; prepared statements first.
-- [OWASP Web Security Testing Guide — Testing for SQL Injection](https://owasp.org/www-project-web-security-testing-guide/) — the offensive methodology (WSTG-INPV-05).
-- [OWASP Top 10:2025](https://owasp.org/Top10/) — A05 Injection.
-- [sqlmap](https://sqlmap.org/) — the tool that automates the entire §2 sequence; understanding it by hand first is the point of this level.
 
 **Real-world cases**
 
-- Heartland Payment Systems 2008 — [Albert Gonzalez (SQLi methodology)](https://en.wikipedia.org/wiki/Albert_Gonzalez); [Heartland breach scope](https://en.wikipedia.org/wiki/Heartland_Payment_Systems#Security_breach).
-- Sony Pictures / LulzSec 2011 — [Wikipedia (LulzSec)](https://en.wikipedia.org/wiki/LulzSec).
-- TalkTalk 2015 — [ICO investigation account](https://ico.org.uk/about-the-ico/media-centre/talktalk-cyber-attack-how-the-ico-investigation-unfolded/).
-- MOVEit Transfer 2023 (CVE-2023-34362) — [NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2023-34362); [CISA advisory AA23-158A](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a).
 
 **Frameworks + standards**
 
-- [NIST SP 800-53 Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final) — SI-10 (Input Validation), SI-11 (Error Handling), AC-6 (Least Privilege).
-- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/cis-controls-list) — Control 16 (Application Software Security), Control 3 (Data Protection).
-- [U.S. Dept. of Education — FERPA](https://studentprivacy.ed.gov/ferpa) — 20 U.S.C. § 1232g; 34 CFR Part 99.
 
 **Secrets management + SAST**
 
-- [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html) · [HashiCorp Vault](https://developer.hashicorp.com/vault/docs/secrets) · [GCP Secret Manager](https://docs.cloud.google.com/secret-manager/docs) · [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview).
-- [Semgrep](https://semgrep.dev/) · [CodeQL](https://codeql.github.com/) — SAST tools with SQL-injection rule packs for the CI gate.
 
 **MITRE ATT&CK references**
 
+
+**CWE catalog**
+
+[^nist-800-53]: [NIST SP 800-53 Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). — SI-10 (Input Validation), SI-11 (Error Handling), AC-6 (Least Privilege).
+[^cwe-89]: [CWE-89 — SQL Injection](https://cwe.mitre.org/data/definitions/89.html).
+[^cwe-209]: [CWE-209 — Error Message Containing Sensitive Information](https://cwe.mitre.org/data/definitions/209.html).
+[^cwe-250]: [CWE-250 — Execution with Unnecessary Privileges](https://cwe.mitre.org/data/definitions/250.html).
+[^cwe-312]: [CWE-312 — Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
+[^cwe-522]: [CWE-522 — Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html).
+
+### Further reading
+
+- [PortSwigger Web Security Academy — SQL injection](https://portswigger.net/web-security/sql-injection). — the best free hands-on labs, including UNION attacks and information_schema enumeration.
+- [OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html). — the canonical defender reference; prepared statements first.
+- [OWASP Web Security Testing Guide — Testing for SQL Injection](https://owasp.org/www-project-web-security-testing-guide/). — the offensive methodology (WSTG-INPV-05).
+- [OWASP Top 10:2025](https://owasp.org/Top10/). — A05 Injection.
+- [sqlmap](https://sqlmap.org/). — the tool that automates the entire §2 sequence; understanding it by hand first is the point of this level.
+- [Heartland Payment Systems 2008 Albert Gonzalez (SQLi methodology)](https://en.wikipedia.org/wiki/Albert_Gonzalez).
+- [Heartland breach scope](https://en.wikipedia.org/wiki/Heartland_Payment_Systems#Security_breach).
+- [Sony Pictures / LulzSec 2011 Wikipedia (LulzSec)](https://en.wikipedia.org/wiki/LulzSec).
+- [TalkTalk 2015 ICO investigation account](https://ico.org.uk/about-the-ico/media-centre/talktalk-cyber-attack-how-the-ico-investigation-unfolded/).
+- [MOVEit Transfer 2023 (CVE-2023-34362) NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2023-34362).
+- [CISA advisory AA23-158A](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a).
+- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/cis-controls-list). — Control 16 (Application Software Security), Control 3 (Data Protection).
+- [U.S. Dept. of Education — FERPA](https://studentprivacy.ed.gov/ferpa). — 20 U.S.C. § 1232g; 34 CFR Part 99.
+- [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html).
+- [HashiCorp Vault](https://developer.hashicorp.com/vault/docs/secrets).
+- [GCP Secret Manager](https://docs.cloud.google.com/secret-manager/docs).
+- [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview).
+- [Semgrep](https://semgrep.dev/).
+- [CodeQL](https://codeql.github.com/). — SAST tools with SQL-injection rule packs for the CI gate.
 - [T1190 — Exploit Public-Facing Application](https://attack.mitre.org/techniques/T1190/).
 - [T1213 — Data from Information Repositories](https://attack.mitre.org/techniques/T1213/).
 - [T1552 — Unsecured Credentials](https://attack.mitre.org/techniques/T1552/).
 - [T1078 — Valid Accounts](https://attack.mitre.org/techniques/T1078/).
-
-**CWE catalog**
-
-- [CWE-89 — SQL Injection](https://cwe.mitre.org/data/definitions/89.html).
-- [CWE-209 — Error Message Containing Sensitive Information](https://cwe.mitre.org/data/definitions/209.html).
-- [CWE-250 — Execution with Unnecessary Privileges](https://cwe.mitre.org/data/definitions/250.html).
-- [CWE-312 — Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
-- [CWE-522 — Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html).

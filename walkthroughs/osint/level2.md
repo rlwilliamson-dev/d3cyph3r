@@ -170,9 +170,9 @@ There are three distinct weaknesses here, and only one of them is a "credential 
 
 **Deletion is not remediation (the core lesson).** When a secret leaks to a public surface, two things are true and both must be addressed. (a) *The artifact is effectively permanent.* The Internet Archive, archive.today, search-engine caches, GitHub's fork network and events API, third-party clones, and the GitHub Arctic Code Vault all survive an origin delete. You cannot reliably un-publish. (b) *Independent of any artifact, the secret is compromised.* The only action that actually shrinks the exposure is rotating/revoking the credential at the provider so the leaked value stops authenticating. Aaron did (a) badly (the archive kept the repo) and skipped (b) entirely (the key still works). This isn't a CWE so much as an incident-response failure mode, and it's one of the most common ones there is: the instinct under pressure is to make the visible thing disappear, and the rotation step — the only one that matters — gets skipped.
 
-**Alias attribution via selector reuse (CWE-200 family).** Pseudonymity is not anonymity and neither is privacy. People link their separate identities somewhere — an old bio, an "about/links" page, a reused avatar, a reused contact email, a distinctive writing style — and the link tends to survive in a place they've forgotten. Here the link was a page Aaron wrote himself and later scrubbed; the archive preserved the scrubbed version, and the reused `aaron.hines.md@gmail.com` removed any doubt. Once the alias is attributed, the "personal" content is read with the same eyes as the professional content — and hobby projects are where people are most careless precisely because they believe nobody is looking.
+**Alias attribution via selector reuse (CWE-200 family).**[^cwe-200] Pseudonymity is not anonymity and neither is privacy. People link their separate identities somewhere — an old bio, an "about/links" page, a reused avatar, a reused contact email, a distinctive writing style — and the link tends to survive in a place they've forgotten. Here the link was a page Aaron wrote himself and later scrubbed; the archive preserved the scrubbed version, and the reused `aaron.hines.md@gmail.com` removed any doubt. Once the alias is attributed, the "personal" content is read with the same eyes as the professional content — and hobby projects are where people are most careless precisely because they believe nobody is looking.
 
-**Cleartext credential in publicly-posted content (CWE-312 / CWE-540).** The Nextcloud admin password is pasted, in cleartext, in a public blog post, inside a `docker-compose` snippet. **CWE-312 (Cleartext Storage of Sensitive Information)** is the primary mapping; **CWE-540 (Inclusion of Sensitive Information in Source Code)** covers the configuration-as-published angle; **CWE-798 (Use of Hard-Coded Credentials)** carries over from the un-rotated AWS key. **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** is the umbrella but is mapping-Discouraged in current MITRE guidance — cite the specific children. The "developer pastes a working config to ask for / offer help" pattern is its own evergreen leak vector: Stack Overflow answers, GitHub issues, Discord pastes, and personal blogs are full of real credentials that the author assumed were either fake, internal, or nobody's business.
+**Cleartext credential in publicly-posted content (CWE-312 / CWE-540).**[^cwe-312][^cwe-540] The Nextcloud admin password is pasted, in cleartext, in a public blog post, inside a `docker-compose` snippet. **CWE-312 (Cleartext Storage of Sensitive Information)** is the primary mapping; **CWE-540 (Inclusion of Sensitive Information in Source Code)** covers the configuration-as-published angle; **CWE-798 (Use of Hard-Coded Credentials)** carries over from the un-rotated AWS key.[^cwe-798] **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** is the umbrella but is mapping-Discouraged in current MITRE guidance — cite the specific children. The "developer pastes a working config to ask for / offer help" pattern is its own evergreen leak vector: Stack Overflow answers, GitHub issues, Discord pastes, and personal blogs are full of real credentials that the author assumed were either fake, internal, or nobody's business.
 
 The robots.txt finding (see §7.5) is a fourth, smaller weakness: using a *disclosure-control* mechanism (robots.txt tells crawlers what to skip) as if it were an *access-control* mechanism (it does nothing to stop a human from reading the listed paths).
 
@@ -212,11 +212,11 @@ it means nobody has been watching.
 
 **Deleting a GitHub repo doesn't delete the data — Truffle Security's CFOR (July 2024).** Truffle Security documented that data from *deleted* repositories, *deleted* forks, and even *private* repositories on GitHub remains accessible — by design — through the fork network and the public events API. They coined the term **Cross Fork Object Reference (CFOR)** and, reviewing three widely-forked public repos from large AI companies, recovered **40 valid API keys from deleted forks**. GitHub's response to the disclosure was that this is "an intentional design decision and is working as expected." This is the exact lesson of this level, on the exact platform: Aaron deleted the repo, but on GitHub specifically, "deleted" is not "gone" — and the only safe assumption for any committed secret is that it is permanently public and must be rotated.
 
-**Selector reuse deanonymized the Silk Road founder — Ross Ulbricht / "altoid" (2013).** The canonical alias-attribution case. In Silk Road's earliest days, a user named **"altoid"** posted on the Bitcoin Talk and Shroomery forums promoting the new marketplace. Months later, an "altoid" post soliciting an "IT pro" asked interested parties to email **rossulbricht@gmail.com** — Ulbricht's real-name personal address. IRS investigator **Gary Alford**, working the case in 2013, found the link by searching the open web for early mentions of the site and pivoting on the reused handle. A reused username plus one reused email collapsed a pseudonymous identity into a real name. Aaron's `saltyhelm` → real-name link is the same shape, just lower-stakes and recovered from an archive instead of a live forum.
+**Selector reuse deanonymized the Silk Road founder — Ross Ulbricht / "altoid" (2013).**[^ross-ulbricht-altoid-deanonymization-wikipedia] The canonical alias-attribution case. In Silk Road's earliest days, a user named **"altoid"** posted on the Bitcoin Talk and Shroomery forums promoting the new marketplace. Months later, an "altoid" post soliciting an "IT pro" asked interested parties to email **rossulbricht@gmail.com** — Ulbricht's real-name personal address. IRS investigator **Gary Alford**, working the case in 2013, found the link by searching the open web for early mentions of the site and pivoting on the reused handle. A reused username plus one reused email collapsed a pseudonymous identity into a real name. Aaron's `saltyhelm` → real-name link is the same shape, just lower-stakes and recovered from an archive instead of a live forum.
 
-**The archive landscape is wider than people think — and Google pointed at it.** In **late January / February 2024**, Google removed the "Cached" link from its search results; Search Liaison Danny Sullivan confirmed the retirement and explicitly suggested the **Internet Archive's** capture as the replacement people should reach for. The practical effect: even as one historical-snapshot source went away, the dominant one (archive.org) got *more* central, and `archive.today` remains a fully independent third archive. There is no single "delete" button that reaches all of them. The **Internet Archive** itself has been capturing the web since its founding in **1996**, with the public **Wayback Machine launching in October 2001** — meaning a target's footprint may be archived across a quarter-century of captures they have no control over.
+**The archive landscape is wider than people think — and Google pointed at it.** In **late January / February 2024**, Google removed the "Cached" link from its search results; Search Liaison Danny Sullivan confirmed the retirement and explicitly suggested the **Internet Archive's** capture as the replacement people should reach for.[^google-retires-the-cached-link] The practical effect: even as one historical-snapshot source went away, the dominant one (archive.org) got *more* central, and `archive.today` remains a fully independent third archive. There is no single "delete" button that reaches all of them. The **Internet Archive** itself has been capturing the web since its founding in **1996**, with the public **Wayback Machine launching in October 2001** — meaning a target's footprint may be archived across a quarter-century of captures they have no control over.
 
-**Forgotten old accounts and location leaks — the Strava 2018 heatmap.** The recurring "the oldest, most-forgotten account is the most exposed" pattern. In January 2018, Strava's published global activity heatmap inadvertently revealed the layout and location of military forward-operating bases and intelligence facilities, traced to individual personnel running on-base with public default settings. The mechanism that matters here isn't fitness data specifically — it's that durable, low-attention personal accounts accumulate sensitive patterns the owner stops thinking about. For a publicly-named executive in a hostile-attention campaign, the forgotten footprint is the soft target.
+**Forgotten old accounts and location leaks — the Strava 2018 heatmap.** The recurring "the oldest, most-forgotten account is the most exposed" pattern. In January 2018, Strava's published global activity heatmap inadvertently revealed the layout and location of military forward-operating bases and intelligence facilities, traced to individual personnel running on-base with public default settings.[^strava-global-heatmap-exposure-january] The mechanism that matters here isn't fitness data specifically — it's that durable, low-attention personal accounts accumulate sensitive patterns the owner stops thinking about. For a publicly-named executive in a hostile-attention campaign, the forgotten footprint is the soft target.
 
 What unites these cases: the web has a long memory and several independent ones. Removal at the source is necessary but never sufficient, and the only durable defenses are *rotation* (for secrets) and *not creating the linkage in the first place* (for identity).
 
@@ -228,7 +228,7 @@ archive.org (founded 1996; Wayback Machine public since October 2001) is a non-p
 
 ### robots.txt — Robots Exclusion Protocol (RFC 9309, September 2022)
 
-The Robots Exclusion Protocol — originally Martijn Koster's 1994 convention — became a formal IETF standard, **RFC 9309**, in September 2022. The critical property for security work: robots.txt is a *politeness signal to well-behaved crawlers* about what not to index. It is **not an access control**. Every path listed in a `Disallow:` line is fully reachable by anyone who reads the file, and well-behaved is optional — crawlers can ignore it. OWASP's testing guide says it directly: robots.txt "should not be considered as a mechanism to enforce restrictions on how web content is accessed." Listing `/backup/` or a draft directory in robots.txt advertises exactly where the sensitive material is.
+The Robots Exclusion Protocol — originally Martijn Koster's 1994 convention — became a formal IETF standard, **RFC 9309**, in September 2022.[^rfc-9309] The critical property for security work: robots.txt is a *politeness signal to well-behaved crawlers* about what not to index. It is **not an access control**. Every path listed in a `Disallow:` line is fully reachable by anyone who reads the file, and well-behaved is optional — crawlers can ignore it. OWASP's testing guide says it directly: robots.txt "should not be considered as a mechanism to enforce restrictions on how web content is accessed." Listing `/backup/` or a draft directory in robots.txt advertises exactly where the sensitive material is.
 
 ### OWASP
 
@@ -237,16 +237,16 @@ The Robots Exclusion Protocol — originally Martijn Koster's 1994 convention �
 
 ### Secret rotation as the real remediation
 
-- **NIST SP 800-53 Rev. 5, IA-5 (Authenticator Management)** — including IA-5(1). When an authenticator is compromised, it must be revoked/replaced. A credential that has touched a public surface is a compromised authenticator by definition, regardless of whether the page it leaked from still exists.
-- **NIST SP 800-218 (SSDF v1.1), PW.6 / PS.1** — secrets management and protecting code; the response to an exposed secret is rotation, not just removal from HEAD.
+- **NIST SP 800-53 Rev. 5, IA-5 (Authenticator Management)** — including IA-5(1).[^nist-800-53] When an authenticator is compromised, it must be revoked/replaced. A credential that has touched a public surface is a compromised authenticator by definition, regardless of whether the page it leaked from still exists.
+- **NIST SP 800-218 (SSDF v1.1), PW.6 / PS.1** — secrets management and protecting code; the response to an exposed secret is rotation, not just removal from HEAD.[^nist-800-218]
 - **AWS IAM guidance for an exposed access key** is explicit and ordered: deactivate the key, create a replacement, update applications, delete the exposed key, then review usage. "Delete the repository" appears nowhere on that list.
 
 ### MITRE ATT&CK
 
-- **T1593 (Search Open Websites/Domains)** — the parent reconnaissance technique. The Internet Archive is the textbook open-website source for content no longer on the live origin.
-- **T1593.002 (Search Engines)** — search-engine-style querying of archived/indexed content for leaked or sensitive material maps here.
-- **T1593.001 (Social Media)** — the `sherlock` handle pivot across the alias's platforms.
-- **T1589.001 (Gather Victim Identity Information: Credentials)** — both the still-archived AWS key and the pasted Nextcloud password are credentials recovered from open sources.
+- **T1593 (Search Open Websites/Domains)** — the parent reconnaissance technique.[^t1593] The Internet Archive is the textbook open-website source for content no longer on the live origin.
+- **T1593.002 (Search Engines)** — search-engine-style querying of archived/indexed content for leaked or sensitive material maps here.[^t1593-002]
+- **T1593.001 (Social Media)** — the `sherlock` handle pivot across the alias's platforms.[^t1593-001]
+- **T1589.001 (Gather Victim Identity Information: Credentials)** — both the still-archived AWS key and the pasted Nextcloud password are credentials recovered from open sources.[^t1589-001]
 - **T1552.001 (Unsecured Credentials: Credentials In Files)** and **T1078 (Valid Accounts)** are the post-recon, attacker-side continuations — and the line our scope does not cross.
 
 ### CWE
@@ -406,7 +406,7 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 
 - **The oldest, most-forgotten account is the most exposed.** Old accounts carry the weakest passwords, no MFA, and the most personal data — and nobody remembers to close them. For a publicly-named executive in a hostile-attention campaign, that forgotten footprint is the soft target. Inventory it; close the dead accounts; never reuse a handle across the personal/professional wall.
 
-- **robots.txt is a disclosure control, not an access control.** Every path in a `Disallow:` line is fully readable by anyone who opens the file — and the file is a map of what the owner wanted hidden. Move private content off the public server; don't advertise it with a `Disallow` line (RFC 9309 / OWASP WSTG-INFO-03).
+- **robots.txt is a disclosure control, not an access control.** Every path in a `Disallow:` line is fully readable by anyone who opens the file — and the file is a map of what the owner wanted hidden. Move private content off the public server; don't advertise it with a `Disallow` line (RFC 9309 / OWASP WSTG-INFO-03).[^owasp-wstg-info-03-review]
 
 - **OSINT scope discipline is the durable differentiator.** Attributing the alias from Aaron's own archived page is in scope; logging into the Nextcloud or using the AWS key to "verify" is not. The deliverable was two findings and a remediation list, stopped at the first concrete exposure. Holding that line — read, don't touch — is what makes the client trust you with the next engagement.
 
@@ -416,43 +416,29 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 
 *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, RFC/standard IDs, historical-case dates, CWE/MITRE mapping status) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
 
-### The archive landscape
+[^google-retires-the-cached-link]: [Google retires the "Cached" link (Feb 2024)](https://searchengineland.com/google-search-officially-retires-cache-link-437122). Search Liaison Danny Sullivan confirmed the removal and suggested the Internet Archive as the replacement.
+[^rfc-9309]: [RFC 9309 — Robots Exclusion Protocol (September 2022)](https://www.rfc-editor.org/rfc/rfc9309.html). The IETF standardization of robots.txt.
+[^owasp-wstg-info-03-review]: [OWASP WSTG-INFO-03 — Review Webserver Metafiles for Information Leakage](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage).
+[^ross-ulbricht-altoid-deanonymization-wikipedia]: [Ross Ulbricht / "altoid" deanonymization (Wikipedia, with the `rossulbricht@gmail.com` forum-post detail)](https://en.wikipedia.org/wiki/Ross_Ulbricht).
+[^strava-global-heatmap-exposure-january]: [Strava global heatmap exposure (January 2018)](https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases). The forgotten-footprint / location-leak pattern.
+[^nist-800-53]: [NIST SP 800-53 Rev. 5 — IA-5 (Authenticator Management)](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). Revoke/replace a compromised authenticator.
+[^nist-800-218]: [NIST SP 800-218 — SSDF v1.1](https://csrc.nist.gov/pubs/sp/800/218/final). Secrets management (PW.6 / PS.1).
+[^cwe-312]: [CWE-312: Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
+[^cwe-540]: [CWE-540: Inclusion of Sensitive Information in Source Code](https://cwe.mitre.org/data/definitions/540.html).
+[^cwe-798]: [CWE-798: Use of Hard-Coded Credentials](https://cwe.mitre.org/data/definitions/798.html).
+[^cwe-200]: [CWE-200: Exposure of Sensitive Information (mapping-Discouraged — cite the specific children)](https://cwe.mitre.org/data/definitions/200.html).
+[^t1593]: [MITRE ATT&CK T1593 — Search Open Websites/Domains](https://attack.mitre.org/techniques/T1593/).
+[^t1593-001]: [T1593.001 — Social Media](https://attack.mitre.org/techniques/T1593/001/).
+[^t1593-002]: [T1593.002 — Search Engines](https://attack.mitre.org/techniques/T1593/002/).
+[^t1589-001]: [T1589.001 — Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/).
 
-- **Internet Archive / Wayback Machine**: <https://web.archive.org/>. Founded 1996; Wayback Machine public since October 2001.
-- **archive.today** (overview): <https://en.wikipedia.org/wiki/Archive.today>. An independent web archive — reachable at archive.today / archive.ph — whose captures persist separately from the Internet Archive.
-- **Google retires the "Cached" link (Feb 2024)**: <https://searchengineland.com/google-search-officially-retires-cache-link-437122>. Search Liaison Danny Sullivan confirmed the removal and suggested the Internet Archive as the replacement.
+### Further reading
 
-### robots.txt + metafiles
-
-- **RFC 9309 — Robots Exclusion Protocol** (September 2022): <https://www.rfc-editor.org/rfc/rfc9309.html>. The IETF standardization of robots.txt.
-- **OWASP WSTG-INFO-03 — Review Webserver Metafiles for Information Leakage**: <https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage>.
-
-### Deleted-isn't-gone + alias attribution (real cases)
-
-- **Truffle Security — "Anyone can Access Deleted and Private Repository Data on GitHub" (CFOR, July 2024)**: <https://trufflesecurity.com/blog/anyone-can-access-deleted-and-private-repo-data-github>.
-- **The Register coverage of the GitHub deleted-data finding (25 July 2024)**: <https://www.theregister.com/security/2024/07/25/data-from-deleted-github-repos-may-not-really-be-deleted/804909>.
-- **Ross Ulbricht / "altoid" deanonymization** (Wikipedia, with the `rossulbricht@gmail.com` forum-post detail): <https://en.wikipedia.org/wiki/Ross_Ulbricht>.
-- **Vice — "If You're Running an Illicit Drug Site, Maybe Don't Use Your Real Email"**: <https://www.vice.com/en/article/irs-found-accused-silk-road-masterminds-email-by-googling-silk-road/>. The IRS investigator's pivot on the reused handle + email.
-- **Strava global heatmap exposure (January 2018)**: <https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases>. The forgotten-footprint / location-leak pattern.
-
-### Secret rotation + standards
-
-- **NIST SP 800-53 Rev. 5 — IA-5 (Authenticator Management)**: <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>. Revoke/replace a compromised authenticator.
-- **NIST SP 800-218 — SSDF v1.1**: <https://csrc.nist.gov/pubs/sp/800/218/final>. Secrets management (PW.6 / PS.1).
-- **AWS — What to Do If You Inadvertently Expose an AWS Access Key** (AWS Security Blog): <https://aws.amazon.com/blogs/security/what-to-do-if-you-inadvertently-expose-an-aws-access-key/>. Deactivate → replace → delete → review; deletion of the repo is not on the list.
-
-### CWE / MITRE ATT&CK
-
-- **CWE-312: Cleartext Storage of Sensitive Information**: <https://cwe.mitre.org/data/definitions/312.html>.
-- **CWE-540: Inclusion of Sensitive Information in Source Code**: <https://cwe.mitre.org/data/definitions/540.html>.
-- **CWE-798: Use of Hard-Coded Credentials**: <https://cwe.mitre.org/data/definitions/798.html>.
-- **CWE-200: Exposure of Sensitive Information** (mapping-Discouraged — cite the specific children): <https://cwe.mitre.org/data/definitions/200.html>.
-- **MITRE ATT&CK T1593 — Search Open Websites/Domains**: <https://attack.mitre.org/techniques/T1593/>.
-- **T1593.001 — Social Media**: <https://attack.mitre.org/techniques/T1593/001/>.
-- **T1593.002 — Search Engines**: <https://attack.mitre.org/techniques/T1593/002/>.
-- **T1589.001 — Gather Victim Identity Information: Credentials**: <https://attack.mitre.org/techniques/T1589/001/>.
-
-### Practitioner resources
-
-- **SANS SEC497 (Practical OSINT)**: <https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/>.
-- **OSINT Framework (community index)**: <https://osintframework.com/>.
+- [Internet Archive / Wayback Machine](https://web.archive.org/). Founded 1996; Wayback Machine public since October 2001.
+- [archive.today (overview)](https://en.wikipedia.org/wiki/Archive.today). An independent web archive — reachable at archive.today / archive.ph — whose captures persist separately from the Internet Archive.
+- [Truffle Security — "Anyone can Access Deleted and Private Repository Data on GitHub" (CFOR, July 2024)](https://trufflesecurity.com/blog/anyone-can-access-deleted-and-private-repo-data-github).
+- [The Register coverage of the GitHub deleted-data finding (25 July 2024)](https://www.theregister.com/security/2024/07/25/data-from-deleted-github-repos-may-not-really-be-deleted/804909).
+- [Vice — "If You're Running an Illicit Drug Site, Maybe Don't Use Your Real Email"](https://www.vice.com/en/article/irs-found-accused-silk-road-masterminds-email-by-googling-silk-road/). The IRS investigator's pivot on the reused handle + email.
+- [AWS — What to Do If You Inadvertently Expose an AWS Access Key (AWS Security Blog)](https://aws.amazon.com/blogs/security/what-to-do-if-you-inadvertently-expose-an-aws-access-key/). Deactivate → replace → delete → review; deletion of the repo is not on the list.
+- [SANS SEC497 (Practical OSINT)](https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/).
+- [OSINT Framework (community index)](https://osintframework.com/).

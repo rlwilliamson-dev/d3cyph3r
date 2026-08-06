@@ -14,7 +14,7 @@ By Monday morning the engagement had moved. Marisol had walked the HIBP results 
 
 The lever Marisol pulled was specific. Over the weekend Aaron had mentioned, casually, that he "tinkered with some clinical-data Python tooling back during his fellowship." Marisol's instinct said: that's the kind of side-project that ends up with secrets in source control. Public GitHub for clinical-era projects, written by a clinician with no formal secrets-management training, kept alive across multiple employer transitions, dormant but still indexed by GitHub's public search — this is the universal pattern. The Uber 2016 breach (AWS keys in GitHub), the Toyota 2022 incident (five years of GitHub-leaked DB credentials), the Mercedes-Benz 2024 GitHub PAT leak — different organizations, same mechanic. Aaron is not Uber and not Mercedes, but the question Marisol wanted answered was: does Aaron's clinical-era Python tooling exist on public GitHub, and if so, does it contain any committed credentials that haven't been rotated since the original commit. That's a thirty-minute Monday-morning OSINT engagement that potentially produces a one-line remediation request.
 
-You're back in the same chair as Friday. `intel` on the Driftwood OSINT engagement workstation, same shared service account, same engagement file (`VER-EXP-2026-002`). The legal frame around the Veridian relationship is unchanged: HIPAA Business Associate, signed BAAs with payer and provider customers, HITRUST CSF v11 overlay, NIST SP 800-66 Rev. 2 as the operating reference, MA 201 CMR 17.00 (Massachusetts data security regulation) because Veridian's HQ and ~70% of staff sit in MA. Today's work doesn't touch any of those directly — Aaron's personal-pgx-tool is personal, not Veridian's — but the framing matters when you write up the brief, because a personal-AWS-credential exposure that touches Aaron's clinical-era data has potential HIPAA-adjacent consequences through Aaron's prior employer (Helix Therapeutics) that Marisol will want to surface to legal before any external communication.
+You're back in the same chair as Friday. `intel` on the Driftwood OSINT engagement workstation, same shared service account, same engagement file (`VER-EXP-2026-002`). The legal frame around the Veridian relationship is unchanged: HIPAA Business Associate, signed BAAs with payer and provider customers, HITRUST CSF v11 overlay, NIST SP 800-66 Rev. 2 as the operating reference, MA 201 CMR 17.00 (Massachusetts data security regulation) because Veridian's HQ and ~70% of staff sit in MA.[^nist-800-66] Today's work doesn't touch any of those directly — Aaron's personal-pgx-tool is personal, not Veridian's — but the framing matters when you write up the brief, because a personal-AWS-credential exposure that touches Aaron's clinical-era data has potential HIPAA-adjacent consequences through Aaron's prior employer (Helix Therapeutics) that Marisol will want to surface to legal before any external communication.
 
 ## §2 — The solve
 
@@ -41,11 +41,11 @@ engagement-notes.md  lessons-learned.md  subject-update.txt  welcome.md
 
 Four files. Read them in order.
 
-`welcome.md` introduces the new `github` command (three forms: profile lookup, repo metadata, file contents) and explains source-control OSINT generally — GitHub Secret Scanning's default-on posture for public repos since March 2023, the TruffleHog / GitGuardian / Gitleaks ecosystem, why `.gitignore` doesn't fix the historical-commit problem.
+`welcome.md` introduces the new `github` command (three forms: profile lookup, repo metadata, file contents) and explains source-control OSINT generally — GitHub Secret Scanning's default-on posture for public repos since March 2023, the TruffleHog / GitGuardian / Gitleaks ecosystem, why `.gitignore` doesn't fix the historical-commit problem.[^github-secret-scanning][^gitleaks]
 
 `engagement-notes.md` is Priya's update. It covers what happened between Friday and Monday — Marisol's weekend conversation with the CPO and Aaron, the scope expansion (sherlock + github now authorized), the unchanged out-of-scope boundaries (no active credential testing, no family enumeration, no Veridian-domain accounts). It also flags the specific pattern to look for: a personal-project repo with a committed `.env`, `config.yaml`, or `.aws/credentials` file. Priya's note ends with the punchline: Aaron's GitHub handle is `aaron-hines-md`, derivable from his LinkedIn bio signature ("github.com/aaron-hines-md" — he linked it years ago and never removed it).
 
-`subject-update.txt` is the formal case-file update. Same case ID as Friday (`VER-EXP-2026-002`), now scope-expanded. The notable section is Marisol's pre-written remediation guidance: if the player finds live committed AWS credentials, Aaron rotates today via AWS console, AWS GuardDuty review for any anomalous API calls under those credentials, and — critically — if the credentials gate a bucket that contained patient-identifying data from Aaron's clinical-era work, the HIPAA-exposure analysis runs through Veridian's GC and potentially Helix's GC. Marisol is pre-emptively framing the conversation that may follow the finding.
+`subject-update.txt` is the formal case-file update. Same case ID as Friday (`VER-EXP-2026-002`), now scope-expanded. The notable section is Marisol's pre-written remediation guidance: if the player finds live committed AWS credentials, Aaron rotates today via AWS console, AWS GuardDuty review for any anomalous API calls under those credentials, and — critically — if the credentials gate a bucket that contained patient-identifying data from Aaron's clinical-era work, the HIPAA-exposure analysis runs through Veridian's GC and potentially Helix's GC.[^aws-guardduty] Marisol is pre-emptively framing the conversation that may follow the finding.
 
 ### Step 3: Confirm the GitHub handle with sherlock
 
@@ -213,13 +213,13 @@ The findings report for Marisol has three components:
 2. **The finding** — `personal-pgx-tool` `.env` at HEAD contains four committed secrets, most importantly an active AWS access-key pair for Aaron's personal AWS account (with the matching S3 bucket name `ahines-pgx-cache`). Original commit 2023-07-14; `.gitignore` added 2023-09-02 with `.env` listed but never `git rm --cached`'d. Total exposure window: ~22 months as of today.
 3. **The HIPAA-adjacent escalation question** — the S3 bucket is personal, not Veridian's, and Aaron's pre-Veridian usage of the tool occurred during his Helix Therapeutics tenure. If the bucket contains any patient-identifying data from his clinical-era work, that is a separate exposure event involving Helix's GC. Marisol will route that conversation through Veridian's legal team if it surfaces.
 
-Marisol's pre-written remediation list applies: Aaron rotates the AWS keys via the IAM console (two-minute operation), regenerates the OpenFDA API key, runs `git rm --cached .env` and force-pushes to remove from HEAD, and reviews AWS CloudTrail for any anomalous API calls under those credentials going back to 2023-07-14. AWS GuardDuty should be enabled on the personal account if it isn't already.
+Marisol's pre-written remediation list applies: Aaron rotates the AWS keys via the IAM console (two-minute operation), regenerates the OpenFDA API key, runs `git rm --cached .env` and force-pushes to remove from HEAD, and reviews AWS CloudTrail for any anomalous API calls under those credentials going back to 2023-07-14.[^aws-cloudtrail] AWS GuardDuty should be enabled on the personal account if it isn't already.
 
 ## §3 — The vulnerability
 
 Two distinct vulnerabilities sit in one .env file. Both have direct CWE mappings; the consequences differ.
 
-The structural vulnerability is **CWE-540 (Inclusion of Sensitive Information in Source Code)**, with the close-companion **CWE-798 (Use of Hard-Coded Credentials)** for the credential-handling failure mode and **CWE-312 (Cleartext Storage of Sensitive Information)** for the broader "secrets-in-plain-text" category. The mapping nuance: CWE-540 is about the *presence* of sensitive information in source; CWE-798 is about the *use* of hard-coded credentials in code; CWE-312 is about the *storage form* (cleartext) being inadequate. All three apply to Aaron's .env. CWE-798 appeared on the CWE Top 25 every year from 2021 through 2024, but MITRE's 2025 methodology change (removing normalization to abstract weaknesses) dropped it off the published Top 25 — the weakness pattern remains common in practitioner reporting regardless. CWE-540 and CWE-312 have not been Top 25 entries, but in practice security teams cite all three when filing findings for source-control credential leakage.
+The structural vulnerability is **CWE-540 (Inclusion of Sensitive Information in Source Code)**, with the close-companion **CWE-798 (Use of Hard-Coded Credentials)** for the credential-handling failure mode and **CWE-312 (Cleartext Storage of Sensitive Information)** for the broader "secrets-in-plain-text" category.[^cwe-798][^cwe-540][^cwe-312] The mapping nuance: CWE-540 is about the *presence* of sensitive information in source; CWE-798 is about the *use* of hard-coded credentials in code; CWE-312 is about the *storage form* (cleartext) being inadequate. All three apply to Aaron's .env. CWE-798 appeared on the CWE Top 25 every year from 2021 through 2024, but MITRE's 2025 methodology change (removing normalization to abstract weaknesses) dropped it off the published Top 25 — the weakness pattern remains common in practitioner reporting regardless. CWE-540 and CWE-312 have not been Top 25 entries, but in practice security teams cite all three when filing findings for source-control credential leakage.
 
 The exposure mechanism that makes this particularly persistent is structural rather than behavioral. The git data model is content-addressable: every commit's contents are immutable from the moment they're hashed, and `.gitignore` is a forward-looking instruction to the staging engine, not a retroactive instruction to history. Adding `.env` to `.gitignore` after the first commit prevents future stages but does nothing about what's already in the commit graph. The correct remediation requires:
 
@@ -272,9 +272,9 @@ Source-control credential leakage is one of the most documented categories of cy
 
 **Uber (2014, disclosed 2015).** Uber filed an early-2015 lawsuit that ultimately attributed a 2014 data breach to AWS credentials that an Uber engineer had committed to a public GitHub Gist. The credentials gated an S3 bucket containing personal data on ~50,000 Uber drivers. The 2014 breach was disclosed to drivers February 2015; the lawsuit was settled in 2016. Uber's *second* breach in 2016 (the much larger one, ~57M users + drivers, with the $148M FTC settlement and Joe Sullivan's prosecution) had different mechanics but is often conflated with the 2014 incident; the credential-in-GitHub vector is from the *first* incident.
 
-**GitGuardian's annual "State of Secrets Sprawl" report** has tracked source-control secret exposure year over year since 2021. The 2024 report counted 12.8 million new secrets exposed in public commits during 2023; the **2026 report (5th edition, published March 17, 2026) tallied approximately 28.65 million new secrets exposed in public commits during 2025** — a 34% year-over-year increase — with AWS, GitHub, and database credentials consistently in the top three categories. Snyk's annual State of Open Source Security report tracks dependency vulnerabilities rather than committed secrets, but their related practitioner-survey data shows secret-in-source-code findings as a top-five category in real-world code review.
+**GitGuardian's annual "State of Secrets Sprawl" report** has tracked source-control secret exposure year over year since 2021.[^gitguardian-state-of-secrets-sprawl] The 2024 report counted 12.8 million new secrets exposed in public commits during 2023; the **2026 report (5th edition, published March 17, 2026) tallied approximately 28.65 million new secrets exposed in public commits during 2025** — a 34% year-over-year increase — with AWS, GitHub, and database credentials consistently in the top three categories. Snyk's annual State of Open Source Security report tracks dependency vulnerabilities rather than committed secrets, but their related practitioner-survey data shows secret-in-source-code findings as a top-five category in real-world code review.
 
-**Toyota (October 2022 disclosure, exposure 2017-2022).** Toyota disclosed that source code for its T-Connect telematics service had been publicly accessible on GitHub for nearly five years (December 2017 to September 15, 2022). The source included database credentials granting access to T-Connect customer email addresses and management numbers — affecting ~296,019 customers. The disclosure followed an internal review; the public GitHub upload was attributed to a development subcontractor. (A separate Toyota incident disclosed in May 2023 — the ~2.15M-customer vehicle-location leak — is sometimes conflated with this one and has different mechanics.)
+**Toyota (October 2022 disclosure, exposure 2017-2022).** Toyota disclosed that source code for its T-Connect telematics service had been publicly accessible on GitHub for nearly five years (December 2017 to September 15, 2022).[^toyota-october-2022-disclosure-t] The source included database credentials granting access to T-Connect customer email addresses and management numbers — affecting ~296,019 customers. The disclosure followed an internal review; the public GitHub upload was attributed to a development subcontractor. (A separate Toyota incident disclosed in May 2023 — the ~2.15M-customer vehicle-location leak — is sometimes conflated with this one and has different mechanics.)
 
 **Mercedes-Benz (January 2024).** Mercedes-Benz Group disclosed that a GitHub personal access token had been leaked in a public repository in late 2023. The token belonged to a developer and granted unrestricted access to Mercedes-Benz's GitHub Enterprise Server, including source code repositories. RedHunt Labs found the token via routine scanning. Mercedes revoked the token within hours of notification; the exposure window was approximately five months.
 
@@ -282,7 +282,7 @@ Source-control credential leakage is one of the most documented categories of cy
 
 **Samsung (March 2023).** Samsung confirmed engineers had pasted sensitive Samsung source code into ChatGPT, with the prompts then logged by OpenAI. Different mechanic from GitHub-leaked credentials but closely related to the "engineers paste secrets into the wrong system" pattern. Samsung subsequently banned generative-AI use for sensitive work.
 
-**The EmeraldWhale campaign** documented by Sysdig in October 2024 demonstrated continuous attacker scraping of exposed Git configuration files — ~15,000 cloud credentials harvested from misconfigured public-internet-facing Git config files in a single campaign. Subsequent 2025 supply-chain campaigns (GhostAction in September 2025, s1ngularity in August 2025, Shai-Hulud in November 2025) have shown the same pattern at scale against package-registry and GitHub-Actions metadata. The window between a credential committed publicly and a credential used by an attacker is now functionally zero for high-value patterns (AWS, GCP, Stripe, Twilio, GitHub PATs).
+**The EmeraldWhale campaign** documented by Sysdig in October 2024 demonstrated continuous attacker scraping of exposed Git configuration files — ~15,000 cloud credentials harvested from misconfigured public-internet-facing Git config files in a single campaign.[^sysdig-emeraldwhale-campaign-writeup-october] Subsequent 2025 supply-chain campaigns (GhostAction in September 2025, s1ngularity in August 2025, Shai-Hulud in November 2025) have shown the same pattern at scale against package-registry and GitHub-Actions metadata. The window between a credential committed publicly and a credential used by an attacker is now functionally zero for high-value patterns (AWS, GCP, Stripe, Twilio, GitHub PATs).
 
 **Detection-side, GitHub's own data.** GitHub published transparency reports in 2023-2024 noting that its Secret Scanning service detected and partner-revoked hundreds of millions of secrets per year across public and private repositories. The partner-revocation integrations (AWS, Stripe, GCP, dozens of others) auto-disable detected credentials within minutes of the push being scanned. Push Protection, which blocks the secret at `git push` time rather than after, was rolled out as a free feature for all public repos in 2024 — but is only effective if developers don't bypass the warning.
 
@@ -292,7 +292,7 @@ What unites these cases is the structural inevitability of the leak: as long as 
 
 ### NIST SP 800-218 — Secure Software Development Framework (SSDF) v1.1
 
-Published February 2022 (Final). For most of 2022-2025, SSDF was treated as the de facto federal-acquisition baseline for secure software development under the OMB M-22-18 / M-23-16 attestation regime — those memoranda required federal software vendors to attest to SSDF practices on the CISA Secure Software Development Attestation Form (finalized March 2024). **OMB rescinded both M-22-18 and M-23-16 on January 23, 2026 via OMB M-26-05 ("Adopting a Risk-based Approach to Software and Hardware Security"); the Common Form is now optional rather than mandatory.** SSDF itself remains the most-referenced NIST framework for secure-development practices; agencies may still use it as part of their tailored risk-based approach, and commercial enterprise RFPs continue to cite SSDF compliance. The directly relevant practices:
+Published February 2022 (Final). For most of 2022-2025, SSDF was treated as the de facto federal-acquisition baseline for secure software development under the OMB M-22-18 / M-23-16 attestation regime — those memoranda required federal software vendors to attest to SSDF practices on the CISA Secure Software Development Attestation Form (finalized March 2024).[^omb-m-22-18-enhancing][^cisa-secure-software-development-attestation] **OMB rescinded both M-22-18 and M-23-16 on January 23, 2026 via OMB M-26-05 ("Adopting a Risk-based Approach to Software and Hardware Security"); the Common Form is now optional rather than mandatory.** SSDF itself remains the most-referenced NIST framework for secure-development practices; agencies may still use it as part of their tailored risk-based approach, and commercial enterprise RFPs continue to cite SSDF compliance. The directly relevant practices:
 
 - **PO.5 (Implement and Maintain Secure Development Environments)** — covers secrets-handling discipline in the development environment. Includes guidance on managing credentials for build pipelines, IDEs, and dev workstations.
 - **PS.1 (Protect All Forms of Code from Unauthorized Access and Tampering)** — the broader source-control security posture. Covers access controls on repos, branch protections, and the integrity of the commit graph.
@@ -331,7 +331,7 @@ The regulatory frame for Veridian. Relevant sections:
 - **CWE-798 (Use of Hard-Coded Credentials)** — primary mapping. AWS keys hardcoded in the .env file. Mapping status is **Allowed-with-Review**. CWE-798 was a regular CWE Top 25 entry from 2021-2024; the **2025 methodology change (MITRE removed normalization to abstract weaknesses) dropped CWE-798 off the published Top 25 list**, though it remains a frequently-encountered Base-level weakness in practitioner reporting.
 - **CWE-540 (Inclusion of Sensitive Information in Source Code)** — the OSINT-side view: the credential's presence in source enables disclosure.
 - **CWE-312 (Cleartext Storage of Sensitive Information)** — the .env stores secrets in cleartext.
-- **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — the umbrella parent. Note: CWE-200's mapping status is currently **Discouraged** — MITRE recommends citing the more specific child weaknesses (CWE-798 / CWE-540 / CWE-312) for direct mappings.
+- **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — the umbrella parent.[^cwe-200] Note: CWE-200's mapping status is currently **Discouraged** — MITRE recommends citing the more specific child weaknesses (CWE-798 / CWE-540 / CWE-312) for direct mappings.
 
 ### GitHub Secret Scanning
 
@@ -349,16 +349,16 @@ GitGuardian is the commercial alternative with dashboard, alerting, and threat-i
 
 ### detect-secrets / git-secrets / pre-commit
 
-The pre-commit hook ecosystem. **detect-secrets** (Yelp) and **git-secrets** (AWS Labs) are the two most-deployed individual hooks; **pre-commit** (pre-commit.com) is the meta-framework that runs them. The defensive value is catching the credential *before* it ever enters the git history — which is the only fully-safe outcome, because once a credential is committed, the credential must be considered compromised regardless of any subsequent remediation.
+The pre-commit hook ecosystem. **detect-secrets** (Yelp) and **git-secrets** (AWS Labs) are the two most-deployed individual hooks; **pre-commit** (pre-commit.com) is the meta-framework that runs them.[^git-secrets-aws-labs] The defensive value is catching the credential *before* it ever enters the git history — which is the only fully-safe outcome, because once a credential is committed, the credential must be considered compromised regardless of any subsequent remediation.
 
 ### MITRE ATT&CK
 
 The relevant techniques:
 
-- **T1593.003 (Search Open Websites/Domains: Code Repositories)** — explicitly names GitHub. The reconnaissance technique we just executed.
-- **T1552.001 (Unsecured Credentials: Credentials In Files)** — the post-compromise consequence of the finding.
+- **T1593.003 (Search Open Websites/Domains: Code Repositories)** — explicitly names GitHub.[^t1593-003] The reconnaissance technique we just executed.
+- **T1552.001 (Unsecured Credentials: Credentials In Files)** — the post-compromise consequence of the finding.[^t1552-001]
 - **T1078 (Valid Accounts)** — using the leaked credential against the target's account.
-- **T1078.004 (Valid Accounts: Cloud Accounts)** — specifically relevant for AWS access keys.
+- **T1078.004 (Valid Accounts: Cloud Accounts)** — specifically relevant for AWS access keys.[^t1078-004]
 - **T1098 (Account Manipulation)** — what an adversary might do post-compromise to establish persistence.
 
 ### MITRE ATT&CK — the two reconnaissance techniques in play
@@ -431,7 +431,7 @@ Three parallel remediation tracks: Aaron specifically, Veridian as the employer,
 
 ### For Aaron specifically
 
-**Rotate the AWS access key today.** Two-minute operation via the AWS IAM console: Users → security credentials → make active access key inactive → create new access key → update Aaron's local `.env` (locally, not committed) → delete the old inactive key after confirming the new one works. The exposed credential is functionally revoked the moment it's deactivated; the historical credential in GitHub history becomes inert.
+**Rotate the AWS access key today.** Two-minute operation via the AWS IAM console: Users → security credentials → make active access key inactive → create new access key → update Aaron's local `.env` (locally, not committed) → delete the old inactive key after confirming the new one works.[^aws-iam-access-key-best] The exposed credential is functionally revoked the moment it's deactivated; the historical credential in GitHub history becomes inert.
 
 **Regenerate the OpenFDA API key.** The OpenFDA developer console supports key regeneration; the rate-limit reset is automatic.
 
@@ -449,7 +449,7 @@ Three parallel remediation tracks: Aaron specifically, Veridian as the employer,
 
 **Standardize developer-footprint reviews for new executive hires.** The Friday HIBP lookup + Monday GitHub lookup pattern from `VER-EXP-2026-002` should become the default for every VP+ hire's first 30 days. Cheap, repeatable, produces actionable findings.
 
-**Enable GitHub Push Protection for the Veridian engineering org.** This requires GitHub Advanced Security for private repos (paid) but is free for public. Push Protection catches the secret at `git push` time before it ever enters the history.
+**Enable GitHub Push Protection for the Veridian engineering org.**[^github-push-protection] This requires GitHub Advanced Security for private repos (paid) but is free for public. Push Protection catches the secret at `git push` time before it ever enters the history.
 
 **Deploy pre-commit hooks across the engineering team.** detect-secrets or git-secrets, run via the pre-commit framework. Cheap (open-source, no per-seat cost), catches most patterns before the commit even lands locally.
 
@@ -565,56 +565,42 @@ For broader awareness: every fitness app, every social media platform, every "fi
 
 *Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
-### Standards documents
+[^nist-800-66]: [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final). Published February 2024 (Final). The HIPAA implementation reference.
+[^omb-m-22-18-enhancing]: [OMB M-22-18 — Enhancing the Security of the Software Supply Chain Through Secure Software Development Practices](https://bidenwhitehouse.archives.gov/wp-content/uploads/2022/09/M-22-18.pdf). The federal software-attestation requirement that cited SSDF. **Rescinded January 23, 2026 by OMB M-26-05** ("Adopting a Risk-based Approach to Software and Hardware Security"). Original whitehouse.gov URL now 404s; cited URL is the National Archives mirror.
+[^cisa-secure-software-development-attestation]: [CISA Secure Software Development Attestation Form (finalized March 11, 2024)](https://www.cisa.gov/resources-tools/resources/secure-software-development-attestation-form). The vendor attestation document. Now optional post-M-26-05; some agencies may still collect it as part of their tailored risk-based approach.
+[^github-secret-scanning]: [GitHub Secret Scanning](https://docs.github.com/en/code-security/how-tos/secure-your-secrets). Default-on for public repos since March 2023.
+[^github-push-protection]: [GitHub Push Protection](https://docs.github.com/en/code-security/concepts/secret-security/push-protection). Free for public repos.
+[^gitleaks]: [Gitleaks](https://github.com/gitleaks/gitleaks). Open-source equivalent of TruffleHog's core scanning. (Note: project is now in feature-complete / maintenance mode — security patches only — with the maintainer pivoting to a successor project.)
+[^git-secrets-aws-labs]: [git-secrets (AWS Labs)](https://github.com/awslabs/git-secrets). Pre-commit hook focused on AWS patterns.
+[^gitguardian-state-of-secrets-sprawl]: [GitGuardian "State of Secrets Sprawl" report (2026, 5th edition, published March 17, 2026)](https://www.gitguardian.com/state-of-secrets-sprawl-report-2026). Annual report tracking secrets exposure in public commits — 29M new secrets in 2025, 34% YoY increase.
+[^cwe-798]: [CWE-798: Use of Hard-Coded Credentials](https://cwe.mitre.org/data/definitions/798.html). Mapping-Allowed. Frequent CWE Top 25 entry.
+[^cwe-540]: [CWE-540: Inclusion of Sensitive Information in Source Code](https://cwe.mitre.org/data/definitions/540.html).
+[^cwe-312]: [CWE-312: Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
+[^cwe-200]: [CWE-200: Exposure of Sensitive Information](https://cwe.mitre.org/data/definitions/200.html). Mapping-Discouraged — cite the more specific child CWEs above.
+[^t1593-003]: [MITRE ATT&CK T1593.003 — Search Open Websites/Domains: Code Repositories](https://attack.mitre.org/techniques/T1593/003/).
+[^t1552-001]: [MITRE ATT&CK T1552.001 — Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
+[^t1078-004]: [MITRE ATT&CK T1078.004 — Valid Accounts: Cloud Accounts](https://attack.mitre.org/techniques/T1078/004/).
+[^aws-iam-access-key-best]: [AWS IAM Access Key best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html). Includes "do not embed access keys in code."
+[^aws-guardduty]: [AWS GuardDuty](https://aws.amazon.com/guardduty/). The CredentialExfiltration finding families.
+[^aws-cloudtrail]: [AWS CloudTrail](https://aws.amazon.com/cloudtrail/). For post-exposure API call audit.
+[^toyota-october-2022-disclosure-t]: [Toyota October 2022 disclosure (T-Connect)](https://blog.gitguardian.com/toyota-accidently-exposed-a-secret-key-publicly-on-github-for-five-years/). Technical writeup of the T-Connect source-code exposure; Toyota's own notice is no longer online. (A separate Toyota May 2023 disclosure — the ~2.15M-customer vehicle-location leak — is sometimes conflated with this one and has different mechanics.)
+[^sysdig-emeraldwhale-campaign-writeup-october]: [Sysdig EmeraldWhale campaign writeup (October 2024)](https://www.sysdig.com/blog/emeraldwhale). Documents continuous scraping of exposed Git configuration files — ~15,000 cloud credentials harvested in a single campaign.
 
-- **NIST SP 800-218 — Secure Software Development Framework (SSDF) v1.1**: <https://csrc.nist.gov/pubs/sp/800/218/final>. February 2022, Final. The federal-acquisition baseline.
-- **NIST SP 800-53 Rev. 5 — Security and Privacy Controls for Information Systems and Organizations**: <https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final>. Published September 2020; latest release 5.2.0 (August 2025).
-- **NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule**: <https://csrc.nist.gov/pubs/sp/800/66/r2/final>. Published February 2024 (Final). The HIPAA implementation reference.
-- **OMB M-22-18 — Enhancing the Security of the Software Supply Chain Through Secure Software Development Practices**: <https://bidenwhitehouse.archives.gov/wp-content/uploads/2022/09/M-22-18.pdf>. The federal software-attestation requirement that cited SSDF. **Rescinded January 23, 2026 by OMB M-26-05** ("Adopting a Risk-based Approach to Software and Hardware Security"). Original whitehouse.gov URL now 404s; cited URL is the National Archives mirror.
-- **CISA Secure Software Development Attestation Form** (finalized March 11, 2024): <https://www.cisa.gov/resources-tools/resources/secure-software-development-attestation-form>. The vendor attestation document. Now optional post-M-26-05; some agencies may still collect it as part of their tailored risk-based approach.
-- **OWASP ASVS v5.0**: <https://owasp.org/www-project-application-security-verification-standard/>. Chapter V13 (Configuration) covers secrets-management. (V14 in v5.0 is *Data Protection* — easy to conflate; cite V13 for secrets specifically.)
-- **CIS Critical Security Controls v8.1**: <https://www.cisecurity.org/controls>.
-- **HIPAA Security Rule (45 CFR Part 164, Subpart C)**: <https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C>.
+### Further reading
 
-### GitHub Secret Scanning + tooling
-
-- **GitHub Secret Scanning**: <https://docs.github.com/en/code-security/how-tos/secure-your-secrets>. Default-on for public repos since March 2023.
-- **GitHub Push Protection**: <https://docs.github.com/en/code-security/concepts/secret-security/push-protection>. Free for public repos.
-- **TruffleHog**: <https://github.com/trufflesecurity/trufflehog>. Open-source pre-push / CI scanner. 700+ detectors with verified-credential checks.
-- **GitGuardian**: <https://www.gitguardian.com/>. Commercial alternative with dashboard + continuous monitoring.
-- **Gitleaks**: <https://github.com/gitleaks/gitleaks>. Open-source equivalent of TruffleHog's core scanning. (Note: project is now in feature-complete / maintenance mode — security patches only — with the maintainer pivoting to a successor project.)
-- **detect-secrets (Yelp)**: <https://github.com/Yelp/detect-secrets>. Pre-commit hook with entropy-based detection.
-- **git-secrets (AWS Labs)**: <https://github.com/awslabs/git-secrets>. Pre-commit hook focused on AWS patterns.
-- **pre-commit framework**: <https://pre-commit.com/>. The meta-framework for running hooks.
-- **GitGuardian "State of Secrets Sprawl" report (2026, 5th edition, published March 17, 2026)**: <https://www.gitguardian.com/state-of-secrets-sprawl-report-2026>. Annual report tracking secrets exposure in public commits — 29M new secrets in 2025, 34% YoY increase.
-
-### CWE / MITRE ATT&CK
-
-- **CWE-798: Use of Hard-Coded Credentials**: <https://cwe.mitre.org/data/definitions/798.html>. Mapping-Allowed. Frequent CWE Top 25 entry.
-- **CWE-540: Inclusion of Sensitive Information in Source Code**: <https://cwe.mitre.org/data/definitions/540.html>.
-- **CWE-312: Cleartext Storage of Sensitive Information**: <https://cwe.mitre.org/data/definitions/312.html>.
-- **CWE-200: Exposure of Sensitive Information**: <https://cwe.mitre.org/data/definitions/200.html>. Mapping-Discouraged — cite the more specific child CWEs above.
-- **MITRE ATT&CK T1593.003 — Search Open Websites/Domains: Code Repositories**: <https://attack.mitre.org/techniques/T1593/003/>.
-- **MITRE ATT&CK T1552.001 — Unsecured Credentials: Credentials In Files**: <https://attack.mitre.org/techniques/T1552/001/>.
-- **MITRE ATT&CK T1078.004 — Valid Accounts: Cloud Accounts**: <https://attack.mitre.org/techniques/T1078/004/>.
-
-### AWS-specific
-
-- **AWS IAM Access Key best practices**: <https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html>. Includes "do not embed access keys in code."
-- **AWS GuardDuty**: <https://aws.amazon.com/guardduty/>. The CredentialExfiltration finding families.
-- **AWS CloudTrail**: <https://aws.amazon.com/cloudtrail/>. For post-exposure API call audit.
-- **AWS Security Token Service (STS)**: <https://docs.aws.amazon.com/STS/latest/APIReference/>. The temporary-credential alternative to long-lived IAM access keys.
-
-### Incident references
-
-- **Uber 2014/2016 breaches — Krebs on Security retrospective**: <https://krebsonsecurity.com/?s=uber>. Brian Krebs's archive includes the 2014 incident (AWS-keys-in-GitHub) and the 2016 follow-on.
-- **Toyota October 2022 disclosure (T-Connect)**: <https://blog.gitguardian.com/toyota-accidently-exposed-a-secret-key-publicly-on-github-for-five-years/>. Technical writeup of the T-Connect source-code exposure; Toyota's own notice is no longer online. (A separate Toyota May 2023 disclosure — the ~2.15M-customer vehicle-location leak — is sometimes conflated with this one and has different mechanics.)
-- **Mercedes-Benz January 2024 (RedHunt Labs writeup)**: <https://redhuntlabs.com/blog/mercedes-benz-source-code-at-risk-github-token-mishap-sparks-major-security-concerns/>. The PAT-in-public-repo finding.
-- **Wiz Microsoft AI Research September 2023 writeup**: <https://www.wiz.io/blog/38-terabytes-of-private-data-accidentally-exposed-by-microsoft-ai-researchers>. The 38TB Azure SAS exposure.
-- **Sysdig EmeraldWhale campaign writeup (October 2024)**: <https://www.sysdig.com/blog/emeraldwhale>. Documents continuous scraping of exposed Git configuration files — ~15,000 cloud credentials harvested in a single campaign.
-
-### Practitioner resources
-
-- **SANS GOSI / SEC497 reading list**: <https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/>.
-- **Trace Labs CTF**: <https://www.tracelabs.org/>. Real-world OSINT practice (missing-persons cases, with explicit ethical framing).
-- **OSINT Framework (community-maintained)**: <https://osintframework.com/>. Index of OSINT tools by category.
+- [NIST SP 800-218 — Secure Software Development Framework (SSDF) v1.1](https://csrc.nist.gov/pubs/sp/800/218/final). February 2022, Final. The federal-acquisition baseline.
+- [NIST SP 800-53 Rev. 5 — Security and Privacy Controls for Information Systems and Organizations](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). Published September 2020; latest release 5.2.0 (August 2025).
+- [OWASP ASVS v5.0](https://owasp.org/www-project-application-security-verification-standard/). Chapter V13 (Configuration) covers secrets-management. (V14 in v5.0 is *Data Protection* — easy to conflate; cite V13 for secrets specifically.)
+- [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls).
+- [HIPAA Security Rule (45 CFR Part 164, Subpart C)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C).
+- [TruffleHog](https://github.com/trufflesecurity/trufflehog). Open-source pre-push / CI scanner. 700+ detectors with verified-credential checks.
+- [GitGuardian](https://www.gitguardian.com/). Commercial alternative with dashboard + continuous monitoring.
+- [detect-secrets (Yelp)](https://github.com/Yelp/detect-secrets). Pre-commit hook with entropy-based detection.
+- [pre-commit framework](https://pre-commit.com/). The meta-framework for running hooks.
+- [AWS Security Token Service (STS)](https://docs.aws.amazon.com/STS/latest/APIReference/). The temporary-credential alternative to long-lived IAM access keys.
+- [Uber 2014/2016 breaches — Krebs on Security retrospective](https://krebsonsecurity.com/?s=uber). Brian Krebs's archive includes the 2014 incident (AWS-keys-in-GitHub) and the 2016 follow-on.
+- [Mercedes-Benz January 2024 (RedHunt Labs writeup)](https://redhuntlabs.com/blog/mercedes-benz-source-code-at-risk-github-token-mishap-sparks-major-security-concerns/). The PAT-in-public-repo finding.
+- [Wiz Microsoft AI Research September 2023 writeup](https://www.wiz.io/blog/38-terabytes-of-private-data-accidentally-exposed-by-microsoft-ai-researchers). The 38TB Azure SAS exposure.
+- [SANS GOSI / SEC497 reading list](https://www.sans.org/cyber-security-courses/practical-open-source-intelligence/).
+- [Trace Labs CTF](https://www.tracelabs.org/). Real-world OSINT practice (missing-persons cases, with explicit ethical framing).
+- [OSINT Framework (community-maintained)](https://osintframework.com/). Index of OSINT tools by category.
