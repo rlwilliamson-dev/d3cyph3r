@@ -268,80 +268,22 @@ Marcus — the conversation goes better when there's no surprise.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  HIPAA Security Rule (45 CFR 164.312)
-    164.312(a)(1) Access Control — implement technical policies
-      that limit electronic access to PHI to authorized parties.
-      A publicly-reachable database with default credentials
-      fails this control.
-    164.312(e)(1) Transmission Security — implement technical
-      measures to guard against unauthorized access during
-      electronic transmission. Even with TLS, an authenticated
-      attacker is "authorized" in transit terms.
+Two weaknesses, one control, one regime.
 
-  HITECH Act (P.L. 111-5)
-    Breach notification: 60 days from discovery to affected
-    individuals; HHS OCR notice for 500+ affected; media notice
-    for 500+ in the same state/jurisdiction.
+  CWE-1392  Use of Default Credentials — the vendor default was
+            flagged in a Q1 2025 review and never rotated.
+  CWE-668   Exposure of Resource to Wrong Sphere — a host the
+            scope file says is VPN-only, answering the internet.
 
-  NIST SP 800-53 Rev. 5
-    SC-7  Boundary Protection — control the flow of information
-      at managed interfaces. The fix is "don't expose 5432 on
-      a public IP." This control names that specifically.
-    CM-7  Least Functionality — configure systems to provide
-      only essential capabilities. Public-internet exposure of
-      a staging DB is not essential.
+  NIST SP 800-53 CM-7 (Least Functionality) and SC-7 (Boundary
+  Protection) are the controls. The perimeter was asserted, not
+  verified, which is the failure this level exists to teach.
 
-  CIS Critical Security Controls v8.1
-    4.5  Implement and Manage a Firewall on End-User Devices —
-      the IG1 host-firewall pattern. v8.1's literal scope is
-      end-user devices; the equivalent server-tier controls live
-      under Control 12 (Network Infrastructure Management) and
-      Control 13 (Network Monitoring and Defense). The intent
-      Atlas should have honored at the server tier: host- or
-      network-level firewalls enforcing "VPN-only" rather than
-      relying on undocumented intent.
-    13.10 Perform Application Layer Filtering — the right
-      enforcement layer for "this DB is reachable only via
-      VPN-issued source IPs."
-
-  CWE
-    CWE-200 Exposure of Sensitive Information to an
-      Unauthorized Actor — the umbrella parent for the
-      database exposure (note: CWE-200 is mapping-Discouraged
-      in current MITRE guidance; cite the more specific
-      CWE-668 / CWE-1392 below for direct mappings).
-    CWE-668 Exposure of Resource to Wrong Sphere — the network
-      perimeter mistake.
-    CWE-1392 Use of Default Credentials — the unrotated
-      \`atlas-default-2025\`.
-
-  OWASP Top 10 (2025) — A02: Security Misconfiguration
-    Covers public exposure of services that should be internal
-    (A05 in the 2021 edition; moved up to A02 in 2025).
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 4 (Security Operations) — vulnerability scanning,
-    network reconnaissance tools. nmap is named directly.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 2 (Threat Intelligence
-    & Threat Hunting) — active recon. Domain 1 (Security
-    Operations) — perimeter monitoring.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 2 (Reconnaissance and Enumeration).
-
-  CISSP
-    Domain 3 (Security Architecture and Engineering) — secure
-    network architecture. Domain 7 (Security Operations) — incident
-    detection and response.
-
-  OSCP / PEN-200
-    The first command on every box on the exam is essentially
-    \`nmap -sV <target>\`. You just ran the opening play.
+  HIPAA is the regime. The Breach Notification Rule (45 CFR
+  164.400-414) gives Atlas 60 days to notify individuals, and at
+  500 or more it must also notify HHS and the media in the
+  affected state. The clock starts at the determination that a
+  breach occurred, not at discovery of the weakness.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -386,6 +328,33 @@ unfixed.
      Security Command Center.
   5. Quarterly perimeter checks remain the floor, not the
      ceiling. Continuous monitoring is the ceiling.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. The scan proves a port is open. Why is that NOT yet a
+     reportable breach under HIPAA?
+
+  2. Marcus's statement went into Atlas's compliance file. What
+     second exposure does that create, and how far back does
+     it reach?
+
+  3. Atlas cannot say how many records are at risk. Why is that
+     itself the finding rather than a gap in your report?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/network/level0.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, how an untested blast radius is
+written up for a risk register, the healthcare breaches this
+mirrors, and a Sigma rule for unexpected external exposure.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -783,111 +752,23 @@ the next quarterly review. Priya is already drafting.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-306: Missing Authentication for Critical Function
-    The DNS server allowed zone transfer to any source without
-    authentication. AXFR is a critical function — it dumps
-    every record in the zone. The control "require TSIG or IP
-    ACL" is standard; failure to apply it is exactly CWE-306.
+Three weaknesses that had to align, and only one looks like a
+security decision.
 
-  CWE-200: Exposure of Sensitive Information to an
-  Unauthorized Actor
-    The TXT-record credential leak. (Note: CWE-200 is broad
-    enough that MITRE's catalog now flags it as "Discouraged
-    for mapping" — better to cite the more specific weakness
-    where one fits. We cite it here as the historical framework
-    reference; the surgical fix is "don't put credentials in
-    DNS records.")
+  CWE-1392  Use of Default Credentials — the entry.
+  CWE-732   Incorrect Permission Assignment — a service account
+            with an interactive shell, which is the foothold.
+  CWE-306   Missing Authentication for Critical Function — the
+            zone transfer that answered anyone who asked.
 
-  NIST SP 800-53 Rev. 5
-    SC-22 — Architecture and Provisioning for Name / Address
-      Resolution Service. Explicitly requires authoritative
-      DNS to be configured per the organization-defined
-      external-network specification. AXFR-from-anywhere fails
-      this control.
-    SC-7  — Boundary Protection. The fact that staging-db can
-      reach internal DNS at all is a segmentation failure on
-      top of the AXFR failure.
-    AC-3  — Access Enforcement. The DNS server must enforce
-      approved authorizations on the AXFR operation. It didn't.
+  NIST SP 800-53 AC-3 (Access Enforcement) is the control the
+  transfer breaches; IA-5 covers the unrotated default.
 
-  NIST SP 800-81 Rev 3 — Secure DNS Deployment Guide (March 2026)
-    The authoritative federal guidance on DNS hardening,
-    superseding the long-standing SP 800-81-2 (withdrawn the
-    same day Rev 3 was published). The recommended posture for
-    AXFR carries through: allowed only to known secondary
-    nameservers, authenticated via TSIG. Atlas's resolver
-    appears to use the looser "allow from anywhere internal"
-    model — which is "allow from anyone with a route to the
-    resolver," which today included you.
-
-  HIPAA Security Rule (45 CFR 164.312)
-    164.312(a)(1) Access Control — Atlas is required to limit
-      access to PHI to authorized parties. The architectural
-      mechanism is network segmentation; segmentation is
-      undermined when an attacker knows where the PHI tier
-      lives because the DNS told them.
-    164.312(e)(1) Transmission Security — hostname enumeration
-      is the first step of any subsequent transmission-layer
-      compromise.
-
-  HIPAA Privacy Rule (45 CFR 164.502)
-    "Minimum necessary" standard: uses, disclosures, and
-    requests for PHI should be limited to the minimum necessary
-    for the purpose. Exposing the internal map of every PHI
-    system to anyone who can query DNS is the opposite of
-    minimum-necessary.
-
-  CIS Critical Security Controls v8.1
-    4.9 — Configure Trusted DNS Servers on Enterprise Assets.
-      The client-side complement; the server-side equivalent
-      lives in 12.2.
-    12.2 — Establish and Maintain a Secure Network Architecture.
-      Covers segmentation, DNS hardening, and the general
-      "don't let any host talk to any other host" principle.
-    13.4 — Perform Traffic Filtering Between Network Segments.
-      Staging hosts shouldn't be able to reach the internal
-      DNS resolver in the first place.
-
-  OWASP Web Security Testing Guide v4.2
-    WSTG-INFO-04 (Enumerate Applications on Webserver)
-    documents DNS zone transfers explicitly under its "DNS
-    Zone Transfers" subsection. Any competent web/infra
-    pentest engagement runs AXFR checks in the first hour.
-
-  OWASP Top 10 (2025) — A02: Security Misconfiguration
-    The umbrella category. "Unnecessary features are enabled
-    or installed" + "default accounts and their passwords are
-    still enabled" both apply.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 4 (Security Operations) — DNS as a recon vector,
-    DNS hardening. Domain 3 (Security Architecture) — secure
-    network services.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 2 (Threat Intelligence
-    & Threat Hunting) — covers the "what does the adversary
-    see from outside?" question that AXFR answers in one
-    query.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 2 (Reconnaissance and Enumeration) — DNS enumeration
-    is named and tested; AXFR is one of the directly-listed
-    techniques.
-
-  CISSP
-    Domain 4 (Communication and Network Security) — DNS as a
-    protocol with documented hardening requirements.
-    Domain 3 (Security Architecture and Engineering) — secure
-    network services.
-
-  OSCP / PEN-200
-    Standard early-recon move on any internal engagement. Every
-    PEN-200 lab box that runs an internal DNS gets AXFR-checked
-    in the first 30 minutes.
+  HIPAA is the regime. The Breach Notification Rule (45 CFR
+  164.400-414) gives Atlas 60 days to notify individuals, and at
+  500 or more it must also notify HHS and the media in the
+  affected state. The clock starts at the determination that a
+  breach occurred, not at discovery of the weakness.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -941,6 +822,32 @@ the technique stops working.
      DNS reconnaissance against your own perimeter — Shodan,
      Censys, SecurityTrails, Detectify. They tell you what your
      DNS is leaking before someone less friendly notices.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. A zone transfer moved no patient records. So why is it a
+     finding at all?
+
+  2. Why is DNS an especially bad place to park a secret, even
+     compared to a config file?
+
+  3. Three weaknesses chained here. If you could only fix one
+     today, which one, and what does that leave open?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/network/level1.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, how the finding is sized, the
+real-world cases, and a Sigma rule that allowlists authorised
+secondaries and alerts on every other transfer request.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -1471,123 +1378,25 @@ audit-bypass account just got overtaken by events.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-200: Exposure of Sensitive Information to an
-  Unauthorized Actor
-    The umbrella weakness. MITRE flags CWE-200 as "Discouraged
-    for mapping" in current guidance because it's too broad to
-    be surgical. The surgical CWEs below.
+Four weaknesses, one of them permanent.
 
-  CWE-1188: Insecure Default Initialization of Resource
-    The 10-year-validity self-signed cert installed in 2023 and
-    never rotated. The "default" for a temporary host is whatever
-    the engineer typed during setup; \`openssl req -newkey
-    -days 3650\` was the typed command. Three years on, the
-    "temporary" cert is still serving.
+  CWE-1188  Insecure Default Initialization — the certificate's
+            metadata defaults that published internal names.
+  CWE-547   Use of Hard-coded Security-relevant Constants.
+  CWE-200   Exposure of Sensitive Information — the SAN list as
+            an infrastructure inventory.
+  CWE-532   Insertion of Sensitive Information into Log File —
+            the autoresponder log carrying cleartext credentials.
 
-  CWE-547: Use of Hard-coded, Security-relevant Constants
-    The wildcard *.atlas.internal SAN entry plus the literal
-    "DELETE BEFORE PROD 2023" string in the Organization field.
-    The cert encodes operational reminders that nobody acted on.
+  NIST SP 800-53 CM-8 (System Component Inventory) is the control
+  that matters most: the host is not in Atlas's asset register,
+  which puts it outside every control measured against it.
 
-  CWE-532: Insertion of Sensitive Information into Log File
-    The exim autoresponder logs the cleartext temp-cred reply
-    body before delivery. Anyone with read on the exim log
-    (audit-svc, root, the adm group) gets the cred.
-
-  NIST SP 800-52 Rev 2 (Guidelines for TLS Implementations)
-    §3.1.3 covers wildcard usage — server certs SHOULD NOT use
-    wildcard DNS names in the SAN when the wildcard's blast
-    radius is wider than the operational need. Atlas's cert is
-    the textbook example: a wildcard that covers 100% of
-    internal hosts including future ones.
-    §3.2.2 — server certs SHOULD have validity ≤ the current
-    CA/Browser Forum baseline (398 days through early 2026; the
-    Forum has voted phased reductions toward 47 days by 2029).
-    A 10-year self-signed cert is an order of magnitude over the
-    modern limit.
-
-  NIST SP 800-57 Part 1 Rev 5 (Recommendation for Key Management)
-    §5.3.6 covers cryptoperiod selection. A 10-year cert exceeds
-    the recommended cryptoperiod for any TLS-server-authentication
-    key purpose.
-
-  Certificate Transparency — RFC 6962 (and the v2 successor
-    RFC 9162, published Dec 2021)
-    The protocol that makes public-facing TLS cert issuance
-    permanently public via append-only logs. Required for
-    browser trust by Chrome (since 2018), Apple (since 2021),
-    Mozilla (gating new certs starting 2024). Atlas can't undo
-    what crt.sh has logged.
-
-  HIPAA Security Rule (45 CFR 164.312)
-    §164.312(e)(2)(ii) Encryption — encryption is required when
-    deemed reasonable and appropriate; TLS termination with a
-    self-signed cert nobody validates downstream meets the letter
-    of "encrypted in transit" while failing the spirit.
-    §164.312(b) Audit Controls — the autoresponder's cleartext
-    credential ship is exactly the kind of activity the audit
-    controls are supposed to surface for review.
-
-  CIS Critical Security Controls v8.1
-    3.10 — Encrypt Sensitive Data in Transit. The cert presence
-    satisfies the literal control; the wildcard scope undermines
-    the control's purpose.
-    4.6 — Securely Manage Enterprise Assets and Software. The
-    "decommissioned, awaiting reimage since 2024-Q1" asset that
-    is still serving production-grade TLS at 2026-04-10 is a
-    direct failure of asset management.
-    12.5 — Centralize Network Authentication, Authorization, and
-    Auditing (AAA). The per-host exim autoresponder shipping
-    creds out-of-band routes around any centralized authn flow
-    Atlas might have.
-
-  OWASP Top 10 (2025) — A02: Security Misconfiguration
-    The cert is the misconfiguration; the autoresponder is a
-    separate misconfiguration; the still-serving "decommissioned"
-    host is a third.
-
-  OWASP Top 10 (2025) — A04: Cryptographic Failures
-    Covers the broad class "data exposed via flawed cryptographic
-    posture." TLS misconfiguration is the canonical example.
-    Wildcard sprawl + self-signed-with-no-validation chain both
-    apply.
-
-  OWASP TLS Cheat Sheet
-    Tracks the CA/Browser Forum baseline + Mozilla server-side
-    TLS recommendations. Names wildcard avoidance, short-lived
-    certs, and the modern automation playbook (ACME / cert-manager
-    / step-ca) for internal CA hygiene.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 1 (General Security Concepts) — PKI fundamentals.
-    Domain 4 (Security Operations) — TLS hardening, cert
-    lifecycle management. The exam-objective bullets name
-    "wildcard certificates" and "self-signed certificates"
-    explicitly.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 2 (Threat Intelligence
-    & Threat Hunting) — CT-log monitoring as a defender
-    discipline. Domain 1 (Security Operations) — TLS posture
-    audit.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 2 (Reconnaissance and Enumeration). crt.sh + SAN
-    enumeration are named tooling.
-
-  CISSP
-    Domain 3 (Security Architecture and Engineering) — PKI,
-    cryptographic protocols, cert lifecycle.
-    Domain 4 (Communication and Network Security) — TLS as a
-    protocol, what cert metadata reveals.
-
-  OSCP / PEN-200
-    Standard recon move on any HTTPS endpoint. Every PEN-200
-    lab box with TLS gets \`openssl s_client\` run against it in
-    the first ten minutes.
+  HIPAA is the regime. The Breach Notification Rule (45 CFR
+  164.400-414) gives Atlas 60 days to notify individuals, and at
+  500 or more it must also notify HHS and the media in the
+  affected state. The clock starts at the determination that a
+  breach occurred, not at discovery of the weakness.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -1669,6 +1478,33 @@ and Dragos.
      looking for "password is", "temp credential", "valid for
      72 hours" across SMTP relay logs catch the pattern
      proactively.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. Rotating the certificate fixes what, exactly — and what
+     does it leave permanently public?
+
+  2. The asset-management system says this host does not exist.
+     Why does that outrank everything else on the page?
+
+  3. Which of these findings moves an attacker from knowing
+     about Atlas to being inside it?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/network/level2.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, Certificate Transparency and why
+append-only logging is a security feature that works against
+you here, and a Sigma rule for autoresponders that email
+credentials.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 

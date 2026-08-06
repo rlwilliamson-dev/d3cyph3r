@@ -474,88 +474,24 @@ ongoing work with Meridian and not landing it.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  FERPA (20 U.S.C. § 1232g; 34 CFR Part 99)
-    34 CFR 99.31  — conditions for disclosure of PII from
-      education records. A publicly-readable URL is not on the
-      list of authorized disclosure mechanisms.
-    34 CFR 99.32  — recordkeeping requirements for disclosures.
-      An exposed CSV creates an undocumented, undated, untracked
-      "disclosure" to an unknown number of recipients.
+Three weaknesses stacked, plus the credential.
 
-  NIST SP 800-171 Rev. 3 (Protecting CUI in non-federal systems —
-  the standard most US universities map to for federal-data
-  handling; Rev. 3 was finalized in May 2024 and supersedes Rev. 2)
-    03.01.20 Use of External Systems — control connections to and
-      use of external information systems. A public autoindex on
-      a directory of CUI-bearing records satisfies neither
-      verification nor limitation of external access.
-    03.13.01 Boundary Protection — monitor, control, and protect
-      organizational communications at external boundaries; an
-      indexed public directory is a boundary failure.
+  CWE-548   Exposure of Information Through Directory Listing —
+            the proximate cause.
+  CWE-668   Exposure of Resource to Wrong Sphere — working files
+            under DocumentRoot, which is the root cause.
+  CWE-798   Use of Hard-coded Credentials — the DB password in
+            the same directory.
 
-  NIST SP 800-53 Rev. 5
-    AC-3   Access Enforcement — autoindex enforces no access
-      control on a directory containing sensitive data.
-    SC-7   Boundary Protection — the public web server is the
-      boundary; it's the wrong place to keep internal artifacts.
-    CM-6   Configuration Settings — autoindex should be off on
-      production unless a directory is explicitly intended to
-      be a public download index.
+  NIST SP 800-53 CM-6 (Configuration Settings) and AC-3 are the
+  controls. robots.txt is not one of them: it is a request to
+  crawlers, and it publishes the path to anyone who reads it.
 
-  CIS Critical Security Controls v8.1
-    4.1   Establish and Maintain a Secure Configuration Process
-      — autoindex-off is a baseline-config item.
-    4.8   Uninstall or Disable Unnecessary Services on
-      Enterprise Assets — Apache's mod_autoindex is "unnecessary"
-      on the vast majority of production deployments.
-
-  CWE
-    CWE-548  Exposure of Information Through Directory Listing
-      — the precise pattern in autoindex.
-    CWE-552  Files or Directories Accessible to External Parties
-      — the underlying weakness: artifacts under DocumentRoot.
-    CWE-200  Exposure of Sensitive Information to an Unauthorized
-      Actor — the umbrella parent for the student records (note:
-      CWE-200 is mapping-Discouraged in current MITRE guidance;
-      cite the more specific CWE-548 / CWE-552 above for direct
-      mappings).
-    CWE-798  Use of Hard-coded Credentials — the DB password in
-      db-creds.txt.
-
-  OWASP Top 10 (2025)
-    A02  Security Misconfiguration — autoindex left on, robots.txt
-         listing sensitive paths, artifacts in the web root: this
-         is the canonical example. (A05 in the 2021 edition;
-         moved up to A02 in 2025.)
-    A01  Broken Access Control — the records are accessible to
-         anyone who guesses the path (slot unchanged from 2021).
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 2 (Threats, Vulnerabilities, and Mitigations) — web
-    application vulnerabilities, security misconfiguration.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 3 (Attacks and Exploits) — directory enumeration is a
-    named technique. Domain 2 (Reconnaissance and Enumeration) —
-    web reconnaissance with gobuster / ffuf / dirb is on the exam.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 2 — reconnaissance
-    detection.
-
-  CISSP
-    Domain 3 (Security Architecture and Engineering) — secure
-    web architecture, defense in depth. Domain 7 (Security
-    Operations) — vulnerability management.
-
-  OSCP / PEN-200
-    "gobuster / ffuf the target" is on every published OSCP
-    walkthrough. Finding /backup, /admin-old, /.git, or /.svn
-    on a public web server is one of the highest-yield
-    openings in the exam labs and in real engagements.
+  FERPA is the regime, and it carries NO breach-notification
+  duty and no fine schedule. Enforcement runs through the
+  Department of Education's funding-withdrawal authority and the
+  annual FSA attestation. Any notification clock here comes from
+  STATE law attaching to the PII. Two exposures, two timelines.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -620,6 +556,32 @@ pattern; it's a weekly one.
      /tmp and rsyncs only the build output to /var/www. A
      .htaccess deny-all in any directory not explicitly meant to
      be public. Code review on web-server config changes.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. 4,217 records are in the CSV. Why is that number a floor
+     rather than a total?
+
+  2. Turning autoindex off: what does it fix, and what still
+     works afterwards?
+
+  3. FERPA has no breach-notification rule. So what actually
+     starts a clock here?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/web/level0.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, how the finding is sized for a risk
+register, the vendor-introduced exposures it mirrors, and a
+Sigma rule for directory-listing responses in production.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -1154,98 +1116,22 @@ review.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-639: Authorization Bypass Through User-Controlled Key
-    The most precise weakness ID. The endpoint takes a key
-    (\`student_id\`) from user-controlled input (the URL
-    parameter), looks up the corresponding record, and
-    returns it without verifying the caller's relationship
-    to the record. CWE-639 is on the CWE catalog's
-    Access-Control category.
+Three weaknesses that are really one missing check.
 
-  CWE-285: Improper Authorization
-    The parent weakness — broader umbrella for any case
-    where the authorization decision is wrong or missing.
+  CWE-639   Authorization Bypass Through User-Controlled Key —
+            the IDOR itself.
+  CWE-285   Improper Authorization.
+  CWE-862   Missing Authorization.
 
-  CWE-862: Missing Authorization
-    The variant where the authorization check is entirely
-    absent (vs. CWE-863 Incorrect Authorization, where a
-    check exists but is wrong). Carlos's case fits CWE-862
-    — the check on student_id ownership is missing
-    entirely. CWE-862 is a recurring CWE Top 25 entry.
+  NIST SP 800-53 AC-3 (Access Enforcement) is the control.
+  Authentication passed here; authorization was never attempted,
+  and those are two different controls.
 
-  FERPA (20 U.S.C. § 1232g; 34 CFR Part 99)
-    §99.3   Definition of "education records" — includes
-      transcripts, grades, enrollment status, advisor notes.
-    §99.31  Conditions under which prior consent is not
-      required to disclose. Anonymous IDOR exposure is not
-      among them.
-    §99.32  Recordkeeping requirements. The exposed records
-      created an undocumented, undated disclosure to an
-      unknown recipient set.
-
-  NIST SP 800-171 Rev. 3 (Protecting CUI in non-federal
-  systems — the standard most US universities map to)
-    03.01.01  Account Management — the demo account
-      shouldn't have outlived its purpose.
-    03.01.02  Access Enforcement — the system shall enforce
-      approved authorizations.
-    03.01.05  Least Privilege — the SSO middleware's
-      authorization scope is too broad.
-
-  NIST SP 800-53 Rev. 5
-    AC-3 (Access Enforcement) — system enforces approved
-      authorizations.
-    AC-6 (Least Privilege) — the SSO-authenticated user has
-      more access than the user's role justifies.
-    AC-4 (Information Flow Enforcement) — student records
-      are flowing to recipients who weren't authorized to
-      receive them.
-
-  CIS Critical Security Controls v8.1
-    6.7   Centralize Access Control — covers the principle
-      that authorization decisions should not be ad-hoc.
-    16.10 Apply Secure Design Principles in Application
-      Architectures — covers the layered model (authn vs
-      authz, defense in depth).
-
-  OWASP Top 10 (2025) — A01: Broken Access Control
-    The umbrella category. A01 has been the #1 web security
-    risk in both the 2021 and 2025 editions. IDOR is the
-    most-cited example in the category description.
-
-  OWASP API Security Top 10 (2023) — API1: Broken Object
-  Level Authorization (BOLA)
-    The API-specific expression of IDOR. API1 has been the
-    #1 entry on the API Security Top 10 since the list was
-    created in 2019.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 2 (Threats, Vulnerabilities, and Mitigations) —
-    application-layer vulnerabilities including IDOR are
-    directly tested.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 3 (Attacks and Exploits) — IDOR is in the named
-    web-application-attack taxonomy.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 2 (Threat Intelligence)
-    — IDOR detection patterns are part of the threat-hunting
-    modules.
-
-  ISC2 CISSP
-    Domain 3 (Security Architecture and Engineering) — the
-    authentication/authorization distinction is a CISSP
-    fundamental.
-
-  Offensive Security OSWA / OSWE / OSCP
-    OffSec's web certs cover IDOR explicitly. The OSWE
-    exam includes IDOR-style challenges as a recurring
-    test of the candidate's ability to find authorization
-    failures.
+  FERPA is the regime, and it carries NO breach-notification
+  duty and no fine schedule. Enforcement runs through the
+  Department of Education's funding-withdrawal authority and the
+  annual FSA attestation. Any notification clock here comes from
+  STATE law attaching to the PII. Two exposures, two timelines.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -1306,6 +1192,32 @@ review.
      RLS, MySQL with views, MongoDB's field-level
      redaction). Treat application-level authz as one
      layer, not the only one.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. Every request in the logs is authenticated and well-formed.
+     What does that do to your detection strategy?
+
+  2. You demonstrated the flaw on one record. Why does the
+     finding still cover every transcript?
+
+  3. Why is the leftover BluePier demo account a separate
+     finding from the IDOR?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/web/level1.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, how IDOR is scoped and reported, the
+real-world cases including First American, and a Sigma rule that
+counts distinct object ids per session.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -1797,61 +1709,26 @@ moment it appeared in a query response, regardless of who was watching.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-89: Improper Neutralization of Special Elements used in an SQL
-    Command ('SQL Injection'). The precise weakness. CWE-89 was #3 on
-    the CWE Top 25 Most Dangerous Software Weaknesses in BOTH 2023 and
-    2024 — two decades after the bug was first documented.
+Four weaknesses, and the first one sets the severity.
 
-  CWE-209: Generation of Error Message Containing Sensitive Information.
-    The verbose error that returned the raw query + DB version.
+  CWE-89    Improper Neutralization of Special Elements in an SQL
+            Command — through a PUBLIC, unauthenticated search.
+  CWE-209   Generation of Error Message Containing Sensitive
+            Information — the verbose errors that guided it.
+  CWE-312   Cleartext Storage of Sensitive Information — the
+            DB-admin credential in app_config.
+  CWE-250   Execution with Unnecessary Privileges — the app's
+            database account reached far past the catalogue.
 
-  CWE-312 / CWE-522: Cleartext Storage of Sensitive Information /
-    Insufficiently Protected Credentials. The \`meridian_dbadmin\`
-    password sat in a database table in plaintext.
+  NIST SP 800-53 SI-10 (Information Input Validation) is the
+  control; parameterized queries are the fix, and a WAF is not
+  one.
 
-  CWE-250: Execution with Unnecessary Privileges. The public catalog
-    connected as a user with read/write on the whole schema.
-
-  OWASP Top 10
-    A05:2025 — Injection. (It was A03:2021, and A1 back in the 2010s.
-    Injection slid DOWN the list not because it's solved but because
-    parameterized queries and ORMs cut its prevalence — it stays on the
-    list because the impact, when it lands, is total.)
-
-  NIST SP 800-53 Rev. 5
-    SI-10 (Information Input Validation) — validate / neutralize input
-      before it reaches an interpreter. The control for injection.
-    SI-11 (Error Handling) — reveal as little as possible in error
-      messages; the verbose error violates this directly.
-    AC-6 (Least Privilege) — the catalog's database account had far more
-      access than its function required.
-
-  CIS Critical Security Controls v8.1
-    16.11 — Leverage Vetted Modules or Services for Application Security
-      Components (use the framework's parameterized-query API; don't
-      hand-build SQL strings).
-    3.x  — Data Protection (the plaintext credential in app_config).
-
-  FERPA (20 U.S.C. § 1232g; 34 CFR Part 99)
-    §99.31 / §99.32 — the \`students\` table reachable through this
-      injection is exactly the "education records" FERPA governs;
-      unauthorized disclosure with no recordkeeping is the violation.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701) — Domain 2: injection attacks are named
-    and tested directly.
-  CompTIA PenTest+ (PT0-003) — Domain 3 (Attacks and Exploits): SQL
-    injection, UNION-based extraction, and information_schema
-    enumeration are all in scope.
-  CompTIA CySA+ (CS0-003 / CS0-004) — CS0-004 launched early 2026 for
-    parallel availability; CS0-003 retires June 2026. Injection
-    detection patterns appear in the threat-hunting modules.
-  ISC2 CISSP — Domain 8 (Software Development Security): input
-    validation and parameterized queries are fundamentals.
-  Offensive Security OSWA / OSWE / OSCP — SQL injection is a core skill;
-    OSWA (Web Assessor) and OSWE test exactly this hand-built
-    UNION-extraction workflow that sqlmap automates.
+  FERPA is the regime, and it carries NO breach-notification
+  duty and no fine schedule. Enforcement runs through the
+  Department of Education's funding-withdrawal authority and the
+  annual FSA attestation. Any notification clock here comes from
+  STATE law attaching to the PII. Two exposures, two timelines.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -1884,6 +1761,32 @@ moment it appeared in a query response, regardless of who was watching.
   7. Scan for the pattern everywhere. The "glue input into SQL" shape
      repeats; Semgrep and CodeQL both ship SQL-injection rule packs.
      Find every query built by concatenation, not just this one.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. No authentication is required here. What does that change
+     about who the attacker population is?
+
+  2. You parameterize the query this afternoon. What is still
+     wrong tomorrow morning?
+
+  3. Priya said prove reach and stop. What separates proof from
+     harm in this specific case?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/web/level2.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, UNION-based extraction step by step,
+the real-world SQLi breaches, and a Sigma rule for injection
+patterns and verbose database errors.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 

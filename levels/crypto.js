@@ -294,72 +294,22 @@ than to add a finding to a remediation plan.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  PCI-DSS v4.0.1
-    Requirement 3.5  — Render cardholder data (and the keys that
-      protect it) unreadable wherever stored. Base64 does not
-      render anything unreadable.
-    Requirement 3.6  — Document and implement procedures to protect
-      keys used to secure stored cardholder data against disclosure
-      and misuse. Committing the key (even encoded) to a repo
-      violates this directly.
-    Requirement 8.3  — Strong authentication for all access to
-      cardholder data environments. The key in question is the
-      authentication artifact; its exposure is an authentication
-      failure.
+Four weaknesses, all describing one mistake.
 
-  NIST SP 800-53 Rev. 5
-    SC-28 (Protection of Information at Rest) — base64 is not
-      "protection." Encrypted-at-rest with a managed key is.
-    IA-5  (Authenticator Management) — production credentials
-      must be protected commensurate with the risk of disclosure.
+  CWE-261   Weak Encoding for Password — the precise pattern:
+            encoding treated as protection.
+  CWE-326   Inadequate Encryption Strength — base64 has none.
+  CWE-256   Plaintext Storage of a Password.
+  CWE-798   Use of Hard-coded Credentials — the underlying
+            practice that put it in the repo at all.
 
-  NIST SP 800-57 (Recommendation for Key Management)
-    The canonical reference for how to actually handle the keys
-    that protect data. Whole-document relevant.
+  NIST SP 800-53 SC-28 (Protection of Information at Rest) is the
+  control: the requirement is encryption or strict access
+  control, and an encoding is neither.
 
-  CWE
-    CWE-261  Weak Encoding for Password — the precise pattern in
-      this file.
-    CWE-326  Inadequate Encryption Strength — base64 has zero
-      strength because it is not encryption.
-    CWE-256  Plaintext Storage of a Password — base64 is, for
-      threat-model purposes, identical to plaintext storage.
-    CWE-798  Use of Hard-coded Credentials — the underlying
-      pattern Theo's "fix" was trying to address but didn't.
-
-  OWASP Top 10 (2025) — A04: Cryptographic Failures
-    Renamed from "Sensitive Data Exposure" in the 2021 edition
-    (where it sat at A02 before moving down to A04 in 2025)
-    specifically because so many failures in this category come
-    from misuse of cryptography (or non-cryptography mistaken
-    for cryptography), not absence of it.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 1 (General Security Concepts) — cryptographic concepts
-    including the distinction between encoding, encryption, and
-    hashing. Tested directly.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 1 — credential exposure
-    patterns.
-
-  ISC2 CC / SSCP
-    Domain 5 (Cryptography) — encoding vs encryption is a
-    foundational distinction.
-
-  CISSP
-    Domain 3 (Security Architecture and Engineering) —
-    cryptography in depth, including the failure modes of
-    misapplied schemes.
-
-  OSCP / PEN-200
-    base64-encoded credentials in source-controlled files are
-    one of the highest-yield finds in real engagements. The
-    opening play is \`grep -r 'base64' .\` against any repo
-    you've pulled.
+  PCI-DSS v4.0.1 is the regime, and it is contractual rather
+  than statutory: notification runs to Vesta's acquirer and the
+  card brands under the merchant agreement, not to a regulator.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -411,6 +361,31 @@ deliberately — is the whole point.
      Add a one-paragraph internal wiki entry titled "base64 is
      not encryption" and link it from the code-review checklist.
      This will save a future Theo from making the same mistake.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. Theo's goal was that the key stop appearing in git diffs.
+     It worked. Why did that make things worse?
+
+  2. You delete the file and commit. Is the credential safe?
+
+  3. The key prefix says "publishable". Why is that not a
+     scoping argument you can put in a report?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/crypto/level0.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, why encoding is not encryption at the
+level of definitions, the real-world key-leak cases, and a Sigma
+rule for credential material committed to repositories.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -764,91 +739,23 @@ tomorrow.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-347: Improper Verification of Cryptographic Signature
-    The primary weakness. The verifier accepted a token
-    whose signature it did not actually verify.
+Four weaknesses, one of which is the absence of a check.
 
-  CWE-345: Insufficient Verification of Data Authenticity
-    The parent weakness. The token's authenticity was not
-    verified before its claims were trusted.
+  CWE-347   Improper Verification of Cryptographic Signature —
+            the headline: verify was called without an
+            algorithms allowlist.
+  CWE-345   Insufficient Verification of Data Authenticity.
+  CWE-287   Improper Authentication.
+  CWE-532   Insertion of Sensitive Information into Log File —
+            the debug log beside it.
 
-  CWE-287: Improper Authentication
-    The umbrella authentication-bypass weakness. Anyone can
-    impersonate an admin without authenticating.
+  NIST SP 800-53 IA-2 (Identification and Authentication) is the
+  control. An endpoint that accepts an unsigned token is not
+  authenticating anyone.
 
-  CWE-532: Insertion of Sensitive Information into Log File
-    The secondary weakness — the admin-API log records full
-    Authorization headers, including the JWT itself. Even
-    if the JWTs were properly verified, this would still
-    be a finding.
-
-  PCI-DSS v4.0.1
-    Requirement 6.2.4 — detect, prevent, and address common
-      software attacks (the OWASP Top 10 + the secure-
-      coding requirements). Algorithm-confusion attacks are
-      named in the supporting guidance.
-    Requirement 8.3 — strong cryptography for authentication
-      credentials. An unsigned token is not strong cryptography.
-    Requirement 10.3.1 / 10.3.2 — restrict read access to
-      audit logs to those with a job-related need; protect
-      audit log files from modification. (Maps to the
-      secrets-in-logs half. Note: v3.2.1 used 10.5.x for
-      this control family; v4.0.1 renumbered to 10.3.x.)
-
-  NIST SP 800-53 Rev. 5
-    IA-2 (Identification and Authentication) — the system
-      must uniquely identify and authenticate users.
-      Accepting alg:none defeats this.
-    SC-8 (Transmission Confidentiality and Integrity) —
-      the integrity of the token is not protected when the
-      signature is not verified.
-    AU-9 (Protection of Audit Information) — the secrets-
-      in-logs half.
-
-  OWASP Top 10 (2025)
-    A07: Authentication Failures — the umbrella category.
-    A02: Security Misconfiguration — applies to the missing
-      algorithms whitelist as a misuse of the JWT library.
-
-  OWASP API Security Top 10 (2023)
-    API2: Broken Authentication — JWT-specific examples
-      are called out, including alg:none confusion and weak
-      signing secrets.
-
-  RFC 8725 — JSON Web Token Best Current Practices
-    Section 3.1 ("Perform Algorithm Verification"):
-    "Libraries MUST enable the caller to specify a
-    supported set of algorithms and MUST NOT use any other
-    algorithms when performing cryptographic operations."
-    Theo's caller doesn't specify; the library follows the
-    token's claim instead.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 1 (General Security Concepts) — cryptographic
-    primitives and their failure modes. JWT-specific
-    examples appear in the secure-coding sub-domain.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    CS0-004 launched in early 2026 for parallel availability;
-    CS0-003 retires June 2026. Domain 2 (Threat Intelligence)
-    — algorithm-confusion attacks are in the catalog of
-    techniques covered.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 3 (Vulnerability Discovery and Analysis) — JWT
-    misconfigurations are a directly-named test target.
-
-  ISC2 CISSP
-    Domain 3 (Security Architecture and Engineering) —
-    digital signatures and the verifier's responsibility
-    to enforce algorithm constraints.
-
-  Offensive Security OSWA / OSWE
-    OffSec's web-focused certs spend significant curriculum
-    time on JWT attacks (alg:none, key confusion RS→HS,
-    weak HMAC secrets).
+  PCI-DSS v4.0.1 is the regime, and it is contractual rather
+  than statutory: notification runs to Vesta's acquirer and the
+  card brands under the merchant agreement, not to a regulator.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -914,6 +821,31 @@ What you simulated maps to:
      Cognito, Microsoft Entra, Stytch — pick a managed
      IdP that handles algorithm enforcement, key rotation,
      session revocation, and audit logging.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. There is no stolen credential here. What does that change
+     about remediation?
+
+  2. Rotating the signing key: does it help? Why or why not?
+
+  3. The debug log shows the same token replayed by the same
+     caller. Why does that come before the code fix?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/crypto/level1.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, the alg:none class across JWT
+libraries and languages, the real-world cases, and a Sigma rule
+that matches the base64url prefix of an alg:none header.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -1323,121 +1255,21 @@ Business, Doppler, Bitwarden Secrets Manager — pick one).
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-916: Use of Password Hash With Insufficient
-  Computational Effort
-    The surgical CWE for "MD5 / SHA-1 / SHA-256 against
-    GPU-accelerated dictionary attacks." Modern guidance is
-    Argon2id (winner of the Password Hashing Competition,
-    2015); failing that, scrypt or bcrypt; PBKDF2 for FIPS-
-    constrained shops. The work-factor parameter (Argon2's
-    iterations / memory, bcrypt's cost) is the actual
-    security boundary.
+Four weaknesses, and the labels matter as much as the hashes.
 
-  CWE-759: Use of a One-Way Hash without a Salt
-    The reason john cracked four hashes simultaneously. Per-
-    password salt (a random 16-byte string concatenated with
-    the password before hashing) makes identical plaintexts
-    hash to distinct outputs. Rainbow tables stop working;
-    bulk-cracking parallelism stops working. Argon2id /
-    bcrypt / scrypt / PBKDF2 all include salt as a non-
-    optional parameter.
+  CWE-916   Use of Password Hash With Insufficient Computational
+            Effort — MD5 for password storage.
+  CWE-759   Use of a One-Way Hash without a Salt — which is what
+            made the reuse visible from the file alone.
+  CWE-521   Weak Password Requirements.
+  CWE-262   Not Using Password Aging.
 
-  CWE-521: Weak Password Requirements
-    \`TheoVesta!1\` passes a literal "8+ chars, contains a
-    symbol" policy. It fails any entropy-aware policy
-    (NIST SP 800-63B-4's blocklist-against-known-bad-passwords
-    approach, OWASP ASVS Authentication V2.1, CIS Critical
-    Security Control 5.2). The fix is not a longer minimum
-    length — it's checking candidate passwords against the
-    rockyou-class blocklist before accepting them.
+  NIST SP 800-63B is the reference standard for how passwords
+  should actually be stored and verified.
 
-  CWE-262: Not Using Password Aging
-    The hash file was committed six months ago. The
-    underlying plaintexts have been valid for six months on
-    four systems. Aging policy debate aside, the deployment
-    pattern that wrote credentials to a repo at all is the
-    real failure here.
-
-  CWE-798: Use of Hard-coded Credentials (committed-to-repo
-  variant)
-    The hashed-versus-plaintext distinction does not matter
-    for this control. The credentials were committed to source
-    control; the audit trail extends back to whoever's had
-    commit access for six months. Modern secrets-in-code
-    scanners (gitleaks, trufflehog, GitHub Secret Scanning,
-    Snyk) all flag hash files; Vesta's commit-review process
-    didn't.
-
-  NIST SP 800-63B-4 — Digital Identity Guidelines:
-  Authentication and Lifecycle Management
-    Final document published August 2025 (the long-awaited
-    refresh of 800-63B-2). §5.1.1 covers Memorized Secret
-    Verifiers; password storage is in §5.1.1.2. The mandated
-    approach: an approved one-way memory-hard function with a
-    randomly-generated salt at least 32 bits long, and an
-    additional secret keyed-hash (HMAC) component stored
-    outside the database. MD5 is explicitly not approved.
-
-  PCI-DSS v4.0.1
-    §3.5.1 Strong Cryptography — covers any storage of
-    Account Data (PAN, expiration, cardholder name,
-    sensitive authentication data). The backup Theo
-    encrypted with the cracked password contains PAN tokens;
-    a key recoverable in <1 second from a 15-year-old
-    wordlist does not meet "strong cryptography."
-    §8.3.2 Strong Cryptography for Password / Passphrase
-    Hashing — requires a one-way cryptographic function
-    that includes a salt. MD5 unsalted fails both clauses.
-
-  OWASP Top 10 (2025) — A02 Security Misconfiguration
-    + A04 Cryptographic Failures (the modern name for
-    "Sensitive Data Exposure"). Both apply.
-
-  OWASP Application Security Verification Standard (ASVS) v4.0.3
-    V2.4 (Credential Storage) — verifies that any password
-    hash uses Argon2 / bcrypt / scrypt / PBKDF2 with appropriate
-    parameters, and includes salt.
-
-  CIS Critical Security Controls v8.1
-    5.2 — Use Unique Passwords. The four hashes being the
-    same plaintext is a direct violation.
-    16.4 — Establish and Maintain an Inventory of Application
-    Authorization Methods. Theo's repo-committed credentials
-    bypass any inventory.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 1 (General Security Concepts) — symmetric / hash
-    primitives. Domain 4 (Security Operations) — credential
-    management. Wordlist-based dictionary attacks are named
-    tooling.
-
-  CompTIA CySA+ (CS0-003 / CS0-004)
-    Domain 1 (Security Operations) — incident response on
-    credential exposure. Domain 4 (Reporting & Communication)
-    — the "what would you tell the auditor" question
-    rockyou.txt makes inevitable.
-
-  CompTIA PenTest+ (PT0-003)
-    Domain 3 (Attacks and Exploits) — Hashcat / John / Hydra
-    naming, rockyou.txt as a named wordlist, salt vs
-    unsalt-aware crack approaches.
-
-  CISSP
-    Domain 3 (Security Architecture and Engineering) — modern
-    password hashing. Domain 4 (Communication & Network
-    Security) — credential transit. Domain 5 (Identity and
-    Access Management) — credential lifecycle.
-
-  OSCP / PEN-200
-    \`john\` and \`hashcat\` are the assumed tooling. The lab
-    exercises wordlist-based MD5 / SHA-1 / NTLM cracking
-    against extracted hashes; this level is the textbook
-    minimum-viable post-extraction exercise.
-
-  Offensive Security CompTIA-equivalent — OSWP / OSWE /
-    OSEP — all assume rockyou-derived dictionary work.
+  PCI-DSS v4.0.1 is the regime, and it is contractual rather
+  than statutory: notification runs to Vesta's acquirer and the
+  card brands under the merchant agreement, not to a regulator.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -1522,6 +1354,32 @@ finding in roughly 1 of every 4 cloud breach narratives.
      intro-tier red-team / blue-team training program teaches.
      Engineers shipping production credentials should be aware
      of how cheap the offline attack is.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. Four hashes cracked, all the same plaintext. Why is "how
+     many cracked" the wrong metric here?
+
+  2. An attacker cracks nothing at all. What have they still
+     been handed?
+
+  3. Theo's commit says "safer than plaintext". Name the
+     specific misunderstanding in those three words.
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/crypto/level2.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, why unsalted MD5 makes reuse visible
+without cracking anything, the real-world credential-dump cases,
+and a Sigma rule for password-cracking tools on corporate hosts.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -2162,79 +2020,22 @@ and has not been assessed as such.
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-326 — Inadequate Encryption Strength
-    Not the cipher — the effective strength of AES-256 keyed
-    from a wordlist password is the strength of the password.
+Three weaknesses, and one thing that is not a weakness at all.
 
-  CWE-522 — Insufficiently Protected Credentials
-    The passphrase hardcoded in make-backup.sh, world-readable,
-    beside the ciphertext.
+  CWE-326   Inadequate Encryption Strength — not the cipher, the
+            passphrase protecting it.
+  CWE-522   Insufficiently Protected Credentials.
+  CWE-311   Missing Encryption of Sensitive Data.
 
-  CWE-311 / CWE-312 — Missing Encryption / Cleartext Storage
-    The decrypted contents, and the plaintext restore config
-    appended to the dump.
+  The retained CVV2 is none of these. It is a PROHIBITED
+  PRACTICE: PCI-DSS v4.0.1 requirement 3.3.1 states that
+  sensitive authentication data is not stored after
+  authorization, even if encrypted. Requirement 3.5.1 separately
+  governs rendering the PAN unreadable.
 
-  CWE-916 — Use of Password Hash With Insufficient
-    Computational Effort. Carried over from level2 and directly
-    relevant here: the same weakness that let john crack the
-    password in a second is what makes this key worthless.
-
-  PCI-DSS v4.0.1 (Vesta is a merchant; this is the governing
-  standard for the engagement)
-    3.3.1  Sensitive Authentication Data must not be retained
-           after authorization, even if encrypted. CVV storage
-           is prohibited outright.
-    3.5.1  PAN must be rendered unreadable wherever stored.
-    3.6.1  Cryptographic keys protecting stored account data
-           must be protected against disclosure and misuse.
-    3.7.x  Key-management lifecycle: generation, distribution,
-           storage, rotation, retirement.
-    8.3.6 / 8.6.3  Password strength requirements, including
-           for credentials used by systems and applications.
-    12.x   Governing policy must exist AND be followed.
-
-  NIST SP 800-57 Part 1 — Recommendation for Key Management
-    The canonical reference for the lifecycle Theo skipped. Key
-    storage separate from protected data is foundational.
-
-  NIST SP 800-132 — Password-Based Key Derivation
-    Specifies PBKDF2 and, critically, that password-based keys
-    inherit the entropy of the password. A KDF raises per-guess
-    cost; it does not add entropy that was never there.
-
-  OWASP Top 10:2025 — A04: Cryptographic Failures
-    The category exists for exactly this shape of finding:
-    correct primitive, failed key management.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 1.4: cryptographic solutions — symmetric vs.
-    asymmetric, key exchange, KDFs, and the recurring exam
-    theme that key management, not algorithm choice, is where
-    implementations fail.
-
-  ISC2 CISSP
-    Domain 3 (Security Architecture and Engineering): the
-    cryptographic lifecycle, key management, and the principle
-    that keys must be protected at least as strongly as the
-    data. Domain 2 covers data retention and destruction —
-    the CVV finding.
-
-  PCI Professional (PCIP) / QSA training
-    SAD retention is the single most-tested rule in the
-    curriculum, precisely because merchants get it wrong.
-
-  CompTIA CySA+ (CS0-003)
-    Data-protection controls and the analyst's job of
-    identifying prohibited data in unexpected locations —
-    backups, logs, exports, test environments.
-
-  Offensive Security OSCP / PEN-200
-    Post-exploitation credential reuse: recovered passwords
-    are tried everywhere, and encrypted archives are a
-    standard target once a wordlist-crackable password is in
-    hand.
+  PCI-DSS v4.0.1 is the regime, and it is contractual rather
+  than statutory: notification runs to Vesta's acquirer and the
+  card brands under the merchant agreement, not to a regulator.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -2289,6 +2090,32 @@ and has not been assessed as such.
      automated scan of backups and exports for PAN and SAD
      patterns will catch the next instance without waiting for
      an auditor.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. AES-256 was never broken. So why is "the backup was
+     encrypted" not a mitigating fact?
+
+  2. Which finding here cannot be fixed by any encryption or
+     key-management practice, and why?
+
+  3. These are nightly backups. What does that do to the scope
+     of the finding?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/crypto/level3.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, why key management bounds the strength
+of any cipher, the real-world card-data cases, and a Sigma rule
+for archive decryption with a passphrase on the command line.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
