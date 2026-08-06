@@ -384,6 +384,34 @@ The Center for Internet Security's *Critical Security Controls v8.1* (released J
 
 The 2025 Top 10 also expanded **A03: Software Supply Chain Failures** (broader than the 2021 *Vulnerable and Outdated Components* category — now covers the full software supply chain rather than just outdated dependencies) and retained **A07: Authentication Failures** (renamed from 2021's *Identification and Authentication Failures*, same position). Default credentials map into the A07 category by content and A02 by example-list inclusion; most auditors will cite both. The 2025 edition also introduces a brand-new **A10: Mishandling of Exceptional Conditions** and elevates **A04: Cryptographic Failures** (which had been A02 in 2021) — neither applies directly to today's finding, but they're worth knowing when comparing 2021-era and 2025-era audit reports against each other.
 
+### MITRE ATT&CK — the two techniques the credential enables
+
+The zone transfer is reconnaissance. What the recovered credential
+enables afterwards is the part that matters for scoping, and the
+in-game post-mortem names both halves.
+
+**[T1078 — Valid Accounts](https://attack.mitre.org/techniques/T1078/)**
+
+A working credential is the cleanest access primitive an adversary can
+hold: no exploit, no malware, no anomaly in any signature-based control.
+ATT&CK lists it under Initial Access, Persistence, Privilege Escalation
+*and* Defense Evasion, which is unusual and is the point. One artifact
+serves four tactics at once, and every action it enables looks like
+legitimate use in the logs. This is why the unrotated default in this
+level is a more serious finding than the zone transfer that disclosed
+the map.
+
+**[T1133 — External Remote Services](https://attack.mitre.org/techniques/T1133/)**
+
+The service account was reachable from outside with an interactive
+shell, which is the combination this technique describes. Atlas's
+perimeter was asserted to be VPN-only; it was not. An adversary using
+valid credentials against an externally-reachable service generates no
+exploitation signal at all, so detection has to come from the account's
+*behaviour* rather than from the connection itself: where it
+authenticates from, at what hour, and whether a service identity has any
+business running an interactive session.
+
 ## §6 — Cert exam relevance
 
 The certification industry has been teaching this finding for decades. If you study any of the certs below, you've seen — or will see — the DNS zone transfer example.

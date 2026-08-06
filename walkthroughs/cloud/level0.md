@@ -432,6 +432,40 @@ Coverline is subject to GLBA because insurance is a Title V financial activity. 
 
 The Coverline finding implicates (c) specifically — the bucket exposed NPI without the access controls 314.4(c) requires. The remediation cascade includes (g) — the IR plan triggers — and (h) — the next annual board report will reference the incident.
 
+### MITRE ATT&CK — what a public bucket enables next
+
+The in-game post-mortem names four techniques that describe where this
+goes rather than what happened, and that forward view is what a risk
+assessment needs. None of them occurred here; all of them are reachable
+from what was found.
+
+**[T1530 — Data from Cloud Storage](https://attack.mitre.org/techniques/T1530/)** is
+the immediate one: the objects in the bucket are readable, with no
+authentication and no request identity recorded.
+
+**[T1538 — Cloud Service Dashboard](https://attack.mitre.org/techniques/T1538/)**
+becomes available the moment the RDS credential is used, because
+credentials that work in one place are tried everywhere. A console
+session gives an adversary the same inventory view Coverline has, which
+is a substantially better position than enumerating from outside.
+
+**[T1485 — Data Destruction](https://attack.mitre.org/techniques/T1485/)** and
+**[T1486 — Data Encrypted for Impact](https://attack.mitre.org/techniques/T1486/)**
+are the pair that turns a confidentiality finding into an availability
+one. A bucket policy permissive enough to allow reads is worth checking
+for writes, because the same misconfiguration frequently grants both,
+and an insurer that cannot produce claim documents has an operational
+crisis in addition to a disclosure.
+
+**[T1567.002 — Exfiltration to Cloud Storage](https://attack.mitre.org/techniques/T1567/002/)**
+closes the loop: cloud storage is also where data *leaves*, over TLS, to
+a service indistinguishable from legitimate traffic.
+
+The reason to enumerate these in a report is that "a bucket is public"
+invites the response "so we made it private." The technique chain is the
+argument for why the follow-up work — key rotation, write-permission
+audit, egress monitoring — is not optional.
+
 ## §6 — Cert exam relevance
 
 Equal-depth coverage for the twelve cert families cited in the in-game post-mortem. Cloud touches more certs than any other track because the cloud-security cert market has fragmented across vendor-specific (AWS, Azure, GCP), vendor-neutral (CCSP, CCSK), pentest-oriented (GCPN, OSCP), and traditional-track (Security+, CySA+, CISSP) lines.

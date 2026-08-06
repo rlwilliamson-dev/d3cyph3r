@@ -243,6 +243,28 @@ The structural lesson maps onto Vesta almost line for line: an encrypted archive
 
 **OWASP Top 10:2025 — A04: Cryptographic Failures.** The category was renumbered from A02 in the 2021 edition; when citing it in a client deliverable, use the current A04 designation. It exists for exactly this shape of finding: correct primitive, failed key management. (The related weakness set also covers exposed keys and secrets, deprecated algorithms, and missing encryption at rest and in transit.)
 
+### MITRE ATT&CK — what the recovered password reaches
+
+**[T1078 — Valid Accounts](https://attack.mitre.org/techniques/T1078/)**
+
+The password `john` recovered is not one credential. It is the host
+login, the admin login, and the archive passphrase, which means a single
+cracked hash produced valid-account access across three different trust
+boundaries. That is the mechanism reuse actually exploits: not that a
+password is weak, but that its blast radius is the union of everywhere
+it was accepted.
+
+**[T1005 — Data from Local System](https://attack.mitre.org/techniques/T1005/)**
+
+Once authenticated, the archive is just a file to be read. There is no
+exploitation step in this level and no tooling more exotic than
+`openssl`. ATT&CK's framing is useful here precisely because it is
+unglamorous: collection from a local system is a documented adversary
+behaviour that requires nothing but access, and the entire defensive
+question is what a legitimately-authenticated identity is permitted to
+read. Cardholder data sitting under a passphrase that a shared password
+unlocks answers that badly.
+
 ## §6 — Cert exam relevance
 
 **CompTIA Security+ (SY0-701)** Domain 1.4 covers cryptographic solutions — symmetric versus asymmetric, block cipher modes, key exchange, and key derivation. The exam returns repeatedly to the theme that key management, not algorithm selection, is where implementations fail; questions shaped as "the data was encrypted with AES-256, so why was it compromised?" expect you to reach for key handling. Domain 4 covers the data-lifecycle side, including retention and secure destruction.

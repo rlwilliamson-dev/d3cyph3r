@@ -521,17 +521,6 @@ One weakness, and a discipline.
   attacker-side techniques to be aware of, IF the formal
   investigation develops in that direction, are:
 
-  T1078     — Valid Accounts. The threat model where a
-              legitimate-credentialed insider uses their own
-              access to do something improper.
-  T1583     — Acquire Infrastructure. The pre-compromise
-              category that includes "Develop Capabilities" —
-              e.g., reusing a previously-captured photograph as
-              an alibi prop falls under capability development.
-  T1592     — Gather Victim Host Information. The
-              reconnaissance technique an insider may have
-              performed before the badge event.
-
   None of these are confirmed by the forensic finding alone.
   They become relevant only if the formal investigation finds
   evidence of intent to exfiltrate.

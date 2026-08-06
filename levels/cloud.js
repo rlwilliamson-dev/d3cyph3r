@@ -1834,10 +1834,6 @@ Two weaknesses, and a missing log.
   T1078        Valid Accounts.
   T1213        Data from Information Repositories — broker
                portal would be the next info-repo.
-  T1090        Proxy — if the broker portal mediates access
-               to insurance-broker data, lateral movement
-               can chain further.
-
 
 ─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 

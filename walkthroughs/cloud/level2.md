@@ -333,6 +333,45 @@ Coverline's SOC 2 attestation depends on the **CC6 (Logical and Physical Access)
 - **CWE-250 Execution with Unnecessary Privileges** — the migration ran with far more privilege than it needed.
 - **CWE-798 Use of Hard-coded Credentials** / **CWE-312 Cleartext Storage of Sensitive Information** — the five plaintext secrets in `bootstrap-iam-keys.env`.
 
+### MITRE ATT&CK — the persistence chain admin unlocks
+
+A dormant administrator key is not dangerous because of what it did. It
+is dangerous because of the sequence it makes available, and the in-game
+post-mortem names that sequence deliberately.
+
+**[T1098.001 — Account Manipulation: Additional Cloud Credentials](https://attack.mitre.org/techniques/T1098/001/)**
+
+The first thing an adversary does with admin is stop depending on the
+credential that got them in. Minting a new access key on a *different*
+principal means revoking `legacy-deploy-bot` accomplishes nothing, and
+this is why incident response in cloud environments starts with
+enumerating recently-created credentials rather than with disabling the
+one that was found.
+
+**[T1098.003 — Account Manipulation: Additional Cloud Roles](https://attack.mitre.org/techniques/T1098/003/)**
+
+Attaching policies or extending trust relationships spreads the
+privilege across identities that individually look unremarkable. A role
+whose trust policy quietly gained an extra principal is far harder to
+spot than a user holding `AdministratorAccess`.
+
+**[T1136.003 — Create Account: Cloud Account](https://attack.mitre.org/techniques/T1136/003/)**
+
+A newly created identity has no history to look anomalous against, and
+in an account that already contains a terminated employee and a
+five-year-old key, one more plausible-looking principal is unlikely to
+be questioned.
+
+**[T1530 — Data from Cloud Storage](https://attack.mitre.org/techniques/T1530/)**
+
+The objective. Administrator reads every bucket in the account,
+including the ones holding the claim documents from `level0@cloud`.
+
+Read in order, the chain explains why the remediation in this level is
+not "deactivate the key." It is deactivate the key, then enumerate
+everything that key could have created, on the assumption that it may
+already have.
+
 ## §6 — Cert exam relevance
 
 **AWS Certified Security – Specialty (SCS-C03).** Identity and Access Management is the heart of this exam, and this level is an SCS-C03 scenario in miniature (SCS-C03 replaced SCS-C02 on December 1, 2025; IAM's exam weight rose to 20%). Expect questions on least-privilege policy design, detecting unused credentials (the IAM credential report; IAM Access Analyzer's unused-access findings), distinguishing managed from inline policies, and using Service Control Policies and permissions boundaries as account-wide guardrails. A representative item: *"A security review finds a service account with the AdministratorAccess managed policy whose access key has not been used in 18 months. Which combination of actions remediates the finding with least disruption?"* — deactivate (don't immediately delete) the key, confirm nothing breaks, then delete the user and replace the workload's access with a least-privilege role.

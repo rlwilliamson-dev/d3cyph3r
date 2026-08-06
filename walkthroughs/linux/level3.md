@@ -210,6 +210,31 @@ The parallels share one structural feature: **a privilege or a secret outlived t
 
 The reporting clock is the part worth committing to memory, because it is far tighter than the FTC's and applies to a different population. Under the Computer-Security Incident Notification Rule, Halton has **36 hours** from determining that a notification incident has occurred to notify its primary federal regulator. A Vault root token sitting in an attacker-reachable backup is precisely the kind of finding that starts that determination.
 
+### MITRE ATT&CK — where the credential actually lived
+
+**[T1552.001 — Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/)**
+
+The in-game post-mortem names this alongside the sudo abuse, and it is
+worth separating because it describes a different failure. T1548.003 is
+how the account reached the file; T1552.001 is why the file was worth
+reaching.
+
+Adversaries search filesystems for credentials because it works
+disproportionately often, and the places they look are boringly
+predictable: configuration directories, backup trees, deployment
+scripts, and anything named like a secret. The Vault token here was in
+none of those by intent. It arrived in `/var/backups/halton-prod/`
+because a config snapshot swept up `/etc/halton/secrets.d/`, and the
+file it came from carried a comment saying DO NOT BACK UP.
+
+That is the pattern worth internalising: credential exposure through
+this technique is usually a *side effect of a process nobody reviewed*,
+not a decision anyone made. Nobody chose to put a root token in a
+backup. A backup job was pointed at a directory, the directory's
+contents changed, and no control existed to notice. Secret-scanning
+tooling aimed at repositories will not see it, because it never reached
+a repository.
+
 ## §6 — Cert exam relevance
 
 **Offensive Security OSCP / PEN-200** treats this level as bread and butter. `sudo -l` is the *first* command in the Linux privilege-escalation playbook — before SUID hunting (`find / -perm -4000`), before cron inspection, before kernel-exploit triage. The PEN-200 materials teach that any sudoers entry is a candidate escalation path, and **GTFOBins** (gtfobins.github.io) is the reference for which sudo-allowed binaries can be escaped to a root shell. `cat` isn't in the "spawn a shell" category — but it *is* an arbitrary-file-read primitive, and GTFOBins lists `cat` precisely for the "read a root-only file" case. The exam tests whether you recognize a permissive grant as a foothold, not whether you can pop a shell from it.

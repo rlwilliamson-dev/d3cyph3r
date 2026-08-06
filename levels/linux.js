@@ -1160,10 +1160,6 @@ What you simulated maps to:
   T1078     — Valid Accounts (the staging-account login itself)
   T1083     — File and Directory Discovery (carryover from lvl 0)
   T1552.001 — Unsecured Credentials: Credentials In Files
-  T1006     — Direct Volume Access (loosely — when an attacker
-              reads files the access-control layer should have
-              denied, but the layer was misconfigured)
-
 T1552.001 in particular is one of the highest-frequency techniques
 in published threat reports. It will be in every incident report
 you read for the rest of your career.

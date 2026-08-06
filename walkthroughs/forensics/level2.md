@@ -339,6 +339,33 @@ A third technique is relevant on the defender side:
 
 ---
 
+### CWE-539 — Use of Persistent Cookies Containing Sensitive Information
+
+[CWE-539](https://cwe.mitre.org/data/definitions/539.html) is the
+weakness class the recovered session artifact belongs to, and it cuts
+both ways in this level.
+
+A persistent cookie survives the browser session by design, which is
+what makes "remember me" work. The cost is that the authentication
+material now sits on disk, in a database an investigator can query, for
+as long as its expiry allows. From the provider's perspective this is a
+usability decision with a documented weakness attached. From Reed's
+perspective it is the artifact that identified his account.
+
+Two things follow, and they should be kept separate in the write-up.
+
+For **Polaris as a defender**, the finding is that a cleared workstation
+retained authentication material for a personal service in recoverable
+form. That is a control gap regardless of this investigation: any
+attacker with disk access, and any future forensic examiner, obtains the
+same artifact.
+
+For **the investigation**, the cookie's evidentiary value is entirely in
+what it *names* rather than what it *opens*. Using it would contaminate
+the evidence and likely constitute unauthorised access. CWE-539 explains
+why the artifact exists; it does not license using it, and the
+restraint here is the professional standard being taught.
+
 ## §6 — Cert exam relevance
 
 Forensic curricula align tightly to the techniques this level demonstrates. A non-exhaustive list of where you'll see browser-DB / SQLite forensics tested:

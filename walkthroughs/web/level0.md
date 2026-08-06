@@ -328,6 +328,31 @@ The current OWASP Top 10 edition is **OWASP Top 10:2025**, finalized in January 
 
 The OWASP 2025 recommended mitigations for A02 are: documented hardening procedures applied identically across environments (Ansible/Terraform/etc., enforced in CI/CD), automated configuration scanning (tools that detect autoindex-on, weak ciphers, missing security headers), and explicit configuration baselines reviewed at least annually. For A01: deny by default, validate authorization at every request, log access-control failures and alert on them.
 
+### CWE-668 — Exposure of Resource to the Wrong Control Sphere
+
+[CWE-668](https://cwe.mitre.org/data/definitions/668.html) is the
+weakness the other two sit inside, and it is the one worth carrying
+away, because it survives every specific fix applied here.
+
+A control sphere is the boundary within which a resource's access rules
+are meant to apply. `DocumentRoot` is a sphere whose rule is "everything
+in here is published to the internet." BluePier placed working files
+inside it. Nothing was misconfigured in the sense a scanner recognises:
+Apache served exactly what it was told to serve, to exactly the audience
+that sphere is defined to have.
+
+This is why disabling `mod_autoindex` is a mitigation rather than a fix.
+Autoindex controls whether the directory is *browsable*; it has no
+bearing on whether the files inside it are *reachable*, and
+`curl /backup/db-creds.txt` still succeeds afterwards. The finding is
+resolved only when the resource leaves the sphere, which means moving
+the directory out from under `DocumentRoot` entirely.
+
+Framing it this way also explains the `robots.txt` entry, which looks
+like a fourth mistake and is really the same one. Listing a path there
+does not move it to a different sphere; it advertises the path while
+leaving its accessibility unchanged.
+
 ## §6 — Cert exam relevance
 
 Equal-depth coverage for the five certifications cited in the in-game post-mortem.

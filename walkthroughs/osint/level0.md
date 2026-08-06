@@ -287,6 +287,28 @@ Two Essential Goals apply to Aaron's case:
 
 The HPH-CPGs are not regulatory mandates in themselves — they are HHS recommendations. But they are increasingly cited in cyber-insurance underwriting questionnaires and in BAA contract terms; the gap between "recommendation" and "expected baseline" closes as the document matures.
 
+### MITRE ATT&CK — reconnaissance as a documented tactic
+
+**[T1591.002 — Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/)**
+
+It is worth noticing that ATT&CK has a whole tactic for what this level
+does. Reconnaissance is not a preamble to the attack; it is part of it,
+and it is the phase where a defender has the least visibility because
+none of it touches their infrastructure.
+
+Business relationships matter specifically for Veridian because it is a
+Business Associate. An adversary who learns which covered entities
+Veridian serves has learned which organisations a Veridian credential
+reaches, and that mapping is usually assembled from entirely public
+material: case studies, press releases, conference talks, job postings
+naming the systems a team integrates with.
+
+The defensive response is not secrecy, which is neither achievable nor
+desirable for a company that must market itself. It is assuming the
+relationship map is known and making it worthless, by ensuring that
+compromising Veridian does not confer standing access to any customer's
+environment.
+
 ## §6 — Cert exam relevance
 
 Equal-depth coverage for the eight certifications cited in the in-game post-mortem. OSINT touches more certs than most tracks because the discipline spans offensive (PenTest+, OSCP), defensive (CySA+, CISSP), and OSINT-specialty (GIAC GOSI, SANS SEC487) cert paths.

@@ -361,6 +361,32 @@ The relevant techniques:
 - **T1078.004 (Valid Accounts: Cloud Accounts)** — specifically relevant for AWS access keys.
 - **T1098 (Account Manipulation)** — what an adversary might do post-compromise to establish persistence.
 
+### MITRE ATT&CK — the two reconnaissance techniques in play
+
+**[T1589.001 — Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/)**
+
+This is the technique the whole engagement rests on, and ATT&CK's
+placement of it is instructive: it sits in Reconnaissance, before any
+tactic that touches the target. Adversaries gather credentials from
+breach corpora, paste sites, and public repositories precisely because
+that collection is invisible to the organisation whose credentials are
+being gathered. Veridian's logs contain nothing about this, and there is
+no control Veridian can deploy that would change that.
+
+What Veridian *can* control is whether a gathered credential still
+works, which is why the finding converts into rotation and MFA rather
+than into monitoring.
+
+**[T1591.002 — Gather Victim Org Information: Business Relationships](https://attack.mitre.org/techniques/T1591/002/)**
+
+The committed `.env` does more than expose keys. It names the services
+the project integrated with, which is organisational intelligence in its
+own right: an adversary learns which cloud provider, which third-party
+APIs, and which authentication patterns a developer is accustomed to
+using. When that developer joins a new employer, those habits usually
+arrive with them, which is the connection this engagement is actually
+investigating.
+
 ## §6 — Cert exam relevance
 
 ### SANS GOSI (GIAC Open Source Intelligence)

@@ -553,10 +553,6 @@ One weakness, and it belongs to a person rather than a system.
 
   Pre-engagement (PRE-ATT&CK):
 
-  T1583      Acquire Infrastructure — the adversary's
-             preparation. Out of scope for our lookup but
-             named here to complete the chain.
-
 
 ─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 

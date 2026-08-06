@@ -256,6 +256,27 @@ The Robots Exclusion Protocol — originally Martijn Koster's 1994 convention �
 - **CWE-798 (Use of Hard-Coded Credentials)** — carryover: the un-rotated AWS key, still a hard-coded, now-public credential.
 - **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — the umbrella; mapping-Discouraged in current MITRE guidance, so cite the specific children above.
 
+### MITRE ATT&CK — archived material as an intelligence source
+
+**[T1591 — Gather Victim Org Information](https://attack.mitre.org/techniques/T1591/)**
+
+The technique is ordinary. What this level demonstrates is that its
+source material does not expire.
+
+An organisation's understanding of its own exposure is almost always
+based on what is *currently* published. Aaron deleted the repository and
+scrubbed the 2009 site, and by any live check both were gone. Neither
+action reduced what an adversary can gather, because the Internet
+Archive is not a copy of the current web; it is a record of the web as
+it was, and it is indifferent to what the origin does afterwards.
+
+For an assessment, this changes the question from "what does the
+organisation publish" to "what has the organisation ever published."
+Those are very different sets, the second is strictly larger and only
+grows, and the practical consequence is that remediation for anything
+found this way is always rotation and never deletion. Deletion changes
+what a live check returns and nothing about what an adversary holds.
+
 ## §6 — Cert exam relevance
 
 ### SANS SEC497 (Practical Open-Source Intelligence) + GIAC GOSI
