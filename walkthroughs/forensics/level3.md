@@ -212,6 +212,39 @@ The `Received:` ordering rule that makes chain reading possible comes from **RFC
 
 There is also a non-technical dimension here that changes the character of the case. Up through yesterday this was a data-handling incident. Producing a fabricated exculpatory document is a different category of act, and fabricating evidence is generally a separate offense from the underlying conduct. **That determination belongs to counsel, not to the analyst.** Your deliverable states what the artifacts show; it does not characterize intent or recommend charges. Analysts who editorialize in a forensic report hand the other side something to attack that isn't the evidence.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | The provider's lawful production of the mailbox, obtained under a preservation request and a court order |
+| The claim tested | An email produced by counsel purporting to authorise Reed to take the project drive home |
+| What the headers show | Authentication failures against a domain at `p=REJECT`, an envelope sender disagreeing with the letterhead, a Message-ID minted by the wrong system, and a server receipt roughly 34 hours after the message's own `Date:` |
+| The corroborating record | An authenticated submission from Reed's own account two minutes after the exfiltration |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+
+**The exposure being sized here is a false exculpatory document, which is
+a different kind of finding entirely.** No new CUI moved. What changed is
+that a defence has been offered and can be disproven from records the
+sender never controlled. The `From:` header is free text a sender types;
+the `Received:` chain is written by the receiving infrastructure after the
+message leaves their hands. When those disagree, the servers win.
+
+**A single authentication failure would prove very little, and the
+strength here is the convergence.** SPF alone breaks on ordinary
+forwarding. What does not have an innocent explanation is every check
+failing at once, against a domain publishing `p=REJECT`, on a message
+whose stamped receipt contradicts its own claimed date by a day and a
+half, alongside a genuine message from the same sender that passes
+everything. The comparison is the method.
+
+**The `ESMTPSA` on Reed's own outbound message is the load-bearing
+detail.** The trailing `A` denotes authenticated submission: not a relay
+passing along someone else's mail, but a logged-in user handing a message
+to their own provider. Combined with the two-minute gap after the upload,
+it places the account holder at the keyboard in a way browser history
+alone never could, and it is the artifact that closes the shared-machine
+argument left open in the previous level.
+
 ## §4 — Real-world parallels
 
 **Business Email Compromise is the industrial-scale version of exactly this.** The FBI's Internet Crime Complaint Center puts BEC losses at **$2.94B (2023), $2.77B (2024), and $3.05B (2025)** — the most financially destructive enterprise-targeted category, with per-complaint losses averaging over $120,000 and the large majority of funds moving by wire or ACH. Every one of those incidents begins the way this level does: a recipient believes a `From:` header.

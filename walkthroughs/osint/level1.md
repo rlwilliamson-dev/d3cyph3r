@@ -234,6 +234,38 @@ The OSINT-side vulnerability is the symmetric consequence: any public repo on Gi
 
 The third related vulnerability is the consent-and-disclosure layer. Aaron's bio in his GitHub profile names his prior employer (Helix Therapeutics) and his current role (Senior CMO at Veridian Analytics). The .env's inline comment names the data category cached in the bucket (PharmGKB JSON dumps — a pharmacogenomic knowledge base). An attacker who finds the AWS credentials immediately knows whose AWS account they have access to, what kind of data is plausibly there, and what employer-stakeholders care about that data. The professional context Aaron published in his GitHub bio is itself a force-multiplier for the credential leak.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | A public personal GitHub repository belonging to the same individual |
+| Committed at HEAD | A `.env` carrying live AWS access keys, an OpenFDA API key, and a Flask secret |
+| Why `.gitignore` did not help | It was added later, and ignoring a path never untracks a file already committed |
+| Scope of exposure | Public since the commit, to anyone including automated secret scanners |
+| Regime | HIPAA as a Business Associate plus HITRUST CSF; a BA notifies the covered entity within 60 days, and the covered entity carries the individual-notice duty |
+
+**Personal does not mean out of scope, and that is the uncomfortable part
+of executive-protection work.** The repository is the individual's own,
+built in a previous clinical role. The credentials in it are live. An
+attacker does not observe the boundary between someone's personal
+projects and their employer's assets, so the assessment cannot either,
+while still handling the finding with the care a personal artifact
+deserves.
+
+**`.gitignore` is the most commonly misunderstood control in this
+class.** It prevents *untracked* files from being staged. It has no effect
+on a file git is already tracking, and none at all on history. Adding
+`.env` to it after the commit produces a repository that looks correctly
+configured while continuing to publish the secret at HEAD, which is
+precisely the state here.
+
+**Assume the keys are already harvested and scope accordingly.** Public
+repositories are continuously scanned by automation that is faster than
+any human review. The window is not "since someone noticed" but "since
+the commit," and the only meaningful remediation is rotation at the
+provider plus a review of what those keys touched. Deleting the file
+changes nothing, as the next level demonstrates directly.
+
 ## §4 — Real-world parallels
 
 Source-control credential leakage is one of the most documented categories of cybersecurity incident in modern history. A non-exhaustive tour:

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-08-05
+
+**Every walkthrough now sizes its finding, and the Linux track cites the right law.** Naming a vulnerability is half of an assessment; the other half is how much is exposed, for how long, and what it opens next. That half was missing from all 24 walkthroughs. Adding it surfaced a regulatory citation error that had been shipped for months.
+
+No gameplay changes.
+
+### Added
+
+- **§3.5 Blast radius, on all 24 walkthroughs.** Each one carries a six-dimension table (what the finding reached, what data is in scope, the exposure window, what it escalates to, and the governing regime) followed by two or three judgement pull-outs naming the ways assessments of that specific finding go wrong. Every figure is sourced from the level's own content. Where a level does not establish a number, the section says so rather than inventing one: `level0@network` reports that Atlas cannot determine its own blast radius, because that is the finding.
+- **A per-track regulatory reference in the authoring guide**, verified against primary sources, with links. It exists so the next walkthrough gets the regime right by default instead of by luck.
+- The section is enforced like the rest of the template: a walkthrough missing it, or ordering it wrongly, fails the build.
+
+### Fixed
+
+- **The Linux track cited the wrong GLBA rule throughout.** It presented Halton Bank as subject to the FTC Safeguards Rule (16 CFR Part 314) and its 30-day, 500-consumer notification requirement. That rule governs *nonbank* financial institutions; banks are carved out because the federal banking agencies supervise them. Halton's actual obligations run through the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B, Pt. 208 App. D-2, Pt. 364 App. B), and its notification clock is **36 hours** to its primary federal regulator under the Computer-Security Incident Notification Rule, not 30 days to the FTC.
+
+  Corrected across all four Linux walkthroughs, their further-reading lists, and the worked example in the project README. The replacement is also a better lesson: the 36-hour clock is dramatically tighter than the one it replaces, and far less widely known.
+
+
 ## [2.4.2] - 2026-08-05
 
 ### Fixed

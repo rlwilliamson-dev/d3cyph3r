@@ -316,6 +316,39 @@ Pull any one thread:
 
 The full remediation tracks each failure independently because each has a different fix and a different timeline. The IDOR fix is one code change shipped this afternoon. The demo-account decommission is a coordination conversation with Carlos and the BluePier successor (or, more likely, a unilateral decision by Carlos because the BluePier successor doesn't exist). The free-form-field cleanup is a schema audit plus a one-shot migration that scrubs known credential patterns from existing data.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Carlos's transcript-download endpoint, which authenticates correctly and never authorises |
+| Who can exploit it | Any logged-in student, by changing `student_id` in the request |
+| Records in scope | Every transcript in the system, which under 34 CFR § 99.3 are education records by name |
+| Detectability | Requests are well-formed and authenticated, so they do not look anomalous |
+| Escalates to | A BluePier-era demo account whose `advisor_notes` field carries the `level2@web` credential |
+| Regime | FERPA education records (no notification duty, no fine schedule); any clock comes from state breach law attaching to the PII |
+
+**Authentication passed. That is what makes this dangerous rather than
+obvious.** The middleware does one job correctly and skips the second
+entirely. Every request in the logs carries a valid session belonging to
+a real, enrolled student, so there is no failed-login spike, no unusual
+source, and nothing for a WAF to match. The absence of an alert here is
+not evidence that the endpoint was not abused.
+
+**The exposed population is every transcript, not the one you fetched.**
+Demonstrating an IDOR on a single record establishes that the control is
+missing, and a missing control has no per-record scope. The assessment
+should report the finding as full-table reach and let Meridian's log
+retention answer the separate question of what was actually taken, if it
+can.
+
+**Stale accounts widen the radius past the current roll.** The demo
+account left over from the BluePier engagement is still live and still
+carries a free-text notes field with a credential in it. Two distinct
+failures meet there: an account that should have been removed at project
+close, and a habit of parking secrets in fields designed for prose. The
+IDOR is what a scanner might eventually find; the demo account is what an
+attacker would actually use.
+
 ## §4 — Real-world parallels
 
 IDOR is, by several published metrics, the most-disclosed vulnerability class on modern web applications. The pattern keeps appearing because authentication frameworks make it easy to gate access by "logged-in user" and harder to gate by "this specific resource belongs to this specific user." A few named incidents that illustrate the range:

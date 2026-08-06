@@ -176,6 +176,38 @@ There are three distinct weaknesses here, and only one of them is a "credential 
 
 The robots.txt finding (see §7.5) is a fourth, smaller weakness: using a *disclosure-control* mechanism (robots.txt tells crawlers what to skip) as if it were an *access-control* mechanism (it does nothing to stop a human from reading the listed paths).
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Internet Archive captures, a scrubbed 2009 personal site, and a homelab blog post |
+| What deletion achieved | Nothing. The live URL 404s while 2023-24 captures still serve the repository, and the AWS key was never rotated |
+| Identity linkage | Archived content recovers a pseudonymous handle, which maps to further accounts |
+| Also disclosed | A cleartext Nextcloud admin password pasted into a blog post |
+| Regime | HIPAA as a Business Associate plus HITRUST CSF; a BA notifies the covered entity within 60 days, and the covered entity carries the individual-notice duty |
+
+**Deletion is not remediation, and this level exists to make that
+undeniable.** The repository was removed and the finding was considered
+closed. The captures still serve the same `.env`, and the key it contains
+still authenticates because nobody rotated it. Removing the copy you know
+about while leaving the credential valid is the single most common false
+remediation in this entire corpus.
+
+**Alias linkage widens scope past the person's professional footprint.**
+A handle recovered from a scrubbed decade-old site connects accounts that
+no employer inventory lists, on platforms nobody thought to review. This
+is the mechanism that turns a contained credential finding into a
+standing exposure, and it is also where the assessment's ethical
+obligations tighten: the goal is to determine reach, not to compile a
+dossier on a private individual.
+
+**The blog password is the reachable one, and it should be triaged
+first.** An archived AWS key is a rotation problem. A cleartext admin
+password for a self-hosted service is a live door, and self-hosted
+homelab infrastructure is typically unpatched, unmonitored, and reusing
+credentials with everything else the person runs. Age is not a control:
+it means nobody has been watching.
+
 ## §4 — Real-world parallels
 
 **Deleting a GitHub repo doesn't delete the data — Truffle Security's CFOR (July 2024).** Truffle Security documented that data from *deleted* repositories, *deleted* forks, and even *private* repositories on GitHub remains accessible — by design — through the fork network and the public events API. They coined the term **Cross Fork Object Reference (CFOR)** and, reviewing three widely-forked public repos from large AI companies, recovered **40 valid API keys from deleted forks**. GitHub's response to the disclosure was that this is "an intentional design decision and is working as expected." This is the exact lesson of this level, on the exact platform: Aaron deleted the repo, but on GitHub specifically, "deleted" is not "gone" — and the only safe assumption for any committed secret is that it is permanently public and must be rotated.

@@ -235,6 +235,38 @@ Three distinct vulnerabilities stacked on one misconfigured bucket. Remediation 
 
 Each failure is independently a finding. Fixing only the bucket configuration (turn on BPA, lock the bucket) without addressing the credential leaves `Cl41ms-Pr0d-M4st3r-2024` as a still-compromised credential that anyone who downloaded the script before remediation still holds. Fixing only the credential without BPA means the next bucket misconfiguration introduces a new exposure tomorrow.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | `coverline-claims-uploads-prod`, publicly listable and publicly readable, found while walking a six-bucket worksheet |
+| Data class | Claim documents containing PII, at an insurance carrier |
+| Also present | A hardcoded RDS password inside a migration script left in the same bucket |
+| Authentication required | None, and no attribution is available for who else listed it |
+| Escalates to | The RDS master credential, which is `level1@cloud` |
+| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively |
+
+**Five buckets configured correctly is not evidence of a control; it is
+evidence of five correct decisions.** The worksheet walks cleanly until
+one entry does not, and that asymmetry is the finding. A control that
+depends on each bucket being individually right at creation time will
+eventually produce this outcome, which is why the remediation is
+account-level enforcement rather than fixing this bucket.
+
+**The credential in the migration script outranks the documents.**
+Publicly readable claim files are a disclosure with a countable scope. An
+RDS master password is reusable access to the live system that holds
+everything, including records never placed in the bucket. Assessments
+that lead with the document count have ranked the smaller finding first.
+
+**Anonymous access leaves no attribution, and the notification analysis
+has to start from that.** There is no requester identity for
+unauthenticated reads, so Coverline cannot enumerate who accessed what
+without access logging that was not enabled. Both NAIC Model 668 and
+NYDFS § 500.17 run a **72-hour** clock from the determination that a
+cybersecurity event occurred, and inability to rule out unauthorised
+access pushes toward that determination rather than away from it.
+
 ## §4 — Real-world parallels
 
 Three named, well-documented S3-misconfiguration breaches. Each was a major industry event, each is documentable from primary sources, and each lands on the same lesson Coverline's finding lands on: public S3 buckets are the single most common cloud-data-exposure pattern in real consulting work, and the technical controls that prevent them have existed for years.

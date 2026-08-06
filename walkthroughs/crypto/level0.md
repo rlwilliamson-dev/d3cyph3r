@@ -96,6 +96,39 @@ The category error is forgivable in a junior engineer who hasn't been formally t
 
 Each failure is independently a finding. Fixing only one — say, rotating the key without addressing the deployment-pipeline practice that produced the situation — guarantees the same conversation in a future sprint when a different engineer makes a different but isomorphic mistake. The defender's playbook lives in §7. First, the parallels.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Vesta's deploy repository, where the key sits in `api-key.b64` |
+| Credential in scope | A **live** payment-processor key, `vesta_pk_live_…`, base64-encoded and nothing else |
+| Effective protection | None. Base64 is a transport encoding with a published algorithm and no key |
+| Exposure window | Every clone, every fork, and the full git history since the commit |
+| Escalates to | The credential chain into `level1@crypto` |
+| Regime | PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands |
+
+**Encoding the value made the exposure worse, not better, and the commit
+message explains why.** Theo's stated goal was that the key stop showing
+up in git diffs. It worked: the string no longer trips a reviewer's eye or
+a naive secret scanner looking for `pk_live_`. The credential is exactly
+as available as before to anyone who runs `base64 -d`, and is now
+invisible to the controls most likely to have caught it. A control that
+defeats detection while preserving access has negative value.
+
+**Git history is the real scope, and rotation is the only remediation.**
+Deleting the file in a new commit leaves the value in every prior object,
+every clone anyone has taken, and every fork. There is no edit that
+un-publishes it. The only action that changes the attacker's position is
+issuing a new key and revoking this one, and any remediation plan whose
+first step is "remove the file" has the order wrong.
+
+**"Publishable" in the key name is not a scoping argument.** The right
+question for the assessment is what this specific credential can do
+against Vesta's processor account, answered from the processor's own
+documentation rather than from the prefix. Guessing generously about a
+live payment credential is how a finding gets downgraded and then
+re-litigated after an incident.
+
 ## §4 — Real-world parallels
 
 Three named, well-documented incidents follow this exact pattern. Each was a major industry event, each is documentable from primary sources you can read, and each lands on the same lesson Theo's commit lands on: the moment a secret touches source control (encoded or not), it is no longer a secret.

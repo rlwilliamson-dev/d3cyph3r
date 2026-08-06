@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.1">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.5.0">
 </head>
 <body class="page-doc">
 
@@ -43,7 +43,7 @@
   <div class="layout">
     <main id="main" class="doc">
 <h1 id="level2cloud-the-key-nobody-turned-off">level2@cloud — The Key Nobody Turned Off<a class="anchor" href="#level2cloud-the-key-nobody-turned-off" aria-label="Link to this section">#</a></h1>
-<p class="doc-meta"><span class="doc-meta-item">22 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">4,431 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Cloud track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p>A study companion for the third Coverline Insurance cloud engagement. Read it after you&#39;ve solved the level.</p>
+<p class="doc-meta"><span class="doc-meta-item">24 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">4,755 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Cloud track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#blast-radius"><span class="toc-ord">§3.5</span><span class="toc-label">Blast radius</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p>A study companion for the third Coverline Insurance cloud engagement. Read it after you&#39;ve solved the level.</p>
 <blockquote class="spoiler-warning">
 <p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for <code>level3@cloud</code>. If you haven&#39;t solved <code>level2@cloud</code> yet, close this tab and come back after. The level&#39;s whole point is the moment you realize the credential with god-mode over the entire AWS account is one nobody has used since 2024 — and nobody turned off. Reading the writeup first removes that moment.</p>
 </blockquote>
@@ -223,6 +223,57 @@ BACKUP_SVC_SECRET_ACCESS_KEY=bkupSvc+RDSsnapshot/2023scoped/Xq7Lm2
 </ol>
 <p>The connective tissue is <strong>an identity lifecycle that has a &quot;create&quot; step and no &quot;destroy&quot; step.</strong> The bot was created in thirty seconds and would have taken thirty seconds to delete. What made it dangerous was the two years in between, during which it was nobody&#39;s job to notice it. The owner of the teardown, Vikram Shah, left before the migration finished, and the task had no other owner — so least privilege quietly decayed into standing admin.</p>
 <p>There is also a fourth, account-level failure you&#39;ll surface in §7.5: the AWS account root user still has an access key (CIS 2.4) and no MFA (CIS 2.5).</p>
+<h2 id="blast-radius">§3.5 — Blast radius<a class="anchor" href="#blast-radius" aria-label="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>This finding</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Reached</td>
+<td>A least-privilege review across 16 IAM principals in Coverline&#39;s account</td>
+</tr>
+<tr>
+<td>The finding</td>
+<td>A 2024-migration <code>legacy-deploy-bot</code> still holding <code>AdministratorAccess</code>, with a still-Active access key last used in 2024</td>
+</tr>
+<tr>
+<td>Where the secret was</td>
+<td>A leftover bootstrap-credentials file on the bastion</td>
+</tr>
+<tr>
+<td>Effective scope</td>
+<td>Administrator, which is the whole account rather than any part of it</td>
+</tr>
+<tr>
+<td>Also surfaced</td>
+<td>An orphaned terminated-employee account, a never-rotated 2019 key, and a root access key</td>
+</tr>
+<tr>
+<td>Regime</td>
+<td>SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively</td>
+</tr>
+</tbody></table>
+<p><strong>An unused administrator key is not a smaller finding than a used one.</strong>
+&quot;Last used 2024&quot; describes what happened, not what is possible. The
+credential is Active, so its reach is the entire account: every bucket,
+every database, every log group, including the logs that would record its
+use. Scoping by observed activity systematically understates dormant
+credentials, and dormancy is exactly what makes them attractive.</p>
+<p><strong>A root access key belongs at the top of the remediation list
+regardless of everything else here.</strong> It cannot be scoped, cannot be
+constrained by policy, and is the one credential AWS&#39;s own guidance says
+should not exist. It appears as a bonus find in this level, and in a real
+report it would lead the executive summary.</p>
+<p><strong>The pattern across all four accounts is the actual deliverable.</strong>
+A migration bot, a terminated employee, a 2019 key, and a root key are
+not four unrelated items; they are one identity-lifecycle process that
+creates principals and never retires them. Deactivating these four leaves
+the process that produced them intact, and the next migration will produce
+the next set. That is the finding a carrier&#39;s board needs to hear, and it
+is the one NYDFS and NAIC examiners will test against.</p>
 <h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
 <p><strong>Capital One, 2019 — the over-privileged role that read 100 million records.</strong> A former AWS engineer exploited a Server-Side Request Forgery flaw in a misconfigured web application firewall to obtain the credentials of an IAM role attached to it. The role had far more S3 permission than the WAF needed — it could list and read buckets holding ~100 million U.S. and ~6 million Canadian credit-card-application records. The breach is the canonical least-privilege cloud failure: the SSRF was the door, but the <em>blast radius</em> came from a role granted more than its job required. The U.S. Office of the Comptroller of the Currency assessed an $80 million penalty in 2020, and the attacker was convicted in 2022. Had that role been scoped to only the objects the WAF legitimately touched, the same SSRF would have leaked far less.</p>
 <p><strong>Cisco, 2018 (guilty plea 2020) — the access nobody revoked.</strong> A former Cisco engineer who had resigned months earlier retained access to Cisco-controlled AWS infrastructure and, from that access, deployed code that deleted 456 virtual machines hosting Cisco&#39;s WebEx Teams application — knocking ~16,000 accounts offline for up to two weeks and costing Cisco roughly $2.4 million in remediation and refunds. He pleaded guilty in 2020. This is the orphaned-account failure exactly: an identity that should have been deprovisioned at departure was still live, and the gap between &quot;left the company&quot; and &quot;lost access&quot; was the whole vulnerability. It is the real-world version of <code>vikram.shah</code>&#39;s still-Active key.</p>
@@ -323,7 +374,7 @@ BACKUP_SVC_SECRET_ACCESS_KEY=bkupSvc+RDSsnapshot/2023scoped/Xq7Lm2
 <li>NYDFS — <a href="https://www.dfs.ny.gov/industry_guidance/cybersecurity" target="_blank" rel="noopener noreferrer">23 NYCRR 500 (Cybersecurity Requirements, amended)</a></li>
 </ul>
 <nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/cloud/level1.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level1@cloud</span><span class="pager-title">The Migration Table Nobody Dropped</span></a><div class="pager-cell pager-empty"></div></nav>    </main>
-    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-0-enter-the-level">Step 0 — Enter the level</a></li><li><a href="#step-1-confirm-who-you-are">Step 1 — Confirm who you are</a></li><li><a href="#step-2-enumerate-every-principal">Step 2 — Enumerate every principal</a></li><li><a href="#step-3-inspect-attached-policies-the-finding">Step 3 — Inspect attached policies (the finding)</a></li><li><a href="#step-4-is-the-key-live-and-is-it-used">Step 4 — Is the key live, and is it used?</a></li><li><a href="#step-5-recover-the-secret-the-level3-breadcrumb">Step 5 — Recover the secret (the level3 breadcrumb)</a></li><li><a href="#if-you-got-stuck">If you got stuck</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a><ul class="toc-sub"><li><a href="#nist-sp-800-53-rev-5">NIST SP 800-53 Rev. 5</a></li><li><a href="#cis-aws-foundations-benchmark-v700-s2-identity-and-access-management">CIS AWS Foundations Benchmark v7.0.0 — §2 Identity and Access Management</a></li><li><a href="#nist-csf-20">NIST CSF 2.0</a></li><li><a href="#soc-2-trust-services-criteria">SOC 2 (Trust Services Criteria)</a></li><li><a href="#regulatory-insurance">Regulatory (insurance)</a></li><li><a href="#cwe">CWE</a></li></ul></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a><ul class="toc-sub"><li><a href="#ghost-of-a-terminated-admin">Ghost of a terminated admin</a></li><li><a href="#a-key-older-than-the-cloud-team">A key older than the cloud team</a></li><li><a href="#root-still-has-an-access-key">Root still has an access key</a></li></ul></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-0-enter-the-level">Step 0 — Enter the level</a></li><li><a href="#step-1-confirm-who-you-are">Step 1 — Confirm who you are</a></li><li><a href="#step-2-enumerate-every-principal">Step 2 — Enumerate every principal</a></li><li><a href="#step-3-inspect-attached-policies-the-finding">Step 3 — Inspect attached policies (the finding)</a></li><li><a href="#step-4-is-the-key-live-and-is-it-used">Step 4 — Is the key live, and is it used?</a></li><li><a href="#step-5-recover-the-secret-the-level3-breadcrumb">Step 5 — Recover the secret (the level3 breadcrumb)</a></li><li><a href="#if-you-got-stuck">If you got stuck</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="blast-radius"><a href="#blast-radius"><span class="toc-ord">§3.5</span><span class="toc-label">Blast radius</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a><ul class="toc-sub"><li><a href="#nist-sp-800-53-rev-5">NIST SP 800-53 Rev. 5</a></li><li><a href="#cis-aws-foundations-benchmark-v700-s2-identity-and-access-management">CIS AWS Foundations Benchmark v7.0.0 — §2 Identity and Access Management</a></li><li><a href="#nist-csf-20">NIST CSF 2.0</a></li><li><a href="#soc-2-trust-services-criteria">SOC 2 (Trust Services Criteria)</a></li><li><a href="#regulatory-insurance">Regulatory (insurance)</a></li><li><a href="#cwe">CWE</a></li></ul></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a><ul class="toc-sub"><li><a href="#ghost-of-a-terminated-admin">Ghost of a terminated admin</a></li><li><a href="#a-key-older-than-the-cloud-team">A key older than the cloud team</a></li><li><a href="#root-still-has-an-access-key">Root still has an access key</a></li></ul></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
   </div>
 
   <footer id="site-footer">

@@ -181,6 +181,41 @@ Three CWEs, and the way they interact is the lesson.
 
 One more structural note that will matter more to Vesta than any of the above: the backup host was treated as **out of scope** for cardholder data *because the file was encrypted*. Encrypted cardholder data is still cardholder data for scope purposes. This host has been in the cardholder data environment the entire time and has never been assessed as such — which means its logging, access control, and review requirements have never been applied.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Vesta's nightly production backup, AES-256 encrypted, decrypted with a passphrase recovered in the previous level |
+| Records in scope | 48,219 transaction rows |
+| Fields present | Cardholder name, **full PAN**, expiry, **CVV2**, auth code, amount |
+| Key management | The passphrase is also the host login, and was one of the four MD5 hashes cracked in `level2@crypto` |
+| Regime | PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands |
+
+**AES-256 was never broken, and saying the backup was "encrypted" is not a
+mitigating fact.** The cipher performed exactly as designed. The
+passphrase protecting it was a reused password sitting as an unsalted MD5
+in a git repository, so the effective strength of the control is the
+strength of that password, not the strength of the algorithm. A control
+is only as strong as its key management, and this is the cleanest
+demonstration of that principle in the corpus.
+
+**The retained CVV2 is not a weakness. It is a prohibited practice, and
+it is categorically worse than the rest of the finding.** PCI-DSS v4.0.1
+requirement 3.3.1 states that sensitive authentication data is not stored
+after authorization completes, **even if encrypted**. There is no
+compensating control, no encryption standard, and no key-management
+practice that makes this permissible. Every other item here is a control
+that failed; this is data that should not exist. Requirement 3.5.1
+separately governs the PAN, which must be rendered unreadable wherever it
+is stored.
+
+**Scope is the whole backup set, not one file.** These are nightly
+backups, so the correct question is how many nights of retained archives
+carry the same fields under the same passphrase, and where those archives
+live. Remediation is three separate tracks that must not be conflated:
+purge the SAD, re-key the archives under managed keys, and end the
+password reuse that made the passphrase recoverable in the first place.
+
 ## §4 — Real-world parallels
 
 **LastPass (2022) — the canonical encrypted-backup failure.** In a two-stage intrusion, attackers first took source code and technical documentation from a development environment, then compromised a senior DevOps engineer's home computer, obtained credentials from it, and exfiltrated backups of customer password vaults. The vaults were encrypted; LastPass's initial messaging leaned on that fact. The problem was underneath it. Vault keys are derived from the user's master password with PBKDF2-SHA-256, and while LastPass raised the default iteration count to 100,100 in 2018, **it did not apply that change retroactively** — so a large population of legacy accounts was still at 5,000 iterations when the backups walked out the door. Once an attacker holds the ciphertext, all defenses are offline: they guess as fast as their hardware allows, forever, with no rate limiting and no lockout. In 2025 LastPass settled a class action for $24.5 million, and reporting has linked large cryptocurrency thefts to credentials recovered from those vaults.

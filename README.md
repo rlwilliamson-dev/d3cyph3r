@@ -76,7 +76,7 @@ Regulatory regime is assigned per track and applied consistently, because the sa
 
 | Track | Client | Regime |
 |---|---|---|
-| Linux | Halton Bank | GLBA |
+| Linux | Halton Bank | GLBA § 501(b) (Interagency Guidelines) |
 | Network | Atlas Health | HIPAA |
 | Crypto | Vesta Retail | PCI-DSS |
 | Web | Meridian State University | FERPA |
@@ -110,11 +110,11 @@ The grant was written for a 2024 migration and marked for removal after cutover.
 | Control | NIST 800-53 CM-6 and SC-28 | The backup should have been encrypted and its secrets excluded |
 | Technique | MITRE ATT&CK T1548.003, Abuse Elevation Control Mechanism: Sudo and Sudo Caching | Adversaries enumerate sudo rights and abuse permissive entries; the level's solve path is the technique |
 | Technique | MITRE ATT&CK T1078.003, Valid Accounts: Local Accounts | The surviving local account is the foothold |
-| Regime | GLBA Safeguards Rule | Halton Bank is a covered financial institution; access control and monitoring obligations attach |
+| Regime | GLBA § 501(b), Interagency Guidelines | Halton is a bank, so its rule is 12 CFR Pt. 30 App. B rather than the FTC Safeguards Rule that covers nonbank institutions; III.C.1.a access control and III.C.1.f monitoring attach, and a notification incident carries a 36-hour regulator clock |
 
 The corresponding walkthrough carries this further into remediation sequencing, detection engineering, and the distinction between a control gap and a documented control the organisation did not follow.
 
-Each level also ships a long-form walkthrough under `/walkthroughs/`, one per level, all 24 conforming to the same ten-section structure: setup, solve, vulnerability class, real-world parallels, framework deep dive, certification relevance, defender actions, optional exploration, key takeaways, and cited further reading. Conformance is enforced by the generator rather than by review: a walkthrough missing a section, repeating one, or ordering them differently fails the build. External citations carry a review date and are verified against primary sources when written.
+Each level also ships a long-form walkthrough under `/walkthroughs/`, one per level, all 24 conforming to the same eleven-section structure: setup, solve, vulnerability class, blast radius, real-world parallels, framework deep dive, certification relevance, defender actions, optional exploration, key takeaways, and cited further reading. Conformance is enforced by the generator rather than by review: a walkthrough missing a section, repeating one, or ordering them differently fails the build. External citations carry a review date and are verified against primary sources when written.
 
 ---
 
@@ -178,7 +178,7 @@ npx playwright test
 
 ## Status and roadmap
 
-Current release is v2.4.2. All seven tracks are playable through level2. Level3 has shipped for linux, crypto, and forensics.
+Current release is v2.5.0. All seven tracks are playable through level2. Level3 has shipped for linux, crypto, and forensics.
 
 **Level3 across the remaining four tracks** (network, web, osint, cloud). Each already has its breadcrumb credential staged in the shipped level2, so the chain is continuous when the content lands.
 

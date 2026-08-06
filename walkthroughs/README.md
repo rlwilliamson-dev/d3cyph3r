@@ -265,6 +265,14 @@ practice bent back to the standard.
 Treat a draft pushing past 8,000 words as a signal to cut, most often
 by replacing a prose enumeration of controls with a table.
 
+**Where the corpus actually sits.** Adding §3.5 to every walkthrough in
+v2.5.0 cost roughly 350 words each, which pushed twelve files above
+8,000. They are not being rewritten to fit: the band is a target for new
+work and a trim signal for existing work, not a rule the corpus is
+retro-fitted to. The twelve are the oldest and longest walkthroughs, and
+they are the right candidates when someone next has an editing pass to
+spend. Do not widen this band again to accommodate growth; cut instead.
+
 ## Pre-merge checklist for a new walkthrough
 
 - [ ] Markdown file at `walkthroughs/<track>/<level>.md`

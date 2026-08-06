@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.1">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.5.0">
 </head>
 <body class="page-doc">
 
@@ -43,7 +43,7 @@
   <div class="layout">
     <main id="main" class="doc">
 <h1 id="level2network-what-the-cert-knew">level2@network — What the Cert Knew<a class="anchor" href="#level2network-what-the-cert-knew" aria-label="Link to this section">#</a></h1>
-<p class="doc-meta"><span class="doc-meta-item">34 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">6,804 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Network track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Network · <strong>Client:</strong> Atlas Health (continued) · <strong>Compliance regime:</strong> HIPAA Security Rule + HITECH breach notification + (per Atlas&#39;s SOC 2 fieldwork) AICPA Trust Services Criteria CC6</p>
+<p class="doc-meta"><span class="doc-meta-item">36 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">7,125 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Network track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#blast-radius"><span class="toc-ord">§3.5</span><span class="toc-label">Blast radius</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Network · <strong>Client:</strong> Atlas Health (continued) · <strong>Compliance regime:</strong> HIPAA Security Rule + HITECH breach notification + (per Atlas&#39;s SOC 2 fieldwork) AICPA Trust Services Criteria CC6</p>
 <blockquote class="spoiler-warning">
 <p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for a future <code>level3@network</code>. If you haven&#39;t solved <code>level2@network</code> yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you&#39;ve worked through <code>level0@network</code> and <code>level1@network</code>; this level continues their narrative directly.</p>
 </blockquote>
@@ -199,6 +199,59 @@ patientportal-uat.atlas.health     Let&#39;s Encrypt (R3)                 2024-0
 <p>Stack the two layers and you get Atlas&#39;s audit-bypass cert: a 10-year metadata document that names every internal host plus a free-form mailbox plus a literal &quot;DELETE BEFORE PROD&quot; reminder — and the metadata is encoded in a way that every TLS-aware tool from <code>openssl</code> to <code>curl -v</code> to <code>nmap --script ssl-cert</code> reads correctly.</p>
 <p>Certificate Transparency makes this worse for public-facing certs. RFC 6962 (2013) and its successor RFC 9162 (December 2021) require CAs in browser-trusted root programs to log every issued cert to public append-only CT logs; the major browser vendors enforce this for new certs (Chrome since 2018, Apple since 2021, Mozilla gating new certs starting 2024). crt.sh, run by Sectigo, is the public query interface over the aggregate CT log feed. Any cert any browser-trusted CA has issued for a domain you control is in those logs forever. Revoking the cert doesn&#39;t unpublish the log entry. Rotating the cert doesn&#39;t unpublish the log entry. The CT log is the permanent record of every hostname any cert ever covered.</p>
 <p>The defenses against all of this are mature and documented; nobody at Atlas applied them.</p>
+<h2 id="blast-radius">§3.5 — Blast radius<a class="anchor" href="#blast-radius" aria-label="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>This finding</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Reached</td>
+<td>A host that Atlas&#39;s asset-management system says does not exist</td>
+</tr>
+<tr>
+<td>Disclosed by the certificate</td>
+<td>Internal infrastructure inventory in the SAN list, and a service mailbox named in the free-form OU field</td>
+</tr>
+<tr>
+<td>Disclosed by the mailbox</td>
+<td>An autoresponder replying to password-reset requests with cleartext credentials</td>
+</tr>
+<tr>
+<td>Permanence</td>
+<td>Public-CA certificates are logged to Certificate Transparency, so the inventory cannot be unpublished</td>
+</tr>
+<tr>
+<td>Escalates to</td>
+<td>The temporary credential in the autoresponder log, which is <code>level3@network</code></td>
+</tr>
+<tr>
+<td>Regime</td>
+<td>HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media</td>
+</tr>
+</tbody></table>
+<p><strong>The unmanaged host is the finding that outlives the certificate.</strong>
+Atlas&#39;s inventory does not know this machine exists, which means it is
+outside patching, outside monitoring, and outside every control whose
+coverage is measured against the asset register. Every other issue on
+this page is downstream of an asset-management gap, and reissuing the
+certificate fixes none of it.</p>
+<p><strong>Certificate Transparency makes this irreversible in a way most
+disclosures are not.</strong> CT logs are append-only by design, and that design
+is a security feature: it is what lets a domain owner detect
+mis-issuance. The same property means Atlas&#39;s internal naming, once it
+appears in a publicly-trusted certificate, is permanently public. Rotating
+the certificate changes what is true going forward and nothing about what
+is already recorded. Remediation here is renaming and re-architecting,
+not revocation.</p>
+<p><strong>The autoresponder is the part that moves this from disclosure to
+access.</strong> An inventory tells an attacker where to go. A mailbox that
+emails cleartext credentials on request tells them how to get in, and it
+does so through a channel that looks like normal helpdesk traffic. For
+HIPAA scoping the question is what those credentials reach, and whether
+Atlas can produce records showing who else asked.</p>
 <h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
 <p><strong>Mandiant UNC5537 / Snowflake 2024.</strong> In June 2024 Mandiant attributed a campaign hitting Snowflake customer instances to UNC5537, a financially-motivated threat actor. The campaign compromised dozens of Snowflake customers including AT&amp;T, Ticketmaster, and Santander. The initial-access mechanism was credential stuffing against Snowflake customer URLs that the attackers had enumerated via several recon paths — including DNS / subdomain enumeration and credential reuse from infostealer logs. Mandiant&#39;s <a href="https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion" target="_blank" rel="noopener noreferrer">June 2024 advisory</a> documents external-recon as the first stage of the kill chain. Atlas&#39;s CT-log exposure of <code>staging.atlas.health</code> and <code>marcus-test.atlas.health</code> is exactly the recon surface UNC5537 capitalized on.</p>
 <p><strong>DigiNotar 2011.</strong> A Dutch root CA was compromised in mid-2011 by an attacker who issued forged wildcard certs for <code>*.google.com</code>, <code>*.skype.com</code>, and over 500 other high-value domains. The forged certs were used to intercept Iranian Gmail traffic. DigiNotar was removed from major browser trust stores in September 2011 and filed for bankruptcy a week later. The lesson Atlas should take from DigiNotar is that <em>issuance authority is power</em>: an internal CA that issues 10-year wildcards covering every internal hostname concentrates that power in one private key, and the private key for Atlas&#39;s self-signed cert is sitting on a host the asset-management tool says doesn&#39;t exist. Mozilla&#39;s <a href="https://blog.mozilla.org/security/2011/08/29/fraudulent-google-com-certificate/" target="_blank" rel="noopener noreferrer">Fraudulent Google.com Certificate post</a> and the <a href="https://blog.mozilla.org/security/2011/09/02/diginotar-removal-follow-up/" target="_blank" rel="noopener noreferrer">DigiNotar removal follow-up</a> cover the response timeline; <a href="https://en.wikipedia.org/wiki/DigiNotar" target="_blank" rel="noopener noreferrer">the Wikipedia article</a> carries the consolidated case study.</p>
@@ -313,7 +366,7 @@ patientportal-uat.atlas.health     Let&#39;s Encrypt (R3)                 2024-0
 <li><a href="https://attack.mitre.org/techniques/T1078/" target="_blank" rel="noopener noreferrer">T1078 — Valid Accounts</a>.</li>
 </ul>
 <nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/network/level1.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level1@network</span><span class="pager-title">The Map Marcus Didn't Mean to Share</span></a><div class="pager-cell pager-empty"></div></nav>    </main>
-    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box</a></li><li><a href="#step-2-read-priyas-note-the-scope-file">Step 2: Read Priya's note + the scope file</a></li><li><a href="#step-3-openssl-s-client-handshake-level-view">Step 3: openssl s_client — handshake-level view</a></li><li><a href="#step-4-openssl-x509-the-full-cert-dump">Step 4: openssl x509 — the full cert dump</a></li><li><a href="#step-5-crtsh-whats-in-the-public-ct-logs">Step 5: crtsh — what's in the public CT logs</a></li><li><a href="#step-6-the-autoresponder-log-the-breadcrumb">Step 6: The autoresponder log — the breadcrumb</a></li><li><a href="#step-7-document-scope-return-to-lobby">Step 7: Document scope, return to lobby</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box</a></li><li><a href="#step-2-read-priyas-note-the-scope-file">Step 2: Read Priya's note + the scope file</a></li><li><a href="#step-3-openssl-s-client-handshake-level-view">Step 3: openssl s_client — handshake-level view</a></li><li><a href="#step-4-openssl-x509-the-full-cert-dump">Step 4: openssl x509 — the full cert dump</a></li><li><a href="#step-5-crtsh-whats-in-the-public-ct-logs">Step 5: crtsh — what's in the public CT logs</a></li><li><a href="#step-6-the-autoresponder-log-the-breadcrumb">Step 6: The autoresponder log — the breadcrumb</a></li><li><a href="#step-7-document-scope-return-to-lobby">Step 7: Document scope, return to lobby</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="blast-radius"><a href="#blast-radius"><span class="toc-ord">§3.5</span><span class="toc-label">Blast radius</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
   </div>
 
   <footer id="site-footer">

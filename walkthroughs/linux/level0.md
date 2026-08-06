@@ -1,6 +1,6 @@
 # level0@linux — Daniel's Last Day
 
-**Track:** Linux · **Client:** Halton Bank · **Compliance regime:** GLBA Safeguards Rule
+**Track:** Linux · **Client:** Halton Bank · **Compliance regime:** GLBA § 501(b) (Interagency Guidelines)
 
 > ⚠ This page contains the full solve path **and** the breadcrumb credential for `level1@linux`. If you haven't solved `level0@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers, and the post-mortem below makes far more sense once you've felt the moment yourself.
 
@@ -16,7 +16,7 @@ The first morning, the fire is already lit. Daniel Yoo, a senior consultant whos
 
 IT booted the laptop into Daniel's account so you can read everything he had access to. The shell prompt reads `daniel@linux` not because you are Daniel, but because you're standing in his shoes — which is how forensic audits work. The person is gone. The evidence isn't.
 
-Halton Bank is a regional bank. That matters more than it sounds: the **Gramm-Leach-Bliley Act Safeguards Rule** treats Driftwood as a "service provider" of customer information, with explicit notification obligations measured in hours, not days, if a credential gets exposed. The Master Services Agreement Driftwood signed with Halton makes credential exposure a contractual breach on top of the regulatory one. So the stakes for the audit you're about to do are: contract, regulation, and reputation, in that order.
+Halton Bank is a regional bank. That matters more than it sounds. As a bank it falls under **GLBA § 501(b)** as implemented by the federal banking agencies' Interagency Guidelines, not the FTC Safeguards Rule that covers nonbank lenders and brokers, and the Guidelines put oversight of service providers like Driftwood squarely on Halton (III.D). Halton's own regulator clock is measured in hours: 36 of them, from the moment it determines a notification incident has occurred. The Master Services Agreement Driftwood signed with Halton makes credential exposure a contractual breach on top of the regulatory one. So the stakes for the audit you're about to do are: contract, regulation, and reputation, in that order.
 
 What you don't know yet, walking in, is that Daniel was the kind of consultant who kept passwords in plaintext files.
 
@@ -135,6 +135,42 @@ Each is independently a finding. A defender who, say, rotates the credential but
 
 The defender's playbook against this category of finding is in §7. First, the parallels.
 
+## §3.5 — Blast radius
+
+Naming the failure is half of an assessment. The other half is sizing it:
+what the finding reaches, how much is in scope, for how long, and what it
+opens next.
+
+| Dimension | This finding |
+|---|---|
+| Reached | Daniel's home directory on a returned laptop: `creds.txt`, `.bash_history`, `notes.txt` |
+| Credential in scope | `app_admin` on `staging-db.halton.internal:5432`, in cleartext |
+| Other copies | `notes.txt` names three more locations for the same string: shell history, an exported `DB_PASS`, and a systemd override on Halton's jumphost |
+| Exposure window | Never rotated. The laptop itself sat unaudited from Friday's roll-off to Wednesday's reimage |
+| Escalates to | The same string is the login on Halton's jumphost, which is `level1@linux` |
+| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours |
+
+Three things separate a useful finding here from a shallow one.
+
+**The laptop is not the blast radius. The credential is.** It is tempting
+to scope this as "one workstation pending reimage," which sounds
+contained and reassuring. But the same string authenticates on a
+different host in a different environment, which is the entire lesson of
+the next level. Reimaging the laptop resolves nothing about that.
+
+**`notes.txt` is an exposure map, and it is the most valuable file in
+the directory.** It lists every other place the password lives.
+Remediation that deletes `creds.txt` and stops has left shell history, an
+environment variable, and a production systemd override untouched, while
+generating a ticket that says the issue is closed. Deleting the copy you
+found is not rotation.
+
+**Two organisations carry this, not one.** Driftwood exposed it, but
+III.D of the Interagency Guidelines puts oversight of service provider
+arrangements on Halton, so the bank owns the failure to verify its
+consultant's controls. The MSA adds a contractual breach on top. That is
+why a service-provider finding never stays a service-provider problem.
+
 ## §4 — Real-world parallels
 
 Three named, well-documented incidents follow this exact pattern. Each was a major news event; each is documentable from primary sources you can read yourself.
@@ -234,9 +270,11 @@ A07 includes weaknesses such as: permitting brute-force attacks, default or weak
 
 The OWASP recommendation for A07 mitigations is layered: enforce multi-factor authentication (and prefer phishing-resistant authenticators like FIDO2/passkeys, per NIST SP 800-63B-4), don't deploy with default credentials, implement weak-password checks, align password length/complexity/rotation policies with **NIST SP 800-63B-4**'s modern guidelines (15-character minimum, no forced periodic rotation unless there's evidence of compromise), and limit failed-login attempts.
 
-### GLBA Safeguards Rule (16 CFR Part 314)
+### GLBA § 501(b) — Interagency Guidelines (12 CFR Pt. 30 App. B)
 
-The Gramm-Leach-Bliley Act, passed in 1999, requires financial institutions to safeguard the confidentiality of customer information. The Federal Trade Commission implements GLBA via the "Safeguards Rule" at 16 CFR Part 314. The Safeguards Rule was significantly updated in 2021 and again with amendments effective 2023, raising the bar for what counts as compliance.
+The Gramm-Leach-Bliley Act, passed in 1999, requires financial institutions to safeguard the confidentiality of customer information. GLBA § 501(b) is implemented by two different regulators for two different populations, and picking the wrong one is the most common citation error in bank work. The Federal Trade Commission's Safeguards Rule (16 CFR Part 314) covers *nonbank* financial institutions. Banks are supervised by the federal banking agencies instead, under the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks). Halton is a regional bank, so the Guidelines are its rule.
+
+The substantive requirements track each other closely. Where the FTC rule says § 314.4(c)(1), the Guidelines say III.C.1.a: *"Access controls on customer information systems, including controls to authenticate and permit access only to authorized individuals."* III.C.1.f requires *"monitoring systems and procedures to detect actual and attempted attacks on or intrusions into customer information systems."* III.C.1.g requires *"response programs that specify actions to be taken when the bank suspects or detects that unauthorized individuals have gained access to customer information systems, including appropriate reports to regulatory and law enforcement agencies."* III.D covers oversight of service provider arrangements, which is the provision that reaches Driftwood.
 
 Several sections apply directly to level0@linux:
 
@@ -446,7 +484,10 @@ The bonus is a small wink at the discipline gap: the same set of commands (`sudo
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
 - [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html)
 - [OWASP Top 10:2025](https://owasp.org/Top10/2025/)
-- [GLBA Safeguards Rule — Federal Register, 2021 final rule and 2023 amendments](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
+- [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030)
+- [Computer-Security Incident Notification Rule — 12 CFR Part 53 (36-hour clock)](https://www.ecfr.gov/current/title-12/chapter-I/part-53)
+- [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and)
+- [GLBA Safeguards Rule — 16 CFR Part 314 (FTC; nonbank institutions, shown for contrast)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
 - [PCI-DSS v4.0.1 — PCI Security Standards Council document library](https://www.pcisecuritystandards.org/document_library/)
 - [MITRE ATT&CK — T1552.001: Unsecured Credentials — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/)
 - [MITRE ATT&CK — T1083: File and Directory Discovery](https://attack.mitre.org/techniques/T1083/)

@@ -556,7 +556,7 @@ const BRAND_GLYPHS =
 
 // Bumped in lockstep with js/engine/version.js so a release busts the
 // stylesheet cache for returning readers (release checklist step 2b).
-const CSS_VERSION = "2.4.1";
+const CSS_VERSION = "2.5.0";
 
 // ─── TOC rail ─────────────────────────────────────────────────────
 

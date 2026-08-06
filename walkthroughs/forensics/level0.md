@@ -150,6 +150,41 @@ What's *missing* — and what Polaris's CISO should consider after the case clos
 
 Each lens matters for the writeup. The Lens 1 framing is what makes the McAfee parallel (next section) instructive. The Lens 2 framing is what makes the post-case institutional review tractable.
 
+## §3.5 — Blast radius
+
+This level differs from the rest of the corpus: nothing was misconfigured
+and no control failed. The exposure is an insider's, and what is being
+sized is the strength of an alibi.
+
+| Dimension | This finding |
+|---|---|
+| Reached | Metadata embedded in a photograph Reed submitted as his own alibi |
+| What it establishes | The image was captured roughly eight months earlier and about a thousand miles south of where the alibi places him |
+| What it does **not** establish | Where Reed actually was, or that he took anything |
+| Evidentiary standing | Voluntarily produced by the subject, which is the strongest possible provenance |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+
+**Refuting an alibi is not proving an act, and conflating the two is how
+internal investigations go wrong.** The EXIF proves the photograph cannot
+depict the day it was offered for. It says nothing about Reed's actual
+whereabouts and nothing about CUI. The correct finding is narrow: the
+submitted evidence is not what it was represented to be. Everything
+further requires the artifacts the later levels examine.
+
+**The provenance is what makes this hold up.** Reed produced the file
+himself, which removes any argument about collection method, chain of
+custody, or investigator tampering. An investigation that had seized this
+image would spend its energy defending how it was obtained; one that was
+handed it spends that energy on the analysis instead.
+
+**Nothing is reportable to DoD yet, and that restraint is the
+professional judgement being taught.** DFARS 252.204-7012 attaches to a
+cyber incident affecting covered defense information, and a
+misrepresented photograph is not one. The 72-hour clock has not started.
+What has started is an internal matter for Polaris's counsel and its
+Facility Security Officer, and the temptation to escalate early is
+exactly what a defensible investigation resists.
+
 ## §4 — Real-world parallels
 
 Three named, well-documented cases where embedded metadata in a digital artifact revealed information the subject did not intend to reveal. Each case became a public lesson in OPSEC and forensic methodology.

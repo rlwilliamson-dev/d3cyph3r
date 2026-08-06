@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.1">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.5.0">
 </head>
 <body class="page-doc">
 
@@ -43,7 +43,7 @@
   <div class="layout">
     <main id="main" class="doc">
 <h1 id="level2crypto-theos-quick-hash">level2@crypto — Theo&#39;s Quick Hash<a class="anchor" href="#level2crypto-theos-quick-hash" aria-label="Link to this section">#</a></h1>
-<p class="doc-meta"><span class="doc-meta-item">26 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">5,290 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Crypto track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Crypto · <strong>Client:</strong> Vesta Retail (continued) · <strong>Compliance regime:</strong> PCI-DSS v4.0.1 + (post-finding) PCI QSA Phase-2 remediation</p>
+<p class="doc-meta"><span class="doc-meta-item">28 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">5,619 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Crypto track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#blast-radius"><span class="toc-ord">§3.5</span><span class="toc-label">Blast radius</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Crypto · <strong>Client:</strong> Vesta Retail (continued) · <strong>Compliance regime:</strong> PCI-DSS v4.0.1 + (post-finding) PCI QSA Phase-2 remediation</p>
 <blockquote class="spoiler-warning">
 <p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for a future <code>level3@crypto</code>. If you haven&#39;t solved <code>level2@crypto</code> yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you&#39;ve worked through <code>level0@crypto</code> and <code>level1@crypto</code>; this level continues their narrative directly.</p>
 </blockquote>
@@ -173,6 +173,58 @@ the RockYou social-game accounts database.
 </ul>
 <p>All four use a per-password salt (a random 16-32 byte value stored alongside the hash output) so that identical plaintexts hash to distinct outputs. The salt defeats rainbow-table attacks (which precompute hash→plaintext mappings for common passwords) AND defeats john&#39;s bulk-cracking parallelism (each guess has to be hashed independently against the target&#39;s salt).</p>
 <p>Theo used MD5 with no salt, which combines all three failure modes. The four hashes that share a plaintext all produce the same output, so cracking one cracks four. The function is fast, so cracking is microseconds. The input is in rockyou, so the search space is bounded. Every modern password-storage doctrine exists specifically to make at least one of those three conditions false; Theo&#39;s &quot;I made it safe&quot; commit made none of them false.</p>
+<h2 id="blast-radius">§3.5 — Blast radius<a class="anchor" href="#blast-radius" aria-label="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>This finding</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Reached</td>
+<td><code>backup-passwords.txt</code> in Vesta&#39;s deploy repository: 200 rows, unsalted MD5 on the left, the production system it unlocks on the right</td>
+</tr>
+<tr>
+<td>Cracked in this level</td>
+<td>Four hashes, in under a second, with a public wordlist</td>
+</tr>
+<tr>
+<td>The compounding fact</td>
+<td>All four resolve to the <strong>same plaintext</strong>, and one row is labelled <code>aes-backup</code></td>
+</tr>
+<tr>
+<td>Weaknesses</td>
+<td>CWE-916 unsuitable hash, CWE-759 no salt, CWE-521 weak requirement, CWE-262 not rotated</td>
+</tr>
+<tr>
+<td>Escalates to</td>
+<td>That plaintext is both a host login and the AES passphrase in <code>level3@crypto</code></td>
+</tr>
+<tr>
+<td>Regime</td>
+<td>PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands</td>
+</tr>
+</tbody></table>
+<p><strong>The labels are worth more than the hashes.</strong> Even uncracked, the right
+column is a directory of Vesta&#39;s production systems and which of them
+share credential custody. An attacker who cracks nothing has still been
+handed a target list and a map of blast radius. Assessments that grade
+this finding on hash strength alone have missed the disclosure that needs
+no cracking at all.</p>
+<p><strong>Reuse converts four findings into one key.</strong> Four rows resolving to a
+single plaintext means the effective credential count is one, and its
+scope is the union of everything those rows label. This is why &quot;how many
+were cracked&quot; is the wrong metric: what matters is how many systems the
+recovered plaintext opens, and here that set spans an admin login, a
+production database account, and an encrypted backup.</p>
+<p><strong>Unsalted MD5 is not weak encryption, and the distinction matters for
+the report.</strong> MD5 is a hash, not a cipher, and unsalted means identical
+inputs produce identical digests, which is precisely what made the reuse
+visible from the file alone. PCI-DSS asks for strong cryptography with
+appropriate key management; this is neither, and the commit titled
+&quot;safer than plaintext&quot; is the clearest statement of the
+misunderstanding the whole level exists to correct.</p>
 <h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
 <p><strong>LinkedIn 2012 (and 2016).</strong> In June 2012 LinkedIn confirmed a breach exposing ~6.5 million SHA-1 unsalted password hashes. The breach was originally thought to be the full scope until 2016, when a credential broker offered ~117 million LinkedIn hashes from the same incident for sale on the dark web. SHA-1 unsalted has the same operational properties Theo&#39;s MD5 unsalted file does — fast, per-password-distinct-only-if-the-plaintexts-differ, vulnerable to bulk dictionary attacks. The 2016 disclosure led to forced password resets for every LinkedIn user that hadn&#39;t changed their password since 2012. <a href="https://haveibeenpwned.com/PwnedWebsites#LinkedIn" target="_blank" rel="noopener noreferrer">Have I Been Pwned&#39;s LinkedIn page</a> summarizes the breach metadata; LinkedIn&#39;s own <a href="https://blog.linkedin.com/2012/06/09/an-update-on-taking-steps-to-protect-our-members" target="_blank" rel="noopener noreferrer">2012 security advisory</a> is preserved in their blog.</p>
 <p><strong>RockYou 2009 — the wordlist itself.</strong> In December 2009 the social-game company RockYou suffered an SQL injection that exposed approximately 14,341,564 plaintext passwords from its accounts database. The company had been storing passwords unhashed; the SQL injection returned the full table. The fact that the plaintexts were available, large in number, and represented real human password choices made the leaked dataset the canonical wordlist for every offline dictionary attack since. It&#39;s the wordlist john pointed at to crack Theo&#39;s hashes. The <a href="https://techcrunch.com/2009/12/14/rockyou-hacked/" target="_blank" rel="noopener noreferrer">TechCrunch coverage of the disclosure</a> and <a href="https://en.wikipedia.org/wiki/RockYou" target="_blank" rel="noopener noreferrer">the Wikipedia case study</a> carry the consolidated record, including the subsequent FTC settlement covering COPPA violations.</p>
@@ -297,7 +349,7 @@ the RockYou social-game accounts database.
 <li><a href="https://cwe.mitre.org/data/definitions/798.html" target="_blank" rel="noopener noreferrer">CWE-798 — Use of Hard-coded Credentials</a>.</li>
 </ul>
 <nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/crypto/level1.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level1@crypto</span><span class="pager-title">Theo's Signature That Wasn't</span></a><a class="pager-cell pager-next" href="/walkthroughs/crypto/level3.html"><span class="pager-dir">&rarr; Next</span><span class="pager-label">level3@crypto</span><span class="pager-title">Theo's Encrypted Backup</span></a></nav>    </main>
-    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box</a></li><li><a href="#step-2-read-priyas-note-the-backup-passwords-file">Step 2: Read Priya's note + the backup-passwords file</a></li><li><a href="#step-3-hash-id-confirms-md5">Step 3: hash-id confirms MD5</a></li><li><a href="#step-4-john-cracks-four-hashes-all-the-same-plaintext">Step 4: john cracks four hashes — all the same plaintext</a></li><li><a href="#step-5-the-2009-rockyou-provenance-optional-exploration">Step 5: The 2009 RockYou provenance (optional exploration)</a></li><li><a href="#step-6-return-to-the-lobby-with-the-finding">Step 6: Return to the lobby with the finding</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box</a></li><li><a href="#step-2-read-priyas-note-the-backup-passwords-file">Step 2: Read Priya's note + the backup-passwords file</a></li><li><a href="#step-3-hash-id-confirms-md5">Step 3: hash-id confirms MD5</a></li><li><a href="#step-4-john-cracks-four-hashes-all-the-same-plaintext">Step 4: john cracks four hashes — all the same plaintext</a></li><li><a href="#step-5-the-2009-rockyou-provenance-optional-exploration">Step 5: The 2009 RockYou provenance (optional exploration)</a></li><li><a href="#step-6-return-to-the-lobby-with-the-finding">Step 6: Return to the lobby with the finding</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="blast-radius"><a href="#blast-radius"><span class="toc-ord">§3.5</span><span class="toc-label">Blast radius</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
   </div>
 
   <footer id="site-footer">
