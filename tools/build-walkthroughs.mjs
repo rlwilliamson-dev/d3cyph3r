@@ -1070,6 +1070,79 @@ async function buildSearchIndex(levels) {
 
 // ─── Main ─────────────────────────────────────────────────────────
 
+/**
+ * Extract a level's in-game post-mortem text from levels/<track>.js.
+ *
+ * The content lives inside a JS template literal, so the scan has to
+ * respect backslash escapes: these files use \` for inline code, and a
+ * naive search for the closing backtick truncates most of them at the
+ * first one. That bug produced a 100x spread in measured lengths before
+ * it was caught, so the walk below is deliberate rather than a regex.
+ *
+ * Returns a Map of "<level>@<track>" -> post-mortem text.
+ */
+async function readPostMortems() {
+  const out = new Map();
+  for (const trackKey of Object.keys(MANIFEST)) {
+    let src;
+    try {
+      src = await readFile(join(ROOT, "levels", `${trackKey}.js`), "utf8");
+    } catch (_) {
+      continue; // a track with no level file yet is not an error here
+    }
+    const re =
+      /"lessons-learned\.md":\s*\{\s*type:\s*"file",\s*content:\s*`/g;
+    let m;
+    while ((m = re.exec(src))) {
+      let i = m.index + m[0].length;
+      let body = "";
+      while (i < src.length) {
+        if (src[i] === "\\") { body += src.slice(i, i + 2); i += 2; continue; }
+        if (src[i] === "`") break;
+        body += src[i]; i += 1;
+      }
+      // Attribute to the nearest preceding level key.
+      const before = src.slice(0, m.index);
+      const keys = [...before.matchAll(/"(level\d+@\w+)":\s*\{/g)];
+      if (keys.length) out.set(keys[keys.length - 1][1], body);
+    }
+  }
+  return out;
+}
+
+/**
+ * Cross-check citations between a level's in-game post-mortem and its
+ * walkthrough.
+ *
+ * The contract as of v2.5.2 is "the post-mortem NAMES a weakness, the
+ * walkthrough EXPLAINS it". That only holds if every identifier the
+ * in-game text names is actually covered somewhere in the walkthrough,
+ * so this asserts containment in one direction: post-mortem ⊆
+ * walkthrough. The walkthrough is free to go further, which it always
+ * does.
+ *
+ * This is not hypothetical maintenance theatre. CWE-539 was added to
+ * level2@forensics's post-mortem in v2.3.1 and never added to its
+ * walkthrough, and nothing noticed until the citation sets were compared
+ * by hand months later.
+ */
+function crossCheckCitations(postMortem, walkthrough, label) {
+  const ids = (t) =>
+    new Set([
+      ...(t.match(/CWE-\d+/g) || []),
+      ...(t.match(/T\d{4}(?:\.\d{3})?/g) || []),
+    ]);
+  const inGame = ids(postMortem);
+  const inWt = ids(walkthrough);
+  const orphans = [...inGame].filter((id) => !inWt.has(id));
+  if (!orphans.length) return [];
+  return [
+    `  ${label}: cited in-game but absent from the walkthrough: ` +
+      `${orphans.sort().join(", ")} ` +
+      `(the post-mortem names it; the walkthrough must explain it)`,
+  ];
+}
+
 async function main() {
   const seq = levelSequence();
 
@@ -1084,10 +1157,16 @@ async function main() {
   // level as unbuilt.
   const shipped = new Set(seq.map((x) => `${x.levelKey}@${x.trackKey}`));
 
+  const postMortems = await readPostMortems();
+
   const problems = [];
   for (const { trackKey, levelKey } of seq) {
     const md = await readFile(join(WT, trackKey, `${levelKey}.md`), "utf8");
-    problems.push(...validate(md, `${trackKey}/${levelKey}.md`, shipped));
+    const label = `${trackKey}/${levelKey}.md`;
+    problems.push(...validate(md, label, shipped));
+
+    const pm = postMortems.get(`${levelKey}@${trackKey}`);
+    if (pm) problems.push(...crossCheckCitations(pm, md, label));
   }
   if (problems.length) {
     console.error(

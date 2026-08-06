@@ -2235,7 +2235,7 @@ before the case can rely on the queries you ran.
           content:
 `═══ POST-MORTEM: SQLITE IS THE USER-ACTIVITY LEDGER ═══
 
-─── BLUNT VERSION ────────────────────────────────────────────
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 Reed Connolly accessed personal Gmail at 02:47 Saturday
 morning, seven hours before the 09:42 Bay 4 badge-in. He
@@ -2253,7 +2253,7 @@ Cookies.sqlite (RC-Gmail-PreDawn-2026-03-14-T0247Z). Outside
 counsel will use that session token to subpoena Google for
 Reed's Sent-folder content under day-four authorization.
 
-─── CONSULTING-FIRM ANGLE ────────────────────────────────────
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 Browser-database forensics is a quietly massive lever for
 internal-investigation work. The discipline at consulting
@@ -2282,7 +2282,7 @@ shops looks like this:
      independent artifacts pointing at the same behavior.
      One could be coincidence; both is rehearsal.
 
-─── FRAMEWORKS ────────────────────────────────────────────────
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
   CWE-539 — Use of Persistent Cookies Containing Sensitive
     Information. The session token you recovered is still
@@ -2327,7 +2327,7 @@ shops looks like this:
     discipline above is what makes the authorization stand
     up to challenge.
 
-─── CERTIFICATIONS ───────────────────────────────────────────
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
   GCFE (GIAC Certified Forensic Examiner) — browser-artifact
     forensics is a major domain. The exam's Chrome / Firefox
@@ -2341,7 +2341,7 @@ shops looks like this:
     neutral forensic-process cert; lists browser DBs in its
     artifact-collection domain.
 
-─── MITRE ATT&CK ─────────────────────────────────────────────
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
   T1119 — Automated Collection. Reed's rc-archive-helper.ps1
     is a textbook example of a custom collector pre-staged
@@ -2361,7 +2361,7 @@ shops looks like this:
     search is the defender's window into Reed's level of
     awareness about what he was about to handle.
 
-─── DEFENDER ACTION ──────────────────────────────────────────
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
   Browser-policy enforcement. Polaris's Chrome Enterprise
     policy could block personal-Gmail sign-in on managed

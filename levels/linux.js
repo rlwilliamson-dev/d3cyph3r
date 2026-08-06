@@ -519,65 +519,24 @@ When the insider is a consultant, the blast radius expands: not
 just YOUR data, but every client whose environment they had access
 to.
 
-─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+─── FRAMEWORKS THAT COVER THIS ────────────────────────────────
 
-  NIST SP 800-53 Rev. 5 — AC-2 (Account Management) + PS-4
-  (Personnel Termination)
-    AC-2(3) "Disable Accounts" requires accounts to be disabled
-    within an organization-defined time period when no longer
-    required (including separation). PS-4 "Personnel Termination"
-    requires disabling system access within an organization-defined
-    time period of termination and revoking authenticators
-    associated with the individual. Both controls are violated
-    whenever a consultant's client access isn't fully revoked at
-    engagement end.
+Two weaknesses, one control family, one regulator.
 
-  CIS Critical Security Controls v8.1 — Control 5 (Account Management)
-    5.3: disable dormant accounts. 5.4: restrict administrator
-    privileges. Both apply here.
+  CWE-798   Use of Hard-coded Credentials — the client password
+            written into a flat file instead of a secrets manager.
+  CWE-312   Cleartext Storage of Sensitive Information — it sat
+            there in plaintext, on a laptop awaiting reimage.
 
-  CWE-798: Use of Hard-coded Credentials
-    The specific weakness committed when Daniel wrote the client's
-    password into a flat file instead of a secrets manager. One of
-    the longest-standing entries in the CWE catalog.
+  NIST SP 800-53 AC-2(3) and PS-4 are the controls: disable
+  accounts and revoke authenticators when someone separates.
+  Neither happened here.
 
-  OWASP Top 10 (2025) — A07: Authentication Failures
-    The umbrella category for the broader weakness class
-    (renamed from "Identification and Authentication Failures"
-    in the 2021 edition).
-
-  GLBA Safeguards Rule (16 CFR Part 314)
-    For financial-services clients like Halton, mandates "service
-    provider oversight." Consulting firms are explicitly covered.
-    Section 314.4(f) puts the burden on the financial institution
-    to ensure their service providers safeguard customer data —
-    which puts the burden on Driftwood to deserve that trust.
-
-  PCI-DSS v4.0.1 — Requirement 12.8
-    Covers third-party / consultant obligations when payment-card
-    data is in scope. Halton is a bank; payment data is always in
-    scope somewhere.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 4.1 (Apply common security techniques) — secrets
-    management. Domain 5.3 (third-party risk management) — directly
-    relevant to consulting-firm security models.
-
-  ISC2 Certified in Cybersecurity (CC)
-    Domain 5 (Security Operations) — account lifecycle.
-
-  CISSP
-    Domain 5 (Identity & Access Management), Domain 7 (Security
-    Operations), and Domain 1 (Security & Risk Management — covers
-    third-party assessments and contractual obligations). All three
-    converge on consultant credential hygiene.
-
-  OSCP / PEN-200
-    Teaches "read every file you can read" as the first move post
-    foothold. The ls-then-cat-everything loop you just executed is
-    literally the opening play of every box on the OSCP exam.
+  GLBA § 501(b) applies because Halton is a bank, so the rule is
+  the Interagency Guidelines (12 CFR Pt. 30 App. B), not the FTC
+  Safeguards Rule that covers nonbank institutions. III.C.1.a is
+  access control; III.D puts oversight of service providers like
+  Driftwood on Halton.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -609,6 +568,34 @@ up in nearly every credible threat report.
   5. Honor MSA notification timelines. Most have 24- to 72-hour
      windows for credential exposure. Missing those is a separate
      compliance event from the exposure itself.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. Daniel's laptop gets reimaged on Wednesday. Does that
+     resolve the finding? Why not?
+
+  2. \`notes.txt\` named three more places the same password
+     lives. Why does that make it the most valuable file in
+     the directory?
+
+  3. Driftwood exposed the credential. Why does Halton carry a
+     finding too?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/linux/level0.html
+
+The walkthrough covers the full NIST and CIS control mapping,
+the certification objectives, how this finding is sized for a
+risk register, the real-world offboarding breaches it mirrors,
+and a Sigma rule for credential files on endpoints. Answers to
+the three questions above are in there.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -1147,58 +1134,24 @@ password months ago. The "have we been breached?" question is
 suddenly an "are we sure we haven't been breached?" question, which
 forensically is much harder to answer cleanly.
 
-─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+─── FRAMEWORKS THAT COVER THIS ────────────────────────────────
 
-  CWE-732: Incorrect Permission Assignment for Critical Resource
-    Exactly this finding. The catalog entry specifically calls out
-    config files, key material, and credential stores left at
-    overly permissive modes.
+One weakness, three controls, one regulator.
 
-  NIST SP 800-53 Rev. 5
-    AC-3 (Access Enforcement): the system must enforce approved
-      authorizations. Mode 644 doesn't enforce; mode 600 does.
-    AC-6 (Least Privilege): app_admin had no business being able
-      to read prod credentials. The backup gave it that ability.
-    SC-28 (Protection of Information at Rest): credentials are
-      data at rest. The control requires either encryption or
-      strict access control. Mode 644 is neither.
+  CWE-732   Incorrect Permission Assignment for Critical Resource
+            — the catalog entry names config files and credential
+            stores left at overly permissive modes. That is this
+            finding exactly.
 
-  CIS Critical Security Controls v8.1
-    3.3 (Configure Data Access Control Lists): the canonical
-      defender play against this anti-pattern.
-    4.7 (Restrict access to administrative interfaces): related,
-      since the jumphost shouldn't have been giving service
-      accounts an interactive shell in the first place.
+  NIST SP 800-53 AC-3 is the control that matters: the system must
+  enforce approved authorizations. Mode 644 does not enforce;
+  mode 600 does. AC-6 and SC-28 follow from it.
 
-  OWASP Top 10 (2025) — A02: Security Misconfiguration
-    The umbrella category (A05 in the 2021 edition; moved up to
-    A02 in 2025). "Improperly configured permissions on cloud
-    services / files / directories" is one of the named examples.
-
-  GLBA Safeguards Rule (16 CFR Part 314)
-    For Halton specifically. Safeguards Rule 314.4(c)(1) requires
-    "appropriate access controls" on customer-information systems.
-    This is a textbook failure to meet that standard.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 3.1 (Security architecture: hardening) — file system
-    permissions and least privilege are tested directly.
-
-  ISC2 CC / SSCP
-    Access control fundamentals — owner / group / other model.
-
-  CISSP
-    Domain 5 (Identity & Access Management). Domain 7 (Sec Ops).
-    Both touch this. Discretionary access control (DAC) is the
-    Unix permission model in CISSP parlance.
-
-  OSCP / PEN-200
-    Privilege escalation via misconfigured files is a category. The
-    classic pattern: SUID binaries, world-writable cron scripts,
-    sudoers misconfigurations. Today's lesson is the credential
-    variant — equally common in real engagements.
+  GLBA § 501(b) applies because Halton is a bank, so the rule is
+  the Interagency Guidelines (12 CFR Pt. 30 App. B), not the FTC
+  Safeguards Rule that covers nonbank institutions. III.C.1.a is
+  access control; III.D puts oversight of service providers like
+  Driftwood on Halton.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -1238,6 +1191,34 @@ you read for the rest of your career.
      config file, ANY config file, treat it as compromised — even
      the supposedly locked one. Rotate. Then migrate to a real
      secrets backend (Vault, Secrets Manager, Doppler, etc).
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. The original override is mode 600 and root-owned. Someone
+     did that work deliberately. Why did it buy nothing?
+
+  2. The shadow copy went undetected for five months. Which
+     control does that number indict, and why is it the number
+     a regulator asks about first?
+
+  3. A *staging* credential got you onto a *production*
+     jumphost. Which failure is that, and does fixing the file
+     permissions address it?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/linux/level1.html
+
+The walkthrough covers the full control mapping, the
+certification objectives, how the finding is sized, the
+real-world cases it mirrors, and a Sigma rule that alerts when a
+sensitive system file is copied into a user's home directory.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -2005,78 +1986,27 @@ way to write it up:
                            need explicit teardown across
                            BOTH organizations' systems.
 
-─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
+─── FRAMEWORKS THAT COVER THIS ────────────────────────────────
 
-  CWE-250 — Execution with Unnecessary Privileges
-    Daniel's account no longer should have ANY privileges.
-    A cron job running under that account inherits whatever
-    permissions the system grants to that uid.
+Three weaknesses, one control principle, one regulator.
 
-  CWE-521 — Weakly Protected Credentials (related)
-    Halton's password pattern is predictable enough to
-    constitute a weak-credential finding on its own.
+  CWE-250   Execution with Unnecessary Privileges — a cron job
+            running under a dormant account inherits that uid's
+            permissions.
+  CWE-521   Weakly Protected Credentials — Halton's password
+            pattern is predictable enough to stand alone.
+  CWE-532   Insertion of Sensitive Information into Log File —
+            the shell trace wrote the passphrase to a 644 log.
 
-  CWE-532 — Insertion of Sensitive Information into Log File
-    The trace of the snapshot script committed the passphrase
-    to a 644-mode log. This CWE is one of the most-cited
-    weakness classes in published threat reports.
+  NIST SP 800-53 AU-9 (Protection of Audit Information) is the
+  control the log breaches; AC-2(3) is the one the account
+  breaches.
 
-  NIST SP 800-53 Rev. 5
-    AC-2(3): Disable Accounts. Required within an
-      organization-defined time period of account no longer
-      being required. Daniel's account is the textbook miss.
-    AC-6: Least Privilege. daniel's continued group
-      memberships gave him read access he should not have
-      retained.
-    AU-9: Protection of Audit Information. The cron trace
-      IS audit information by Halton's own policy. It must
-      be protected commensurate with its sensitivity.
-    PS-4: Personnel Termination. Within an org-defined time
-      period of termination, disable system access AND
-      revoke authenticators (passwords, SSH keys, smart
-      cards) associated with the individual.
-
-  CIS Critical Security Controls v8.1
-    5.3: Disable dormant accounts (e.g., 45 days no activity).
-    5.5: Enforce automatic disabling of dormant accounts.
-    6.7: Centralize access control where feasible — a
-         centralized identity store would have made the
-         offboarding teardown a single revoke instead of
-         per-system housekeeping that gets missed.
-
-  OWASP Top 10 (2025) — A04: Insecure Design
-    Logging untrusted data into world-readable files at
-    design time is the named example. (Pre-2025 editions
-    placed this finding under A09: Security Logging /
-    Monitoring Failures.)
-
-  GLBA Safeguards Rule (16 CFR Part 314)
-    314.4(c)(3): "Limit and monitor who can access systems
-    containing customer information." daniel's account is
-    a monitored-access failure for Halton specifically.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  CompTIA Security+ (SY0-701)
-    Domain 4.1: Account-management practices, including
-    deprovisioning. The exam tests this directly.
-
-  ISC2 Certified in Cybersecurity (CC)
-    Identity & Access lifecycle — the offboarding step.
-
-  CompTIA CySA+ (CS0-003)
-    Domain 1.4: Threat intelligence and threat-hunting,
-    including hunts for dormant-account misuse.
-
-  CISSP
-    Domain 5 (IAM): provisioning + deprovisioning lifecycle.
-    Domain 6 (Security Assessment + Testing): how to audit
-    the lifecycle a real organization claims to be running.
-
-  OSCP / PEN-200
-    Privilege escalation via cron — a classic category.
-    Today's variant is the credentials-leaking-into-the-
-    log subspecies.
+  GLBA § 501(b) applies because Halton is a bank, so the rule is
+  the Interagency Guidelines (12 CFR Pt. 30 App. B), not the FTC
+  Safeguards Rule that covers nonbank institutions. III.C.1.a is
+  access control; III.D puts oversight of service providers like
+  Driftwood on Halton.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -2133,6 +2063,32 @@ way to write it up:
      guess production credentials within a 12-string
      window. That's a finding in its own right and
      belongs in the executive summary.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. \`set -x\` is documented behaviour, not a bug. So what
+     exactly is the defect here?
+
+  2. The production DB password was accepted as an SSH login.
+     Which does more damage: that reuse, or the logging?
+
+  3. Who is the affected population for a world-readable log,
+     and what makes that hard to answer after the fact?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/linux/level2.html
+
+The walkthrough covers the full NIST, CIS and OWASP mapping,
+the certification objectives, how this is sized for a risk
+register, the real-world cases, and a Sigma rule that alerts on
+reads of job logs by accounts that do not own them.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 
@@ -2640,65 +2596,29 @@ write-up:
 
 ─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
-  CWE-250 — Execution with Unnecessary Privileges
-    The grant let a dormant account act as root.
+Three weaknesses, one control principle, one regulator.
 
-  CWE-732 — Incorrect Permission Assignment for Critical
-    Resource. The sudoers grant was never revoked or scoped.
+  CWE-250   Execution with Unnecessary Privileges — the grant
+            let a dormant account act as root.
+  CWE-732   Incorrect Permission Assignment — it was never
+            revoked, and its wildcard was never scoped.
+  CWE-312   Cleartext Storage of Sensitive Information — live
+            secrets sat in plaintext inside a config backup.
 
-  CWE-312 — Cleartext Storage of Sensitive Information
-    Live secrets sat in plaintext inside a config backup.
+  NIST SP 800-53 AC-6 (Least Privilege) is the control this
+  finding is really about. A wildcard NOPASSWD grant is the
+  textbook violation of it.
 
-  NIST SP 800-53 Rev. 5
-    AC-6: Least Privilege. A wildcard NOPASSWD grant is the
-      textbook violation. AC-6(1)/(2) push privileged commands
-      onto separate, audited accounts.
-    AC-2(3): Disable Accounts. daniel, again.
-    PS-4: Personnel Termination — revoke access AND
-      authenticators (his SSH key still worked).
-    CM-6 / SC-28: Protect information at rest — the backup
-      should have been encrypted and its secrets excluded.
+  GLBA § 501(b) applies because Halton is a bank — which means
+  the Interagency Guidelines (12 CFR Pt. 30 App. B), NOT the
+  FTC Safeguards Rule that covers nonbank institutions. III.C.1.a
+  requires access controls on customer-information systems;
+  III.D puts oversight of service providers like Driftwood on
+  Halton. If this becomes a notification incident, the bank has
+  36 hours to tell its primary federal regulator.
 
-  CIS Critical Security Controls v8.1
-    5.3 / 5.5: Disable dormant accounts.
-    4.7: Manage default/temporary accounts and grants.
-    3.11: Encrypt sensitive data at rest (the backup).
-
-  OWASP Top 10 (2025) — A01: Broken Access Control
-    The sudoers wildcard is a broken-access-control primitive:
-    a narrow-looking grant that authorizes far more than
-    intended. (Privilege-escalation paths also touch A04:
-    Insecure Design.)
-
-  GLBA Safeguards Rule (16 CFR Part 314)
-    314.4(c)(1): access controls on systems holding customer
-    information. A NOPASSWD root grant on a dormant account
-    is an access-control failure at the system level.
-    314.4(c)(3): "Limit and monitor who can access systems
-    containing customer information." The grant survived
-    offboarding and reaches production secrets, so it is a
-    monitoring failure as well as an access one.
-
-─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
-
-  OSCP / PEN-200
-    \`sudo -l\` is the FIRST command in the Linux privilege-
-    escalation playbook. GTFOBins (gtfobins.github.io) catalogs
-    which sudo-allowed binaries can be escaped to a root shell;
-    the defensive lesson is to assume any NOPASSWD grant is a
-    priv-esc primitive until proven otherwise.
-
-  CompTIA Security+ (SY0-701) / CySA+ (CS0-003)
-    Least privilege, account deprovisioning, and privilege-
-    escalation detection are all directly tested.
-
-  CISSP
-    Domain 5 (IAM): the deprovisioning lifecycle and privileged-
-    access management. Domain 3: protecting data at rest.
-
-  Linux Foundation LFCS / RHCSA
-    Managing sudoers safely (visudo, scoping, NOPASSWD hygiene)
-    is an exam objective.
+The walkthrough works through the full control mapping,
+the certification-exam angles, and the real-world cases.
 
 ─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
@@ -2739,6 +2659,34 @@ write-up:
   6. Prefer short-lived, auditable privilege: sudo grants
      scoped to exact commands, logged centrally, with no
      NOPASSWD on anything that touches sensitive data.
+
+─── CHECK YOURSELF ───────────────────────────────────────────
+
+Before you move on, see if you can answer these without
+scrolling back. If one stalls you, that's the part worth
+re-reading.
+
+  1. \`sudo -l\` showed a grant ending in \`*\`. Why is that
+     wildcard the finding, rather than the \`cat\` it permits?
+
+  2. Halton rotates the Vault token this afternoon. Which of
+     the three failures does that fix, and which two survive?
+
+  3. The account belonged to a consultant who left a year ago.
+     Whose control failed — Driftwood's or Halton's?
+
+─── GO DEEPER ────────────────────────────────────────────────
+
+  https://www.d3cyph3r.com/walkthroughs/linux/level3.html
+
+The walkthrough covers what this debrief deliberately doesn't:
+the full NIST / CIS / OWASP mapping, the certification
+objectives, how the finding is sized for a risk register, a
+Sigma rule that alerts on privileged reads of the backup tree,
+and why a sudo grant scoped by path glob is a standing bet.
+Answers to the three questions above are in there.
+
+From the terminal:    walkthrough
 
 ─── CLOSING THOUGHT ──────────────────────────────────────────
 

@@ -2728,7 +2728,7 @@ BACKUP_SVC_SECRET_ACCESS_KEY=bkupSvc+RDSsnapshot/2023scoped/Xq7Lm2
   Coverline Insurance · IAM least privilege + dormant credentials
 
 
-─── BLUNT VERSION ─────────────────────────────────────────────
+─── THE BLUNT VERSION ────────────────────────────────────────
 
 A service account called legacy-deploy-bot was created in
 February 2024 to unblock a region migration. Someone attached
@@ -2754,7 +2754,7 @@ turn off. It is the quietest catastrophic finding in cloud
 security, and it is extremely common.
 
 
-─── CONSULTING-FIRM ANGLE ─────────────────────────────────────
+─── THE CONSULTING-FIRM ANGLE ────────────────────────────────
 
 The three Coverline findings this week are the same finding in
 three costumes:
@@ -2782,7 +2782,7 @@ for N days, and who owns the leaver half of joiner-mover-leaver.
 The bot is a symptom; the missing lifecycle is the finding.
 
 
-─── FRAMEWORKS ────────────────────────────────────────────────
+─── FRAMEWORKS THAT COVER THIS ───────────────────────────────
 
 NIST SP 800-53 Rev. 5
   AC-6 Least Privilege — the control this level is about.
@@ -2841,7 +2841,7 @@ CWE
     file with five secret keys in plaintext.
 
 
-─── CERTIFICATIONS ────────────────────────────────────────────
+─── WHERE THIS SHOWS UP ON CERTIFICATIONS ────────────────────
 
 AWS Certified Security – Specialty (SCS-C03; the successor to
 SCS-C02, which was decommissioned Dec 1, 2025)
@@ -2870,7 +2870,7 @@ ISC2 CCSP
   privileged-access management in cloud environments.
 
 
-─── MITRE ATT&CK ──────────────────────────────────────────────
+─── MITRE ATT&CK MAPPING ─────────────────────────────────────
 
   T1078.004  Valid Accounts: Cloud Accounts — a dormant, valid IAM
              credential is the cleanest initial-access and
@@ -2887,7 +2887,7 @@ ISC2 CCSP
              admin reads every bucket in the account.
 
 
-─── DEFENDER ACTION ───────────────────────────────────────────
+─── WHAT A DEFENDER SHOULD ACTUALLY DO ───────────────────────
 
 Immediate (today):
   1. Deactivate legacy-deploy-bot's access key (aws iam
