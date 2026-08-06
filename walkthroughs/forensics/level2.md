@@ -233,6 +233,37 @@ The point is not that browsers are designed badly. They're designed for users wh
 
 ---
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Chromium History and Cookies databases from the seized workstation |
+| What they establish | A pre-dawn webmail visit hours before the badge-in, and searches about CUI handling rules that speak to intent |
+| Also recovered | A live session cookie for a personal webmail account |
+| Investigative value | The cookie identifies **which account** to name in legal process |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+
+**Searches about the rules go to intent, and intent is what separates a
+policy violation from a deliberate act.** Timeline and technique were
+established in the previous level. Someone reading up on what is and is
+not permitted, shortly before doing the thing, changes the character of
+the finding and is the sort of artifact that outside counsel will care
+about more than the file transfer itself.
+
+**The live cookie must not be used, and the restraint is the entire
+professional point.** Replaying a seized session to browse a suspect's
+mailbox contaminates the evidence and may itself be an offence. Its
+correct use is narrow and administrative: it names the account, which is
+what a preservation request and a subsequent court order are written
+against. The next level works from the provider's lawful production, not
+from this artifact.
+
+**Browser artifacts are corroboration, not proof of who was typing.**
+History records the profile's activity, not the human at the keyboard. It
+sits alongside the badge log, the event log, and the mail headers, and its
+strength comes from agreeing with them. A case resting on browser history
+alone has a shared-workstation problem it cannot answer.
+
 ## §4 — Real-world parallels
 
 Browser-artifact forensics has been pivotal in several high-profile cases over the past two decades. A short selection, chosen because each one shows a different angle of the same underlying technique.

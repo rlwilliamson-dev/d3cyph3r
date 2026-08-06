@@ -116,6 +116,7 @@ const SECTION_SLUGS = {
   "§1 — The setup":              "setup",
   "§2 — The solve":              "solve",
   "§3 — The vulnerability":      "vulnerability",
+  "§3.5 — Blast radius":         "blast-radius",
   "§4 — Real-world parallels":   "real-world-parallels",
   "§5 — Frameworks, deep dive":  "frameworks",
   "§6 — Cert exam relevance":    "certifications",
@@ -145,6 +146,7 @@ const SECTION_LABELS = {
   setup:                 "The setup",
   solve:                 "The solve",
   vulnerability:         "The vulnerability",
+  "blast-radius":        "Blast radius",
   "real-world-parallels":"Real-world parallels",
   frameworks:            "Frameworks",
   certifications:        "Cert exam relevance",
@@ -554,7 +556,7 @@ const BRAND_GLYPHS =
 
 // Bumped in lockstep with js/engine/version.js so a release busts the
 // stylesheet cache for returning readers (release checklist step 2b).
-const CSS_VERSION = "2.4.1";
+const CSS_VERSION = "2.5.0";
 
 // ─── TOC rail ─────────────────────────────────────────────────────
 

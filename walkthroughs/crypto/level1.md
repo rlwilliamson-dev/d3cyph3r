@@ -257,6 +257,39 @@ The mitigation tracks each failure independently:
 
 Each fix is mechanical. The discipline that prevents the next instance is the same in all three cases: the engineer writing the code understands what the library actually does when called without the safety arguments. RFC 8725 — JSON Web Token Best Current Practices — is the document you would print and hand to Theo.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Vesta's internal admin API, whose verify middleware calls `jwt.verify` with no algorithms allowlist |
+| Consequence | Tokens presented with `alg: none` are accepted, so anyone who can craft JSON can mint an administrative identity |
+| Authentication required | None. This is not a stolen credential, it is the absence of a check |
+| Also disclosed | A debug log recording a token being replayed by the same caller |
+| Escalates to | `level2@crypto` |
+| Regime | PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands |
+
+**There is no credential to rotate here, which changes the entire
+remediation shape.** Every other finding in this track is fixed by
+issuing a new secret. This one cannot be, because the attacker never
+needed a secret. Until the allowlist is added, rotating signing keys
+accomplishes nothing at all: an `alg: none` token does not carry a
+signature to check against them.
+
+**Assume exploitation and work backwards, because the population of
+possible attackers is "anyone who could reach the endpoint."** Scoping
+questions that begin "who had valid credentials" do not apply. The
+useful questions are which network positions could reach the admin API,
+for how long the middleware has been in this state, and whether request
+logs retain enough to distinguish a forged token from a legitimate one
+after the fact.
+
+**The replay in the debug log is evidence, and it should be treated as
+such immediately.** The same caller presenting the same token twice
+against an administrative endpoint is exactly the pattern this
+vulnerability produces. It may be benign. Determining which it is comes
+before the code fix in priority order, because if it is not benign then
+Vesta's obligations to its acquirer have already started.
+
 ## §4 — Real-world parallels
 
 JWT verification failures are one of the most consistently exploited classes of authentication vulnerabilities in modern web apps. The history is short — JWT itself is a 2015 standard (RFC 7519 was published in May 2015) — but dense.

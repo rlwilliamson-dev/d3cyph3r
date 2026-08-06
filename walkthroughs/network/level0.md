@@ -121,6 +121,41 @@ Each is independently a finding. A defender who, say, closes 5432 at the firewal
 
 The defender's playbook against this category of finding is in §7. First, the parallels.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | `staging.atlas.health` from the open internet, three ports where the scope file permits none |
+| Credential in scope | The vendor default `atlas-default-2025`, unrotated for five quarters |
+| Population at the client | Roughly 400,000 patients across about 40 clinics |
+| Records demonstrably exposed | **Unknown, and that is the finding.** See below |
+| Escalates to | A shell on the staging-db host as the service account, which is `level1@network` |
+| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media |
+
+**The honest answer to "how many records" is that Atlas cannot say, and
+an assessment that invents a number is worse than one that reports the
+gap.** What is established is that an internet-reachable Postgres accepts
+a known default credential on a production-adjacent host. Whether the
+path from there into production patient data is short or long has never
+been tested. "We do not know our own blast radius" is a reportable
+finding in its own right, and it is the one that should drive the next
+engagement.
+
+**A false attestation is already in the compliance file, and that is a
+second exposure with its own timeline.** Marcus said in a recorded review
+that staging was VPN-only. Driftwood wrote a summary report on that basis
+and it went into Atlas's compliance record. The perimeter finding is
+today's problem; the fact that Atlas has been representing a control as
+effective when it was not is a governance problem that reaches backwards
+through every attestation made since March.
+
+**The 60-day clock does not start at the scan.** HIPAA measures from
+discovery of a *breach*, and an exposed service is not yet a breach.
+The determination of whether unauthorised acquisition occurred is what
+starts it, which is why the log-retention question ("can Atlas prove
+nobody used this credential") matters more than the port scan. If Atlas
+cannot answer it from records, it cannot rule the event out either.
+
 ## §4 — Real-world parallels
 
 Three named, well-documented incidents follow this exact pattern. Each was a major news event, each is documentable from primary sources you can read yourself, and each is structurally identical to the Atlas Health finding in a way that makes the lesson transferable.

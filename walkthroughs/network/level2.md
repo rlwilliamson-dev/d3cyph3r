@@ -223,6 +223,40 @@ Certificate Transparency makes this worse for public-facing certs. RFC 6962 (201
 
 The defenses against all of this are mature and documented; nobody at Atlas applied them.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | A host that Atlas's asset-management system says does not exist |
+| Disclosed by the certificate | Internal infrastructure inventory in the SAN list, and a service mailbox named in the free-form OU field |
+| Disclosed by the mailbox | An autoresponder replying to password-reset requests with cleartext credentials |
+| Permanence | Public-CA certificates are logged to Certificate Transparency, so the inventory cannot be unpublished |
+| Escalates to | The temporary credential in the autoresponder log, which is `level3@network` |
+| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media |
+
+**The unmanaged host is the finding that outlives the certificate.**
+Atlas's inventory does not know this machine exists, which means it is
+outside patching, outside monitoring, and outside every control whose
+coverage is measured against the asset register. Every other issue on
+this page is downstream of an asset-management gap, and reissuing the
+certificate fixes none of it.
+
+**Certificate Transparency makes this irreversible in a way most
+disclosures are not.** CT logs are append-only by design, and that design
+is a security feature: it is what lets a domain owner detect
+mis-issuance. The same property means Atlas's internal naming, once it
+appears in a publicly-trusted certificate, is permanently public. Rotating
+the certificate changes what is true going forward and nothing about what
+is already recorded. Remediation here is renaming and re-architecting,
+not revocation.
+
+**The autoresponder is the part that moves this from disclosure to
+access.** An inventory tells an attacker where to go. A mailbox that
+emails cleartext credentials on request tells them how to get in, and it
+does so through a channel that looks like normal helpdesk traffic. For
+HIPAA scoping the question is what those credentials reach, and whether
+Atlas can produce records showing who else asked.
+
 ## §4 — Real-world parallels
 
 **Mandiant UNC5537 / Snowflake 2024.** In June 2024 Mandiant attributed a campaign hitting Snowflake customer instances to UNC5537, a financially-motivated threat actor. The campaign compromised dozens of Snowflake customers including AT&T, Ticketmaster, and Santander. The initial-access mechanism was credential stuffing against Snowflake customer URLs that the attackers had enumerated via several recon paths — including DNS / subdomain enumeration and credential reuse from infostealer logs. Mandiant's [June 2024 advisory](https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion) documents external-recon as the first stage of the kill chain. Atlas's CT-log exposure of `staging.atlas.health` and `marcus-test.atlas.health` is exactly the recon surface UNC5537 capitalized on.

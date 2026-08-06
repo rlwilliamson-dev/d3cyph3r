@@ -186,6 +186,38 @@ The second finding — the 4625 typed-password-as-username — has a direct CWE 
 
 The structural lesson: Windows event logs catch what defenders forget to look at. CMMC AU.L2-3.3.x mandates the audit infrastructure; what it doesn't mandate is that anyone actually reads it. Polaris has them on, has the reviews scheduled, has a vendor (Driftwood) who actually opens the files — and so two findings surfaced from one log in one engagement. Most CMMC-compliant environments are AU-2 compliant (the logs are generated) and AU-12 compliant (the rules say what to log), but AU-6 noncompliant in practice (the logs are not actually reviewed beyond ingest into a SIEM that fires only on a small handful of pre-built rules). Reed's chain wouldn't have alerted on most default SIEM rule sets. The 4625 typed-password would not have alerted at all. Both findings depended on a human reading the log.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | The Security event log from Reed's imaged workstation, `POL-WS-0418` |
+| The chain recovered | Archive creation, encoding to text, browser launch, and upload to a consumer file-sharing host, on a Saturday |
+| Data class | Controlled Unclassified Information, which is what makes this a DFARS matter rather than an HR one |
+| Second finding | An IR responder's password, typed into the username field and captured verbatim in a failed-logon record |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+
+**This is the point where the case becomes reportable, and the clock is
+72 hours from the determination.** Level0 refuted an alibi. This
+establishes a sequence of actions against CUI, which is what
+DFARS 252.204-7012 is written about. Polaris's obligation runs to DoD via
+DIBNet, and the same clause requires preserving images and logs for at
+least 90 days, so evidence handling and the reporting decision are the
+same workstream.
+
+**Every tool in the chain is legitimate, which is the detection lesson.**
+Archiving, encoding, and a browser are ordinary administrative activity.
+No malware is involved and no signature will fire. What distinguishes the
+sequence is the combination and the timing, which means detection has to
+be behavioural, and an environment tuned to catch malicious binaries will
+watch this happen without objection.
+
+**The responder's leaked password is a separate incident and needs its
+own clock.** A credential mistyped into a username field is captured in
+cleartext in the log record, and it belongs to someone with investigative
+privileges. It has nothing to do with Reed. It must be rotated
+immediately, and the forensic bench's own access reviewed, because the
+investigation team is now part of the exposure it is investigating.
+
 ## §4 — Real-world parallels
 
 Windows event log forensics shows up in essentially every major IR investigation of the last fifteen years. A non-exhaustive tour:

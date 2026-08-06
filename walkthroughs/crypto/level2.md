@@ -192,6 +192,39 @@ All four use a per-password salt (a random 16-32 byte value stored alongside the
 
 Theo used MD5 with no salt, which combines all three failure modes. The four hashes that share a plaintext all produce the same output, so cracking one cracks four. The function is fast, so cracking is microseconds. The input is in rockyou, so the search space is bounded. Every modern password-storage doctrine exists specifically to make at least one of those three conditions false; Theo's "I made it safe" commit made none of them false.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | `backup-passwords.txt` in Vesta's deploy repository: 200 rows, unsalted MD5 on the left, the production system it unlocks on the right |
+| Cracked in this level | Four hashes, in under a second, with a public wordlist |
+| The compounding fact | All four resolve to the **same plaintext**, and one row is labelled `aes-backup` |
+| Weaknesses | CWE-916 unsuitable hash, CWE-759 no salt, CWE-521 weak requirement, CWE-262 not rotated |
+| Escalates to | That plaintext is both a host login and the AES passphrase in `level3@crypto` |
+| Regime | PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands |
+
+**The labels are worth more than the hashes.** Even uncracked, the right
+column is a directory of Vesta's production systems and which of them
+share credential custody. An attacker who cracks nothing has still been
+handed a target list and a map of blast radius. Assessments that grade
+this finding on hash strength alone have missed the disclosure that needs
+no cracking at all.
+
+**Reuse converts four findings into one key.** Four rows resolving to a
+single plaintext means the effective credential count is one, and its
+scope is the union of everything those rows label. This is why "how many
+were cracked" is the wrong metric: what matters is how many systems the
+recovered plaintext opens, and here that set spans an admin login, a
+production database account, and an encrypted backup.
+
+**Unsalted MD5 is not weak encryption, and the distinction matters for
+the report.** MD5 is a hash, not a cipher, and unsalted means identical
+inputs produce identical digests, which is precisely what made the reuse
+visible from the file alone. PCI-DSS asks for strong cryptography with
+appropriate key management; this is neither, and the commit titled
+"safer than plaintext" is the clearest statement of the
+misunderstanding the whole level exists to correct.
+
 ## §4 — Real-world parallels
 
 **LinkedIn 2012 (and 2016).** In June 2012 LinkedIn confirmed a breach exposing ~6.5 million SHA-1 unsalted password hashes. The breach was originally thought to be the full scope until 2016, when a credential broker offered ~117 million LinkedIn hashes from the same incident for sale on the dark web. SHA-1 unsalted has the same operational properties Theo's MD5 unsalted file does — fast, per-password-distinct-only-if-the-plaintexts-differ, vulnerable to bulk dictionary attacks. The 2016 disclosure led to forced password resets for every LinkedIn user that hadn't changed their password since 2012. [Have I Been Pwned's LinkedIn page](https://haveibeenpwned.com/PwnedWebsites#LinkedIn) summarizes the breach metadata; LinkedIn's own [2012 security advisory](https://blog.linkedin.com/2012/06/09/an-update-on-taking-steps-to-protect-our-members) is preserved in their blog.

@@ -234,6 +234,39 @@ Pull any one of the five threads out of the chain and the breach becomes substan
 
 This is the shape of most real-world breaches. There is rarely a single dramatic vulnerability that opens the front door; there are five or six mundane misconfigurations that compound into a path. The lesson is not "lock down AXFR" — the lesson is "any one of these five would have stopped this."
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | The staging-db host's internal DNS resolver, from a shell obtained with an unrotated vendor default |
+| Disclosed | Atlas's full internal data-centre map via unauthenticated zone transfer, plus a service-account credential parked in a TXT record |
+| Compounding weaknesses | CWE-1392 default credential, CWE-732 interactive shell on a service account, CWE-306 missing authentication on the transfer |
+| Exposure window | The default was flagged in a Q1 2025 review with rotation promised "next sprint"; five sprints later it was live |
+| Escalates to | The credential recovered from DNS, which is `level2@network` |
+| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media |
+
+**A zone transfer is not a data breach, and treating it as one will get
+the finding dismissed.** No patient record moved. What moved is the map:
+hostnames, addressing, and naming conventions for infrastructure Atlas
+never intended to publish. The correct characterisation is that
+reconnaissance which should have cost an attacker weeks now costs one
+query, and that every subsequent finding in this track is cheaper because
+of it.
+
+**The credential in the TXT record is the more serious half, and it is
+there for an ordinary reason.** DNS is a convenient key-value store that
+every host can already reach, which is exactly why people use it as one.
+It also answers to anyone who asks, keeps no meaningful access log, and
+is rarely in scope for secret-scanning. A secret placed there is not
+hidden; it is published to a service designed to distribute things.
+
+**Three weaknesses had to align, and only one of them looks like a
+security decision.** Rotating the default fixes the entry. Removing the
+shell fixes the foothold. Restricting transfers fixes the disclosure.
+Each is independently a finding, and remediation that addresses the
+loudest one leaves the chain intact, which is what III.C.1.f-style
+monitoring exists to catch and did not.
+
 ## §4 — Real-world parallels
 
 DNS zone transfer is one of the longest-running classes of misconfiguration in the security catalog. The technique predates Common Vulnerabilities and Exposures (CVE) as an indexing system; AXFR enumeration is documented in security literature going back to the mid-1990s, and the first significant published red-team writeups about using it appeared around 2000-2001. What follows is not a comprehensive history (that would be a different document) but three threads worth tracing.

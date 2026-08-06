@@ -206,6 +206,37 @@ The second vulnerability is the **detection gap** in Coverline's RDS audit loggi
 
 The third, indirectly: the **dormant-account lifecycle gap** in Coverline's application-side `users` table. The `vikram.shah` row has `status: terminated` since 2024-01-31 but the row still exists, which means the application's identity-resolution logic still has the identity. This isn't directly tied to today's exposure — vikram.shah's RDS credentials (if they ever had any) aren't the leaked master credential — but it's a CC6.2 gap that's worth surfacing.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | The `coverline_claims` production database, entered with the RDS credential recovered from the public bucket |
+| The finding | A `migration_artifacts` table from the 2024 region cutover, carrying explicit TTL columns that scheduled its own deletion for Q2 2024 |
+| Contents | A broker-portal service credential, stored as a row in a database table |
+| The other signal | A single anomalous schema-enumeration query from 2026-05-20 02:14 UTC, with **no captured source IP** |
+| Escalates to | The broker-portal credential, which is `level2@cloud` |
+| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively |
+
+**The table documented its own expiry and outlived it by two years.**
+Someone thought about lifecycle, wrote the TTL columns, and built nothing
+that acted on them. Intent expressed as a column is not a control; it is a
+comment that happens to be typed. This is a governance finding about data
+retention that is independent of how the credential got read.
+
+**A credential stored as a table row inherits none of a secret store's
+properties.** It is in every backup, every replica, every export, and
+every developer's local restore, and it is visible to anyone with read on
+the schema. Rotation reaches the live row and none of the copies, which is
+why the remediation is a secrets manager rather than an `UPDATE`.
+
+**The unattributed query is the most urgent line in the table.** Someone
+enumerated the schema at 02:14 UTC and Coverline cannot say who, because
+`pgaudit` was never enabled. That missing source IP is simultaneously a
+control gap and the reason the incident cannot be closed as benign. For a
+72-hour regulator clock, "we cannot determine whether unauthorised access
+occurred" is not a neutral answer, and the logging gap will be the first
+thing examined.
+
 ## §4 — Real-world parallels
 
 Database row-value credential leakage is less publicized than source-control credential leakage but happens at comparable rates. A non-exhaustive tour:

@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.4.1">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.5.0">
 </head>
 <body class="page-doc">
 
@@ -43,7 +43,7 @@
   <div class="layout">
     <main id="main" class="doc">
 <h1 id="level3crypto-theos-encrypted-backup">level3@crypto — Theo&#39;s Encrypted Backup<a class="anchor" href="#level3crypto-theos-encrypted-backup" aria-label="Link to this section">#</a></h1>
-<p class="doc-meta"><span class="doc-meta-item">23 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">4,577 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Crypto track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Crypto · <strong>Client:</strong> Vesta Retail (continued) · <strong>Compliance regime:</strong> PCI-DSS v4.0.1</p>
+<p class="doc-meta"><span class="doc-meta-item">25 min read</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">4,909 words</span><span class="doc-meta-sep" aria-hidden="true">&middot;</span><span class="doc-meta-item">Crypto track</span></p><details class="toc-mobile"><summary>On this page</summary><ul class="toc-list"><li><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a></li><li><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li><a href="#blast-radius"><span class="toc-ord">§3.5</span><span class="toc-label">Blast radius</span></a></li><li><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul></details><p><strong>Track:</strong> Crypto · <strong>Client:</strong> Vesta Retail (continued) · <strong>Compliance regime:</strong> PCI-DSS v4.0.1</p>
 <blockquote class="spoiler-warning">
 <p>⚠ This page contains the full solve path <strong>and</strong> the breadcrumb credential for a future <code>level4@crypto</code>. If you haven&#39;t solved <code>level3@crypto</code> yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough assumes you&#39;ve worked through <code>level0@crypto</code> through <code>level2@crypto</code>; this level is the capstone of their argument.</p>
 </blockquote>
@@ -175,6 +175,57 @@ vesta-admin@backup:~$ exit
 <p><strong>CWE-311 / CWE-312: Missing Encryption / Cleartext Storage of Sensitive Information.</strong> The decrypted contents, and — separately — the restore configuration appended to the dump in plaintext, which carries the HSM unwrap credential. That block is a credential for the <em>actual</em> key store, sitting inside a file whose protection is a cracked password. The key hierarchy is inverted: the weakly-protected thing contains the credential to the strongly-protected thing.</p>
 <p><strong>And the one that isn&#39;t a CWE at all.</strong> The CVV retention is not a software weakness; it is a prohibited practice. PCI-DSS 3.3.1 forbids storing sensitive authentication data after authorization <em>even if encrypted</em>, and it applies everywhere the data lands — databases, logs, and backups alike. No control makes it acceptable. This distinction — between &quot;data that needs protecting&quot; and &quot;data you may not keep&quot; — is the single most common conceptual error auditors encounter, and it is exactly the error Theo made when he concluded that encrypting the export resolved the question.</p>
 <p>One more structural note that will matter more to Vesta than any of the above: the backup host was treated as <strong>out of scope</strong> for cardholder data <em>because the file was encrypted</em>. Encrypted cardholder data is still cardholder data for scope purposes. This host has been in the cardholder data environment the entire time and has never been assessed as such — which means its logging, access control, and review requirements have never been applied.</p>
+<h2 id="blast-radius">§3.5 — Blast radius<a class="anchor" href="#blast-radius" aria-label="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>This finding</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Reached</td>
+<td>Vesta&#39;s nightly production backup, AES-256 encrypted, decrypted with a passphrase recovered in the previous level</td>
+</tr>
+<tr>
+<td>Records in scope</td>
+<td>48,219 transaction rows</td>
+</tr>
+<tr>
+<td>Fields present</td>
+<td>Cardholder name, <strong>full PAN</strong>, expiry, <strong>CVV2</strong>, auth code, amount</td>
+</tr>
+<tr>
+<td>Key management</td>
+<td>The passphrase is also the host login, and was one of the four MD5 hashes cracked in <code>level2@crypto</code></td>
+</tr>
+<tr>
+<td>Regime</td>
+<td>PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands</td>
+</tr>
+</tbody></table>
+<p><strong>AES-256 was never broken, and saying the backup was &quot;encrypted&quot; is not a
+mitigating fact.</strong> The cipher performed exactly as designed. The
+passphrase protecting it was a reused password sitting as an unsalted MD5
+in a git repository, so the effective strength of the control is the
+strength of that password, not the strength of the algorithm. A control
+is only as strong as its key management, and this is the cleanest
+demonstration of that principle in the corpus.</p>
+<p><strong>The retained CVV2 is not a weakness. It is a prohibited practice, and
+it is categorically worse than the rest of the finding.</strong> PCI-DSS v4.0.1
+requirement 3.3.1 states that sensitive authentication data is not stored
+after authorization completes, <strong>even if encrypted</strong>. There is no
+compensating control, no encryption standard, and no key-management
+practice that makes this permissible. Every other item here is a control
+that failed; this is data that should not exist. Requirement 3.5.1
+separately governs the PAN, which must be rendered unreadable wherever it
+is stored.</p>
+<p><strong>Scope is the whole backup set, not one file.</strong> These are nightly
+backups, so the correct question is how many nights of retained archives
+carry the same fields under the same passphrase, and where those archives
+live. Remediation is three separate tracks that must not be conflated:
+purge the SAD, re-key the archives under managed keys, and end the
+password reuse that made the passphrase recoverable in the first place.</p>
 <h2 id="real-world-parallels">§4 — Real-world parallels<a class="anchor" href="#real-world-parallels" aria-label="Link to this section">#</a></h2>
 <p><strong>LastPass (2022) — the canonical encrypted-backup failure.</strong> In a two-stage intrusion, attackers first took source code and technical documentation from a development environment, then compromised a senior DevOps engineer&#39;s home computer, obtained credentials from it, and exfiltrated backups of customer password vaults. The vaults were encrypted; LastPass&#39;s initial messaging leaned on that fact. The problem was underneath it. Vault keys are derived from the user&#39;s master password with PBKDF2-SHA-256, and while LastPass raised the default iteration count to 100,100 in 2018, <strong>it did not apply that change retroactively</strong> — so a large population of legacy accounts was still at 5,000 iterations when the backups walked out the door. Once an attacker holds the ciphertext, all defenses are offline: they guess as fast as their hardware allows, forever, with no rate limiting and no lockout. In 2025 LastPass settled a class action for $24.5 million, and reporting has linked large cryptocurrency thefts to credentials recovered from those vaults.</p>
 <p>The structural lesson maps onto Vesta almost line for line: an encrypted archive left the perimeter, and everything that decided the outcome — passphrase entropy, KDF work factor, whether old material was ever re-keyed — had been settled long beforehand. Once the ciphertext is out, you cannot improve any of those things retroactively.</p>
@@ -253,7 +304,7 @@ vesta-admin@backup:~$ exit
 <hr>
 <p><em>Return to <a href="/walkthroughs/">walkthroughs index</a> — or back to <a href="/">d3cyph3r.com</a></em></p>
 <nav class="pager" aria-label="Walkthrough navigation"><a class="pager-cell pager-prev" href="/walkthroughs/crypto/level2.html"><span class="pager-dir">&larr; Previous</span><span class="pager-label">level2@crypto</span><span class="pager-title">Theo's Quick Hash</span></a><div class="pager-cell pager-empty"></div></nav>    </main>
-    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box</a></li><li><a href="#step-2-see-whats-on-the-box">Step 2: See what's on the box</a></li><li><a href="#step-3-confirm-that-ciphertext-is-not-readable">Step 3: Confirm that ciphertext is not readable</a></li><li><a href="#step-4-get-the-cipher-from-theos-notes">Step 4: Get the cipher from Theo's notes</a></li><li><a href="#step-5-decrypt">Step 5: Decrypt</a></li><li><a href="#step-6-read-to-the-bottom-the-level4-breadcrumb">Step 6: Read to the bottom — the level4 breadcrumb</a></li><li><a href="#step-7-post-mortem-then-out">Step 7: Post-mortem, then out</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
+    <aside class="rail"><nav class="toc" id="toc" aria-label="On this page"><p class="toc-title">On this page</p><ul class="toc-list"><li data-section="setup"><a href="#setup"><span class="toc-ord">§1</span><span class="toc-label">The setup</span></a></li><li data-section="solve"><a href="#solve"><span class="toc-ord">§2</span><span class="toc-label">The solve</span></a><ul class="toc-sub"><li><a href="#step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box</a></li><li><a href="#step-2-see-whats-on-the-box">Step 2: See what's on the box</a></li><li><a href="#step-3-confirm-that-ciphertext-is-not-readable">Step 3: Confirm that ciphertext is not readable</a></li><li><a href="#step-4-get-the-cipher-from-theos-notes">Step 4: Get the cipher from Theo's notes</a></li><li><a href="#step-5-decrypt">Step 5: Decrypt</a></li><li><a href="#step-6-read-to-the-bottom-the-level4-breadcrumb">Step 6: Read to the bottom — the level4 breadcrumb</a></li><li><a href="#step-7-post-mortem-then-out">Step 7: Post-mortem, then out</a></li></ul></li><li data-section="vulnerability"><a href="#vulnerability"><span class="toc-ord">§3</span><span class="toc-label">The vulnerability</span></a></li><li data-section="blast-radius"><a href="#blast-radius"><span class="toc-ord">§3.5</span><span class="toc-label">Blast radius</span></a></li><li data-section="real-world-parallels"><a href="#real-world-parallels"><span class="toc-ord">§4</span><span class="toc-label">Real-world parallels</span></a></li><li data-section="frameworks"><a href="#frameworks"><span class="toc-ord">§5</span><span class="toc-label">Frameworks</span></a></li><li data-section="certifications"><a href="#certifications"><span class="toc-ord">§6</span><span class="toc-label">Cert exam relevance</span></a></li><li data-section="defender"><a href="#defender"><span class="toc-ord">§7</span><span class="toc-label">What a defender does</span></a></li><li data-section="optional-exploration"><a href="#optional-exploration"><span class="toc-ord">§7.5</span><span class="toc-label">Optional exploration</span></a></li><li data-section="takeaways"><a href="#takeaways"><span class="toc-ord">§8</span><span class="toc-label">Key takeaways</span></a></li><li data-section="further-reading"><a href="#further-reading"><span class="toc-ord">§9</span><span class="toc-label">Further reading</span></a></li></ul><a class="toc-top" href="#main">Back to top</a></nav></aside>
   </div>
 
   <footer id="site-footer">

@@ -248,6 +248,38 @@ The connective tissue is **an identity lifecycle that has a "create" step and no
 
 There is also a fourth, account-level failure you'll surface in §7.5: the AWS account root user still has an access key (CIS 2.4) and no MFA (CIS 2.5).
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | A least-privilege review across 16 IAM principals in Coverline's account |
+| The finding | A 2024-migration `legacy-deploy-bot` still holding `AdministratorAccess`, with a still-Active access key last used in 2024 |
+| Where the secret was | A leftover bootstrap-credentials file on the bastion |
+| Effective scope | Administrator, which is the whole account rather than any part of it |
+| Also surfaced | An orphaned terminated-employee account, a never-rotated 2019 key, and a root access key |
+| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively |
+
+**An unused administrator key is not a smaller finding than a used one.**
+"Last used 2024" describes what happened, not what is possible. The
+credential is Active, so its reach is the entire account: every bucket,
+every database, every log group, including the logs that would record its
+use. Scoping by observed activity systematically understates dormant
+credentials, and dormancy is exactly what makes them attractive.
+
+**A root access key belongs at the top of the remediation list
+regardless of everything else here.** It cannot be scoped, cannot be
+constrained by policy, and is the one credential AWS's own guidance says
+should not exist. It appears as a bonus find in this level, and in a real
+report it would lead the executive summary.
+
+**The pattern across all four accounts is the actual deliverable.**
+A migration bot, a terminated employee, a 2019 key, and a root key are
+not four unrelated items; they are one identity-lifecycle process that
+creates principals and never retires them. Deactivating these four leaves
+the process that produced them intact, and the next migration will produce
+the next set. That is the finding a carrier's board needs to hear, and it
+is the one NYDFS and NAIC examiners will test against.
+
 ## §4 — Real-world parallels
 
 **Capital One, 2019 — the over-privileged role that read 100 million records.** A former AWS engineer exploited a Server-Side Request Forgery flaw in a misconfigured web application firewall to obtain the credentials of an IAM role attached to it. The role had far more S3 permission than the WAF needed — it could list and read buckets holding ~100 million U.S. and ~6 million Canadian credit-card-application records. The breach is the canonical least-privilege cloud failure: the SSRF was the door, but the *blast radius* came from a role granted more than its job required. The U.S. Office of the Comptroller of the Currency assessed an $80 million penalty in 2020, and the attacker was convicted in 2022. Had that role been scoped to only the objects the WAF legitimately touched, the same SSRF would have leaked far less.

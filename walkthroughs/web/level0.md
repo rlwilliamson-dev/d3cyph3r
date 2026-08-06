@@ -190,6 +190,46 @@ It is tempting to summarize this finding as "BluePier left files in `/backup/`."
 
 Each failure is independently a finding. The autoindex layer is the proximate cause of the exposure; the DocumentRoot layer is the root cause; the robots.txt layer is the institutional pattern that signals to attackers exactly which paths to probe. Fixing only one — say, turning autoindex off without removing the directory — leaves the credential and CSV still served on direct request (`curl /backup/db-creds.txt` would still work). Fixing only DocumentRoot but leaving the robots.txt entries leaks the path-naming convention to future audits and attackers alike.
 
+## §3.5 — Blast radius
+
+Naming the failure is half of an assessment. The other half is sizing it:
+what the finding reaches, how much is in scope, for how long, and what it
+opens next. That is the part a risk register needs and the part a
+vulnerability scanner cannot produce.
+
+| Dimension | This finding |
+|---|---|
+| Reached | `/backup/` under `DocumentRoot`, unauthenticated, over the public internet |
+| Records in scope | 4,217 student records: student ID, name, email, major, GPA |
+| Population | Meridian enrols roughly 30,000 students; the CSV is a 2023 subset, not the roll |
+| Exposure window | Roughly two years, from BluePier's deployment to this audit |
+| Escalates to | A live production MySQL credential (`webapp_admin` on `db.meridian.edu`), reused in staging |
+| Regime | FERPA education records, plus state breach-notification law for the PII |
+
+Three things in that table deserve to be pulled out, because each is a
+place assessments routinely go wrong.
+
+**The record count is a floor, not a total.** 4,217 is what sits in the
+CSV. The credential in the same directory reaches `meridian_portal`, the
+live system behind it, which holds the rest of the student body. An
+assessment that reports "4,217 records exposed" has measured the file and
+missed the credential sitting beside it. The honest finding is that a
+subset was disclosed and the whole was made reachable.
+
+**The credential is reused, so the radius is wider than one host.**
+James's handoff note says the same value is baked into the staging
+deployment. Rotating production alone leaves staging authenticating with a
+string that has been published on the internet for two years.
+
+**FERPA does not carry a breach-notification duty, and saying otherwise
+will get you corrected in the room.** It has no fine schedule and no
+notification clause; enforcement runs through the Department of
+Education's funding-withdrawal authority, which has never been formally
+invoked, and through the annual FSA compliance attestation. The
+notification obligation here comes from *state* law attaching to the PII,
+not from FERPA. The two are separate exposures with separate clocks, and
+conflating them produces a remediation plan that satisfies neither.
+
 ## §4 — Real-world parallels
 
 Three named, well-documented incidents follow this exact pattern. Each was a major news event, each is documentable from primary sources, and each lands on the lesson Meridian's finding lands on: a vendor relationship that ended without proper cleanup is an indefinite exposure window for the data the vendor touched.

@@ -241,6 +241,43 @@ And the prize compounds a fourth: **the DB-admin credential stored in plaintext 
 
 A note on the threat landscape. In the [OWASP Top 10:2025](https://owasp.org/Top10/), Injection sits at **A05** — it dropped from A03:2021 (and from #1 in the 2013/2017 editions). That decline is real and it's good news: parameterized queries and ORMs are now the framework default, so classic SQLi is genuinely less common than it was a decade ago. But "less common" is not "gone," and when it lands the impact is total — as MOVEit (§4) demonstrated in 2023. Meridian's catalog is exactly the kind of code that slips through: a 2021 hand-built query, inherited and never rewritten, on a subdomain nobody re-reviewed.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | BluePier's 2021 course-search, which concatenates the query parameter straight into SQL |
+| Authentication required | **None.** The search box is public and unauthenticated |
+| Reachable via UNION | Four tables: `courses` as intended, plus `students`, `staff_users`, and `app_config` |
+| Also disclosed | A plaintext database-admin credential in `app_config`, and verbose SQL errors (CWE-209) echoing the constructed query |
+| Regime | FERPA education records (no notification duty, no fine schedule); any clock comes from state breach law attaching to the PII |
+
+**Unauthenticated is the word that sets the severity.** Every other
+finding in this track needs a session first. This one needs a browser.
+The population of possible attackers is the internet, the skill floor is
+a copied payload, and the reach extends to FERPA-protected records and
+the authentication table in the same query.
+
+**The credential in `app_config` outlives the injection fix.** Patching
+the query stops the extraction path and does nothing about a plaintext
+database-admin credential that has been reachable through a public search
+box since 2021. Rotation and a review of what that account touched must
+run in parallel with the code fix, not after it, or the attacker keeps a
+key to a door that has just been locked.
+
+**The verbose errors are a finding in their own right and the reason this
+was tractable.** Echoing the constructed query back to the client turns
+blind injection into a guided conversation, telling an attacker exactly
+how their payload was parsed. It is also the single cheapest thing on this
+page to fix: suppress the detail to the client, keep it in the server log,
+and the same vulnerability becomes dramatically more expensive to
+exploit.
+
+**A note on the scoping discipline the engagement imposes.** Priya's
+instruction was to prove reach and stop, and that is not squeamishness.
+Pulling a handful of rows demonstrates the finding; harvesting the
+students table would make Driftwood the party that exfiltrated FERPA
+records. The proof and the harm are separated by where you choose to stop.
+
 ## §4 — Real-world parallels
 
 **Heartland Payment Systems, 2008.** The Albert Gonzalez crew — the same group behind the TJX and 7-Eleven breaches — used SQL injection to plant backdoors on corporate networks and pivot to payment systems, where they installed packet sniffers. Heartland was among the targets; roughly 130 million card numbers were exposed, one of the largest payment breaches of its era. The lesson Meridian's catalog repeats: the injectable endpoint is rarely the valuable target itself — it's the doorway to the network behind it. [Wikipedia on Albert Gonzalez](https://en.wikipedia.org/wiki/Albert_Gonzalez) documents the SQL-injection methodology; [the Heartland breach article](https://en.wikipedia.org/wiki/Heartland_Payment_Systems#Security_breach) carries the scope.

@@ -1,6 +1,6 @@
 # level3@linux — Daniel's Forgotten Sudo
 
-**Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA Safeguards Rule
+**Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA § 501(b) (Interagency Guidelines)
 
 > ⚠ This page contains the full solve path **and** the breadcrumb credential for a future `level4@linux`. If you haven't solved `level3@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough assumes you've worked through `level0@linux` through `level2@linux`; this level continues their narrative directly.
 
@@ -150,6 +150,38 @@ The three compound like this: CWE-732 (the over-broad grant) turns CWE-250 (the 
 
 One thing this level is *not*: it is not a sudo software vulnerability. `sudo` the program did precisely what its configuration told it to. The finding is entirely in the policy (who may run what, as whom, over which paths) and in what the wildcard was allowed to reach. That distinction matters when you write it up — the remediation is `visudo`, not `apt upgrade sudo`.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Halton's build-runner as `daniel`, an account belonging to a consultant who rolled off a year earlier and was never deprovisioned |
+| Grant in scope | A surviving `NOPASSWD` sudo rule permitting `cat` over a wildcard path in the production backup tree |
+| Data reached | A Vault **root** token, swept into the weekly backup from a file marked "DO NOT BACK UP" |
+| Exposure window | Issued for the 2024-Q4 migration, with a ticket saying rotate before Q1 2025. Never rotated |
+| Escalates to | Vault root is the top of Halton's secret hierarchy, not a step in it |
+| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours |
+
+**A Vault root token is not one more credential, and reporting it as one
+understates it by an order of magnitude.** Every secret Vault brokers is
+reachable from it, including secrets for systems this engagement never
+touched. The correct scoping question is not "what does this token open"
+but "what did Vault hold," and the answer is the reason this finding
+outranks everything else in the track.
+
+**The wildcard is the whole grant.** `cat /var/backups/halton-prod/*`
+reads as narrow, and it is not: it is unrestricted read of whatever the
+backup process places in that directory, as root, forever, decided by a
+process nobody reviewed against the sudoers rule. Sudo grants scoped by
+path glob are a standing bet that the directory's future contents stay
+harmless. That bet lost here.
+
+**The offboarding failure is the control finding; the token is the
+consequence.** Daniel's account outliving his engagement by a year is a
+III.C.1.a access-control failure that no amount of secret rotation fixes,
+and III.D puts the oversight of that service-provider arrangement on
+Halton. Rotating the token and leaving the account closes the incident
+and preserves the vulnerability.
+
 ## §4 — Real-world parallels
 
 Leftover and over-broad sudo grants, dormant privileged accounts, and secrets-in-backups are all heavily represented in published incident data.
@@ -174,7 +206,9 @@ The parallels share one structural feature: **a privilege or a secret outlived t
 
 **OWASP Top 10:2025** puts this under **A01:2025 — Broken Access Control**, which has held the #1 slot since the 2021 edition. An over-broad sudoers wildcard is a textbook broken-access-control primitive: an authorization rule that grants materially more than its author intended. There's a secondary read under **A04 — Insecure Design** (the decision to route a `/etc/halton` snapshot, secrets and all, into a directory reachable by a low-privilege grant is a design defect, not just a config slip).
 
-**GLBA Safeguards Rule** (16 CFR Part 314) applies because Halton is a covered financial institution. §314.4(c)(1) requires access controls on customer-information systems; a NOPASSWD root grant on a dormant account is an access-control failure at the system level. §314.4(c)(3) requires the firm to "limit and monitor who can access" those systems; a grant that survived offboarding and reaches production secrets is both an access failure and a monitoring failure. §314.4(f) puts service-provider oversight on Halton — Driftwood is the service provider and Daniel is the failure boundary the provision was written to govern. The 2023 FTC amendments lowered the notification threshold to 500 consumers and set a 30-day reporting clock that starts when Halton determines a reasonable basis to believe customer data was accessed — a Vault root token in an attacker-reachable backup is precisely the kind of finding that starts that clock.
+**GLBA § 501(b)** applies because Halton is a covered financial institution; as a bank its implementing rule is the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks), not the FTC Safeguards Rule that governs nonbank institutions. III.C.1.a requires access controls on customer-information systems, and a NOPASSWD root grant on a dormant account is an access-control failure at the system level. III.C.1.f requires monitoring to detect attempted intrusions; a grant that survived offboarding and reaches production secrets is both an access failure and a monitoring failure. III.D puts service-provider oversight on Halton, and Driftwood is the service provider the provision was written to govern.
+
+The reporting clock is the part worth committing to memory, because it is far tighter than the FTC's and applies to a different population. Under the Computer-Security Incident Notification Rule, Halton has **36 hours** from determining that a notification incident has occurred to notify its primary federal regulator. A Vault root token sitting in an attacker-reachable backup is precisely the kind of finding that starts that determination.
 
 ## §6 — Cert exam relevance
 
@@ -245,7 +279,10 @@ The bonus finds exist to exercise the systemic-root-cause pattern without leavin
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
 - [CIS Controls Navigator — Safeguards 5.3 / 5.4 / 4.7 / 3.11](https://www.cisecurity.org/controls/cis-controls-navigator)
 - [OWASP Top 10:2025 — A01:2025 Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/)
-- [GLBA Safeguards Rule — 16 CFR Part 314 (FTC)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
+- [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030)
+- [Computer-Security Incident Notification Rule — 12 CFR Part 53 (36-hour clock)](https://www.ecfr.gov/current/title-12/chapter-I/part-53)
+- [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and)
+- [GLBA Safeguards Rule — 16 CFR Part 314 (FTC; nonbank institutions, shown for contrast)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
 - [FTC Safeguards Rule — 2023 amendments (security-event notification, 30-day clock)](https://www.ftc.gov/business-guidance/blog/2023/10/ftc-safeguards-rule-what-your-business-needs-know)
 - [HashiCorp Vault — token management and revocation](https://developer.hashicorp.com/vault/docs/concepts/tokens)
 - [Cisco ex-employee WebEx deletion (2018) — DOJ press release](https://www.justice.gov/usao-ndca/pr/san-jose-man-pleads-guilty-damaging-cisco-s-network)

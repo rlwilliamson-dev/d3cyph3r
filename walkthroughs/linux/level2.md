@@ -1,6 +1,6 @@
 # level2@linux — Daniel's Forgotten Cron
 
-**Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA Safeguards Rule
+**Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA § 501(b) (Interagency Guidelines)
 
 > ⚠ This page contains the full solve path **and** the breadcrumb credential for a future `level3@linux`. If you haven't solved `level2@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've worked through `level0@linux` and `level1@linux`; this level continues their narrative directly.
 
@@ -198,6 +198,37 @@ This level lands four CWEs stacked into one bastion. Three are direct-mappable (
 
 The structural CWE — **CWE-1188 (Insecure Default Initialization of Resource)** is the closest mapping — covers the choice to deploy cron-managed scripts with `set -x` and a redirect to a 644 log as the default operational pattern. Cron itself isn't inherently insecure; cron+`set -x`+644 is a default-mode configuration choice. Most production-bastion scripts in real ops shops should NEITHER use `set -x` with secret-bearing exports NOR redirect to plain files in `/var/log/`; the right modern primitives are systemd journal (`StandardOutput=journal+console` in the unit file) and structured logging with redaction filters. Halton's bastion uses neither.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Halton's production bastion, entered with the production database password reused as an SSH login |
+| Credential in scope | An SSH key passphrase, written in cleartext to a world-readable log by a weekly cron job running under `set -x` |
+| Who can read it | Every account on the bastion, without privilege escalation of any kind |
+| Exposure window | Written afresh every week the job has run, and readable the whole time |
+| Escalates to | The passphrase unlocks Daniel's snapshot key, which is `level3@linux` |
+| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours |
+
+**Credential reuse is doing more damage here than the logging bug.** The
+production database password being accepted as a bastion SSH login is the
+reason an attacker is on this host at all. The `set -x` trace is what they
+find once they arrive. Fixing the logging and leaving the reuse in place
+addresses the symptom and preserves the mechanism.
+
+**`set -x` is not a vulnerability, which is precisely why this persists.**
+It is a debugging aid that behaves exactly as documented: it echoes
+commands, including their arguments, including secrets passed as
+arguments. Nothing is misconfigured in the sense a scanner understands.
+The defect is a design decision about how the job passes its passphrase,
+and no tool will flag it, which is why it survived.
+
+**Every account on the box is the affected population.** This needs no
+privilege escalation and leaves no unusual audit trail, because reading a
+world-readable file is not an anomaly. For scoping, the right question is
+not "was this exploited" but "who had a shell on this host during the
+weeks the job ran," and Halton must be able to answer that from records
+that III.C.1.f expects to exist.
+
 ## §4 — Real-world parallels
 
 Tombstoned accounts, log-file credential leaks, and the joint-mode (a tombstoned account exfiltrating its own credentials via a job nobody is monitoring) are recurring fact patterns in published breach reports.
@@ -224,7 +255,9 @@ Five frameworks land hard on this finding. The intersection is unusually dense f
 
 **OWASP Top 10:2025** puts this finding under **A02:2025 — Security Misconfiguration** (the 644-mode log + the cron defaults that produced it), **A06:2025 — Insecure Design** (the architectural choice to redirect a `set -x` trace into a plain log path), and **A09:2025 — Security Logging and Alerting Failures** (the absence of a defender process noticing the credentials in the log over six months of weekly recurrence). The 2025 edition renumbered several categories relative to the 2021 edition; equivalent failures previously sat under A05 (Misconfiguration), A04 (Insecure Design), and A09 (Logging Failures). When citing OWASP in a Halton-facing audit deliverable, prefer the 2025 ordering — Halton's ops team will have moved to the current edition by the time the report lands.
 
-**GLBA Safeguards Rule** (16 CFR Part 314, applicable because Halton is a covered financial institution) gives this finding regulatory teeth. §314.4(c)(1) requires "access controls" on customer-information systems; daniel's continued account on a system that touches the bastion-to-production network is a failure to control access at the system level. §314.4(c)(3) requires that the firm "limit and monitor who can access" those systems; dormant-but-active accounts subvert the monitoring posture by failing to surface as "in use" in any reasonable audit. §314.4(f) puts service-provider oversight squarely on Halton; Driftwood is the service provider, and Driftwood's contractor (Daniel) is the failure boundary that the §314.4(f) language was specifically designed to govern. The 2023 FTC amendments to GLBA reduced the consumer-records threshold for notification reporting from 5,000 to 500 customers, and shortened the deadline from "as soon as possible" to *30 days from determination*. That clock starts the day Halton's CISO concludes that there's a reasonable basis to believe customer data was accessed, not the day the underlying bug was introduced.
+**GLBA § 501(b)**, implemented for banks through the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks), gives this finding regulatory teeth. III.C.1.a requires access controls on customer-information systems; daniel's continued account on a system that touches the bastion-to-production network is a failure to control access at the system level. III.C.1.f requires monitoring to detect attempted intrusions; dormant-but-active accounts subvert that posture by never surfacing as "in use" in any reasonable audit. III.D puts service-provider oversight squarely on Halton; Driftwood is the service provider, and Driftwood's contractor is exactly the failure boundary III.D was written to govern.
+
+On the clock: the FTC Safeguards Rule's 2023 amendment, which lowered the notification threshold to 500 consumers and set 30 days from determination, does **not** apply here, because 16 CFR Part 314 reaches nonbank institutions and Halton is a bank. Halton's obligation is tighter. Under the Computer-Security Incident Notification Rule (12 CFR Pt. 53 / Pt. 225 Subpart N / Pt. 304 Subpart C) it has **36 hours** from determining a notification incident to notify its primary federal regulator, with customer notice governed by the 2005 Interagency Guidance on Response Programs. That clock starts the day Halton's CISO concludes there is a reasonable basis to believe customer data was accessed, not the day the underlying bug was introduced.
 
 ## §6 — Cert exam relevance
 
@@ -295,7 +328,10 @@ The bonus finds exist to let curious players exercise the systemic-root-cause an
 - [OWASP Top 10:2025 — A02:2025 Security Misconfiguration](https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/)
 - [OWASP Top 10:2025 — A06:2025 Insecure Design](https://owasp.org/Top10/2025/A06_2025-Insecure_Design/)
 - [OWASP Top 10:2025 — A09:2025 Security Logging and Alerting Failures](https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/)
-- [GLBA Safeguards Rule — 16 CFR Part 314 (FTC)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
+- [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030)
+- [Computer-Security Incident Notification Rule — 12 CFR Part 53 (36-hour clock)](https://www.ecfr.gov/current/title-12/chapter-I/part-53)
+- [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and)
+- [GLBA Safeguards Rule — 16 CFR Part 314 (FTC; nonbank institutions, shown for contrast)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
 - [FTC Safeguards Rule — 2023 amendments (security event notification, 30-day reporting clock)](https://www.ftc.gov/business-guidance/blog/2023/10/ftc-safeguards-rule-what-your-business-needs-know)
 - [MITRE ATT&CK — T1078.003: Valid Accounts: Local Accounts](https://attack.mitre.org/techniques/T1078/003/)
 - [MITRE ATT&CK — T1053.003: Scheduled Task/Job: Cron](https://attack.mitre.org/techniques/T1053/003/)

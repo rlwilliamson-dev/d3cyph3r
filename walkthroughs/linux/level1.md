@@ -1,6 +1,6 @@
 # level1@linux — The Backup Daniel Forgot
 
-**Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA Safeguards Rule
+**Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA § 501(b) (Interagency Guidelines)
 
 > ⚠ This page contains the full solve path **and** the breadcrumb credential for a future `level2@linux`. If you haven't solved `level1@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've read or solved `level0@linux` first; the setup picks up where that one ended.
 
@@ -20,7 +20,7 @@ Three layered failures put you here, and they're worth naming explicitly before 
 
 The MSA between Driftwood and Halton contractually requires Driftwood to surface any client-environment finding within 24 hours of discovery. The conversation Priya is going to have with Halton's ops lead tomorrow morning is going to be uncomfortable: *"You gave a service account an interactive shell, your former Driftwood contractor left the password in cleartext on his workstation, and the same password still works two years later."* All three failures contributed; remediation has to address all three.
 
-Halton Bank is GLBA-covered (Gramm-Leach-Bliley Act Safeguards Rule, 16 CFR Part 314). The 2023 FTC amendments raised the bar for what counts as compliance — and a *production-database credential exposure* triggers the FTC's 30-day-from-determination notification clock if 500+ consumers' nonpublic personal information is potentially accessed. Halton processes deposits and loans for what's almost certainly hundreds of thousands of customers; the breach-math is unambiguous.
+Halton Bank is GLBA-covered, and as a bank its rule is the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks) rather than the FTC's Safeguards Rule, which reaches nonbank institutions only. A *production-database credential exposure* puts it inside III.C.1.g's response-program territory, and if the bank determines a notification incident has occurred it has **36 hours** to tell its primary federal regulator under the Computer-Security Incident Notification Rule. Halton processes deposits and loans for what's almost certainly hundreds of thousands of customers; the breach-math is unambiguous.
 
 What you don't know yet, walking onto this box, is that the *production* database password lives in a properly locked-down systemd override file on this same machine — and that Daniel left a debug copy of that same override file in his home directory with default permissions. The properly-protected file is unreadable to you as `app_admin`. The debug copy isn't. The credential you're about to recover doesn't open the staging DB you came here through; it opens the *production* DB sitting behind it.
 
@@ -224,6 +224,40 @@ It is tempting to summarize this level as "Daniel left a debug copy of a sensiti
 
 Each of these four failures is independently a finding. Fixing only one — say, deleting the shadow copy — leaves the sudo configuration and the login-shell configuration intact, which means *the next engineer in this role makes a different but isomorphic mistake six months from now*. The remediation needs to address all four, and the audit deliverable needs to surface all four to Halton's ops lead.
 
+## §3.5 — Blast radius
+
+The finding is a world-readable file. What matters for an assessment is
+which file, on which host, holding which credential, reachable by whom.
+
+| Dimension | This finding |
+|---|---|
+| Reached | Halton's production jumphost as `app_admin`, a service identity that was given a login shell and unrestricted `sudo` |
+| Credential in scope | The **production** database password, in a shadow copy of a systemd override at mode 644 |
+| Why it is readable | The original override is correctly locked down. The debug copy beside it is not |
+| Exposure window | Undetected for five months, and never rotated |
+| Escalates to | The production DB password is reused as the bastion SSH login, which is `level2@linux` |
+| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours |
+
+**The environment boundary already failed before this file existed.** A
+*staging* credential got someone onto a *production* jumphost. Everything
+downstream is a consequence of that, and an assessment that opens with
+the file permissions has started one step too late.
+
+**Correctly securing the original bought nothing, because the copy was
+never in scope.** Someone did the work: the real override is
+root-owned and restricted. Then a debug copy landed next to it at 644 and
+inherited none of that care. Control coverage measured against *files you
+know about* systematically misses this class of finding, which is why
+III.C.1.f asks for monitoring that detects attempted access rather than
+attestation that the right files were hardened.
+
+**Five months undetected is itself the reportable fact.** The dwell time
+is not colour commentary; it is evidence about the monitoring control,
+and it is the number a regulator will ask about first. Under III.C.1.g
+Halton needs a response program that specifies what happens on detection,
+and the 36-hour clock starts at determination, not at the file's
+creation date.
+
 ## §4 — Real-world parallels
 
 Three named, well-documented incidents where a "shadow copy of a properly-protected secret" or a "developer-convenience cache of credentials" produced significant downstream consequences. Each was a major industry event, each is documentable from primary sources, and each demonstrates that the specific pattern of *"the engineer copied the credential somewhere convenient and forgot"* is one of the most repeated patterns in modern credential-exposure incidents.
@@ -306,13 +340,13 @@ A02:2025's category description includes a sub-pattern that directly captures Ha
 
 The OWASP 2025 recommended mitigation for A02 is *a documented hardening process applied identically across environments, enforced via configuration-as-code in CI/CD, with automated configuration scanning detecting drift.* For Halton, that translates to: Ansible / Chef / Puppet (or AWS Systems Manager Configuration Compliance, or equivalent) managing file permissions across the production fleet, with continuous monitoring detecting any file in a sensitive directory whose mode drifts from the documented baseline.
 
-### GLBA Safeguards Rule — 16 CFR Part 314 §§ 314.4(c)(1)
+### GLBA § 501(b) — Interagency Guidelines III.C.1.a
 
-The Gramm-Leach-Bliley Act Safeguards Rule (16 CFR Part 314) applies to Halton as a financial institution. The 2023-effective FTC amendments raised the bar for what counts as compliance. **§ 314.4(c)(1) — Access Controls** specifically requires *"placing access controls on customer information systems, including controls to authenticate and permit access only to authorized users, and controls to monitor activity, detect unauthorized access, and prevent unauthorized access."*
+GLBA § 501(b) applies to Halton as a financial institution, implemented for banks through the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks). **III.C.1.a — Access Controls** requires *"access controls on customer information systems, including controls to authenticate and permit access only to authorized individuals,"* and **III.C.1.f** separately requires *"monitoring systems and procedures to detect actual and attempted attacks on or intrusions into customer information systems."* Read together they are the bank-side analogue of the FTC rule's § 314.4(c)(1).
 
 The Halton finding implicates 314.4(c)(1) on every reading. The shadow copy of the production-database credential is *unauthorized access to customer information systems' authentication material*. The fact that the access has not yet been demonstrably exploited (no smoking-gun log entry of an unauthorized `psql` connection) doesn't satisfy the control — the control requires *controls to monitor activity, detect unauthorized access, and prevent unauthorized access*, and Halton's posture clearly didn't *prevent* the shadow-copy creation, didn't *detect* it for five months, and (we'd have to check) probably isn't *monitoring* file-system events on jumphosts at the granularity that would have caught it.
 
-The Safeguards Rule's 2023 amendments also added an explicit breach-notification requirement: financial institutions must report a security event affecting 500+ consumers' nonpublic personal information to the FTC within 30 days of determining that such an event has occurred. Halton has hundreds of thousands of customer accounts; if the formal investigation concludes that the production-database credential exposure created a reasonable likelihood of NPI access, the 30-day clock starts at *that determination*, not at the discovery of the shadow copy. The determination process is Halton's general counsel's work, not Driftwood's — we surface the finding; they decide whether the threshold is crossed.
+Notification is where the regime matters, and where a bank is treated differently from the nonbank financial institutions the FTC supervises. The FTC Safeguards Rule's 30-day, 500-consumer notification does not reach Halton; banks are carved out of 16 CFR Part 314. What does reach it is the Computer-Security Incident Notification Rule (12 CFR Pt. 53 / Pt. 225 Subpart N / Pt. 304 Subpart C), which gives a banking organization **36 hours** from determining that a notification incident has occurred to notify its primary federal regulator, plus the 2005 Interagency Guidance on Response Programs for customer notice where misuse of customer information has occurred or is reasonably possible. Halton has hundreds of thousands of customer accounts; if the formal investigation concludes that the production-database credential exposure created a reasonable likelihood of NPI access, the clock starts at *that determination*, not at the discovery of the shadow copy. The determination is Halton's general counsel's work, not Driftwood's — we surface the finding; they decide whether the threshold is crossed.
 
 ## §6 — Cert exam relevance
 
@@ -514,7 +548,10 @@ Two hidden bonus finds seed orthogonal lessons. `progress --detail` from anywher
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1)
 - [CIS Linux Benchmarks — Ubuntu / RHEL / CentOS distribution-specific configuration baselines](https://www.cisecurity.org/cis-benchmarks)
 - [OWASP Top 10:2025 — A02:2025 Security Misconfiguration (deep link)](https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/)
-- [GLBA Safeguards Rule — 16 CFR Part 314 (FTC)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
+- [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030)
+- [Computer-Security Incident Notification Rule — 12 CFR Part 53 (36-hour clock)](https://www.ecfr.gov/current/title-12/chapter-I/part-53)
+- [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and)
+- [GLBA Safeguards Rule — 16 CFR Part 314 (FTC; nonbank institutions, shown for contrast)](https://www.ftc.gov/legal-library/browse/rules/safeguards-rule)
 - [MITRE ATT&CK — T1078: Valid Accounts](https://attack.mitre.org/techniques/T1078/)
 - [MITRE ATT&CK — T1083: File and Directory Discovery](https://attack.mitre.org/techniques/T1083/)
 - [MITRE ATT&CK — T1552.001: Unsecured Credentials — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/)

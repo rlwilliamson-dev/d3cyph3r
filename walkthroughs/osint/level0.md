@@ -110,6 +110,39 @@ There are three distinct vulnerabilities stacked here, and remediation needs to 
 
 Each failure is independently a finding. Fixing only the reuse without addressing the publicly-derivable root means the next round of compromise looks the same. Fixing both without enabling 2FA means a subsequent credential-corpus expansion (which happens roughly annually) reopens the same exposure surface. The defender's playbook lives in §7.
 
+## §3.5 — Blast radius
+
+| Dimension | This finding |
+|---|---|
+| Reached | Public breach corpora only. Nothing belonging to Veridian was touched |
+| What it establishes | The same cleartext password appears for one individual in two separate breaches |
+| Why two matters | One appearance is an exposed password; two is evidence of a reuse *habit* |
+| Subject | A newly-hired executive at a HIPAA Business Associate handling analytics for covered entities |
+| Regime | HIPAA as a Business Associate plus HITRUST CSF; a BA notifies the covered entity within 60 days, and the covered entity carries the individual-notice duty |
+
+**Nothing here is a breach of Veridian, and the report must say so
+plainly.** Every artifact came from public sources. What the finding
+establishes is elevated likelihood, not an incident: a specific person
+with privileged access has demonstrably reused credentials before, which
+raises the probability that a Veridian credential shares that fate. This
+is a risk input, and writing it up as an incident would be both wrong and
+damaging to the person involved.
+
+**The habit is the finding, not the password.** A single breach
+appearance tells you a third party was compromised. The same plaintext in
+two unrelated corpora tells you something about how this individual
+manages secrets, and that generalises to systems the corpora never
+touched. It is the difference between "this key is burned" and "keys of
+this shape are likely burned."
+
+**A Business Associate's blast radius is measured in its customers.**
+Veridian holds PHI on behalf of covered entities, so a credential
+compromise here propagates outward to organisations that have their own
+notification duties and their own regulators. Under HIPAA the BA notifies
+the covered entity within 60 days; the covered entity then owns the
+individual notice. One reused password can start clocks inside companies
+Veridian does not control.
+
 ## §4 — Real-world parallels
 
 Three named, well-documented incidents where credential reuse — recovered from breach corpora and used in credential-stuffing attacks against subsequent accounts — produced significant downstream consequences.
