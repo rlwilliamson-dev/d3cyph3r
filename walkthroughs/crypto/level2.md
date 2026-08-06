@@ -199,7 +199,7 @@ Theo used MD5 with no salt, which combines all three failure modes. The four has
 | Reached | `backup-passwords.txt` in Vesta's deploy repository: 200 rows, unsalted MD5 on the left, the production system it unlocks on the right |
 | Cracked in this level | Four hashes, in under a second, with a public wordlist |
 | The compounding fact | All four resolve to the **same plaintext**, and one row is labelled `aes-backup` |
-| Weaknesses | CWE-916 unsuitable hash, CWE-759 no salt, CWE-521 weak requirement, CWE-262 not rotated |
+| Weaknesses | CWE-916 unsuitable hash, CWE-759 no salt, CWE-521 weak requirement, CWE-262 not rotated[^cwe-262][^cwe-521][^cwe-759][^cwe-916] |
 | Escalates to | That plaintext is both a host login and the AES passphrase in `level3@crypto` |
 | Regime | PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands |
 
@@ -237,7 +237,7 @@ misunderstanding the whole level exists to correct.
 
 **Ashley Madison 2015.** The Ashley Madison breach disclosed in August 2015 exposed ~36M user records. The site had used bcrypt (cost 12) for password storage on the modern auth path — but had ALSO retained a legacy MD5 hash for ~11M users from an earlier auth version that was supposed to be deprecated. The MD5 hashes were cracked at industrial scale within weeks; the bcrypt-only accounts remained mostly uncracked because of bcrypt's cost factor. The case is the textbook example of why "we switched to bcrypt" without removing legacy weak hashes leaves the weak hashes as the operative security boundary. [CynoSure Prime's writeup](https://blog.cynosureprime.com/2015/09/how-we-cracked-millions-of-ashley.html) documents the technical work; [Wikipedia's article](https://en.wikipedia.org/wiki/Ashley_Madison_data_breach) carries the broader case study.
 
-**Have I Been Pwned + the Pwned Passwords API.** Troy Hunt's [Have I Been Pwned](https://haveibeenpwned.com/) service aggregates breach corpora into a queryable database; the [Pwned Passwords API](https://haveibeenpwned.com/Passwords) specifically exposes the union of all passwords that have appeared in any breach corpus. As of 2025 the database contains ~850 million unique passwords. Modern auth platforms (Cloudflare Zero Trust, 1Password, Bitwarden, JumpCloud, Okta) integrate Pwned Passwords lookups at registration to block known-bad password choices. NIST SP 800-63B-4 §5.1.1 codifies this approach: the standard requires verifiers to reject passwords found in a "list of values known to be commonly-used, expected, or compromised," and HIBP is the de-facto implementation. Vesta does not run this check today; if they did, Theo's password choice would have been rejected at creation.
+**Have I Been Pwned + the Pwned Passwords API.** Troy Hunt's [Have I Been Pwned](https://haveibeenpwned.com/) service aggregates breach corpora into a queryable database; the [Pwned Passwords API](https://haveibeenpwned.com/Passwords) specifically exposes the union of all passwords that have appeared in any breach corpus. As of 2025 the database contains ~850 million unique passwords. Modern auth platforms (Cloudflare Zero Trust, 1Password, Bitwarden, JumpCloud, Okta) integrate Pwned Passwords lookups at registration to block known-bad password choices. NIST SP 800-63B-4 §5.1.1 codifies this approach: the standard requires verifiers to reject passwords found in a "list of values known to be commonly-used, expected, or compromised," and HIBP is the de-facto implementation.[^nist-800-63b] Vesta does not run this check today; if they did, Theo's password choice would have been rejected at creation.
 
 ## §5 — Frameworks, deep dive
 
@@ -245,7 +245,7 @@ misunderstanding the whole level exists to correct.
 
 **CWE-759: Use of a One-Way Hash without a Salt.** The reason john cracked four hashes simultaneously. The catalog entry mandates per-password random salt. ([MITRE CWE-759](https://cwe.mitre.org/data/definitions/759.html))
 
-**CWE-521: Weak Password Requirements.** `TheoVesta!1` passes a "8+ chars, contains a symbol" policy and fails any modern entropy-aware policy. The catalog entry references NIST SP 800-63B's blocklist-based approach. ([MITRE CWE-521](https://cwe.mitre.org/data/definitions/521.html))
+**CWE-521: Weak Password Requirements.** `TheoVesta!1` passes a "8+ chars, contains a symbol" policy and fails any modern entropy-aware policy. The catalog entry references NIST SP 800-63B's blocklist-based approach.[^nist-800-63b] ([MITRE CWE-521](https://cwe.mitre.org/data/definitions/521.html))
 
 **CWE-262: Not Using Password Aging.** Six months on disk for a password committed to source control. The catalog entry's framing of "credentials that should rotate but don't" applies. ([MITRE CWE-262](https://cwe.mitre.org/data/definitions/262.html))
 
@@ -274,17 +274,17 @@ misunderstanding the whole level exists to correct.
 
 ## §6 — Cert exam relevance
 
-**CompTIA Security+ (SY0-701).** Domain 1.4 (Cryptographic concepts) — symmetric vs hash primitives, salting, PBKDFs. Domain 4.5 (Modify enterprise capabilities to enhance security) — credential management. Wordlist-based dictionary attacks named explicitly. ([CompTIA Security+ cert page](https://www.comptia.org/en-us/certifications/security/))
+**CompTIA Security+ (SY0-701).**[^cert-security-plus] Domain 1.4 (Cryptographic concepts) — symmetric vs hash primitives, salting, PBKDFs. Domain 4.5 (Modify enterprise capabilities to enhance security) — credential management. Wordlist-based dictionary attacks named explicitly. ([CompTIA Security+ cert page](https://www.comptia.org/en-us/certifications/security/))
 
-**CompTIA CySA+ (CS0-003 / CS0-004).** CS0-004 launched in early 2026 for parallel availability; CS0-003 retires June 2026. Domain 1 (Security Operations) — incident response on credential exposure. Domain 4 (Reporting & Communication) — the "what would you tell the auditor" question.
+**CompTIA CySA+ (CS0-003 / CS0-004).**[^cert-cysa] CS0-004 launched on 23 June 2026; CS0-003 retires 22 December 2026. Domain 1 (Security Operations) — incident response on credential exposure. Domain 4 (Reporting & Communication) — the "what would you tell the auditor" question.
 
-**CompTIA PenTest+ (PT0-003).** Domain 3 (Attacks and Exploits) — Hashcat / John / Hydra naming, rockyou.txt as a named wordlist, salt-aware vs salt-unaware crack approaches.
+**CompTIA PenTest+ (PT0-003).**[^cert-pentest-plus] Domain 3 (Attacks and Exploits) — Hashcat / John / Hydra naming, rockyou.txt as a named wordlist, salt-aware vs salt-unaware crack approaches.
 
-**(ISC)² CISSP.** Domain 3 (Security Architecture and Engineering) — modern password hashing. Domain 5 (Identity and Access Management) — credential lifecycle.
+**(ISC)² CISSP.**[^cert-cissp] Domain 3 (Security Architecture and Engineering) — modern password hashing. Domain 5 (Identity and Access Management) — credential lifecycle.
 
-**OffSec OSCP / PEN-200.** Standard primitive on every lab box. The exam-objective bullets explicitly name `john` and `hashcat` as required tooling. The 2023 curriculum revision added Argon2id as a brief defender-side mention.
+**OffSec OSCP / PEN-200.**[^cert-oscp] Standard primitive on every lab box. The exam-objective bullets explicitly name `john` and `hashcat` as required tooling. The 2023 curriculum revision added Argon2id as a brief defender-side mention.
 
-**EC-Council CEH v13.** Module 5 (Vulnerability Analysis) and Module 6 (System Hacking) cover hash extraction + dictionary attacks. The v13 release (April 2024) refreshed the password-hashing-recommendations section.
+**EC-Council CEH v13.**[^cert-ceh] Module 5 (Vulnerability Analysis) and Module 6 (System Hacking) cover hash extraction + dictionary attacks. The v13 release (September 2024) refreshed the password-hashing-recommendations section.
 
 ## §7 — What a defender does
 
@@ -294,7 +294,7 @@ misunderstanding the whole level exists to correct.
 
 **Per-credential salt at the application layer.** Or — equivalently — adopt a framework's built-in password storage that handles salting transparently. The opt-OUT-of-salting path requires more code than the opt-IN path in every modern framework.
 
-**Block rockyou-class passwords at registration.** [Have I Been Pwned's Pwned Passwords API](https://haveibeenpwned.com/Passwords) is the de-facto implementation; integration is typically ~20 lines of code. The API returns a count of how many breaches the candidate password has appeared in; rejecting any candidate with count > 0 is the standard implementation. NIST SP 800-63B-4 §5.1.1 codifies this requirement; OWASP ASVS V2.1.7 verifies it.
+**Block rockyou-class passwords at registration.** [Have I Been Pwned's Pwned Passwords API](https://haveibeenpwned.com/Passwords) is the de-facto implementation; integration is typically ~20 lines of code. The API returns a count of how many breaches the candidate password has appeared in; rejecting any candidate with count > 0 is the standard implementation. NIST SP 800-63B-4 §5.1.1 codifies this requirement; OWASP ASVS V2.1.7 verifies it.[^nist-800-63b]
 
 **Scan repos for committed credentials.** [gitleaks](https://github.com/gitleaks/gitleaks), [trufflehog](https://github.com/trufflesecurity/trufflehog), [GitHub Secret Scanning](https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning), [GitLab Secret Detection](https://docs.gitlab.com/user/application_security/secret_detection/). All flag hash files. `backup-passwords.txt` would have been caught at pre-commit by any of these.
 
@@ -385,7 +385,7 @@ The level3 credential — `TheoVesta!1` — is the AES backup encryption passwor
 
 ## §9 — Further reading
 
-*Last reviewed: April 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 **Modern password hashing**
 
@@ -421,6 +421,12 @@ The level3 credential — `TheoVesta!1` — is the AES backup encryption passwor
 [^cwe-521]: [CWE-521 — Weak Password Requirements](https://cwe.mitre.org/data/definitions/521.html).
 [^cwe-262]: [CWE-262 — Not Using Password Aging](https://cwe.mitre.org/data/definitions/262.html).
 [^cwe-798]: [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
 
 ### Further reading
 

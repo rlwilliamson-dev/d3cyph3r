@@ -148,7 +148,7 @@ opens next.
 | Other copies | `notes.txt` names three more locations for the same string: shell history, an exported `DB_PASS`, and a systemd override on Halton's jumphost |
 | Exposure window | Never rotated. The laptop itself sat unaudited from Friday's roll-off to Wednesday's reimage |
 | Escalates to | The same string is the login on Halton's jumphost, which is `level1@linux` |
-| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours |
+| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours[^cfr-12-30] |
 
 Three things separate a useful finding here from a shallow one.
 
@@ -254,7 +254,7 @@ Audit evidence for CIS Control 5: dormant-account reports (typically anything wi
 
 ### CWE-798: Use of Hard-coded Credentials
 
-CWE (Common Weakness Enumeration) is MITRE's catalog of software weaknesses. **CWE-798 — Use of Hard-coded Credentials** captures the exact pattern of embedding a credential directly in source code, configuration files, or scripts, where any reader of the file can extract it.
+CWE (Common Weakness Enumeration) is MITRE's catalog of software weaknesses. **CWE-798 — Use of Hard-coded Credentials** captures the exact pattern of embedding a credential directly in source code, configuration files, or scripts, where any reader of the file can extract it.[^cwe-798]
 
 The CWE-798 entry has been in the catalog since the early days of CWE (entry created circa 2006) and was one of the longest-standing entries in MITRE's "Top 25 Most Dangerous Software Weaknesses" rankings — it appeared on every annual Top 25 list from 2019 through 2024. The **2025 CWE Top 25 dropped CWE-798 off the published list entirely** when MITRE changed its methodology (removing normalization to abstract weaknesses); the weakness pattern itself remains as widespread as ever — practitioner surveys and tooling-vendor reports continue to identify hardcoded credentials as a top breach contributor — but the formal Top 25 ranking no longer reflects that prominence. The weakness is well-documented, well-publicized, and continues to dominate breach post-mortems despite the prevalence of secrets-management tools that solve it.
 
@@ -301,12 +301,12 @@ Equal-depth coverage for the four certifications cited in the in-game post-morte
 
 ### CompTIA Security+ — current version SY0-701
 
-CompTIA refreshed Security+ from SY0-601 to **SY0-701** in November 2023; SY0-601 was retired July 31, 2024. SY0-701 is the only version currently testable. Anyone studying for the cert today should be using SY0-701 study materials. The exam has five domains; level0@linux's material maps directly to two.
+CompTIA refreshed Security+ from SY0-601 to **SY0-701** in November 2023; SY0-601 was retired July 31, 2024.[^cert-security-plus] SY0-701 is the only version currently testable. Anyone studying for the cert today should be using SY0-701 study materials. The exam has five domains; level0@linux's material maps directly to two.
 
 - **Domain 4.1 — Apply common security techniques to computing resources.** This is the technical-controls domain. Within it, secrets management, configuration enforcement, and access management are tested directly. Expect a question asking which control would prevent credentials from being readable in a flat file (correct answer involves a secrets manager; common distractors include "encrypt the file" — which is technically also right but a worse answer because it doesn't address the root cause of credentials being on disk at all).
-- **Domain 5.3 — Explain the processes associated with third-party risk management.** This domain explicitly covers vendor agreements, vendor monitoring, and consulting-firm-style service provider relationships. GLBA-style notification requirements, MSA security clauses, and right-to-audit clauses all live here.
+- **Domain 5.3 — Explain the processes associated with third-party risk management.** This domain explicitly covers vendor agreements, vendor monitoring, and consulting-firm-style service provider relationships. GLBA-style notification requirements, MSA security clauses, and right-to-audit clauses all live here.[^cfr-16-314][^cfr-12-30]
 - **Domain 4.6 — Implement and maintain identity and access management.** Account lifecycle (provisioning, deprovisioning, dormant accounts) is tested.
-- **Domain 5.4 — Summarize elements of effective security compliance.** Frameworks (NIST CSF, CIS Controls, PCI-DSS, GLBA, HIPAA) are the body of this domain; recognition-level knowledge is expected.
+- **Domain 5.4 — Summarize elements of effective security compliance.** Frameworks (NIST CSF, CIS Controls, PCI-DSS, GLBA, HIPAA) are the body of this domain; recognition-level knowledge is expected.[^pci-dss-v4-0-1]
 
 **Sample question framing:**
 
@@ -323,7 +323,7 @@ This is the kind of question Security+ writes: multiple defensible answers, one 
 
 ### (ISC)² Certified in Cybersecurity (CC)
 
-(ISC)²'s Certified in Cybersecurity (CC) is the entry-level certification (ISC)² introduced in 2022 to compete with Security+ as a first-cert option, with the long-term goal of building a pipeline into CISSP. It has five domains; level0@linux's material concentrates in two.
+(ISC)²'s Certified in Cybersecurity (CC) is the entry-level certification (ISC)² introduced in 2022 to compete with Security+ as a first-cert option, with the long-term goal of building a pipeline into CISSP.[^cert-cissp] It has five domains; level0@linux's material concentrates in two.
 
 - **Domain 3 — Access Control Concepts.** Account lifecycle, principle of least privilege, identification/authentication/authorization model.
 - **Domain 5 — Security Operations.** Asset disposal, configuration management, handling of incidents, security awareness training.
@@ -362,7 +362,7 @@ The correct answer is **C**. The CISSP trap here is that A, B, and D are all rea
 
 ### OSCP / PEN-200
 
-The Offensive Security Certified Professional is the most-recognized hands-on offensive certification. Unlike Security+ or CISSP, OSCP's exam is not multiple-choice — it's a 24-hour practical hands-on test where the candidate is given access to a set of target machines and must compromise them. The cert is awarded based on the report submitted afterward.
+The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.[^cert-oscp] Unlike Security+ or CISSP, OSCP's exam is not multiple-choice — it's a 24-hour practical hands-on test where the candidate is given access to a set of target machines and must compromise them. The cert is awarded based on the report submitted afterward.
 
 The methodology OSCP teaches is, at its core, exactly what you just did to Daniel's laptop:
 
@@ -477,7 +477,7 @@ The bonus is a small wink at the discipline gap: the same set of commands (`sudo
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^nist-800-53]: [NIST SP 800-53 Rev. 5 — Security and Privacy Controls](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final).
 [^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html).
@@ -495,6 +495,9 @@ The bonus is a small wink at the discipline gap: the same set of commands (`sudo
 [^aws-secrets-manager-user-guide]: [AWS Secrets Manager — User Guide](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html).
 [^trufflehog-secret-scanning]: [TruffleHog — secret scanning](https://github.com/trufflesecurity/trufflehog).
 [^sigma-generic-signature-format-for]: [Sigma — generic signature format for SIEM systems](https://github.com/SigmaHQ/sigma).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 
 ### Further reading
 

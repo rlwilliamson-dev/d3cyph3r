@@ -240,10 +240,10 @@ This is the shape of most real-world breaches. There is rarely a single dramatic
 |---|---|
 | Reached | The staging-db host's internal DNS resolver, from a shell obtained with an unrotated vendor default |
 | Disclosed | Atlas's full internal data-centre map via unauthenticated zone transfer, plus a service-account credential parked in a TXT record |
-| Compounding weaknesses | CWE-1392 default credential, CWE-732 interactive shell on a service account, CWE-306 missing authentication on the transfer |
+| Compounding weaknesses | CWE-1392 default credential, CWE-732 interactive shell on a service account, CWE-306 missing authentication on the transfer[^cwe-732][^cwe-1392][^cwe-306] |
 | Exposure window | The default was flagged in a Q1 2025 review with rotation promised "next sprint"; five sprints later it was live |
 | Escalates to | The credential recovered from DNS, which is `level2@network` |
-| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media |
+| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media[^cfr-45-164] |
 
 **A zone transfer is not a data breach, and treating it as one will get
 the finding dismissed.** No patient record moved. What moved is the map:
@@ -314,19 +314,19 @@ The post-mortem at the bottom of the level (`lessons-learned.md`) walks through 
 
 ### CWE — Common Weakness Enumeration
 
-**CWE-306: Missing Authentication for Critical Function.** The primary weakness for the AXFR failure. The CWE catalog entry describes the weakness as "the product does not perform any authentication for functionality that requires a provable user identity or consumes a significant amount of resources." AXFR fits both halves: it requires a provable identity (the requester should be a known secondary nameserver) and consumes significant resources (the full zone dump). CWE-306 has been on the CWE Top 25 *Most Dangerous Software Weaknesses* list multiple times, most recently the 2024 edition. The MITRE mapping status is **ALLOWED** — it's a valid weakness ID for analytics and reporting.
+**CWE-306: Missing Authentication for Critical Function.**[^cwe-306] The primary weakness for the AXFR failure. The CWE catalog entry describes the weakness as "the product does not perform any authentication for functionality that requires a provable user identity or consumes a significant amount of resources." AXFR fits both halves: it requires a provable identity (the requester should be a known secondary nameserver) and consumes significant resources (the full zone dump). CWE-306 has been on the CWE Top 25 *Most Dangerous Software Weaknesses* list multiple times, most recently the 2024 edition. The MITRE mapping status is **ALLOWED** — it's a valid weakness ID for analytics and reporting.
 
-**CWE-1392: Use of Default Credentials.** Maps the unrotated `atlas-default-2025`. CWE-1392 is the more recent, more specific successor to CWE-798 (*Use of Hard-coded Credentials*); use it when the credential is a vendor-shipped default that the operator failed to change, rather than a developer-baked secret. MITRE mapping status: **ALLOWED**.
+**CWE-1392: Use of Default Credentials.**[^cwe-1392] Maps the unrotated `atlas-default-2025`. CWE-1392 is the more recent, more specific successor to CWE-798 (*Use of Hard-coded Credentials*); use it when the credential is a vendor-shipped default that the operator failed to change, rather than a developer-baked secret. MITRE mapping status: **ALLOWED**.
 
-**CWE-732: Incorrect Permission Assignment for Critical Resource.** Maps the `/bin/bash` shell on the `dbadmin` service account. MITRE mapping status: **ALLOWED-WITH-REVIEW** — the entry notes that CWE-732 is frequently misused for authorization weaknesses (which belong under CWE-862 *Missing Authorization* or CWE-863 *Incorrect Authorization*); the shell-mode case here fits the literal CWE-732 definition correctly.
+**CWE-732: Incorrect Permission Assignment for Critical Resource.**[^cwe-732] Maps the `/bin/bash` shell on the `dbadmin` service account. MITRE mapping status: **ALLOWED-WITH-REVIEW** — the entry notes that CWE-732 is frequently misused for authorization weaknesses (which belong under CWE-862 *Missing Authorization* or CWE-863 *Incorrect Authorization*); the shell-mode case here fits the literal CWE-732 definition correctly.
 
-**CWE-200: Exposure of Sensitive Information to an Unauthorized Actor.** Maps the TXT-record credential leak. MITRE mapping status: **DISCOURAGED** — the entry is "frequently misused" and is too broad to be useful for fine-grained analytics. Cite CWE-200 as the framework reference; for surgical analysis use CWE-540 (*Inclusion of Sensitive Information in Source Code* — extended in practice to "any non-secret-grade artifact") as the better-fitting weakness.
+**CWE-200: Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] Maps the TXT-record credential leak. MITRE mapping status: **DISCOURAGED** — the entry is "frequently misused" and is too broad to be useful for fine-grained analytics. Cite CWE-200 as the framework reference; for surgical analysis use CWE-540 (*Inclusion of Sensitive Information in Source Code* — extended in practice to "any non-secret-grade artifact") as the better-fitting weakness.[^cwe-540]
 
 **CWE-540: Inclusion of Sensitive Information in Source Code.** The narrower, more useful weakness for the TXT-record case. The literal catalog text is about source code, but the spirit — "credentials should not appear in artifacts whose access control is not credential-grade" — fits the DNS-record case directly.
 
 ### NIST SP 800-53 Rev. 5
 
-NIST Special Publication 800-53 Revision 5 (the federal control catalog, also widely used by the private sector) addresses today's findings across several control families.
+NIST Special Publication 800-53 Revision 5 (the federal control catalog, also widely used by the private sector) addresses today's findings across several control families.[^nist-800-53]
 
 **SC-22 — Architecture and Provisioning for Name/Address Resolution Service.** The most surgical fit for the AXFR failure. SC-22's control text requires that the system "provide name/address resolution services for organizational users that perform fault-tolerant name/address resolution services; implement internal/external role separation." (The SC-22(1) enhancement that lived separately in Rev 4 was incorporated into the SC-22 base control in Rev 5.) Atlas's resolver fails the architecture-and-provisioning requirement by not implementing the standard AXFR restriction.
 
@@ -350,7 +350,7 @@ If you've been relying on SP 800-81-2 as your DNS hardening reference, swap to R
 
 ### HIPAA — 45 CFR Part 164
 
-The Privacy and Security Rules apply to Atlas Health as a HIPAA-covered entity.
+The Privacy and Security Rules apply to Atlas Health as a HIPAA-covered entity.[^cfr-45-164]
 
 **§164.312(a)(1) — Access Control (Technical Safeguard).** Requires covered entities to "implement technical policies and procedures for electronic information systems that maintain electronic protected health information to allow access only to those persons or software programs that have been granted access rights." The architectural mechanism Atlas uses for PHI access control is network segmentation between the staging tier (no PHI) and the PHI tier. Today's finding doesn't directly cross the segmentation boundary — but it discloses where the boundary is, which is the first step of any subsequent attack against the boundary.
 
@@ -416,17 +416,17 @@ business running an interactive session.
 
 The certification industry has been teaching this finding for decades. If you study any of the certs below, you've seen — or will see — the DNS zone transfer example.
 
-**CompTIA Security+ (SY0-701).** The current exam (released November 2023). Domain 4 (*Security Operations*) covers DNS enumeration as a reconnaissance technique; the official objectives list `dig`, `nslookup`, and `whois` as named tools. Domain 3 (*Security Architecture*) covers DNS hardening from the defender side. Expect 2-3 questions touching the AXFR concept across a full exam attempt.
+**CompTIA Security+ (SY0-701).**[^cert-security-plus] The current exam (released November 2023). Domain 4 (*Security Operations*) covers DNS enumeration as a reconnaissance technique; the official objectives list `dig`, `nslookup`, and `whois` as named tools. Domain 3 (*Security Architecture*) covers DNS hardening from the defender side. Expect 2-3 questions touching the AXFR concept across a full exam attempt.
 
-**CompTIA CySA+ (CS0-003).** The current exam (released June 2023). Domain 2 (*Threat Intelligence and Threat Hunting*) covers the "what does an adversary see from outside?" question that AXFR is one answer to. Domain 1 (*Security Operations*) covers DNS log analysis — the AXFR-request-monitoring half of the defender story.
+**CompTIA CySA+ (CS0-003).**[^cert-cysa] The current exam (released June 2023). Domain 2 (*Threat Intelligence and Threat Hunting*) covers the "what does an adversary see from outside?" question that AXFR is one answer to. Domain 1 (*Security Operations*) covers DNS log analysis — the AXFR-request-monitoring half of the defender story.
 
-**CompTIA PenTest+ (PT0-003).** The current exam (released December 2024, replacing PT0-002 which sunsets in mid-2025). Domain 2 (*Reconnaissance and Enumeration*) names DNS enumeration explicitly; AXFR is among the directly-listed techniques in the official exam objectives. Domain 3 (*Vulnerability Discovery and Analysis*) covers the follow-on of identifying internal services from the enumeration.
+**CompTIA PenTest+ (PT0-003).**[^cert-pentest-plus] The current exam (released December 2024, replacing PT0-002 which sunsets in mid-2025). Domain 2 (*Reconnaissance and Enumeration*) names DNS enumeration explicitly; AXFR is among the directly-listed techniques in the official exam objectives. Domain 3 (*Vulnerability Discovery and Analysis*) covers the follow-on of identifying internal services from the enumeration.
 
-**(ISC)² CISSP.** Domain 4 (*Communication and Network Security*) covers DNS as a protocol with documented hardening requirements; the CBK chapters on DNS specifically reference RFC 5936 (AXFR) and RFC 8945 (TSIG). Domain 3 (*Security Architecture and Engineering*) covers the architectural decisions — secure naming services, zone segregation, secondary nameserver placement.
+**(ISC)² CISSP.**[^cert-cissp] Domain 4 (*Communication and Network Security*) covers DNS as a protocol with documented hardening requirements; the CBK chapters on DNS specifically reference RFC 5936 (AXFR) and RFC 8945 (TSIG).[^rfc-8945][^rfc-5936] Domain 3 (*Security Architecture and Engineering*) covers the architectural decisions — secure naming services, zone segregation, secondary nameserver placement.
 
-**Offensive Security OSCP / PEN-200.** OffSec's flagship offensive cert. The PEN-200 course material covers DNS enumeration as a standard part of the information-gathering phase; the lab environment includes machines where AXFR is the intended initial-recon win. The exam itself doesn't directly test "did you find the AXFR misconfig" as a discrete question (it's a practical exam), but the methodology that gets candidates to the foothold relies on the recon habits PEN-200 teaches.
+**Offensive Security OSCP / PEN-200.**[^cert-oscp] OffSec's flagship offensive cert. The PEN-200 course material covers DNS enumeration as a standard part of the information-gathering phase; the lab environment includes machines where AXFR is the intended initial-recon win. The exam itself doesn't directly test "did you find the AXFR misconfig" as a discrete question (it's a practical exam), but the methodology that gets candidates to the foothold relies on the recon habits PEN-200 teaches.
 
-**SANS GIAC GSEC / GCIH / GCIA / GPEN.** The SANS curriculum covers DNS recon across multiple courses — GSEC's *Security Essentials*, GCIH's *Hacker Tools, Techniques, and Incident Handling*, GCIA's *Intrusion Analyst* (DNS log analysis is a substantial chapter), and GPEN's *Network Penetration Tester* (AXFR is among the named techniques). The GCIH and GPEN material is the most directly relevant.
+**SANS GIAC GSEC / GCIH / GCIA / GPEN.**[^cert-gpen][^cert-gcia][^cert-gsec][^cert-gcih] The SANS curriculum covers DNS recon across multiple courses — GSEC's *Security Essentials*, GCIH's *Hacker Tools, Techniques, and Incident Handling*, GCIA's *Intrusion Analyst* (DNS log analysis is a substantial chapter), and GPEN's *Network Penetration Tester* (AXFR is among the named techniques). The GCIH and GPEN material is the most directly relevant.
 
 ## §7 — What a defender does
 
@@ -661,7 +661,7 @@ None of this changes the solve. It does change how a written-up finding *reads* 
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
 [^rfc-5936]: [RFC 5936 — DNS Zone Transfer Protocol (AXFR)](https://datatracker.ietf.org/doc/html/rfc5936). The interoperable specification for AXFR — *updates* RFC 1035's original definition (per the "Updates: 1035" header) rather than replacing it; RFC 1035 §3.2.3, §4.2.2, and §6.3 remain foundational. Read sections 2 (Transport) and 4 (Authoritative Server's AXFR Response) for the operational meat.
 [^rfc-8945]: [RFC 8945 — Secret Key Transaction Authentication for DNS (TSIG)](https://datatracker.ietf.org/doc/html/rfc8945). The current TSIG spec (obsoletes RFC 2845, 4635). The mechanism the AXFR ACL relies on for authentication. Read sections 4 (TSIG RR format) and 5 (Protocol Details) for the implementation specifics.
@@ -683,6 +683,15 @@ None of this changes the solve. It does change how a written-up finding *reads* 
 [^securitytrails]: [SecurityTrails](https://securitytrails.com/). Passive DNS and historical DNS data. Free tier covers most ad-hoc lookups.
 [^dnsdumpster]: [DNSDumpster](https://dnsdumpster.com/). Free DNS reconnaissance tool. Useful for quick "what's reachable in this zone" checks.
 [^hhs-office-for-civil-rights-2]: [HHS Office for Civil Rights — Resolution Agreements](https://www.hhs.gov/hipaa/for-professionals/compliance-enforcement/agreements/index.html). The settlements OCR has negotiated with breach-affected covered entities. Useful for calibrating the financial side of "how seriously does HHS treat this category of failure."
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
+[^cert-gsec]: [GIAC GSEC — Security Essentials](https://www.giac.org/certifications/security-essentials-gsec).
+[^cert-gcia]: [GIAC GCIA — Certified Intrusion Analyst](https://www.giac.org/certifications/certified-intrusion-analyst-gcia).
+[^cert-gpen]: [GIAC GPEN — Penetration Tester](https://www.giac.org/certifications/penetration-tester-gpen).
 
 ### Further reading
 

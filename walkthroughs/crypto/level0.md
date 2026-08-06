@@ -105,7 +105,7 @@ Each failure is independently a finding. Fixing only one — say, rotating the k
 | Effective protection | None. Base64 is a transport encoding with a published algorithm and no key |
 | Exposure window | Every clone, every fork, and the full git history since the commit |
 | Escalates to | The credential chain into `level1@crypto` |
-| Regime | PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands |
+| Regime | PCI-DSS v4.0.1 — contractual, not statutory; notification runs to the acquirer and card brands[^pci-dss-v4-0-1-2][^pci-dss-v4-0-1] |
 
 **Encoding the value made the exposure worse, not better, and the commit
 message explains why.** Theo's stated goal was that the key stop showing
@@ -157,7 +157,7 @@ The most pedagogically pure parallel to Theo's mistake is decades old and predat
 
 The Type-7 algorithm is a simple XOR with a known constant key. The decoding is trivial: it requires no secret, no specialized tooling, and roughly six lines of Python (or a free web tool that's been online since 1996). Despite this, generations of network engineers — and a non-trivial number of cybersecurity students — have looked at Type-7 strings in Cisco configs and concluded that the passwords were "encrypted." They were not. They were encoded with a published, deterministic, reversible transformation that the Cisco documentation has called "obfuscation, not encryption" for thirty years.
 
-Cisco eventually added **Type-5** (MD5 hashing, properly cryptographic but now considered weak), **Type-8** (PBKDF2 with SHA-256), and **Type-9** (scrypt) password schemes — all of which are actual cryptographic operations. But Type-7 strings still appear in production configurations across the industry, and the misconception that they provide meaningful protection persists. The Cisco Type-7 episode shows up in OSCP study materials, in PenTest+ exam prep, in CISSP review sessions, in network-engineering certifications generally, as the standard worked example of "encoding is not encryption."
+Cisco eventually added **Type-5** (MD5 hashing, properly cryptographic but now considered weak), **Type-8** (PBKDF2 with SHA-256), and **Type-9** (scrypt) password schemes — all of which are actual cryptographic operations. But Type-7 strings still appear in production configurations across the industry, and the misconception that they provide meaningful protection persists. The Cisco Type-7 episode shows up in OSCP study materials, in PenTest+ exam prep, in CISSP review sessions, in network-engineering certifications generally, as the standard worked example of "encoding is not encryption."[^cert-oscp][^cert-cissp]
 
 Theo's `api-key.b64` is a 2026 version of the same mistake. The category error — believing that a reversible byte-transformation provides protection because the output looks unfamiliar — is the same error, just applied to a different encoding (base64 instead of Cisco Type-7 XOR) and a different secret (a payment-processor API key instead of an interface password). The lesson is the same. The fix is the same. The cert curriculum has been teaching the lesson for a generation, which means there's no excuse for it to keep recurring in production code — and yet it does.
 
@@ -232,7 +232,7 @@ Equal-depth coverage for the five certifications cited in the in-game post-morte
 
 ### CompTIA Security+ — current version SY0-701
 
-Security+ is the entry-level certification most commonly required for DoD 8570/8140 IAT Level II positions and many state/federal government roles. The current exam is **SY0-701**, which superseded SY0-601 in November 2023 (SY0-601 was retired July 31, 2024). The crypto-track material maps strongly to one domain in particular.
+Security+ is the entry-level certification most commonly required for DoD 8570/8140 IAT Level II positions and many state/federal government roles.[^cert-security-plus] The current exam is **SY0-701**, which superseded SY0-601 in November 2023 (SY0-601 was retired July 31, 2024). The crypto-track material maps strongly to one domain in particular.
 
 - **Domain 1 — General Security Concepts.** Objective 1.4 covers cryptographic solutions in depth: the differences between encoding (base64, URL encoding, hex), encryption (symmetric vs. asymmetric, AES, RSA, ECC), and hashing (SHA-2, SHA-3, bcrypt, Argon2). The encoding-vs-encryption distinction is tested directly and often. Security+ also covers PKI fundamentals, certificate management, and the use of TLS — all of which sit in this domain.
 - **Domain 4 — Security Operations.** Objective 4.4 covers identity and access management; secrets management and the difference between persistent and ephemeral credentials live here.
@@ -254,7 +254,7 @@ This question pattern is canonical Security+. The answer is **B**. The traps are
 
 ### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA's CySA+ is the analyst-track cert focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The crypto-track material maps to Domain 1.
+CompTIA's CySA+ is the analyst-track cert focused on threat-detection, vulnerability-management, and incident-response work.[^cert-cysa] CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched on 23 June 2026**, with CS0-003 retiring 22 December 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The crypto-track material maps to Domain 1.
 
 - **Domain 1 — Security Operations.** Specifically the analyst's role in identifying credential-exposure events in code reviews, in CI/CD pipeline logs, and in incident-response casework. Secret-scanning tools (gitleaks, TruffleHog, GitHub Secret Scanning) are named tools in the domain.[^trufflehog-secret-scanning]
 
@@ -271,7 +271,7 @@ The trap is B — substituting one in-repo "protection" for another. C is real b
 
 ### (ISC)² Certified in Cybersecurity (CC) and SSCP
 
-(ISC)²'s Certified in Cybersecurity (CC) is the entry-level cert (ISC)² introduced in 2022 as a Security+ alternative and a feeder pipeline into CISSP. (ISC)²'s SSCP (Systems Security Certified Practitioner) is the operational-practitioner cert one rung up. Both certs cover cryptography in their respective syllabi.
+(ISC)²'s Certified in Cybersecurity (CC) is the entry-level cert (ISC)² introduced in 2022 as a Security+ alternative and a feeder pipeline into CISSP.[^cert-sscp][^cert-cissp] (ISC)²'s SSCP (Systems Security Certified Practitioner) is the operational-practitioner cert one rung up. Both certs cover cryptography in their respective syllabi.
 
 - **CC Domain 5 — Security Operations.** Cryptography fundamentals, including the encoding-vs-encryption distinction, are introduced at the recognition level. CC questions are simpler and more definitional than Security+ — expect direct questions like "Which of the following is *not* a cryptographic operation?" with base64 among the choices.
 - **SSCP Domain 5 — Cryptography.** Deeper coverage including symmetric/asymmetric primitives, key management, PKI, and digital signatures. SSCP candidates should be able to explain why base64 is a transport encoding, why ROT-13 is a substitution cipher with effectively no key, why XOR with a fixed constant (Cisco Type-7's mechanism) is not encryption in any modern sense, and what the actual algorithm boundaries are.
@@ -308,7 +308,7 @@ The trap is that A, B, and D are all reasonable executive responses. **C** is th
 
 ### OSCP / PEN-200
 
-The Offensive Security Certified Professional is the most-recognized hands-on offensive certification. The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward.
+The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.[^cert-oscp] The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward.
 
 The OSCP methodology applied to the Vesta scenario is a textbook example of the "credential-recovery in source-controlled artifacts" play. The OSCP curriculum specifically teaches:
 
@@ -331,7 +331,7 @@ The Vesta scenario is not theoretical. Every defender working on a payment-handl
 
 **1. Move every credential to a secrets manager.** AWS Secrets Manager, HashiCorp Vault, Doppler, 1Password Secrets Automation, Bitwarden Secrets Manager, Akeyless, Infisical — any of them. The credential lives in the secrets manager; the application fetches it at runtime via an authenticated identity (IAM role for AWS, AppRole for Vault, OIDC for cloud-native CI). The credential never appears in source control, never appears in a configuration file checked into a repository, never appears in environment variables that get copied around. For Vesta specifically, AWS Secrets Manager is the obvious choice if Vesta is on AWS (which most likely they are — the deploy.sh hands off to kubectl, suggesting EKS or similar). The Stripe-side API-key rotation has a built-in "rotate without downtime" workflow; Secrets Manager can drive the rotation automatically.
 
-**2. Rotate the exposed key, immediately and completely.** Once a credential has lived in a repository — encoded or otherwise — it must be treated as compromised. Stripe (and Vesta's in-house gateway) supports issuing a new key, running both old and new in parallel for a brief cut-over window, and then revoking the old key. The cut-over should happen in hours, not days. The rotation log goes into the IR documentation and the PCI-DSS evidence trail.
+**2. Rotate the exposed key, immediately and completely.** Once a credential has lived in a repository — encoded or otherwise — it must be treated as compromised. Stripe (and Vesta's in-house gateway) supports issuing a new key, running both old and new in parallel for a brief cut-over window, and then revoking the old key. The cut-over should happen in hours, not days. The rotation log goes into the IR documentation and the PCI-DSS evidence trail.[^pci-dss-v4-0-1-2][^pci-dss-v4-0-1]
 
 **3. Clean the credential from git history.** Until the credential is removed from history, anyone with `git clone --mirror` access can recover it. The tools are `git filter-repo` (the modern, recommended successor to `git filter-branch`) or BFG Repo-Cleaner. The procedure rewrites history, requires a force-push, and breaks every existing clone — which is why it should be done as a coordinated event with the engineering team, not silently. After the rewrite, the team destroys local clones and re-clones from the cleaned remote.
 
@@ -400,7 +400,7 @@ This is also the shape of why secret-management migrations stall at most consult
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^pci-dss-v4-0-1]: [PCI-DSS v4.0.1 — PCI Security Standards Council document library](https://www.pcisecuritystandards.org/document_library/).
 [^pci-dss-v4-0-1-2]: [PCI-DSS v4.0.1 announcement (PCI SSC blog)](https://blog.pcisecuritystandards.org/just-published-pci-dss-v4-0-1).
@@ -420,6 +420,11 @@ This is also the shape of why secret-management migrations stall at most consult
 [^trufflehog-secret-scanning]: [TruffleHog — Secret scanning](https://github.com/trufflesecurity/trufflehog).
 [^gitguardian-secret-detection]: [GitGuardian — Secret detection](https://www.gitguardian.com/).
 [^bfg-repo-cleaner-git-history]: [BFG Repo-Cleaner — Git history rewriting](https://rtyley.github.io/bfg-repo-cleaner/).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-sscp]: [ISC2 SSCP — Systems Security Certified Practitioner](https://www.isc2.org/certifications/sscp).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 
 ### Further reading
 

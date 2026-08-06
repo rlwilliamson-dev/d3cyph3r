@@ -220,7 +220,7 @@ There is also a non-technical dimension here that changes the character of the c
 | The claim tested | An email produced by counsel purporting to authorise Reed to take the project drive home |
 | What the headers show | Authentication failures against a domain at `p=REJECT`, an envelope sender disagreeing with the letterhead, a Message-ID minted by the wrong system, and a server receipt roughly 34 hours after the message's own `Date:` |
 | The corroborating record | An authenticated submission from Reed's own account two minutes after the exfiltration |
-| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days[^nist-800-171] |
 
 **The exposure being sized here is a false exculpatory document, which is
 a different kind of finding entirely.** No new CUI moved. What changed is
@@ -257,7 +257,7 @@ argument left open in the previous level.
 
 ## §5 — Frameworks, deep dive
 
-**The email authentication RFCs**, in the order you should read them: **RFC 5322** (Internet Message Format — the header block and the prepend rule), **RFC 7208** (SPF), **RFC 6376** (DKIM), and **RFC 9989** (DMARC, obsoleting RFC 7489, with RFC 9990 and RFC 9991 for reporting).
+**The email authentication RFCs**, in the order you should read them: **RFC 5322** (Internet Message Format — the header block and the prepend rule), **RFC 7208** (SPF), **RFC 6376** (DKIM), and **RFC 9989** (DMARC, obsoleting RFC 7489, with RFC 9990 and RFC 9991 for reporting).[^rfc-7489][^rfc-9989][^rfc-6376][^rfc-7208][^rfc-5322]
 
 **NIST SP 800-177 Rev. 1 — Trustworthy Email** is the consolidated federal guidance on deploying all three.[^nist-800-177] It's the document to cite when you need to argue internally for moving from `p=none` to enforcement, because it makes the recommendation in a form procurement and compliance functions recognize.
 
@@ -269,13 +269,13 @@ argument left open in the previous level.
 
 ## §6 — Cert exam relevance
 
-**CompTIA Security+ (SY0-701)** tests SPF, DKIM, and DMARC directly, usually as "which control prevents this?" or by showing a header excerpt and asking what it demonstrates. Know that SPF checks the envelope, DKIM signs, and DMARC aligns them to the visible `From:` — that triad answers most questions on the topic.
+**CompTIA Security+ (SY0-701)** tests SPF, DKIM, and DMARC directly, usually as "which control prevents this?" or by showing a header excerpt and asking what it demonstrates.[^cert-security-plus] Know that SPF checks the envelope, DKIM signs, and DMARC aligns them to the visible `From:` — that triad answers most questions on the topic.
 
-**CompTIA CySA+ (CS0-003)** treats header analysis as a hands-on analyst skill: you're shown a block and asked to identify the true origin or the spoofing indicator. Practice reading chains bottom-up until it's automatic, because the exam rewards the correct direction and punishes the intuitive one.
+**CompTIA CySA+ (CS0-003)** treats header analysis as a hands-on analyst skill: you're shown a block and asked to identify the true origin or the spoofing indicator.[^cert-cysa] Practice reading chains bottom-up until it's automatic, because the exam rewards the correct direction and punishes the intuitive one.
 
-**GIAC GCFA / GCIH** cover email as an evidence source, including chain reconstruction, provider records, and the legal-process side of obtaining them. The distinction between artifacts you may examine and accounts you may access is examinable material, not just professional etiquette.
+**GIAC GCFA / GCIH** cover email as an evidence source, including chain reconstruction, provider records, and the legal-process side of obtaining them.[^cert-gcih][^cert-gcfa] The distinction between artifacts you may examine and accounts you may access is examinable material, not just professional etiquette.
 
-**ISC2 CISSP** Domain 7 (Security Operations) covers investigations, evidence handling, and admissibility — including the requirement that findings survive adversarial scrutiny. Domain 4 covers the secure communications side.
+**ISC2 CISSP** Domain 7 (Security Operations) covers investigations, evidence handling, and admissibility — including the requirement that findings survive adversarial scrutiny.[^cert-cissp] Domain 4 covers the secure communications side.
 
 **EnCE / AccessData ACE** and similar tool certifications assume the underlying header literacy this level teaches; the tools parse the chain for you, but you still have to know what it means when `Date:` and the trace fields disagree.
 
@@ -375,7 +375,7 @@ grep -n received mail/02-hutchins-genuine-2026-02-11.eml
 
 ## §9 — Further reading
 
-*Last reviewed: July 2026. RFC status, statutory citations, and incident figures verified against current canonical sources as of this date — note in particular that RFC 7489 (DMARC) was obsoleted by RFC 9989/9990/9991 in May 2026. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. RFC status, statutory citations, and incident figures verified against current canonical sources as of this date — note in particular that RFC 7489 (DMARC) was obsoleted by RFC 9989/9990/9991 in May 2026. Report stale links via the project's GitHub issues tracker.*
 
 [^cwe-290]: [CWE-290 — Authentication Bypass by Spoofing](https://cwe.mitre.org/data/definitions/290.html).
 [^rfc-5322]: [RFC 5322 — Internet Message Format](https://datatracker.ietf.org/doc/html/rfc5322).
@@ -388,6 +388,11 @@ grep -n received mail/02-hutchins-genuine-2026-02-11.eml
 [^nist-800-171]: [NIST SP 800-171 Rev. 3 — Protecting CUI in Nonfederal Systems](https://csrc.nist.gov/pubs/sp/800/171/r3/final).
 [^18-u-s-c-2703]: [18 U.S.C. § 2703 — Required disclosure of customer communications or records](https://www.law.cornell.edu/uscode/text/18/2703).
 [^doj-lithuanian-man-sentenced-for]: [DOJ — Lithuanian man sentenced for $120M business email compromise (Rimasauskas)](https://www.justice.gov/usao-sdny/pr/lithuanian-man-sentenced-5-years-prison-theft-over-120-million-fraudulent-business).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-gcfa]: [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa).
+[^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
 
 ### Further reading
 

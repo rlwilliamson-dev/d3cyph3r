@@ -130,7 +130,7 @@ The defender's playbook against this category of finding is in §7. First, the p
 | Population at the client | Roughly 400,000 patients across about 40 clinics |
 | Records demonstrably exposed | **Unknown, and that is the finding.** See below |
 | Escalates to | A shell on the staging-db host as the service account, which is `level1@network` |
-| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media |
+| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media[^cfr-45-164] |
 
 **The honest answer to "how many records" is that Atlas cannot say, and
 an assessment that invents a number is worse than one that reports the
@@ -188,7 +188,7 @@ The initial access vector, per UnitedHealth's congressional testimony, was a Cit
 
 The Atlas Health parallel here is sharper than it first looks. Change Healthcare's *Citrix portal* was internet-exposed, and the *credential gap* (no MFA) was the exploitable condition. Atlas Health's *postgres* is internet-exposed, and the *credential gap* (default password) is the exploitable condition. The mechanism is "internet-facing service + a credential that shouldn't work but does." That's not a sophisticated technique. It's the most common shape of catastrophic incident.
 
-The aftermath of Change Healthcare also clarifies what the regulatory and contractual cascade looks like when a healthcare exposure of this magnitude lands. UnitedHealth was required to notify affected individuals under HIPAA's Breach Notification Rule. Several state attorneys general opened investigations. Class-action lawsuits were filed in multiple jurisdictions. The HHS Office for Civil Rights opened a formal compliance review. Subsequent HHS HPH-CPGs (Cybersecurity Performance Goals) explicitly called out MFA on internet-facing services as an "Essential" goal — meaning every covered entity is expected to have it.[^hhs-hph-cpgs-healthcare-and] Atlas Health's staging postgres is the same risk class as Change Healthcare's Citrix portal, just with fewer zeros at the end of the patient-count.
+The aftermath of Change Healthcare also clarifies what the regulatory and contractual cascade looks like when a healthcare exposure of this magnitude lands. UnitedHealth was required to notify affected individuals under HIPAA's Breach Notification Rule.[^cfr-45-164] Several state attorneys general opened investigations. Class-action lawsuits were filed in multiple jurisdictions. The HHS Office for Civil Rights opened a formal compliance review. Subsequent HHS HPH-CPGs (Cybersecurity Performance Goals) explicitly called out MFA on internet-facing services as an "Essential" goal — meaning every covered entity is expected to have it.[^hhs-hph-cpgs-healthcare-and] Atlas Health's staging postgres is the same risk class as Change Healthcare's Citrix portal, just with fewer zeros at the end of the patient-count.
 
 ## §5 — Frameworks, deep dive
 
@@ -208,7 +208,7 @@ Audit evidence for §164.312 includes the covered entity's documented risk asses
 
 ### HITECH Act — Pub. L. 111-5, Subtitle D
 
-The Health Information Technology for Economic and Clinical Health Act, enacted as part of the 2009 American Recovery and Reinvestment Act, made two substantive changes to the HIPAA enforcement landscape. First, it formally extended HIPAA's penalties and obligations to business associates — meaning a security consulting firm like Driftwood is directly liable for its handling of ePHI it touches, not just contractually liable through the covered entity. Second, and more famously, it introduced the Breach Notification Rule (now codified at 45 CFR Part 164, Subpart D).
+The Health Information Technology for Economic and Clinical Health Act, enacted as part of the 2009 American Recovery and Reinvestment Act, made two substantive changes to the HIPAA enforcement landscape. First, it formally extended HIPAA's penalties and obligations to business associates — meaning a security consulting firm like Driftwood is directly liable for its handling of ePHI it touches, not just contractually liable through the covered entity. Second, and more famously, it introduced the Breach Notification Rule (now codified at 45 CFR Part 164, Subpart D).[^cfr-45-164]
 
 The Breach Notification Rule requires covered entities to notify affected individuals of a breach of unsecured PHI without unreasonable delay and in no case later than 60 calendar days after discovery. "Discovery" is the day the breach was known or should have been known by exercising reasonable diligence. For a breach affecting 500 or more individuals in a single state or jurisdiction, the covered entity must also notify HHS Office for Civil Rights in the same 60-day window, and must notify "prominent media outlets serving the state or jurisdiction." HHS OCR maintains the public Breach Portal (informally the "Wall of Shame"), where all 500+ breaches are listed indefinitely with the covered entity name, breach date, individuals affected, type of breach, and location of breached information.
 
@@ -276,7 +276,7 @@ Equal-depth coverage for the five certifications cited in the in-game post-morte
 
 ### CompTIA Security+ — current version SY0-701
 
-Security+ is the entry-level certification most commonly required for DoD 8570/8140 IAT Level II positions and for many state and federal government roles. The current exam is **SY0-701**, which superseded SY0-601 in November 2023 (SY0-601 was retired July 31, 2024). Atlas Health's level0 material maps directly to two domains.
+Security+ is the entry-level certification most commonly required for DoD 8570/8140 IAT Level II positions and for many state and federal government roles.[^cert-security-plus] The current exam is **SY0-701**, which superseded SY0-601 in November 2023 (SY0-601 was retired July 31, 2024). Atlas Health's level0 material maps directly to two domains.
 
 - **Domain 2 — Threats, Vulnerabilities, and Mitigations.** Objective 2.5 covers vulnerability identification, including network scanning and the difference between credentialed and uncredentialed scans. Expect a question that gives you nmap output similar to what you ran and asks which finding represents the highest-severity risk.
 - **Domain 4 — Security Operations.** Objective 4.1 explicitly names nmap as a tool you should be able to recognize and explain. Objective 4.3 covers vulnerability management — including external attack-surface enumeration, the practice you just performed manually for Atlas.
@@ -295,7 +295,7 @@ The trap is A — rotating the credential is necessary but does not address the 
 
 ### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA's CySA+ (Cybersecurity Analyst) is the analyst-track cert, focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. Atlas Health's material maps to two domains.
+CompTIA's CySA+ (Cybersecurity Analyst) is the analyst-track cert, focused on threat-detection, vulnerability-management, and incident-response work.[^cert-cysa] CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched on 23 June 2026**, with CS0-003 retiring 22 December 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. Atlas Health's material maps to two domains.
 
 - **Domain 1 — Security Operations.** Objective 1.4 covers vulnerability scanning interpretation, including nmap output, Nessus output, and the workflow for prioritizing findings. Objective 1.6 covers active and passive reconnaissance — Driftwood's quarterly verification is exactly the activity this objective tests.
 - **Domain 2 — Threat Intelligence and Threat Hunting.** Objective 2.2 covers threat-intelligence sources, including Shodan and Censys (the tools an attacker would use to find Atlas Health's exposed postgres before Driftwood's check found it).[^censys-internet-wide-scanner]
@@ -313,7 +313,7 @@ CySA+ wants the *first* action; this is a procedural-discipline question. Both A
 
 ### CompTIA PenTest+ — current version PT0-003
 
-CompTIA's PenTest+ is the offensive-track cert, focused on planning, scoping, executing, and reporting penetration tests. The current exam is **PT0-003**, which superseded PT0-002 in December 2024. Atlas Health's level0 material maps directly to PenTest+'s information-gathering domain, which makes this scenario unusually high-value for PenTest+ study.
+CompTIA's PenTest+ is the offensive-track cert, focused on planning, scoping, executing, and reporting penetration tests.[^cert-pentest-plus] The current exam is **PT0-003**, which superseded PT0-002 in December 2024. Atlas Health's level0 material maps directly to PenTest+'s information-gathering domain, which makes this scenario unusually high-value for PenTest+ study.
 
 - **Domain 1 — Engagement Management.** Covers scoping, rules of engagement, and authorization documentation. Driftwood's MSA with Atlas constraining the scan to perimeter verification (not credentialed assessment) is the type of constraint this domain tests.
 - **Domain 2 — Reconnaissance and Enumeration.** Objective 2.2 covers active reconnaissance with nmap, masscan, and similar; objective 2.3 covers vulnerability identification including service-version mapping to known CVEs.
@@ -332,7 +332,7 @@ PT0-003 explicitly tests scope discipline. Both A and C exceed perimeter-verific
 
 ### CISSP
 
-CISSP is the senior-level (ISC)² certification, intended for security professionals with five or more years of experience. The current exam follows the **2024 CBK refresh** (still current, with the next refresh expected in 2027 on the standard three-year cycle). CISSP has eight domains; Atlas Health material spans three.
+CISSP is the senior-level (ISC)² certification, intended for security professionals with five or more years of experience.[^cert-cissp] The current exam follows the **2024 CBK refresh** (still current, with the next refresh expected in 2027 on the standard three-year cycle). CISSP has eight domains; Atlas Health material spans three.
 
 - **Domain 3 — Security Architecture and Engineering.** Covers secure-network-architecture, including segmentation, defense-in-depth, and the secure-by-default principle. The conceptual remediation for Atlas Health's finding lives in this domain.
 - **Domain 4 — Communication and Network Security.** Covers boundary devices, firewalls, intrusion detection/prevention, and network monitoring. The technical "how" of preventing the Atlas exposure lives here.
@@ -353,7 +353,7 @@ The trap is that all four are reasonable. **D** is necessary but is a near-term 
 
 ### OSCP / PEN-200
 
-The Offensive Security Certified Professional is the most-recognized hands-on offensive certification. The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward. The methodology OSCP teaches is, at its core, exactly what you just did to Atlas Health's perimeter — with the discipline that, on the OSCP exam, *you actually do attempt the credential* (because the exam scope authorizes it; the Atlas engagement scope did not).
+The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.[^cert-oscp] The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward. The methodology OSCP teaches is, at its core, exactly what you just did to Atlas Health's perimeter — with the discipline that, on the OSCP exam, *you actually do attempt the credential* (because the exam scope authorizes it; the Atlas engagement scope did not).
 
 The OSCP enumeration loop, applied to a target like Atlas Health, looks like this:
 
@@ -445,7 +445,7 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^cfr-45-164]: [HIPAA Security Rule — 45 CFR Part 164, Subpart C (HHS)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C).
 [^hhs-office-for-civil-rights]: [HHS Office for Civil Rights — Breach Portal ("Wall of Shame")](https://ocrportal.hhs.gov/ocr/breach/breach_frontpage.jsf).
@@ -466,6 +466,11 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 [^censys-internet-wide-scanner]: [Censys — internet-wide scanner](https://search.censys.io/).
 [^hashicorp-boundary-just-in-time]: [HashiCorp Boundary — just-in-time bastion](https://developer.hashicorp.com/boundary).
 [^tenable-nessus-credentialed-vulnerability-scanning]: [Tenable Nessus — credentialed vulnerability scanning](https://www.tenable.com/products/nessus).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 
 ### Further reading
 

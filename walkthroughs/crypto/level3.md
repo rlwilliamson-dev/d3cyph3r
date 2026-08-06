@@ -267,15 +267,15 @@ unlocks answers that badly.
 
 ## §6 — Cert exam relevance
 
-**CompTIA Security+ (SY0-701)** Domain 1.4 covers cryptographic solutions — symmetric versus asymmetric, block cipher modes, key exchange, and key derivation. The exam returns repeatedly to the theme that key management, not algorithm selection, is where implementations fail; questions shaped as "the data was encrypted with AES-256, so why was it compromised?" expect you to reach for key handling. Domain 4 covers the data-lifecycle side, including retention and secure destruction.
+**CompTIA Security+ (SY0-701)** Domain 1.4 covers cryptographic solutions — symmetric versus asymmetric, block cipher modes, key exchange, and key derivation.[^cert-security-plus] The exam returns repeatedly to the theme that key management, not algorithm selection, is where implementations fail; questions shaped as "the data was encrypted with AES-256, so why was it compromised?" expect you to reach for key handling. Domain 4 covers the data-lifecycle side, including retention and secure destruction.
 
-**ISC2 CISSP** Domain 3 (Security Architecture and Engineering) covers the full cryptographic lifecycle and the principle that keys must be protected at least as strongly as what they protect. Domain 2 (Asset Security) covers data retention, classification, and destruction — the CVV finding lives there, and the CBK is explicit that classification follows the data into backups.
+**ISC2 CISSP** Domain 3 (Security Architecture and Engineering) covers the full cryptographic lifecycle and the principle that keys must be protected at least as strongly as what they protect.[^cert-cissp] Domain 2 (Asset Security) covers data retention, classification, and destruction — the CVV finding lives there, and the CBK is explicit that classification follows the data into backups.
 
 **PCI Professional (PCIP)** and QSA training treat SAD retention as a foundational rule, precisely because merchants get it wrong so often. If you take one fact from this level into an exam room: *CVV must not be stored after authorization, encryption is not a mitigating control, and there is no merchant business justification.*
 
-**CompTIA CySA+ (CS0-003)** covers the analyst's job of finding prohibited or sensitive data in places it was never supposed to reach — backups, logs, exports, test fixtures, analytics stores. The hunt technique is a pattern scan (PAN regexes with Luhn validation, CVV-adjacent column names) across storage that is nominally out of scope.
+**CompTIA CySA+ (CS0-003)** covers the analyst's job of finding prohibited or sensitive data in places it was never supposed to reach — backups, logs, exports, test fixtures, analytics stores.[^cert-cysa] The hunt technique is a pattern scan (PAN regexes with Luhn validation, CVV-adjacent column names) across storage that is nominally out of scope.
 
-**Offensive Security OSCP / PEN-200** covers the offensive half: recovered credentials are sprayed everywhere, and encrypted archives found during post-exploitation are standard targets once any wordlist-crackable password is in hand. `openssl enc -d` and John/hashcat against archive formats are routine tooling.
+**Offensive Security OSCP / PEN-200** covers the offensive half: recovered credentials are sprayed everywhere, and encrypted archives found during post-exploitation are standard targets once any wordlist-crackable password is in hand.[^cert-oscp] `openssl enc -d` and John/hashcat against archive formats are routine tooling.
 
 ## §7 — What a defender does
 
@@ -366,7 +366,7 @@ The bonus finds exist to exercise the schema-reading and key-tracing habits with
 
 ## §9 — Further reading
 
-*Last reviewed: July 2026. External standards versions, requirement numbers, and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions, requirement numbers, and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^cwe-326]: [CWE-326 — Inadequate Encryption Strength](https://cwe.mitre.org/data/definitions/326.html).
 [^cwe-522]: [CWE-522 — Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html).
@@ -376,6 +376,10 @@ The bonus finds exist to exercise the schema-reading and key-tracing habits with
 [^nist-800-132]: [NIST SP 800-132 — Recommendation for Password-Based Key Derivation](https://csrc.nist.gov/pubs/sp/800/132/final).
 [^owasp-top-10-2025-a04]: [OWASP Top 10:2025 — A04: Cryptographic Failures](https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/).
 [^lastpass-notice-of-recent-security]: [LastPass — Notice of Recent Security Incident (December 2022 update)](https://blog.lastpass.com/posts/notice-of-recent-security-incident).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 
 ### Further reading
 

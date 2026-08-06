@@ -352,6 +352,35 @@ function validate(md, label, shipped) {
     );
   }
 
+  // Review staleness.
+  //
+  // Every §9 opens with "Last reviewed: <Month> <Year>", and the value
+  // of that line is entirely in whether anyone acts on it. They did not:
+  // two walkthroughs sat at April 2026 through four releases, while
+  // their neighbours said July, and nothing anywhere noticed. Meanwhile
+  // the corpus accumulated real drift — a CySA+ retirement date off by
+  // six months, a PenTest+ launch year off by one, a CEH release off by
+  // five months, a CISSP outline refresh off by a month.
+  //
+  // Cert vendors and standards bodies move on a roughly annual cycle,
+  // so a review older than MAX_REVIEW_AGE_MONTHS is treated as expired
+  // and fails the build. The fix is to re-audit and re-date, which is
+  // exactly the work the line was supposed to prompt.
+  //
+  // Deliberately checked against the newest date in the corpus rather
+  // than against today. A clone built two years from now should not
+  // fail on a fresh checkout, and a repository whose walkthroughs were
+  // all reviewed together should not go red simply for sitting still.
+  // What this catches is DIVERGENCE: one walkthrough being re-audited
+  // while its neighbours are left behind, which is the actual failure
+  // mode observed.
+  const reviewed = md.match(/Last reviewed:\s*([A-Z][a-z]+)\s+(\d{4})/);
+  if (!reviewed) {
+    problems.push(
+      `missing the "Last reviewed: <Month> <Year>" line at the top of §9`
+    );
+  }
+
   // Stale forward references.
   //
   // A walkthrough written before the next level existed describes it as
@@ -1462,6 +1491,62 @@ function crossCheckCitations(postMortem, walkthrough, label) {
   ];
 }
 
+// How far a walkthrough's review date may lag the freshest one in the
+// corpus before the build treats it as abandoned. Three months is one
+// release cycle here, which is long enough to ship a level without
+// tripping over this and short enough that a track cannot quietly fall
+// a year behind.
+const MAX_REVIEW_LAG_MONTHS = 3;
+
+const MONTHS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+
+/** "Last reviewed: August 2026" -> a comparable month ordinal. */
+function reviewOrdinal(md) {
+  const m = md.match(/Last reviewed:\s*([A-Z][a-z]+)\s+(\d{4})/);
+  if (!m) return null;
+  const mi = MONTHS.indexOf(m[1].toLowerCase());
+  if (mi < 0) return null;
+  return { n: Number(m[2]) * 12 + mi, label: `${m[1]} ${m[2]}` };
+}
+
+/**
+ * Fail walkthroughs whose review date has fallen behind the corpus.
+ *
+ * The user's instruction was that the audit happens for ALL walkthroughs
+ * on every level build, not just the new one, "so it stays the most
+ * current". Left to memory that lasted exactly as long as it took to
+ * ship the next level: at the time this was written, two walkthroughs
+ * still said April 2026 while three said July, and the April ones were
+ * carrying four separate factual errors about certification versions.
+ *
+ * Comparing each file against the FRESHEST file rather than against
+ * today is what makes this a divergence check. Re-auditing one
+ * walkthrough and not its neighbours is the thing that goes wrong, and
+ * that is precisely what this makes impossible to merge.
+ */
+function checkReviewDates(entries) {
+  const dated = entries.filter((e) => e.ord);
+  if (!dated.length) return [];
+
+  const newest = Math.max(...dated.map((e) => e.ord.n));
+  const problems = [];
+  for (const e of dated) {
+    const lag = newest - e.ord.n;
+    if (lag > MAX_REVIEW_LAG_MONTHS) {
+      problems.push(
+        `  ${e.label}: last reviewed ${e.ord.label}, ${lag} months behind ` +
+          `the rest of the corpus.\n` +
+          `      Re-audit its certification versions, framework revisions, and\n` +
+          `      regulation citations, then update the "Last reviewed" line.`
+      );
+    }
+  }
+  return problems;
+}
+
 async function main() {
   const seq = levelSequence();
 
@@ -1480,10 +1565,12 @@ async function main() {
 
   const problems = [];
   const rendered = new Map();
+  const reviews = [];
   for (const { trackKey, levelKey } of seq) {
     const md = await readFile(join(WT, trackKey, `${levelKey}.md`), "utf8");
     const label = `${trackKey}/${levelKey}.md`;
     problems.push(...validate(md, label, shipped));
+    reviews.push({ label, ord: reviewOrdinal(md) });
 
     // Rendering doubles as citation validation: unknown keys and
     // uncited definitions are only knowable once the body has been
@@ -1500,6 +1587,8 @@ async function main() {
       );
     }
   }
+  problems.push(...checkReviewDates(reviews));
+
   if (problems.length) {
     console.error(
       `\nWalkthrough template violations (${problems.length}):\n`

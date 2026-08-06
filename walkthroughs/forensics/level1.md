@@ -192,9 +192,9 @@ The structural lesson: Windows event logs catch what defenders forget to look at
 |---|---|
 | Reached | The Security event log from Reed's imaged workstation, `POL-WS-0418` |
 | The chain recovered | Archive creation, encoding to text, browser launch, and upload to a consumer file-sharing host, on a Saturday |
-| Data class | Controlled Unclassified Information, which is what makes this a DFARS matter rather than an HR one |
+| Data class | Controlled Unclassified Information, which is what makes this a DFARS matter rather than an HR one[^dfars-252-204-7012-safeguarding] |
 | Second finding | An IR responder's password, typed into the username field and captured verbatim in a failed-logon record |
-| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days[^nist-800-171] |
 
 **This is the point where the case becomes reportable, and the clock is
 72 hours from the determination.** Level0 refuted an alibi. This
@@ -222,7 +222,7 @@ investigation team is now part of the exposure it is investigating.
 
 Windows event log forensics shows up in essentially every major IR investigation of the last fifteen years. A non-exhaustive tour:
 
-**TJX (2006-2007).** TJX Companies disclosed a breach affecting ~45.7 million payment cards in early 2007; subsequent legal filings put the figure significantly higher. The investigation reconstruction relied heavily on Windows event logs from TJX's retail-store domain controllers and POS infrastructure. The famous "Wi-Fi from the parking lot" entry point is the headline; the timeline of what attackers did *after* gaining a foothold — credential reuse, lateral movement, staging — was reconstructed from event-log forensics. The TJX case is on the GCIH and CHFI exam syllabi for that reason.
+**TJX (2006-2007).** TJX Companies disclosed a breach affecting ~45.7 million payment cards in early 2007; subsequent legal filings put the figure significantly higher. The investigation reconstruction relied heavily on Windows event logs from TJX's retail-store domain controllers and POS infrastructure. The famous "Wi-Fi from the parking lot" entry point is the headline; the timeline of what attackers did *after* gaining a foothold — credential reuse, lateral movement, staging — was reconstructed from event-log forensics. The TJX case is on the GCIH and CHFI exam syllabi for that reason.[^cert-chfi][^cert-gcih]
 
 **Target (2013).** The Target breach (~40 million payment cards + 70 million customer records) is most famous for the Fazio Mechanical Services HVAC vendor as the initial vector, but the bulk of the published case material covers what BlackPOS malware did once inside — which the investigators reconstructed from Windows event logs across the POS environment. Krebs on Security's coverage cites event-log findings directly. The Senate Commerce Committee's March 2014 report on the breach has a process-creation timeline pulled from 4688 events.[^target-2013-breach-senate-commerce]
 
@@ -290,7 +290,7 @@ CIS Controls v8.1 was released in 2024 (a maintenance update to v8). Control 8 (
 
 ### DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting
 
-The DFARS clause that creates the 72-hour reporting clock to DoD (functionally to DC3 / DoD Cyber Crime Center via the DIBNET portal) upon discovery of a cyber incident affecting CUI. The clause's (c) paragraph defines the reporting requirement; the (e) paragraph requires preservation of media for at least 90 days post-incident — which is why Polaris is sitting on the full E01 image in cold storage even after this engagement closes.
+The DFARS clause that creates the 72-hour reporting clock to DoD (functionally to DC3 / DoD Cyber Crime Center via the DIBNET portal) upon discovery of a cyber incident affecting CUI.[^dfars-252-204-7012-safeguarding] The clause's (c) paragraph defines the reporting requirement; the (e) paragraph requires preservation of media for at least 90 days post-incident — which is why Polaris is sitting on the full E01 image in cold storage even after this engagement closes.
 
 ### NISPOM 32 CFR Part 117
 
@@ -298,13 +298,13 @@ The National Industrial Security Program Operating Manual, codified into 32 CFR 
 
 ### CWE / MITRE
 
-- **CWE-532 Insertion of Sensitive Information into Log File** — the typed-password-in-4625 finding.
+- **CWE-532 Insertion of Sensitive Information into Log File** — the typed-password-in-4625 finding.[^cwe-532]
 - **CWE-117 Improper Output Neutralization for Logs** — adjacent; covers log-injection rather than passive sensitive-data exposure.[^cwe-117] Cited together with CWE-532 when reviewing log-handling design.
 - **CWE-200 Exposure of Sensitive Information to an Unauthorized Actor** — the parent of CWE-532, and the CWE cited in `level0@forensics` for the EXIF metadata finding.[^cwe-200] (CWE-200 itself is now mapping-**Discouraged** in current CWE guidance — MITRE recommends citing the more specific child weakness, which for the typed-password finding is CWE-532.)
-- **MITRE ATT&CK T1078 Valid Accounts** — Reed's use of his own valid credentials.
+- **MITRE ATT&CK T1078 Valid Accounts** — Reed's use of his own valid credentials.[^t1078]
 - **MITRE ATT&CK T1083 File and Directory Discovery** — the 4663 CUI reads as deliberate enumeration.[^t1083]
 - **MITRE ATT&CK T1560.001 Archive Collected Data: Archive via Utility** — the PowerShell Compress-Archive step.[^t1560-001]
-- **MITRE ATT&CK T1027 Obfuscated Files or Information** — the certutil -encode base64 step.
+- **MITRE ATT&CK T1027 Obfuscated Files or Information** — the certutil -encode base64 step.[^t1027]
 - **MITRE ATT&CK T1059.001 Command and Scripting Interpreter: PowerShell** — the cmdline.[^t1059-001]
 - **MITRE ATT&CK T1059.003 Command and Scripting Interpreter: Windows Command Shell** — the cmd.exe parent.[^t1059-003]
 - **MITRE ATT&CK T1567.002 Exfiltration Over Web Service: Exfiltration to Cloud Storage** — the chrome → mega.nz tab.[^t1567-002]
@@ -327,15 +327,15 @@ Windows event log forensics is core curriculum across the IR/DFIR certification 
 
 ### GIAC GCFE — Certified Forensic Examiner
 
-The Windows-forensics-on-disk specialist cert. Security.evtx structure and analysis is core content — both the binary EVTX format (XML-typed records, channels, providers) and the analytical patterns (logon-type taxonomy, sub-status codes, process-tree reconstruction). Feeds from SANS FOR500 (Windows Forensic Analysis), which is the most direct training-path course for what we just did. GCFE is typically the first DFIR cert practitioners earn.
+The Windows-forensics-on-disk specialist cert.[^cert-gcfe] Security.evtx structure and analysis is core content — both the binary EVTX format (XML-typed records, channels, providers) and the analytical patterns (logon-type taxonomy, sub-status codes, process-tree reconstruction). Feeds from SANS FOR500 (Windows Forensic Analysis), which is the most direct training-path course for what we just did. GCFE is typically the first DFIR cert practitioners earn.
 
 ### GIAC GCFA — Certified Forensic Analyst
 
-The deeper IR/forensics cert. Event-log analysis at timeline-reconstruction scale, file-system forensics (MFT, USN journal, $LogFile), memory forensics (Volatility, Rekall). Feeds from SANS FOR508 (Advanced Incident Response, Threat Hunting and Digital Forensics). GCFA is the cert you'd typically pursue after GCFE if your role centers on IR rather than e-discovery or expert-witness testimony.
+The deeper IR/forensics cert.[^cert-gcfa] Event-log analysis at timeline-reconstruction scale, file-system forensics (MFT, USN journal, $LogFile), memory forensics (Volatility, Rekall). Feeds from SANS FOR508 (Advanced Incident Response, Threat Hunting and Digital Forensics). GCFA is the cert you'd typically pursue after GCFE if your role centers on IR rather than e-discovery or expert-witness testimony.
 
 ### GIAC GCIH — Certified Incident Handler
 
-The enterprise-IR cert. Less forensics-deep, more incident-process-broad. Detection-engineering coverage of event-log monitoring lives here — the rule that would catch the 4625 typed-password pattern is the kind of content GCIH covers. Feeds from SANS SEC504 (Hacker Tools, Techniques, and Incident Handling).
+The enterprise-IR cert.[^cert-gcih] Less forensics-deep, more incident-process-broad. Detection-engineering coverage of event-log monitoring lives here — the rule that would catch the 4625 typed-password pattern is the kind of content GCIH covers. Feeds from SANS SEC504 (Hacker Tools, Techniques, and Incident Handling).
 
 ### GIAC GCDA — Certified Detection Analyst
 
@@ -343,11 +343,11 @@ SOC/SIEM-side cert (formerly branded as "Continuous Monitoring & Security Operat
 
 ### CompTIA CySA+ (CS0-003 / CS0-004)
 
-CySA+ is the broad SOC-analyst credential. CS0-003 was the current exam revision as of the May 2026 review date, **with CS0-004 launched in early 2026 for parallel availability** — CS0-003 retires June 2026, so by the time anyone reads this much past the review date, CS0-004 will be the only sittable version. Domain 1 (Security Operations) covers log analysis and SIEM correlation; Domain 3 (Incident Response and Management) covers forensic analysis including event logs. CySA+ is a non-vendor cert; it's lighter than GIAC but cheaper and more broadly recognized at entry-to-mid SOC roles.
+CySA+ is the broad SOC-analyst credential.[^cert-cysa] CS0-003 was the current exam revision as of the May 2026 review date, **with CS0-004 launched on 23 June 2026** — CS0-003 retires 22 December 2026, so by the time anyone reads this much past the review date, CS0-004 will be the only sittable version. Domain 1 (Security Operations) covers log analysis and SIEM correlation; Domain 3 (Incident Response and Management) covers forensic analysis including event logs. CySA+ is a non-vendor cert; it's lighter than GIAC but cheaper and more broadly recognized at entry-to-mid SOC roles.
 
 ### ISC2 CISSP
 
-The Common Body of Knowledge cert. Domain 7 (Security Operations) includes "Conduct logging and monitoring activities" and "Conduct investigations" — both procedural-side coverage of what we just did. CISSP is conceptual rather than hands-on; you'd cite it as the framework cert, not the practical one.
+The Common Body of Knowledge cert.[^cert-cissp] Domain 7 (Security Operations) includes "Conduct logging and monitoring activities" and "Conduct investigations" — both procedural-side coverage of what we just did. CISSP is conceptual rather than hands-on; you'd cite it as the framework cert, not the practical one.
 
 ### Microsoft SC-200 — Security Operations Analyst Associate
 
@@ -355,7 +355,7 @@ The Microsoft-native SOC cert. Microsoft Sentinel KQL queries, Microsoft Defende
 
 ### EC-Council CHFI — Computer Hacking Forensic Investigator
 
-Module 13 (Windows Forensics) covers event logs in depth — both the binary EVTX format and the analytical patterns. CHFI is a whole-cert forensics credential, generally considered weaker than GCFE/GCFA in the DFIR community but holds federal-recognition status (DoD 8570 / 8140 baseline cert for IAT/IAM/CSSP roles) that GCFE/GCFA don't.
+Module 13 (Windows Forensics) covers event logs in depth — both the binary EVTX format and the analytical patterns.[^cert-chfi] CHFI is a whole-cert forensics credential, generally considered weaker than GCFE/GCFA in the DFIR community but holds federal-recognition status (DoD 8570 / 8140 baseline cert for IAT/IAM/CSSP roles) that GCFE/GCFA don't.
 
 ## §7 — What a defender does
 
@@ -363,7 +363,7 @@ Two parallel remediation tracks, plus the longer-arc audit-log-program improveme
 
 ### For the Reed case specifically
 
-Hand Dana the timeline with verbatim event IDs and UTC timestamps. She will cite them to General Counsel and (when the DFARS clock starts at her receipt) to DC3 via the DIBNET portal. Do not speculate in the report about Reed's intent — the events show what happened, intent is Dana's call to make with HR, legal, and DCSA in the loop. Sign and hash `Security.evtx` as part of the chain-of-custody package; the hash you compute now is what proves the log wasn't altered between acquisition and any eventual proceeding.
+Hand Dana the timeline with verbatim event IDs and UTC timestamps. She will cite them to General Counsel and (when the DFARS clock starts at her receipt) to DC3 via the DIBNET portal.[^dfars-252-204-7012-safeguarding] Do not speculate in the report about Reed's intent — the events show what happened, intent is Dana's call to make with HR, legal, and DCSA in the loop. Sign and hash `Security.evtx` as part of the chain-of-custody package; the hash you compute now is what proves the log wasn't altered between acquisition and any eventual proceeding.
 
 Polaris IT's parallel containment work: rotate Reed's account credentials (already initiated under Friday's escalation), revoke his M365 / VPN tokens, audit any external systems his account touched between 2026-03-14 and 2026-03-20. Clean up `C:\Users\rconnolly\AppData\Local\Temp\sa-export.zip` and `sa-export.b64` from the workstation image's source path on Polaris's file servers (the live workstation is offline pending the formal investigation; the file artifacts on it are evidence-preserved on the E01).
 
@@ -474,7 +474,7 @@ For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-e
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
 [^nist-800-53]: [NIST SP 800-53 Rev. 5 — Security and Privacy Controls for Information Systems and Organizations](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). Published September 2020; Revision 5 Update 1 published December 2023. AU family is in chapter 3.3.
 [^nist-800-92]: [NIST SP 800-92 — Guide to Computer Security Log Management](https://csrc.nist.gov/pubs/sp/800/92/final).
@@ -508,6 +508,12 @@ For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-e
 [^13cubed-youtube-channel]: [13Cubed YouTube channel](https://www.youtube.com/@13cubed). Practitioner-friendly Windows forensics videos including event-log walkthroughs.
 [^roberto-rodriguez-cyb3rward0g-helk-mordor]: [Roberto Rodriguez (Cyb3rWard0g) — HELK, Mordor, OSSEM projects](https://github.com/Cyb3rWard0g). Threat-hunting infrastructure and adversary-emulation datasets including 4625 anomaly detection content.
 [^eric-zimmerman-blog]: [Eric Zimmerman blog](https://ericzimmerman.github.io/). Author of the EZ Tools forensics suite.
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-gcfa]: [GIAC GCFA — Certified Forensic Analyst](https://www.giac.org/certifications/certified-forensic-analyst-gcfa).
+[^cert-gcfe]: [GIAC GCFE — Certified Forensic Examiner](https://www.giac.org/certifications/certified-forensic-examiner-gcfe).
+[^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
+[^cert-chfi]: [EC-Council CHFI — Computer Hacking Forensic Investigator](https://www.eccouncil.org/train-certify/computer-hacking-forensic-investigator-chfi-north-america/).
 
 ### Further reading
 

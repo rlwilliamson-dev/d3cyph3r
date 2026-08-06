@@ -244,7 +244,7 @@ Each failure is independently a finding. Fixing only the bucket configuration (t
 | Also present | A hardcoded RDS password inside a migration script left in the same bucket |
 | Authentication required | None, and no attribution is available for who else listed it |
 | Escalates to | The RDS master credential, which is `level1@cloud` |
-| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively |
+| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively[^nycrr-500][^naic-insurance-data-security-model] |
 
 **Five buckets configured correctly is not evidence of a control; it is
 evidence of five correct decisions.** The worksheet walks cleanly until
@@ -299,7 +299,7 @@ For Coverline, the parallel is the structural-scale dimension. Coverline's claim
 
 ## §5 — Frameworks, deep dive
 
-The in-game post-mortem cites ten framework controls. Each is expanded below. Cloud is the broadest framework surface of any track because every layer of the modern cloud-security regulatory stack applies simultaneously — SOC 2 for the customer-facing assurance, NIST 800-53 for the federal-control baseline, NIST CSF 2.0 for the cybersecurity-program framing, CIS for the configuration baseline, ISO 27017 for the international cloud-specific standard, OWASP for the application-security frame, CWE for the vulnerability taxonomy, plus the insurance-vertical regulations (NAIC, NYDFS) and the financial-services backstop (GLBA).[^nist-800-53]
+The in-game post-mortem cites ten framework controls. Each is expanded below. Cloud is the broadest framework surface of any track because every layer of the modern cloud-security regulatory stack applies simultaneously — SOC 2 for the customer-facing assurance, NIST 800-53 for the federal-control baseline, NIST CSF 2.0 for the cybersecurity-program framing, CIS for the configuration baseline, ISO 27017 for the international cloud-specific standard, OWASP for the application-security frame, CWE for the vulnerability taxonomy, plus the insurance-vertical regulations (NAIC, NYDFS) and the financial-services backstop (GLBA).[^nist-800-53][^naic-insurance-data-security-model]
 
 ### SOC 2 Trust Services Criteria — CC6.1, CC6.6, CC6.7, CC7.1
 
@@ -402,7 +402,7 @@ Three sections apply to Coverline's case:
 
 ### NYDFS 23 NYCRR 500 (2017, amended 2023)
 
-**NYDFS 23 NYCRR 500** — the New York Department of Financial Services Cybersecurity Requirements for Financial Services Companies — applies to any financial-services company licensed by NYDFS. Coverline is NY-licensed and therefore subject. The regulation was originally promulgated in 2017 and substantially amended effective November 2023.
+**NYDFS 23 NYCRR 500** — the New York Department of Financial Services Cybersecurity Requirements for Financial Services Companies — applies to any financial-services company licensed by NYDFS.[^nycrr-500] Coverline is NY-licensed and therefore subject. The regulation was originally promulgated in 2017 and substantially amended effective November 2023.
 
 Six sections apply to Coverline:
 
@@ -468,7 +468,7 @@ audit, egress monitoring — is not optional.
 
 ## §6 — Cert exam relevance
 
-Equal-depth coverage for the twelve cert families cited in the in-game post-mortem. Cloud touches more certs than any other track because the cloud-security cert market has fragmented across vendor-specific (AWS, Azure, GCP), vendor-neutral (CCSP, CCSK), pentest-oriented (GCPN, OSCP), and traditional-track (Security+, CySA+, CISSP) lines.
+Equal-depth coverage for the twelve cert families cited in the in-game post-mortem. Cloud touches more certs than any other track because the cloud-security cert market has fragmented across vendor-specific (AWS, Azure, GCP), vendor-neutral (CCSP, CCSK), pentest-oriented (GCPN, OSCP), and traditional-track (Security+, CySA+, CISSP) lines.[^cert-oscp][^cert-ccsp][^cert-cissp]
 
 ### AWS Certified Security – Specialty — current exam code SCS-C03
 
@@ -498,13 +498,13 @@ The Cloud Practitioner cert is AWS's entry-level certification. The current exam
 
 ### CompTIA Security+ — current exam code SY0-701
 
-Security+ SY0-701 (current; superseded SY0-601 November 2023, SY0-601 retired July 31, 2024). The cloud track maps to:
+Security+ SY0-701 (current; superseded SY0-601 November 2023, SY0-601 retired July 31, 2024).[^cert-security-plus] The cloud track maps to:
 
 - **Domain 4 — Security Operations.** Cloud-security baseline including misconfigurations, MFA enforcement, audit logging.
 
 ### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA CySA+ — CS0-003 is the legacy exam revision (in market since June 2023), and **CS0-004 launched in early 2026 for parallel availability**; CS0-003 retires June 2026, so by the time anyone reads this much past the review date, CS0-004 will be the only sittable version. The cloud track maps to:
+CompTIA CySA+ — CS0-003 is the legacy exam revision (in market since June 2023), and **CS0-004 launched on 23 June 2026**; CS0-003 retires 22 December 2026, so by the time anyone reads this much past the review date, CS0-004 will be the only sittable version.[^cert-cysa] The cloud track maps to:
 
 - **Domain 1 — Security Operations.** Cloud-misconfiguration detection and response.
 
@@ -514,7 +514,7 @@ The CCSP is (ISC)²'s flagship cloud-security cert, designed for security profes
 
 - **Domain 2 — Cloud Data Security.** Storage architectures, data-at-rest protections, access controls.
 - **Domain 3 — Cloud Platform & Infrastructure Security.** Infrastructure-layer security including the storage-layer access controls Coverline's finding implicates.
-- **Domain 6 — Legal, Risk, and Compliance.** The regulatory cascade (SOC 2, GLBA, NYDFS, NAIC).
+- **Domain 6 — Legal, Risk, and Compliance.** The regulatory cascade (SOC 2, GLBA, NYDFS, NAIC).[^naic-insurance-data-security-model][^cfr-16-314][^nycrr-500]
 
 ### CSA CCSK — Certificate of Cloud Security Knowledge
 
@@ -555,7 +555,7 @@ The fact that the same misconfiguration pattern exists across all three major cl
 
 The Coverline scenario is not theoretical. Every defender working at an organization with non-trivial cloud presence — and especially at organizations handling regulated data — has to navigate this category of finding. Here's what the work looks like.
 
-**1. For this specific finding, today.** Restrict `coverline-claims-uploads-prod` to private immediately. Turn on Block Public Access at the bucket level. Update the bucket policy to deny all principals except the claims-app role. Pull the S3 server-access logs and CloudTrail data events for the bucket; identify any non-Coverline source IP that has requested objects since the bucket was created. That access log is the data set that determines the breach-notification math. Rotate the RDS master password immediately. Audit RDS authentication logs (CloudWatch Logs for RDS audit logging, if enabled) for any non-Coverline source IP in the period the script's password has been in the wild. Delete the migration script and the SQL dump from the bucket once they've been preserved to an evidence-retention store. Coverline's CISO + GC + outside counsel determine the breach-notification posture across NAIC, NYDFS, GLBA, and the state laws of every claimant's jurisdiction.
+**1. For this specific finding, today.** Restrict `coverline-claims-uploads-prod` to private immediately. Turn on Block Public Access at the bucket level. Update the bucket policy to deny all principals except the claims-app role. Pull the S3 server-access logs and CloudTrail data events for the bucket; identify any non-Coverline source IP that has requested objects since the bucket was created. That access log is the data set that determines the breach-notification math. Rotate the RDS master password immediately. Audit RDS authentication logs (CloudWatch Logs for RDS audit logging, if enabled) for any non-Coverline source IP in the period the script's password has been in the wild. Delete the migration script and the SQL dump from the bucket once they've been preserved to an evidence-retention store. Coverline's CISO + GC + outside counsel determine the breach-notification posture across NAIC, NYDFS, GLBA, and the state laws of every claimant's jurisdiction.[^naic-insurance-data-security-model][^cfr-16-314][^nycrr-500]
 
 **2. For Coverline's broader S3 posture, this quarter.** Enable **S3 Block Public Access at the ACCOUNT level** on every production AWS account. Single switch, account-wide, overrides every per-bucket setting. This makes "accidentally public" structurally impossible. Enforce account-level BPA via an **AWS Organizations Service Control Policy**; SCPs cannot be overridden by member-account admins. Enable **AWS Config managed rules** `s3-bucket-public-read-prohibited` and `s3-bucket-public-write-prohibited` org-wide via AWS Config Aggregator. Set noncompliance alerts to page security on detection. Enable **AWS Macie** on the production accounts — Macie surfaces buckets that contain sensitive data types (PII, PHI, financial, credentials) AND are publicly accessible, exactly the union of conditions that made Coverline's finding a finding. Enable **AWS Security Hub** with the CIS AWS Foundations Benchmark v5 + AWS Foundational Security Best Practices standards for continuous compliance scoring.
 
@@ -635,7 +635,7 @@ The CIS AWS Foundations Benchmark addresses this from the *audited* side: separa
 
 ## §9 — Further reading
 
-*Last reviewed: June 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^nist-800-53]: [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final).
 [^nist-cybersecurity-framework-2-0]: [NIST Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework).
@@ -655,6 +655,11 @@ The CIS AWS Foundations Benchmark addresses this from the *audited* side: separa
 [^federal-reserve-terminates-capital-one]: [Federal Reserve terminates Capital One enforcement action (2023)](https://www.cybersecuritydive.com/news/fed-ends-capital-one-breach-action/686970/).
 [^upguard-accenture-s3-buckets-exposure]: [UpGuard — Accenture S3 buckets exposure (September 2017)](https://www.upguard.com/breaches/cloud-leak-accenture).
 [^upguard-deep-root-analytics-rnc]: [UpGuard — Deep Root Analytics / RNC voter data exposure (June 2017)](https://www.upguard.com/breaches/the-rnc-files).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-ccsp]: [ISC2 CCSP — certification exam outline](https://www.isc2.org/certifications/ccsp/ccsp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 
 ### Further reading
 

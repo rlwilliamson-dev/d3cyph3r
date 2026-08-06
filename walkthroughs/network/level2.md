@@ -232,7 +232,7 @@ The defenses against all of this are mature and documented; nobody at Atlas appl
 | Disclosed by the mailbox | An autoresponder replying to password-reset requests with cleartext credentials |
 | Permanence | Public-CA certificates are logged to Certificate Transparency, so the inventory cannot be unpublished |
 | Escalates to | The temporary credential in the autoresponder log, which is `level3@network` |
-| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media |
+| Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media[^cfr-45-164] |
 
 **The unmanaged host is the finding that outlives the certificate.**
 Atlas's inventory does not know this machine exists, which means it is
@@ -283,9 +283,9 @@ Atlas can produce records showing who else asked.
 
 **NIST SP 800-57 Part 1 Rev 5 — Recommendation for Key Management: Part 1 — General.** May 2020 publication ([NIST CSRC](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final)). §5.3.6 covers cryptoperiod selection: the recommended cryptoperiod for a TLS-server private key is short (1-3 years for high-assurance use). A 10-year cert exceeds the cryptoperiod by a wide margin.
 
-**RFC 5280 — Internet X.509 Public Key Infrastructure Certificate and CRL Profile.** May 2008 publication, the canonical reference for the X.509 v3 cert format used today. §4.1.2 defines the cert content (Issuer, Subject, Validity, public key, extensions); §4.2.1.6 specifically defines the Subject Alternative Name extension. The free-form OU field is permitted; Atlas's use of email-in-OU is non-standard but syntactically valid.
+**RFC 5280 — Internet X.509 Public Key Infrastructure Certificate and CRL Profile.**[^rfc-5280] May 2008 publication, the canonical reference for the X.509 v3 cert format used today. §4.1.2 defines the cert content (Issuer, Subject, Validity, public key, extensions); §4.2.1.6 specifically defines the Subject Alternative Name extension. The free-form OU field is permitted; Atlas's use of email-in-OU is non-standard but syntactically valid.
 
-**RFC 6962 — Certificate Transparency.** June 2013 publication ([IETF datatracker](https://datatracker.ietf.org/doc/html/rfc6962)) — the protocol that introduced append-only CT logs as the cryptographic record of every public-CA-issued cert. The follow-up RFC 9162 ("Certificate Transparency Version 2.0") was published December 2021. CT is what makes `staging.atlas.health`'s 2025-09-08 cert permanently public.
+**RFC 6962 — Certificate Transparency.** June 2013 publication ([IETF datatracker](https://datatracker.ietf.org/doc/html/rfc6962)) — the protocol that introduced append-only CT logs as the cryptographic record of every public-CA-issued cert. The follow-up RFC 9162 ("Certificate Transparency Version 2.0") was published December 2021.[^rfc-9162] CT is what makes `staging.atlas.health`'s 2025-09-08 cert permanently public.
 
 **HIPAA Security Rule (45 CFR Part 164, Subpart C).** §164.312(e)(2)(ii) — encryption is required for ePHI in transit when deemed reasonable and appropriate.[^cfr-45-164] TLS termination with a self-signed 10-year cert nobody validates downstream meets the literal control while failing the spirit. §164.312(b) — audit controls. Atlas's autoresponder shipping cleartext credentials should have been flagged by audit controls; it wasn't, because the audit controls don't extend to exim auto-reply behavior on hosts the asset-management tool says don't exist. The 2024 HIPAA Security Rule NPRM proposes [stronger explicit encryption requirements](https://www.federalregister.gov/documents/2025/01/06/2024-30983/hipaa-security-rule-to-strengthen-the-cybersecurity-of-electronic-protected-health-information) (published January 6, 2025; comment period closed March 7, 2025); if the NPRM finalizes, "encryption appropriate to address known threats" becomes a near-mandatory baseline.
 
@@ -297,23 +297,23 @@ Atlas can produce records showing who else asked.
 
 **OWASP TLS Cheat Sheet.** The [Transport Layer Protection Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html) tracks CA/Browser Forum + Mozilla server-side TLS recommendations: short-lived certs, ACME automation (cert-manager, acme.sh), wildcard avoidance, modern cipher suites.
 
-**CIS Critical Security Controls v8.1.** [Control 3.10](https://www.cisecurity.org/controls/cis-controls-list) — Encrypt Sensitive Data in Transit. Control 4.6 — Securely Manage Enterprise Assets and Software (the "decommissioned but still serving" host fails this). Control 12.5 — Centralize Network AAA (the per-host exim autoresponder routes around centralized auth). v8.1 published May 2024.
+**CIS Critical Security Controls v8.1.** [Control 3.10](https://www.cisecurity.org/controls/cis-controls-list) — Encrypt Sensitive Data in Transit. Control 4.6 — Securely Manage Enterprise Assets and Software (the "decommissioned but still serving" host fails this). Control 12.5 — Centralize Network AAA (the per-host exim autoresponder routes around centralized auth). v8.1 published June 2024.
 
 **CA/Browser Forum Baseline Requirements.** Public-CA issuance baseline ([CA/Browser Forum](https://cabforum.org/baseline-requirements/)). The Forum's baseline currently caps server-cert validity at 398 days; in April 2025 the Forum passed Ballot SC-081v3 introducing a phased reduction schedule that ends at 47-day validity by March 2029. The full baseline document at the linked page carries the current cap and the schedule reference. Atlas's 10-year self-signed cert is 9× the current public baseline; the gap will be 76× when the phased reduction completes.
 
 ## §6 — Cert exam relevance
 
-**CompTIA Security+ (SY0-701).** Current revision is SY0-701, available since November 2023; predecessor SY0-601 retired July 2024. Domain 1.4 (Cryptographic concepts) and Domain 4.5 (Modify enterprise capabilities to enhance security — specifically TLS/SSL and certificate-management). The exam-objective bullets explicitly name "wildcard certificates" and "self-signed certificates" as topics. The [CompTIA Security+ cert page](https://www.comptia.org/en-us/certifications/security/) is the official scope reference and links to the current objectives PDF.
+**CompTIA Security+ (SY0-701).**[^cert-security-plus] Current revision is SY0-701, available since November 2023; predecessor SY0-601 retired July 2024. Domain 1.4 (Cryptographic concepts) and Domain 4.5 (Modify enterprise capabilities to enhance security — specifically TLS/SSL and certificate-management). The exam-objective bullets explicitly name "wildcard certificates" and "self-signed certificates" as topics. The [CompTIA Security+ cert page](https://www.comptia.org/en-us/certifications/security/) is the official scope reference and links to the current objectives PDF.
 
-**CompTIA CySA+ (CS0-003 / CS0-004).** CS0-004 launched in early 2026 for parallel availability; CS0-003 retires June 2026. Domain 1 (Security Operations) covers TLS posture audit; Domain 2 (Threat Intelligence & Threat Hunting) covers CT-log monitoring as a defender discipline. CS0-004 explicitly adds CT-log-monitoring to the threat-hunting techniques covered.
+**CompTIA CySA+ (CS0-003 / CS0-004).**[^cert-cysa] CS0-004 launched on 23 June 2026; CS0-003 retires 22 December 2026. Domain 1 (Security Operations) covers TLS posture audit; Domain 2 (Threat Intelligence & Threat Hunting) covers CT-log monitoring as a defender discipline. CS0-004 explicitly adds CT-log-monitoring to the threat-hunting techniques covered.
 
-**CompTIA PenTest+ (PT0-003).** Current revision is PT0-003, available since December 2023. Domain 2 (Reconnaissance and Enumeration) names crt.sh + SAN enumeration as in-scope tooling. The level you just played is the textbook PenTest+ recon scenario.
+**CompTIA PenTest+ (PT0-003).**[^cert-pentest-plus] Current revision is PT0-003, available since December 2024. Domain 2 (Reconnaissance and Enumeration) names crt.sh + SAN enumeration as in-scope tooling. The level you just played is the textbook PenTest+ recon scenario.
 
-**(ISC)² CISSP.** Domain 3 (Security Architecture and Engineering) — PKI, cryptographic protocols, cert lifecycle. Domain 4 (Communication and Network Security) — TLS as a protocol, what cert metadata reveals. The CISSP CBK was substantively refreshed in May 2024 and the cert-lifecycle topic was expanded to cover CT and short-lived-cert automation.
+**(ISC)² CISSP.**[^cert-cissp] Domain 3 (Security Architecture and Engineering) — PKI, cryptographic protocols, cert lifecycle. Domain 4 (Communication and Network Security) — TLS as a protocol, what cert metadata reveals. The CISSP exam outline was refreshed effective 15 April 2024 and the cert-lifecycle topic was expanded to cover CT and short-lived-cert automation.
 
-**OffSec OSCP / PEN-200.** Standard recon move on any HTTPS endpoint in the lab. The 2023 PEN-200 curriculum revision moved CT-log enumeration earlier in the recon module; every PEN-200 student now learns `crt.sh` and `subfinder` as basic-tier tools.
+**OffSec OSCP / PEN-200.**[^cert-oscp] Standard recon move on any HTTPS endpoint in the lab. The 2023 PEN-200 curriculum revision moved CT-log enumeration earlier in the recon module; every PEN-200 student now learns `crt.sh` and `subfinder` as basic-tier tools.
 
-**EC-Council CEH v13.** Module 4 (Enumeration) covers DNS + cert enumeration as recon techniques. The v13 release (April 2024) added explicit CT-log coverage.
+**EC-Council CEH v13.**[^cert-ceh] Module 4 (Enumeration) covers DNS + cert enumeration as recon techniques. The v13 release (September 2024) added explicit CT-log coverage.
 
 ## §7 — What a defender does
 
@@ -331,7 +331,7 @@ Atlas can produce records showing who else asked.
 
 **Audit exim / postfix outbound for cleartext-credential patterns.** SIEM rules in Splunk / Sentinel / Elastic looking for `password is`, `temp credential`, `valid for 72 hours`, `T3mp-`-prefixed strings across SMTP relay logs catch the pattern proactively. Atlas's autoresponder pattern would have been flagged by any of these rules; nobody set them up.
 
-**Generate a TLS configuration with the Mozilla TLS generator.** The [Mozilla TLS Generator](https://ssl-config.mozilla.org/) produces ready-to-paste Apache / nginx / HAProxy / Caddy configs for the modern (intermediate / modern) TLS profiles. The "modern" profile aligns with NIST SP 800-52 Rev 2 and CIS Control 3.10. Operators who use the generator land on safe-by-default configs; operators who copy-paste a 2019 stackoverflow answer land on Atlas's 2023 config.
+**Generate a TLS configuration with the Mozilla TLS generator.** The [Mozilla TLS Generator](https://ssl-config.mozilla.org/) produces ready-to-paste Apache / nginx / HAProxy / Caddy configs for the modern (intermediate / modern) TLS profiles. The "modern" profile aligns with NIST SP 800-52 Rev 2 and CIS Control 3.10.[^nist-800-52] Operators who use the generator land on safe-by-default configs; operators who copy-paste a 2019 stackoverflow answer land on Atlas's 2023 config.
 
 ### Sample detection rule (Sigma)
 
@@ -417,7 +417,7 @@ The level3 credential — `T3mp-DevopsCI-HD8814!q2` — is in `/var/log/exim/aut
 
 ## §9 — Further reading
 
-*Last reviewed: April 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 **TLS cert hygiene and modern PKI**
 
@@ -443,6 +443,12 @@ The level3 credential — `T3mp-DevopsCI-HD8814!q2` — is in `/var/log/exim/aut
 [^rfc-9162]: [RFC 9162](https://datatracker.ietf.org/doc/html/rfc9162). — Certificate Transparency Version 2.0 (December 2021).
 [^aws-private-certificate-authority]: [AWS Private Certificate Authority](https://docs.aws.amazon.com/privateca/latest/userguide/). — managed internal CA.
 [^cfr-45-164]: [HIPAA Security Rule (45 CFR Part 164, Subpart C)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C). — §164.312 covers Technical Safeguards.
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
 
 ### Further reading
 

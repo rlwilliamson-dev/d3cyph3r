@@ -162,7 +162,7 @@ sized is the strength of an alibi.
 | What it establishes | The image was captured roughly eight months earlier and about a thousand miles south of where the alibi places him |
 | What it does **not** establish | Where Reed actually was, or that he took anything |
 | Evidentiary standing | Voluntarily produced by the subject, which is the strongest possible provenance |
-| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days[^nist-800-171] |
 
 **Refuting an alibi is not proving an act, and conflating the two is how
 internal investigations go wrong.** The EXIF proves the photograph cannot
@@ -241,7 +241,7 @@ Audit evidence for NIST 800-86 compliance includes documented forensic-handling 
 
 ### NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information
 
-NIST Special Publication 800-171, currently at **Revision 3** (finalized May 2024; supersedes Rev. 2), defines the security requirements for protecting Controlled Unclassified Information (CUI) when it resides in non-federal systems. For Polaris specifically, NIST 800-171 Rev. 3 is the operational control baseline that maps underneath CMMC Level 2 — the controls Polaris has to demonstrate are implemented at the time of CMMC assessment.
+NIST Special Publication 800-171, currently at **Revision 3** (finalized May 2024; supersedes Rev. 2), defines the security requirements for protecting Controlled Unclassified Information (CUI) when it resides in non-federal systems.[^nist-800-171] For Polaris specifically, NIST 800-171 Rev. 3 is the operational control baseline that maps underneath CMMC Level 2 — the controls Polaris has to demonstrate are implemented at the time of CMMC assessment.
 
 Four controls apply directly to the Reed case:
 
@@ -271,7 +271,7 @@ Audit evidence for CMMC compliance includes documented practices for each domain
 
 ### NISPOM — 32 CFR Part 117
 
-The National Industrial Security Program Operating Manual (NISPOM) is the federal regulation governing cleared contractors' protection of classified information. NISPOM was moved into the Code of Federal Regulations at **32 CFR Part 117** in 2021 (it was previously a Department of Defense manual, DoD 5220.22-M); the current text is the regulatory authority for all cleared-contractor obligations.
+The National Industrial Security Program Operating Manual (NISPOM) is the federal regulation governing cleared contractors' protection of classified information. NISPOM was moved into the Code of Federal Regulations at **32 CFR Part 117** in 2021 (it was previously a Department of Defense manual, DoD 5220.22-M); the current text is the regulatory authority for all cleared-contractor obligations.[^cfr-32-117]
 
 For Polaris, NISPOM's relevance to the Reed case sits primarily in two areas:
 
@@ -312,7 +312,7 @@ Equal-depth coverage for the six certifications cited in the in-game post-mortem
 
 ### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA's CySA+ is the analyst-track certification focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The forensics-track material maps to two domains.
+CompTIA's CySA+ is the analyst-track certification focused on threat-detection, vulnerability-management, and incident-response work.[^cert-cysa] CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched on 23 June 2026**, with CS0-003 retiring 22 December 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The forensics-track material maps to two domains.
 
 - **Domain 3 — Incident Response and Management.** Objective 3.2 covers incident-response procedures including chain of custody, evidence handling, and the analyst's role in the IR cycle. The Reed case is the textbook example of a CySA+ incident-response scenario.
 - **Domain 4 — Reporting and Communication.** Objective 4.1 covers technical communication for security incidents. The forensic-finding-as-written-report discipline lives here.
@@ -334,7 +334,7 @@ The GIAC Certified Forensic Examiner is the entry-level forensics certification 
 
 The Reed case maps directly to GCFE's first two domains:
 
-- **Digital Forensics Fundamentals** — chain of custody, evidence handling, the four-phase forensic process from NIST 800-86.
+- **Digital Forensics Fundamentals** — chain of custody, evidence handling, the four-phase forensic process from NIST 800-86.[^nist-800-86]
 - **Windows Forensic Analysis (and adjacent: smartphone artifact analysis)** — file-system artifacts, registry analysis, deleted-file recovery, and the embedded-metadata standards (EXIF for images, document metadata for Office files, etc.).
 
 **Sample question framing:**
@@ -388,7 +388,7 @@ CHFI is also more legally-oriented than the GIAC certifications — its coverage
 
 ### CISSP
 
-CISSP is the senior-level (ISC)² certification. The current exam still follows the **2024 CBK refresh** (next refresh expected in 2027). The forensics track touches CISSP in one domain primarily.
+CISSP is the senior-level (ISC)² certification.[^cert-cissp] The current exam still follows the **2024 CBK refresh** (next refresh expected in 2027). The forensics track touches CISSP in one domain primarily.
 
 - **Domain 7 — Security Operations.** Covers "Conduct investigations" (including digital forensics) and "Conduct logging and monitoring activities" (the detective layer that produces the badge-log anomaly). The CISSP framing is governance-level: how an institution organizes its forensic capability, how it integrates forensic findings into broader incident response, how it manages the legal-and-regulatory cascade that follows a finding.
 
@@ -487,7 +487,7 @@ For the project: when you train forensic examiners, train them on every EXIF fie
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^nist-800-86]: [NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/pubs/sp/800/86/final).
 [^nist-800-171]: [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information](https://csrc.nist.gov/pubs/sp/800/171/r3/final).
@@ -503,6 +503,8 @@ For the project: when you train forensic examiners, train them on every EXIF fie
 [^vice-december-3-2012-we]: [Vice — December 3, 2012: "We are with John McAfee right now, suckers." (the EXIF-revealed McAfee photograph)](https://www.vice.com/en/article/we-are-with-john-mcafee-right-now-suckers/).
 [^fbi-san-antonio-field-office]: [FBI San Antonio Field Office — Press release on Ochoa sentencing (August 2012)](https://archives.fbi.gov/archives/sanantonio/press-releases/2012/galveston-man-sentenced-to-federal-prison-for-computer-hacking).
 [^dennis-rader-btk-killer-wikipedia]: [Dennis Rader / BTK Killer — Wikipedia (consolidated reference; the original Wichita Eagle coverage from Feb 26, 2005 may no longer resolve at its original URL)](https://en.wikipedia.org/wiki/Dennis_Rader).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 
 ### Further reading
 

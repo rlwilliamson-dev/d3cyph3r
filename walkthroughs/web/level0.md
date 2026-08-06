@@ -204,7 +204,7 @@ vulnerability scanner cannot produce.
 | Population | Meridian enrols roughly 30,000 students; the CSV is a 2023 subset, not the roll |
 | Exposure window | Roughly two years, from BluePier's deployment to this audit |
 | Escalates to | A live production MySQL credential (`webapp_admin` on `db.meridian.edu`), reused in staging |
-| Regime | FERPA education records, plus state breach-notification law for the PII |
+| Regime | FERPA education records, plus state breach-notification law for the PII[^cfr-34-99] |
 
 Three things in that table deserve to be pulled out, because each is a
 place assessments routinely go wrong.
@@ -240,7 +240,7 @@ In November 2013, the Maricopa County Community College District — the largest
 
 The technical mechanism was different in detail from Meridian's autoindex exposure, but the *institutional pattern* is identical. Maricopa had outsourced parts of its IT infrastructure; the vendor relationship produced data sprawl across multiple web-facing systems; an internal audit identified the exposure; the audit's findings were not remediated; the exposure persisted for years until external discovery forced the issue. The district paid an estimated **$26 million in breach-response costs**, including identity-monitoring services for affected individuals and class-action settlements that ran into 2018.
 
-For higher-education specifically, the Maricopa breach is the canonical case study of "the vendor introduced the exposure; the institution carries the regulatory and reputational burden." FERPA's enforcement mechanism — withdrawal of federal funding — was specifically discussed in the post-incident commentary, though the Department of Education did not invoke it in this case. The lesson Meridian's general counsel would draw from Maricopa: vendor-introduced FERPA exposures do not stay vendor problems; they become institutional problems the moment they're discovered.
+For higher-education specifically, the Maricopa breach is the canonical case study of "the vendor introduced the exposure; the institution carries the regulatory and reputational burden." FERPA's enforcement mechanism — withdrawal of federal funding — was specifically discussed in the post-incident commentary, though the Department of Education did not invoke it in this case.[^cfr-34-99] The lesson Meridian's general counsel would draw from Maricopa: vendor-introduced FERPA exposures do not stay vendor problems; they become institutional problems the moment they're discovered.
 
 ### First American Financial Corporation — May 2019
 
@@ -264,7 +264,7 @@ The in-game post-mortem cites six framework controls. Each is expanded below: wh
 
 ### FERPA — 20 U.S.C. § 1232g; 34 CFR Part 99
 
-The Family Educational Rights and Privacy Act, originally enacted in 1974 and codified at 20 U.S.C. § 1232g, is the federal statute that governs the privacy of student education records at any educational agency or institution that receives funds under any program administered by the U.S. Department of Education. The implementing regulations are at 34 CFR Part 99. Meridian receives federal student aid; FERPA applies to every record about every currently-enrolled and formerly-enrolled student.
+The Family Educational Rights and Privacy Act, originally enacted in 1974 and codified at 20 U.S.C. § 1232g, is the federal statute that governs the privacy of student education records at any educational agency or institution that receives funds under any program administered by the U.S. Department of Education. The implementing regulations are at 34 CFR Part 99.[^cfr-34-99] Meridian receives federal student aid; FERPA applies to every record about every currently-enrolled and formerly-enrolled student.
 
 Two sections of 34 CFR Part 99 bear directly on the Meridian finding:
 
@@ -359,7 +359,7 @@ Equal-depth coverage for the five certifications cited in the in-game post-morte
 
 ### CompTIA Security+ — current version SY0-701
 
-Security+ is the entry-level certification most commonly required for DoD 8570/8140 IAT Level II positions and many state/federal government roles. The current exam is **SY0-701**, which superseded SY0-601 in November 2023 (SY0-601 was retired July 31, 2024). The web-track material maps strongly to two domains.
+Security+ is the entry-level certification most commonly required for DoD 8570/8140 IAT Level II positions and many state/federal government roles.[^cert-security-plus] The current exam is **SY0-701**, which superseded SY0-601 in November 2023 (SY0-601 was retired July 31, 2024). The web-track material maps strongly to two domains.
 
 - **Domain 2 — Threats, Vulnerabilities, and Mitigations.** Objective 2.3 covers web application vulnerabilities including security misconfiguration. Objective 2.5 covers vulnerability identification, including web reconnaissance and the tools used for it (gobuster, ffuf, dirb are named explicitly).
 - **Domain 3 — Security Architecture.** Objective 3.4 covers secure web architecture, including the security implications of web-server configuration, directory traversal, and authorization controls.
@@ -377,10 +377,10 @@ This is the canonical Security+ question pattern — multiple defensible answers
 
 ### CompTIA PenTest+ — current version PT0-003
 
-CompTIA's PenTest+ is the offensive-track certification. The current exam is **PT0-003**, which superseded PT0-002 on December 17, 2024 (PT0-002 was retired June 17, 2025). The web-track material maps to two domains.
+CompTIA's PenTest+ is the offensive-track certification.[^cert-pentest-plus] The current exam is **PT0-003**, which superseded PT0-002 on December 17, 2024 (PT0-002 was retired June 17, 2025). The web-track material maps to two domains.
 
 - **Domain 2 — Reconnaissance and Enumeration.** Objective 2.2 covers active reconnaissance with web-enumeration tools — gobuster, ffuf, dirb, dirsearch are all named. The methodology of "wordlist-driven path enumeration → status-code triage → response inspection" is exam-canonical.
-- **Domain 3 — Vulnerability Discovery and Analysis.** Web vulnerabilities including directory listing exposure (CWE-548) and predictable-URL exposure (CWE-552). Objective 3.4 covers the analysis side — what to do with a finding once you have it.
+- **Domain 3 — Vulnerability Discovery and Analysis.** Web vulnerabilities including directory listing exposure (CWE-548) and predictable-URL exposure (CWE-552).[^cwe-552][^cwe-548] Objective 3.4 covers the analysis side — what to do with a finding once you have it.
 
 **Sample question framing:**
 
@@ -403,7 +403,7 @@ PenTest+ rewards practical exam-canonical analysis. **C** is the most significan
 
 ### CompTIA CySA+ — current version CS0-003
 
-CompTIA's CySA+ is the analyst-track certification focused on threat-detection, vulnerability-management, and incident-response work. CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The web-track material maps to two domains.
+CompTIA's CySA+ is the analyst-track certification focused on threat-detection, vulnerability-management, and incident-response work.[^cert-cysa] CS0-003 was the in-market exam from June 2023 onward; **CS0-004 launched on 23 June 2026**, with CS0-003 retiring 22 December 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version — check CompTIA's exam blueprint page for the current code. The web-track material maps to two domains.
 
 - **Domain 2 — Vulnerability Management.** Objective 2.4 covers the vulnerability-identification → prioritization → remediation workflow. The Meridian scenario is a textbook example.
 - **Domain 1 — Security Operations.** Web-attack-surface monitoring and detection of reconnaissance against your own web servers.
@@ -421,7 +421,7 @@ CySA+ tests pattern recognition in operational telemetry. **C** is correct — t
 
 ### CISSP
 
-CISSP is the senior-level (ISC)² certification, intended for security professionals with five or more years of experience. The current exam still follows the **2024 CBK refresh** (next refresh expected in 2027 on the standard three-year cycle). The web-track material spans three domains.
+CISSP is the senior-level (ISC)² certification, intended for security professionals with five or more years of experience.[^cert-cissp] The current exam still follows the **2024 CBK refresh** (next refresh expected in 2027 on the standard three-year cycle). The web-track material spans three domains.
 
 - **Domain 3 — Security Architecture and Engineering.** Secure web architecture, defense in depth, secure-by-default principles. The conceptual remediation for the Meridian finding lives in this domain.
 - **Domain 5 — Identity and Access Management.** Access-control models, including the principle that resources should be denied by default and accessible only by explicit grant.
@@ -440,7 +440,7 @@ The trap is that A is necessary (and the legal counsel is involved regardless), 
 
 ### OSCP / PEN-200
 
-The Offensive Security Certified Professional is the most-recognized hands-on offensive certification. The exam is a 24-hour practical hands-on test against a set of target machines. The web-track material is at the heart of the OSCP curriculum.
+The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.[^cert-oscp] The exam is a 24-hour practical hands-on test against a set of target machines. The web-track material is at the heart of the OSCP curriculum.
 
 The methodology OSCP teaches for a web target maps directly to the Meridian solve:
 
@@ -479,7 +479,7 @@ The Meridian scenario is not theoretical. Every defender working on a public-fac
 
 **5. Fix the robots.txt.** Remove every sensitive path from robots.txt. The right way to keep something off the public internet is to not publish it; the right way to keep it out of search engines is the same. A robots.txt should list paths that are legitimately public-facing but you don't want indexed (e.g., search-result pages, infinite-scroll endpoints, login pages); it should never list sensitive paths.
 
-**6. Notify the affected students.** FERPA does not have a hard breach-notification clock like HIPAA's 60 days, but the Department of Education's Privacy Technical Assistance Center (PTAC) expects affected students to be notified "in a reasonable time" and publishes a notification template.[^privacy-technical-assistance-center-ptac] Coordinate with Meridian's general counsel; the federal financial-aid attestation is annual and a documented exposure must be disclosed in the next cycle.
+**6. Notify the affected students.** FERPA does not have a hard breach-notification clock like HIPAA's 60 days, but the Department of Education's Privacy Technical Assistance Center (PTAC) expects affected students to be notified "in a reasonable time" and publishes a notification template.[^privacy-technical-assistance-center-ptac] Coordinate with Meridian's general counsel; the federal financial-aid attestation is annual and a documented exposure must be disclosed in the next cycle.[^cfr-34-99]
 
 **7. Continuous Attack-Surface Management (EASM).** Modern external-attack-surface tools — Censys ASM, Microsoft Defender External ASM, Detectify, Tenable Attack Surface Management, Bishop Fox CAST, Cobalt Strike's Cobalt PtaaS, Palo Alto Cortex Xpanse — run continuous gobuster-equivalent scans against your own public footprint and alert on changes. The Meridian finding is the kind of issue these tools surface in their first scan against any new customer. The cost is modest at the institutional scale; the value is the difference between Meridian's 22-month detection window and an hours-long one.
 
@@ -555,7 +555,7 @@ The historical "best practice" of using robots.txt to hide things is the most re
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^cfr-34-99]: [FERPA Regulations — 34 CFR Part 99 (eCFR)](https://www.ecfr.gov/current/title-34/subtitle-A/part-99).
 [^privacy-technical-assistance-center-ptac]: [Privacy Technical Assistance Center (PTAC) — US Department of Education](https://studentprivacy.ed.gov/).
@@ -574,6 +574,11 @@ The historical "best practice" of using robots.txt to hide things is the most re
 [^cve-2023-34362]: [MOVEit Transfer CVE-2023-34362 — NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2023-34362).
 [^progress-software-moveit-advisory]: [Progress Software MOVEit advisory](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a).
 [^seclists-curated-wordlists-for-security]: [SecLists — Curated wordlists for security testing](https://github.com/danielmiessler/SecLists).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 
 ### Further reading
 

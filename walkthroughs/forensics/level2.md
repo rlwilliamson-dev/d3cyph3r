@@ -241,7 +241,7 @@ The point is not that browsers are designed badly. They're designed for users wh
 | What they establish | A pre-dawn webmail visit hours before the badge-in, and searches about CUI handling rules that speak to intent |
 | Also recovered | A live session cookie for a personal webmail account |
 | Investigative value | The cookie identifies **which account** to name in legal process |
-| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days[^nist-800-171][^dfars-252-204-7012-safeguarding] |
 
 **Searches about the rules go to intent, and intent is what separates a
 policy violation from a deliberate act.** Timeline and technique were
@@ -380,7 +380,7 @@ Forensic curricula align tightly to the techniques this level demonstrates. A no
 
 **CompTIA CySA+ (CS0-003).** [CySA+](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/) covers forensic analysis within the broader security-operations role; browser-artifact handling is one section. Intermediate-level cert.
 
-**(ISC)² SSCP / CISSP.** [SSCP](https://www.isc2.org/Certifications/SSCP) and [CISSP](https://www.isc2.org/Certifications/CISSP) cover digital forensics at the policy / process level rather than the SQL / artifact level. The frameworks discussed in §5 above are the SSCP / CISSP vocabulary.
+**(ISC)² SSCP / CISSP.**[^cert-sscp][^cert-cissp] [SSCP](https://www.isc2.org/Certifications/SSCP) and [CISSP](https://www.isc2.org/Certifications/CISSP) cover digital forensics at the policy / process level rather than the SQL / artifact level. The frameworks discussed in §5 above are the SSCP / CISSP vocabulary.
 
 **AccessData ACE / Magnet AX200 / Magnet AXIOM Certified Examiner (MCE).** Tool-specific certs. ACE is for FTK; the Magnet certs are for AXIOM (the dominant commercial browser-forensics tool in mobile + endpoint work). All three test on the same underlying schemas this level uses; they differ on the toolchain.
 
@@ -535,7 +535,7 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^nist-800-86]: [NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response](https://csrc.nist.gov/pubs/sp/800/86/final). The canonical U.S. government reference for the forensic process; §3.3 is the closest single-source reference for what this level demonstrates.
 [^nist-800-171]: [NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information in Nonfederal Systems and Organizations](https://csrc.nist.gov/pubs/sp/800/171/r3/final). The CUI control set Polaris is operating under; the AU family is the relevant subset.
@@ -546,6 +546,8 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 [^sqlite-wal-mode]: [SQLite WAL mode](https://www.sqlite.org/wal.html). The journal-page mechanism that lets historical row data survive deletion.
 [^sans-for500]: [SANS FOR500](https://www.sans.org/cyber-security-courses/windows-forensic-analysis/).
 [^chrome-enterprise-policy-list]: [Chrome Enterprise policy list](https://chromeenterprise.google/policies/). The catalog defenders should configure.
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-sscp]: [ISC2 SSCP — Systems Security Certified Practitioner](https://www.isc2.org/certifications/sscp).
 
 ### Further reading
 

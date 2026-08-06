@@ -236,7 +236,7 @@ which file, on which host, holding which credential, reachable by whom.
 | Why it is readable | The original override is correctly locked down. The debug copy beside it is not |
 | Exposure window | Undetected for five months, and never rotated |
 | Escalates to | The production DB password is reused as the bastion SSH login, which is `level2@linux` |
-| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours |
+| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours[^cfr-12-30] |
 
 **The environment boundary already failed before this file existed.** A
 *staging* credential got someone onto a *production* jumphost. Everything
@@ -302,7 +302,7 @@ The in-game post-mortem cites five framework controls. Each is expanded below: w
 
 ### CWE-732 — Incorrect Permission Assignment for Critical Resource
 
-**CWE-732** is the precise weakness category for level1@linux's finding. The CWE catalog entry describes the weakness as: *"The product specifies permissions for a security-critical resource in a way that allows that resource to be read or modified by unintended actors."* The shadow-copy pattern — a file containing security-critical data (the production database password) with overly permissive read access (world-readable, mode 644) — is the textbook CWE-732 instance.
+**CWE-732** is the precise weakness category for level1@linux's finding.[^cwe-732] The CWE catalog entry describes the weakness as: *"The product specifies permissions for a security-critical resource in a way that allows that resource to be read or modified by unintended actors."* The shadow-copy pattern — a file containing security-critical data (the production database password) with overly permissive read access (world-readable, mode 644) — is the textbook CWE-732 instance.
 
 CWE-732 has been in the catalog since the early CWE program (entry created in 2006) and was on MITRE's Top 25 Most Dangerous Software Weaknesses lists in 2020 and 2021; it has since dropped off the annual Top 25 but remains an actively-maintained canonical entry with frequent real-world mappings. Its mapping status is **ALLOWED-WITH-REVIEW** (the second-strongest CWE mapping tier — MITRE's note is that the entry can be used to map real-world vulnerabilities but warrants careful review because it is frequently misused for authorization rather than permission-assignment weaknesses). Unlike CWE-200 or CWE-668 (both marked Discouraged for direct vulnerability mapping), CWE-732 remains valid as a mapping target — and for the formal remediation report to Halton, it is the canonical citation.
 
@@ -312,7 +312,7 @@ Related CWEs worth knowing in the same family: **CWE-276 (Incorrect Default Perm
 
 ### NIST SP 800-53 Rev. 5 — AC-3, AC-6, SC-28
 
-NIST SP 800-53 Rev. 5, currently at **Release 5.2.0 (August 27, 2025)**, is the federal-government control catalog. Three controls apply directly to the Halton finding:
+NIST SP 800-53 Rev. 5, currently at **Release 5.2.0 (August 27, 2025)**, is the federal-government control catalog.[^nist-800-53] Three controls apply directly to the Halton finding:
 
 **AC-3 — Access Enforcement.** The information system must enforce approved authorizations for logical access to information and system resources. **The legitimate `staging-worker.env` file at mode 600 is AC-3 working as designed** — the access-enforcement layer correctly denies the `app_admin` user's read attempt. The control failure is not on the legitimate file; it's on the shadow copy, where the access-enforcement layer is *configured to permit the read* because the file's mode is 644. AC-3 requires the access-enforcement decision to be *correct for the resource's sensitivity*, not just *enforced consistently*. The shadow copy's permission configuration produces an AC-3 failure because the enforcement decision (permit read by any user) is wrong for the resource's sensitivity (production credential material).
 
@@ -342,7 +342,7 @@ The OWASP 2025 recommended mitigation for A02 is *a documented hardening process
 
 ### GLBA § 501(b) — Interagency Guidelines III.C.1.a
 
-GLBA § 501(b) applies to Halton as a financial institution, implemented for banks through the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks). **III.C.1.a — Access Controls** requires *"access controls on customer information systems, including controls to authenticate and permit access only to authorized individuals,"* and **III.C.1.f** separately requires *"monitoring systems and procedures to detect actual and attempted attacks on or intrusions into customer information systems."* Read together they are the bank-side analogue of the FTC rule's § 314.4(c)(1).
+GLBA § 501(b) applies to Halton as a financial institution, implemented for banks through the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks).[^cfr-12-30] **III.C.1.a — Access Controls** requires *"access controls on customer information systems, including controls to authenticate and permit access only to authorized individuals,"* and **III.C.1.f** separately requires *"monitoring systems and procedures to detect actual and attempted attacks on or intrusions into customer information systems."* Read together they are the bank-side analogue of the FTC rule's § 314.4(c)(1).
 
 The Halton finding implicates 314.4(c)(1) on every reading. The shadow copy of the production-database credential is *unauthorized access to customer information systems' authentication material*. The fact that the access has not yet been demonstrably exploited (no smoking-gun log entry of an unauthorized `psql` connection) doesn't satisfy the control — the control requires *controls to monitor activity, detect unauthorized access, and prevent unauthorized access*, and Halton's posture clearly didn't *prevent* the shadow-copy creation, didn't *detect* it for five months, and (we'd have to check) probably isn't *monitoring* file-system events on jumphosts at the granularity that would have caught it.
 
@@ -354,7 +354,7 @@ Equal-depth coverage for the four certifications cited in the in-game post-morte
 
 ### CompTIA Security+ — current version SY0-701
 
-CompTIA Security+ SY0-701 (current; superseded SY0-601 November 2023, SY0-601 retired July 31, 2024). The level1@linux material maps directly to **Domain 3 — Security Architecture**, particularly objective 3.1 (Compare and contrast security implications of different architecture models — specifically the *hardening* sub-domain that covers file-system permissions, default account management, and access-control configuration).
+CompTIA Security+ SY0-701 (current; superseded SY0-601 November 2023, SY0-601 retired July 31, 2024).[^cert-security-plus] The level1@linux material maps directly to **Domain 3 — Security Architecture**, particularly objective 3.1 (Compare and contrast security implications of different architecture models — specifically the *hardening* sub-domain that covers file-system permissions, default account management, and access-control configuration).
 
 Security+ tests the recognition that *the correct response to "this credential is exposed in a less-protected location" is rotation plus structural fix, not just deletion of the exposed copy.* Expect a question like:
 
@@ -369,7 +369,7 @@ The trap is A (too narrow — addresses the immediate exposure but not the root 
 
 ### (ISC)² Certified in Cybersecurity (CC) / SSCP — Access Control Fundamentals
 
-The (ISC)² Certified in Cybersecurity (CC) and the more-advanced Systems Security Certified Practitioner (SSCP) certifications both cover the fundamentals of access control, including the Unix permission model (owner/group/other × read/write/execute). The shadow-copy pattern is the textbook teaching example for the *discretionary access control (DAC)* model that Unix permissions implement.
+The (ISC)² Certified in Cybersecurity (CC) and the more-advanced Systems Security Certified Practitioner (SSCP) certifications both cover the fundamentals of access control, including the Unix permission model (owner/group/other × read/write/execute).[^cert-sscp] The shadow-copy pattern is the textbook teaching example for the *discretionary access control (DAC)* model that Unix permissions implement.
 
 The CC and SSCP curricula specifically test:
 
@@ -377,11 +377,11 @@ The CC and SSCP curricula specifically test:
 - The default umask behavior (typically 022 on modern Linux distributions, producing default file modes of 644 and default directory modes of 755).
 - The conditions under which a tool that copies a file does or doesn't preserve permissions (`cp` without `-p` does not preserve; `cp -p` preserves; `cp -a` is `cp -p -R --preserve=all` shorthand).
 
-For the SSCP candidate specifically, the Halton scenario is a high-value worked example: the legitimate `cp` operation that Daniel ran (`sudo cp /etc/systemd/.../override.conf /home/app_admin/staging-worker.env.bak`) without the `-p` flag is *exactly* the kind of operation that creates a CWE-732 finding. The remediation discipline — *every operation that handles sensitive data has to be deliberate about permission preservation* — is what SSCP-level competence looks like.
+For the SSCP candidate specifically, the Halton scenario is a high-value worked example: the legitimate `cp` operation that Daniel ran (`sudo cp /etc/systemd/.../override.conf /home/app_admin/staging-worker.env.bak`) without the `-p` flag is *exactly* the kind of operation that creates a CWE-732 finding.[^cwe-732] The remediation discipline — *every operation that handles sensitive data has to be deliberate about permission preservation* — is what SSCP-level competence looks like.
 
 ### CISSP — Domain 5 (IAM), Domain 7 (Security Operations)
 
-CISSP (current 2024 CBK refresh, next refresh expected 2027) covers the Halton scenario across two domains.
+CISSP (current 2024 CBK refresh, next refresh expected 2027) covers the Halton scenario across two domains.[^cert-cissp]
 
 **Domain 5 — Identity and Access Management.** Discretionary access control (DAC) is the Unix permission model in CISSP parlance. The Domain 5 curriculum specifically covers *the policy and governance layer above the permission mechanics* — how an organization establishes which roles can access which data, how those role-to-data mappings are enforced via permission-management automation, how exceptions are documented and reviewed, how the access-control program produces audit evidence.
 
@@ -400,7 +400,7 @@ The CISSP answer is **B**. A is necessary but tactical. C is punitive without pr
 
 ### OSCP / PEN-200 — Privilege Escalation via Misconfigured Files
 
-The Offensive Security Certified Professional is the most-recognized hands-on offensive certification. The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward.
+The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.[^cert-oscp] The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward.
 
 The OSCP curriculum specifically teaches **Linux privilege escalation via misconfigured files** as a standalone module — and the level1@linux scenario is the textbook entry-level example. The OSCP candidate's standard post-compromise enumeration sweep includes:
 
@@ -446,7 +446,7 @@ The Halton scenario is not theoretical. Every defender working at a financial in
 
 **3. For Halton's broader service-account hygiene, this quarter.**
 
-- **Inventory all service accounts** across the production fleet. For each, document: the daemon it exists to run, the legitimate sudo needs, the legitimate file-system access needs, and the current login-shell configuration. The output is a service-account inventory artifact that the next SOC 2 / GLBA / NYDFS audit can reference.
+- **Inventory all service accounts** across the production fleet. For each, document: the daemon it exists to run, the legitimate sudo needs, the legitimate file-system access needs, and the current login-shell configuration. The output is a service-account inventory artifact that the next SOC 2 / GLBA / NYDFS audit can reference.[^cfr-16-314][^cfr-12-30]
 - **Restrict login shells on service accounts.** Default to `/usr/sbin/nologin` or `/bin/false`. Exceptions documented and reviewed.
 - **Scope sudo permissions narrowly.** Per-account `sudoers.d` files with specific command allowlists. The legacy "`app_admin ALL=(ALL) ALL`" pattern is the anti-pattern; every staging or production service account should follow the narrow-allowlist pattern.
 
@@ -537,7 +537,7 @@ Two hidden bonus finds seed orthogonal lessons. `progress --detail` from anywher
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^cwe-732]: [CWE-732 — Incorrect Permission Assignment for Critical Resource](https://cwe.mitre.org/data/definitions/732.html).
 [^cwe-276]: [CWE-276 — Incorrect Default Permissions](https://cwe.mitre.org/data/definitions/276.html).
@@ -558,6 +558,10 @@ Two hidden bonus finds seed orthogonal lessons. `progress --detail` from anywher
 [^hashicorp-vault-getting-started-database]: [HashiCorp Vault — Getting Started (database secrets engine)](https://developer.hashicorp.com/vault/tutorials/db-credentials/database-secrets).
 [^aws-secrets-manager-user-guide]: [AWS Secrets Manager — User Guide (RDS rotation)](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html).
 [^ossec-wazuh-host-based-intrusion]: [OSSEC / Wazuh — Host-based intrusion detection and file-integrity monitoring](https://wazuh.com/).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-sscp]: [ISC2 SSCP — Systems Security Certified Practitioner](https://www.isc2.org/certifications/sscp).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 
 ### Further reading
 

@@ -159,7 +159,7 @@ One thing this level is *not*: it is not a sudo software vulnerability. `sudo` t
 | Data reached | A Vault **root** token, swept into the weekly backup from a file marked "DO NOT BACK UP" |
 | Exposure window | Issued for the 2024-Q4 migration, with a ticket saying rotate before Q1 2025. Never rotated |
 | Escalates to | Vault root is the top of Halton's secret hierarchy, not a step in it |
-| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours |
+| Regime | GLBA § 501(b) via the Interagency Guidelines; Halton's regulator clock is 36 hours[^cfr-12-30] |
 
 **A Vault root token is not one more credential, and reporting it as one
 understates it by an order of magnitude.** Every secret Vault brokers is
@@ -217,7 +217,7 @@ The reporting clock is the part worth committing to memory, because it is far ti
 The in-game post-mortem names this alongside the sudo abuse, and it is
 worth separating because it describes a different failure. T1548.003 is
 how the account reached the file; T1552.001 is why the file was worth
-reaching.
+reaching.[^t1548-003]
 
 Adversaries search filesystems for credentials because it works
 disproportionately often, and the places they look are boringly
@@ -237,13 +237,13 @@ a repository.
 
 ## §6 — Cert exam relevance
 
-**Offensive Security OSCP / PEN-200** treats this level as bread and butter. `sudo -l` is the *first* command in the Linux privilege-escalation playbook — before SUID hunting (`find / -perm -4000`), before cron inspection, before kernel-exploit triage. The PEN-200 materials teach that any sudoers entry is a candidate escalation path, and **GTFOBins** (gtfobins.github.io) is the reference for which sudo-allowed binaries can be escaped to a root shell.[^gtfobins-sudo-suid-abuse-reference][^gtfobins-cat-root-owned-file] `cat` isn't in the "spawn a shell" category — but it *is* an arbitrary-file-read primitive, and GTFOBins lists `cat` precisely for the "read a root-only file" case. The exam tests whether you recognize a permissive grant as a foothold, not whether you can pop a shell from it.
+**Offensive Security OSCP / PEN-200** treats this level as bread and butter.[^cert-oscp] `sudo -l` is the *first* command in the Linux privilege-escalation playbook — before SUID hunting (`find / -perm -4000`), before cron inspection, before kernel-exploit triage. The PEN-200 materials teach that any sudoers entry is a candidate escalation path, and **GTFOBins** (gtfobins.github.io) is the reference for which sudo-allowed binaries can be escaped to a root shell.[^gtfobins-sudo-suid-abuse-reference][^gtfobins-cat-root-owned-file] `cat` isn't in the "spawn a shell" category — but it *is* an arbitrary-file-read primitive, and GTFOBins lists `cat` precisely for the "read a root-only file" case. The exam tests whether you recognize a permissive grant as a foothold, not whether you can pop a shell from it.
 
-**CompTIA Security+ (SY0-701)** Domain 4.1 (security techniques for computing resources) and the least-privilege material across Domains 3–4 test the account-hardening side: recognizing that privilege should live on dedicated accounts, that dormant accounts are a risk, and that "least privilege" means narrowing grants to the minimum. Questions framed as "which control would have prevented this?" expect least-privilege / account-deprovisioning answers.
+**CompTIA Security+ (SY0-701)** Domain 4.1 (security techniques for computing resources) and the least-privilege material across Domains 3–4 test the account-hardening side: recognizing that privilege should live on dedicated accounts, that dormant accounts are a risk, and that "least privilege" means narrowing grants to the minimum.[^cert-security-plus] Questions framed as "which control would have prevented this?" expect least-privilege / account-deprovisioning answers.
 
-**CompTIA CySA+ (CS0-003)** Domain 1 covers threat-hunting for exactly this: a hunt that enumerates `sudo -l` (or parses `/etc/sudoers` and `/etc/sudoers.d/`) across the fleet, flags every NOPASSWD entry and every wildcard, and cross-references grant owners against the active roster. Daniel's grant is a high-confidence hit on all three signals.
+**CompTIA CySA+ (CS0-003)** Domain 1 covers threat-hunting for exactly this: a hunt that enumerates `sudo -l` (or parses `/etc/sudoers` and `/etc/sudoers.d/`) across the fleet, flags every NOPASSWD entry and every wildcard, and cross-references grant owners against the active roster.[^cert-cysa] Daniel's grant is a high-confidence hit on all three signals.
 
-**ISC2 CISSP** Domain 5 (Identity and Access Management) covers privileged-access management and the deprovisioning lifecycle in depth; the CBK specifically calls out per-system privilege remnants (local accounts, sudoers entries, key material) as frequently-missed deprovisioning steps. Domain 3 covers protecting data at rest, the backup-encryption angle.
+**ISC2 CISSP** Domain 5 (Identity and Access Management) covers privileged-access management and the deprovisioning lifecycle in depth; the CBK specifically calls out per-system privilege remnants (local accounts, sudoers entries, key material) as frequently-missed deprovisioning steps.[^cert-cissp] Domain 3 covers protecting data at rest, the backup-encryption angle.
 
 **Linux Foundation LFCS / Red Hat RHCSA** test sudoers management directly as a hands-on objective: editing `/etc/sudoers` safely with `visudo`, scoping commands, understanding `NOPASSWD`, and using `/etc/sudoers.d/` drop-ins. The defensive half of this level — *how a competently-managed sudoers policy is supposed to look* — is squarely on those exams. **CompTIA Linux+ (XK0-005)** covers the same ground at an associate level.
 
@@ -330,7 +330,7 @@ The bonus finds exist to exercise the systemic-root-cause pattern without leavin
 
 ## §9 — Further reading
 
-*Last reviewed: July 2026. External standards versions, CVE identifiers, and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions, CVE identifiers, and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^cwe-250]: [CWE-250 — Execution with Unnecessary Privileges](https://cwe.mitre.org/data/definitions/250.html).
 [^cwe-732]: [CWE-732 — Incorrect Permission Assignment for Critical Resource](https://cwe.mitre.org/data/definitions/732.html).
@@ -348,6 +348,10 @@ The bonus finds exist to exercise the systemic-root-cause pattern without leavin
 [^cfr-12-30]: [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030).
 [^ftc-safeguards-rule-2023-amendments]: [FTC Safeguards Rule — 2023 amendments (security-event notification, 30-day clock)](https://www.ftc.gov/news-events/news/press-releases/2023/10/ftc-amends-safeguards-rule-require-non-banking-financial-institutions-report-data-security-breaches).
 [^cisco-ex-employee-webex-deletion]: [Cisco ex-employee WebEx deletion (2018) — DOJ press release](https://www.justice.gov/usao-ndca/pr/san-jose-man-pleads-guilty-damaging-cisco-s-network).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 
 ### Further reading
 

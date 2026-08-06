@@ -248,7 +248,7 @@ A note on the threat landscape. In the [OWASP Top 10:2025](https://owasp.org/Top
 | Reached | BluePier's 2021 course-search, which concatenates the query parameter straight into SQL |
 | Authentication required | **None.** The search box is public and unauthenticated |
 | Reachable via UNION | Four tables: `courses` as intended, plus `students`, `staff_users`, and `app_config` |
-| Also disclosed | A plaintext database-admin credential in `app_config`, and verbose SQL errors (CWE-209) echoing the constructed query |
+| Also disclosed | A plaintext database-admin credential in `app_config`, and verbose SQL errors (CWE-209) echoing the constructed query[^cwe-209] |
 | Regime | FERPA education records (no notification duty, no fine schedule); any clock comes from state breach law attaching to the PII |
 
 **Unauthenticated is the word that sets the severity.** Every other
@@ -321,17 +321,17 @@ The through-line across all four: SQL injection's prevalence has fallen, but its
 
 ## §6 — Cert exam relevance
 
-**CompTIA Security+ (SY0-701).** Domain 2 (Threats, Vulnerabilities, and Mitigations) names injection attacks directly, and Domain 4 covers input validation and secure coding as mitigations. ([CompTIA Security+](https://www.comptia.org/en-us/certifications/security/))
+**CompTIA Security+ (SY0-701).**[^cert-security-plus] Domain 2 (Threats, Vulnerabilities, and Mitigations) names injection attacks directly, and Domain 4 covers input validation and secure coding as mitigations. ([CompTIA Security+](https://www.comptia.org/en-us/certifications/security/))
 
-**CompTIA PenTest+ (PT0-003).** Domain 3 (Attacks and Exploits) covers SQL injection, UNION-based extraction, and `information_schema` enumeration; Domain 2 (Reconnaissance and Enumeration) covers the web-app testing that finds the injectable parameter. `sqlmap` is named tooling.
+**CompTIA PenTest+ (PT0-003).**[^cert-pentest-plus] Domain 3 (Attacks and Exploits) covers SQL injection, UNION-based extraction, and `information_schema` enumeration; Domain 2 (Reconnaissance and Enumeration) covers the web-app testing that finds the injectable parameter. `sqlmap` is named tooling.
 
-**CompTIA CySA+ (CS0-003 / CS0-004).** CS0-004 launched in early 2026 for parallel availability; CS0-003 retires June 2026. Injection-detection patterns appear in the threat-hunting and log-analysis modules — the SIEM signature for SQLi (anomalous query strings, error spikes) is on the exam.
+**CompTIA CySA+ (CS0-003 / CS0-004).**[^cert-cysa] CS0-004 launched on 23 June 2026; CS0-003 retires 22 December 2026. Injection-detection patterns appear in the threat-hunting and log-analysis modules — the SIEM signature for SQLi (anomalous query strings, error spikes) is on the exam.
 
-**(ISC)² CISSP.** Domain 8 (Software Development Security) — input validation, parameterized queries, and the secure-SDLC controls that catch this class are fundamentals.
+**(ISC)² CISSP.**[^cert-cissp] Domain 8 (Software Development Security) — input validation, parameterized queries, and the secure-SDLC controls that catch this class are fundamentals.
 
-**Offensive Security OSWA / OSWE / OSCP.** SQL injection is a core skill across all three. The **OSWA (Web Assessor)** and **OSWE (Web Expert)** exams test exactly this hand-built UNION-extraction workflow; OSCP includes SQLi as a web-app foothold technique. ([OffSec certifications](https://www.offsec.com/courses/))
+**Offensive Security OSWA / OSWE / OSCP.**[^cert-oswe][^cert-oscp] SQL injection is a core skill across all three. The **OSWA (Web Assessor)** and **OSWE (Web Expert)** exams test exactly this hand-built UNION-extraction workflow; OSCP includes SQLi as a web-app foothold technique. ([OffSec certifications](https://www.offsec.com/courses/))
 
-**EC-Council CEH v13.** Module 15 (SQL Injection) is a dedicated module covering error-based, UNION-based, and blind SQLi plus `sqlmap` automation.
+**EC-Council CEH v13.**[^cert-ceh] Module 15 (SQL Injection) is a dedicated module covering error-based, UNION-based, and blind SQLi plus `sqlmap` automation.
 
 ## §7 — What a defender does
 
@@ -339,7 +339,7 @@ The through-line across all four: SQL injection's prevalence has fallen, but its
 
 **Scope the database account to least privilege.** The public catalog needs `SELECT` on `courses` and nothing else. A read-only account scoped to one table turns even a successful injection into a non-event. Treat every application's database credential as needing the minimum grant that lets the application function — never the schema-wide read/write BluePier configured.
 
-**Stop returning errors to clients.** Return a generic 500 with a correlation ID; log the detail server-side. Never echo the query, the DB version, or the stack trace to an HTTP response. This closes CWE-209 and removes the attacker's feedback loop.
+**Stop returning errors to clients.** Return a generic 500 with a correlation ID; log the detail server-side. Never echo the query, the DB version, or the stack trace to an HTTP response. This closes CWE-209 and removes the attacker's feedback loop.[^cwe-209]
 
 **Rotate the exposed credential and move it out of the database.** Treat `meridian_dbadmin` / `M3rid14n-DBr00t!2026` as burned the moment it appeared in a query response. Rotate it, then move it into a secrets manager ([AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html), [HashiCorp Vault](https://developer.hashicorp.com/vault/docs/secrets), [GCP Secret Manager](https://docs.cloud.google.com/secret-manager/docs), [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/overview)). Credentials never belong in a database row an injection can read.
 
@@ -428,7 +428,7 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 **SQL injection — learn + prevent**
 
@@ -453,6 +453,13 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 [^cwe-250]: [CWE-250 — Execution with Unnecessary Privileges](https://cwe.mitre.org/data/definitions/250.html).
 [^cwe-312]: [CWE-312 — Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
 [^cwe-522]: [CWE-522 — Insufficiently Protected Credentials](https://cwe.mitre.org/data/definitions/522.html).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
+[^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
 
 ### Further reading
 

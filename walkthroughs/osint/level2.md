@@ -251,10 +251,10 @@ The Robots Exclusion Protocol — originally Martijn Koster's 1994 convention �
 
 ### CWE
 
-- **CWE-312 (Cleartext Storage of Sensitive Information)** — the pasted Nextcloud password. Primary mapping for the breadcrumb finding.
-- **CWE-540 (Inclusion of Sensitive Information in Source Code)** — the published `docker-compose` snippet.
-- **CWE-798 (Use of Hard-Coded Credentials)** — carryover: the un-rotated AWS key, still a hard-coded, now-public credential.
-- **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — the umbrella; mapping-Discouraged in current MITRE guidance, so cite the specific children above.
+- **CWE-312 (Cleartext Storage of Sensitive Information)** — the pasted Nextcloud password.[^cwe-312] Primary mapping for the breadcrumb finding.
+- **CWE-540 (Inclusion of Sensitive Information in Source Code)** — the published `docker-compose` snippet.[^cwe-540]
+- **CWE-798 (Use of Hard-Coded Credentials)** — carryover: the un-rotated AWS key, still a hard-coded, now-public credential.[^cwe-798]
+- **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — the umbrella; mapping-Discouraged in current MITRE guidance, so cite the specific children above.[^cwe-200]
 
 ### MITRE ATT&CK — archived material as an intelligence source
 
@@ -285,23 +285,23 @@ Archive-based recon (Wayback pivoting, deleted-content recovery), username / ali
 
 ### CompTIA PenTest+ (PT0-003)
 
-The current exam revision (released 2024). Domain 1 (Engagement Management) covers scoping and OSINT in pre-engagement; Domain 2 (Reconnaissance and Enumeration) covers passive recon and metadata review (robots.txt / sitemap / archived content).
+The current exam revision (released 2024).[^cert-pentest-plus] Domain 1 (Engagement Management) covers scoping and OSINT in pre-engagement; Domain 2 (Reconnaissance and Enumeration) covers passive recon and metadata review (robots.txt / sitemap / archived content).
 
 ### CompTIA CySA+ (CS0-003 / CS0-004)
 
-The SOC-analyst credential. CS0-003 was current as of the May 2026 review date; **CompTIA released CS0-004 in early 2026 for parallel availability, with CS0-003 retiring June 2026** — through that window, candidates may sit either. Domain 1 (Security Operations) covers OSINT-driven threat intelligence and exposed-asset discovery.
+The SOC-analyst credential.[^cert-cysa] CS0-003 was current as of the May 2026 review date; **CompTIA released CS0-004 in early 2026 for parallel availability, with CS0-003 retiring 22 December 2026** — through that window, candidates may sit either. Domain 1 (Security Operations) covers OSINT-driven threat intelligence and exposed-asset discovery.
 
 ### CompTIA Security+ (SY0-701)
 
-The entry-level cert. Domain 2 (Threats, Vulnerabilities, and Mitigations) covers reconnaissance and OSINT; Domain 4 (Security Operations) covers identity and credential management, including rotation.
+The entry-level cert.[^cert-security-plus] Domain 2 (Threats, Vulnerabilities, and Mitigations) covers reconnaissance and OSINT; Domain 4 (Security Operations) covers identity and credential management, including rotation.
 
 ### ISC2 CISSP
 
-Domain 1 (Security and Risk Management) covers threat intelligence / OSINT; Domain 2 (Asset Security) covers the data lifecycle, retention, and the reality that "delete" rarely means destroyed.
+Domain 1 (Security and Risk Management) covers threat intelligence / OSINT; Domain 2 (Asset Security) covers the data lifecycle, retention, and the reality that "delete" rarely means destroyed.[^cert-cissp]
 
 ### GIAC GCIH (Certified Incident Handler)
 
-The leaked-credential IR pattern is squarely in scope — and so is its classic failure mode: removing the artifact instead of rotating the secret. The "leaked credential → rotate → audit usage" workflow is the canonical case.
+The leaked-credential IR pattern is squarely in scope — and so is its classic failure mode: removing the artifact instead of rotating the secret.[^cert-gcih] The "leaked credential → rotate → audit usage" workflow is the canonical case.
 
 ## §7 — What a defender does
 
@@ -414,7 +414,7 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, RFC/standard IDs, historical-case dates, CWE/MITRE mapping status) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, RFC/standard IDs, historical-case dates, CWE/MITRE mapping status) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
 
 [^google-retires-the-cached-link]: [Google retires the "Cached" link (Feb 2024)](https://searchengineland.com/google-search-officially-retires-cache-link-437122). Search Liaison Danny Sullivan confirmed the removal and suggested the Internet Archive as the replacement.
 [^rfc-9309]: [RFC 9309 — Robots Exclusion Protocol (September 2022)](https://www.rfc-editor.org/rfc/rfc9309.html). The IETF standardization of robots.txt.
@@ -431,6 +431,11 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 [^t1593-001]: [T1593.001 — Social Media](https://attack.mitre.org/techniques/T1593/001/).
 [^t1593-002]: [T1593.002 — Search Engines](https://attack.mitre.org/techniques/T1593/002/).
 [^t1589-001]: [T1589.001 — Gather Victim Identity Information: Credentials](https://attack.mitre.org/techniques/T1589/001/).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
 
 ### Further reading
 

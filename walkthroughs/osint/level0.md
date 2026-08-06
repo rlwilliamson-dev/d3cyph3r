@@ -117,8 +117,8 @@ Each failure is independently a finding. Fixing only the reuse without addressin
 | Reached | Public breach corpora only. Nothing belonging to Veridian was touched |
 | What it establishes | The same cleartext password appears for one individual in two separate breaches |
 | Why two matters | One appearance is an exposed password; two is evidence of a reuse *habit* |
-| Subject | A newly-hired executive at a HIPAA Business Associate handling analytics for covered entities |
-| Regime | HIPAA as a Business Associate plus HITRUST CSF; a BA notifies the covered entity within 60 days, and the covered entity carries the individual-notice duty |
+| Subject | A newly-hired executive at a HIPAA Business Associate handling analytics for covered entities[^nist-800-66][^cfr-45-164] |
+| Regime | HIPAA as a Business Associate plus HITRUST CSF; a BA notifies the covered entity within 60 days, and the covered entity carries the individual-notice duty[^hitrust-csf-v11-hitrust-alliance] |
 
 **Nothing here is a breach of Veridian, and the report must say so
 plainly.** Every artifact came from public sources. What the finding
@@ -222,7 +222,7 @@ Audit evidence for the HIPAA Security Rule includes the covered entity / busines
 
 ### HITRUST CSF v11
 
-The HITRUST CSF (Common Security Framework) is the de facto certification framework healthcare organizations use to attest to multi-source compliance (HIPAA + NIST 800-53 + ISO 27001 + state regulations) in a single audited program. Veridian's HITRUST certification is the gating credential for several of their major-payer customer renewals.
+The HITRUST CSF (Common Security Framework) is the de facto certification framework healthcare organizations use to attest to multi-source compliance (HIPAA + NIST 800-53 + ISO 27001 + state regulations) in a single audited program.[^hitrust-csf-v11-hitrust-alliance] Veridian's HITRUST certification is the gating credential for several of their major-payer customer renewals.
 
 HITRUST CSF v11 has three control families that apply directly to Aaron's case:
 
@@ -236,7 +236,7 @@ Audit evidence for HITRUST includes the documented HITRUST MyCSF assessment (the
 
 ### NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule
 
-NIST SP 800-66 Rev. 2 (published February 2024; supersedes Rev. 1) is the implementation guide for HIPAA covered entities and business associates. It maps each HIPAA Security Rule requirement to specific NIST 800-53 controls and provides practical implementation guidance. Section 4 (Administrative Safeguards) covers the risk-management and password-management practices that apply to Aaron's case; Section 5 (Technical Safeguards) covers the authentication controls.
+NIST SP 800-66 Rev. 2 (published February 2024; supersedes Rev. 1) is the implementation guide for HIPAA covered entities and business associates.[^nist-800-66] It maps each HIPAA Security Rule requirement to specific NIST 800-53 controls and provides practical implementation guidance. Section 4 (Administrative Safeguards) covers the risk-management and password-management practices that apply to Aaron's case; Section 5 (Technical Safeguards) covers the authentication controls.
 
 Veridian uses 800-66 Rev. 2 as the operating-procedural reference for HIPAA compliance — the document translates the Security Rule's somewhat-vague language into specific implementable controls. The reference matters because audit findings against HIPAA tend to cite the Rule's text but be resolvable by implementing the 800-66-described controls.
 
@@ -311,11 +311,11 @@ environment.
 
 ## §6 — Cert exam relevance
 
-Equal-depth coverage for the eight certifications cited in the in-game post-mortem. OSINT touches more certs than most tracks because the discipline spans offensive (PenTest+, OSCP), defensive (CySA+, CISSP), and OSINT-specialty (GIAC GOSI, SANS SEC487) cert paths.
+Equal-depth coverage for the eight certifications cited in the in-game post-mortem. OSINT touches more certs than most tracks because the discipline spans offensive (PenTest+, OSCP), defensive (CySA+, CISSP), and OSINT-specialty (GIAC GOSI, SANS SEC487) cert paths.[^cert-oscp][^cert-cissp]
 
 ### CompTIA Security+ — current version SY0-701
 
-Security+ SY0-701 (current; superseded SY0-601 in November 2023, SY0-601 retired July 31, 2024) covers credential-based attacks in two domains.
+Security+ SY0-701 (current; superseded SY0-601 in November 2023, SY0-601 retired July 31, 2024) covers credential-based attacks in two domains.[^cert-security-plus]
 
 - **Domain 1 — General Security Concepts.** Objective 1.4 covers cryptographic solutions, including hash functions and the relationship between hash storage and credential recovery. The exam tests recognition of password-hashing schemes (MD5, SHA-1, bcrypt, scrypt, Argon2) and their relative resistance to GPU-accelerated cracking.
 - **Domain 4 — Security Operations.** Objective 4.6 covers identity and access management, including MFA, password policy, and breach-screening. Objective 4.1 covers IOC-driven detection — the credential-stuffing detection layer.
@@ -333,14 +333,14 @@ The trap is A. **B** is correct. Two breaches with matching cleartexts is the st
 
 ### CompTIA PenTest+ — current version PT0-003
 
-PenTest+ PT0-003 (current; superseded PT0-002 on December 17, 2024, PT0-002 retired June 17, 2025). The OSINT track maps to two domains:
+PenTest+ PT0-003 (current; superseded PT0-002 on December 17, 2024, PT0-002 retired June 17, 2025).[^cert-pentest-plus] The OSINT track maps to two domains:
 
 - **Domain 1 — Engagement Management.** Scoping and rules-of-engagement discipline. The Veridian engagement's narrow scope (one email address, read-only, no minors, no active testing) is the kind of constraint Domain 1 explicitly tests — *what can you legally do, given this authorization?*
 - **Domain 2 — Reconnaissance and Enumeration.** Objective 2.2 covers passive reconnaissance, including breach-data corpora, public-records pivoting, and identity enumeration. HIBP and the broader breach-aggregator ecosystem (Dehashed, IntelX, Constella, SpyCloud) are named tools in the curriculum.
 
 ### CompTIA CySA+ — exam codes CS0-003 / CS0-004
 
-CompTIA CySA+ — CS0-003 was the legacy exam revision (in market since June 2023); **CS0-004 launched in early 2026 for parallel availability**, with CS0-003 retiring June 2026. By the time anyone reads this much past the review date, CS0-004 will be the only sittable version. The OSINT track maps to:
+CompTIA CySA+ — CS0-003 was the legacy exam revision (in market since June 2023); **CS0-004 launched on 23 June 2026**, with CS0-003 retiring 22 December 2026.[^cert-cysa] By the time anyone reads this much past the review date, CS0-004 will be the only sittable version. The OSINT track maps to:
 
 - **Domain 1 — Security Operations.** Objective 1.6 covers OSINT-driven threat intelligence, including breach-corpus enrichment for executive-protection use cases.
 - **Domain 3 — Incident Response and Management.** Credential-compromise detection and the response workflow when a personal-credential exposure is identified.
@@ -359,7 +359,7 @@ For Driftwood internally, SEC497 is the recommended baseline for any consultant 
 
 ### OSCP / OSWE
 
-The Offensive Security Certified Professional (OSCP) and the more advanced Offensive Security Web Expert (OSWE) both treat OSINT as the first-phase activity in any engagement. The OSCP exam allocates time to information-gathering before active exploitation; the OSWE exam similarly expects pre-engagement OSINT.
+The Offensive Security Certified Professional (OSCP) and the more advanced Offensive Security Web Expert (OSWE) both treat OSINT as the first-phase activity in any engagement.[^cert-oswe] The OSCP exam allocates time to information-gathering before active exploitation; the OSWE exam similarly expects pre-engagement OSINT.
 
 For credential-reuse exploitation specifically, both certs teach the canonical workflow: identify the target's email addresses (via OSINT), check those addresses against breach corpora (HIBP free tier plus paid enrichment for the cleartext recoveries), generate a credential-stuffing wordlist from the recovered values plus rule-mutated variants, test against the in-scope authentication endpoints under the engagement's authorization.
 
@@ -385,7 +385,7 @@ The CISSP answer is the structural one. **B** is correct — the *primary focus*
 
 ### GIAC GCIH — Certified Incident Handler
 
-GIAC GCIH covers the incident-response side of credential-stuffing attacks. The exam includes the detection-and-response workflow for credential-stuffing campaigns — recognizing the IOC signature (high-volume login attempts from distributed IPs, single-attempt-per-account patterns, geographic anomalies), responding to confirmed compromise (forced password rotation, MFA enforcement, session invalidation), and the post-incident analysis (which credentials were used, where else they might be reused, what services should be notified).
+GIAC GCIH covers the incident-response side of credential-stuffing attacks.[^cert-gcih] The exam includes the detection-and-response workflow for credential-stuffing campaigns — recognizing the IOC signature (high-volume login attempts from distributed IPs, single-attempt-per-account patterns, geographic anomalies), responding to confirmed compromise (forced password rotation, MFA enforcement, session invalidation), and the post-incident analysis (which credentials were used, where else they might be reused, what services should be notified).
 
 The Veridian engagement is *pre-incident* OSINT, not incident response — but the GCIH curriculum's IR-side handling of credential-stuffing events is the operational mirror of what Aaron's personal services are presumably implementing on the defensive side.
 
@@ -467,7 +467,7 @@ The historical lesson is for product designers: **never store password hints in 
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
+*Last reviewed: August 2026. External standards versions and incident facts verified against current canonical sources as of this date. Report stale links via the project's GitHub issues tracker.*
 
 [^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html).
 [^nist-800-63b-nist-4]: [NIST SP 800-63B-4 (CSRC pub page)](https://csrc.nist.gov/pubs/sp/800/63/b/4/final).
@@ -491,6 +491,13 @@ The historical lesson is for product designers: **never store password hints in 
 [^sans-giac-gosi-open-source]: [SANS GIAC GOSI — Open Source Intelligence certification](https://www.giac.org/certifications/open-source-intelligence-gosi/).
 [^1password-password-manager-consumer-business]: [1Password — password manager (consumer + business)](https://1password.com/).
 [^bitwarden-open-source-password-manager]: [Bitwarden — open-source password manager](https://bitwarden.com/).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
+[^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
 
 ### Further reading
 

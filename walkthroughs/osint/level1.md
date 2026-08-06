@@ -242,7 +242,7 @@ The third related vulnerability is the consent-and-disclosure layer. Aaron's bio
 | Committed at HEAD | A `.env` carrying live AWS access keys, an OpenFDA API key, and a Flask secret |
 | Why `.gitignore` did not help | It was added later, and ignoring a path never untracks a file already committed |
 | Scope of exposure | Public since the commit, to anyone including automated secret scanners |
-| Regime | HIPAA as a Business Associate plus HITRUST CSF; a BA notifies the covered entity within 60 days, and the covered entity carries the individual-notice duty |
+| Regime | HIPAA as a Business Associate plus HITRUST CSF; a BA notifies the covered entity within 60 days, and the covered entity carries the individual-notice duty[^nist-800-66] |
 
 **Personal does not mean out of scope, and that is the uncomfortable part
 of executive-protection work.** The repository is the individual's own,
@@ -328,9 +328,9 @@ The regulatory frame for Veridian. Relevant sections:
 
 ### CWE
 
-- **CWE-798 (Use of Hard-Coded Credentials)** — primary mapping. AWS keys hardcoded in the .env file. Mapping status is **Allowed-with-Review**. CWE-798 was a regular CWE Top 25 entry from 2021-2024; the **2025 methodology change (MITRE removed normalization to abstract weaknesses) dropped CWE-798 off the published Top 25 list**, though it remains a frequently-encountered Base-level weakness in practitioner reporting.
-- **CWE-540 (Inclusion of Sensitive Information in Source Code)** — the OSINT-side view: the credential's presence in source enables disclosure.
-- **CWE-312 (Cleartext Storage of Sensitive Information)** — the .env stores secrets in cleartext.
+- **CWE-798 (Use of Hard-Coded Credentials)** — primary mapping.[^cwe-798] AWS keys hardcoded in the .env file. Mapping status is **Allowed-with-Review**. CWE-798 was a regular CWE Top 25 entry from 2021-2024; the **2025 methodology change (MITRE removed normalization to abstract weaknesses) dropped CWE-798 off the published Top 25 list**, though it remains a frequently-encountered Base-level weakness in practitioner reporting.
+- **CWE-540 (Inclusion of Sensitive Information in Source Code)** — the OSINT-side view: the credential's presence in source enables disclosure.[^cwe-540]
+- **CWE-312 (Cleartext Storage of Sensitive Information)** — the .env stores secrets in cleartext.[^cwe-312]
 - **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — the umbrella parent.[^cwe-200] Note: CWE-200's mapping status is currently **Discouraged** — MITRE recommends citing the more specific child weaknesses (CWE-798 / CWE-540 / CWE-312) for direct mappings.
 
 ### GitHub Secret Scanning
@@ -399,23 +399,23 @@ The flagship SANS OSINT practitioner course, which effectively replaced SEC487 i
 
 ### CompTIA PenTest+ (PT0-003)
 
-PenTest+ is the offensive-leaning CompTIA cert; the current exam revision is PT0-003 (released 2024). Domain 2 (Information Gathering and Vulnerability Scanning) covers OSINT-driven source-control enumeration. Domain 3 (Attacks and Exploits) covers credential reuse and lateral movement from leaked secrets.
+PenTest+ is the offensive-leaning CompTIA cert; the current exam revision is PT0-003 (released 2024).[^cert-pentest-plus] Domain 2 (Information Gathering and Vulnerability Scanning) covers OSINT-driven source-control enumeration. Domain 3 (Attacks and Exploits) covers credential reuse and lateral movement from leaked secrets.
 
 ### CompTIA CySA+ (CS0-003 / CS0-004)
 
-The broad SOC-analyst credential. CS0-003 was the current exam revision as of the May 2026 review date; **CompTIA released CS0-004 in early 2026 for parallel availability, with CS0-003 retiring June 2026**. Through June 2026, candidates may sit either. Domain 1 (Security Operations) covers credential-leak detection workflows; Domain 3 (Incident Response and Management) covers post-leak IR.
+The broad SOC-analyst credential.[^cert-cysa] CS0-003 was the current exam revision as of the May 2026 review date; **CompTIA released CS0-004 in early 2026 for parallel availability, with CS0-003 retiring 22 December 2026**. Through June 2026, candidates may sit either. Domain 1 (Security Operations) covers credential-leak detection workflows; Domain 3 (Incident Response and Management) covers post-leak IR.
 
 ### CompTIA Security+ (SY0-701)
 
-The entry-level CompTIA cert. Domain 1 (General Security Concepts) covers OSINT briefly; Domain 4 (Security Operations) covers IAM and credential management.
+The entry-level CompTIA cert.[^cert-security-plus] Domain 1 (General Security Concepts) covers OSINT briefly; Domain 4 (Security Operations) covers IAM and credential management.
 
 ### GIAC GCIH (Certified Incident Handler)
 
-The enterprise-IR cert. Credential-compromise IR pattern is in scope — "leaked credential discovered in a public repo, rotated, IR follow-up" is the canonical case. Feeds from SANS SEC504.
+The enterprise-IR cert.[^cert-gcih] Credential-compromise IR pattern is in scope — "leaked credential discovered in a public repo, rotated, IR follow-up" is the canonical case. Feeds from SANS SEC504.
 
 ### ISC2 CISSP
 
-The Common Body of Knowledge cert. Domain 3 (Security Architecture and Engineering) covers secrets-management as an architectural concern; Domain 8 (Software Development Security) covers SSDF / secure SDLC.
+The Common Body of Knowledge cert.[^cert-cissp] Domain 3 (Security Architecture and Engineering) covers secrets-management as an architectural concern; Domain 8 (Software Development Security) covers SSDF / secure SDLC.
 
 ### AWS Certified Security — Specialty (SCS-C03)
 
@@ -423,7 +423,7 @@ The AWS-native security cert. AWS released SCS-C03 in late 2025 / early 2026 as 
 
 ### EC-Council CEH (Certified Ethical Hacker)
 
-CEH v13 is the current version (2024 release). OSINT is covered in the reconnaissance phase. CEH is broadly recognized at federal/DoD level under 8140M; less practitioner-respected than the SANS / OffSec equivalents.
+CEH v13 is the current version (2024 release).[^cert-ceh] OSINT is covered in the reconnaissance phase. CEH is broadly recognized at federal/DoD level under 8140M; less practitioner-respected than the SANS / OffSec equivalents.
 
 ## §7 — What a defender does
 
@@ -443,7 +443,7 @@ Three parallel remediation tracks: Aaron specifically, Veridian as the employer,
 
 **Audit AWS CloudTrail.** Review API call history under the exposed access key going back to 2023-07-14. CloudTrail retains 90 days by default in the AWS console; if Aaron configured a CloudTrail trail to an S3 bucket, the history may go back further. Anything anomalous (API calls from unexpected IPs, unexpected services accessed, IAM modifications) gets escalated to a real IR engagement.
 
-**Review the S3 bucket contents.** `aws s3 ls s3://ahines-pgx-cache` and walk the contents. What's actually cached there? If patient-identifying data from his clinical-era work, that's a separate HIPAA exposure event requiring Helix's GC involvement.
+**Review the S3 bucket contents.** `aws s3 ls s3://ahines-pgx-cache` and walk the contents. What's actually cached there? If patient-identifying data from his clinical-era work, that's a separate HIPAA exposure event requiring Helix's GC involvement.[^nist-800-66]
 
 ### For Veridian
 
@@ -563,7 +563,7 @@ For broader awareness: every fitness app, every social media platform, every "fi
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
 [^nist-800-66]: [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final). Published February 2024 (Final). The HIPAA implementation reference.
 [^omb-m-22-18-enhancing]: [OMB M-22-18 — Enhancing the Security of the Software Supply Chain Through Secure Software Development Practices](https://bidenwhitehouse.archives.gov/wp-content/uploads/2022/09/M-22-18.pdf). The federal software-attestation requirement that cited SSDF. **Rescinded January 23, 2026 by OMB M-26-05** ("Adopting a Risk-based Approach to Software and Hardware Security"). Original whitehouse.gov URL now 404s; cited URL is the National Archives mirror.
@@ -585,6 +585,12 @@ For broader awareness: every fitness app, every social media platform, every "fi
 [^aws-cloudtrail]: [AWS CloudTrail](https://aws.amazon.com/cloudtrail/). For post-exposure API call audit.
 [^toyota-october-2022-disclosure-t]: [Toyota October 2022 disclosure (T-Connect)](https://blog.gitguardian.com/toyota-accidently-exposed-a-secret-key-publicly-on-github-for-five-years/). Technical writeup of the T-Connect source-code exposure; Toyota's own notice is no longer online. (A separate Toyota May 2023 disclosure — the ~2.15M-customer vehicle-location leak — is sometimes conflated with this one and has different mechanics.)
 [^sysdig-emeraldwhale-campaign-writeup-october]: [Sysdig EmeraldWhale campaign writeup (October 2024)](https://www.sysdig.com/blog/emeraldwhale). Documents continuous scraping of exposed Git configuration files — ~15,000 cloud credentials harvested in a single campaign.
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
+[^cert-ceh]: [EC-Council CEH — Certified Ethical Hacker](https://www.eccouncil.org/train-certify/certified-ethical-hacker-ceh/).
 
 ### Further reading
 

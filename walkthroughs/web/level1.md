@@ -385,17 +385,17 @@ The post-mortem at the bottom of the level (`lessons-learned.md`) walks through 
 
 ### CWE — Common Weakness Enumeration
 
-**CWE-639: Authorization Bypass Through User-Controlled Key.** The most precise weakness ID. The catalog entry describes the weakness as "the system's authorization functionality does not prevent one user from gaining access to another user's data or record by modifying the key value identifying the data." MITRE mapping status: **ALLOWED**.
+**CWE-639: Authorization Bypass Through User-Controlled Key.**[^cwe-639] The most precise weakness ID. The catalog entry describes the weakness as "the system's authorization functionality does not prevent one user from gaining access to another user's data or record by modifying the key value identifying the data." MITRE mapping status: **ALLOWED**.
 
-**CWE-862: Missing Authorization.** The variant where the authorization check is entirely absent. Carlos's handler is CWE-862 — the check on `student_id` ownership is missing entirely, not present-but-wrong. MITRE mapping status: **ALLOWED-WITH-REVIEW** (CWE-862 is a Class-level weakness; the catalog recommends reviewing Base-level children before mapping). CWE-862 has been a recurring CWE Top 25 entry, climbing to #9 on the 2024 edition and #4 on the 2025 edition.
+**CWE-862: Missing Authorization.**[^cwe-862] The variant where the authorization check is entirely absent. Carlos's handler is CWE-862 — the check on `student_id` ownership is missing entirely, not present-but-wrong. MITRE mapping status: **ALLOWED-WITH-REVIEW** (CWE-862 is a Class-level weakness; the catalog recommends reviewing Base-level children before mapping). CWE-862 has been a recurring CWE Top 25 entry, climbing to #9 on the 2024 edition and #4 on the 2025 edition.
 
-**CWE-863: Incorrect Authorization.** The sibling weakness where the check exists but produces the wrong answer. Not Carlos's case directly; cited here as the differentiator.
+**CWE-863: Incorrect Authorization.**[^cwe-863] The sibling weakness where the check exists but produces the wrong answer. Not Carlos's case directly; cited here as the differentiator.
 
-**CWE-285: Improper Authorization.** The broad parent for the authorization-failure family. MITRE mapping status: **DISCOURAGED** — the catalog explicitly recommends mappers use CWE-862 *Missing Authorization* or CWE-863 *Incorrect Authorization* (or a narrower variant like CWE-639) instead. CWE-285 is included here as the historical / hierarchy reference only; for surgical analytics, always reach for CWE-862 / CWE-863 / CWE-639.
+**CWE-285: Improper Authorization.**[^cwe-285] The broad parent for the authorization-failure family. MITRE mapping status: **DISCOURAGED** — the catalog explicitly recommends mappers use CWE-862 *Missing Authorization* or CWE-863 *Incorrect Authorization* (or a narrower variant like CWE-639) instead. CWE-285 is included here as the historical / hierarchy reference only; for surgical analytics, always reach for CWE-862 / CWE-863 / CWE-639.
 
 **CWE-200: Exposure of Sensitive Information to an Unauthorized Actor.** The umbrella for any sensitive-data disclosure. MITRE marks CWE-200 as **DISCOURAGED for mapping** — it's frequently misused as a catch-all when a more specific weakness applies. Use the more specific weakness (CWE-639 / CWE-862 here) and cite CWE-200 only for framework-mapping reference.
 
-**CWE-312: Cleartext Storage of Sensitive Information.** Maps the BluePier-demo credential stored in plain text in an `advisor_notes` field. The catalog text covers exactly this case — credential data stored unencrypted in a database field.
+**CWE-312: Cleartext Storage of Sensitive Information.**[^cwe-312] Maps the BluePier-demo credential stored in plain text in an `advisor_notes` field. The catalog text covers exactly this case — credential data stored unencrypted in a database field.
 
 ### FERPA — 20 U.S.C. § 1232g; 34 CFR Part 99
 
@@ -459,17 +459,17 @@ The Center for Internet Security's *Critical Security Controls v8.1* (June 2024)
 
 IDOR is taught everywhere. If you study any of the certs below, you've seen the pattern.
 
-**CompTIA Security+ (SY0-701).** The current exam (released November 2023). Domain 2 (*Threats, Vulnerabilities, and Mitigations*) covers application-layer vulnerabilities including IDOR / Broken Access Control. Domain 3 (*Security Architecture*) covers the authentication-vs-authorization distinction.
+**CompTIA Security+ (SY0-701).**[^cert-security-plus] The current exam (released November 2023). Domain 2 (*Threats, Vulnerabilities, and Mitigations*) covers application-layer vulnerabilities including IDOR / Broken Access Control. Domain 3 (*Security Architecture*) covers the authentication-vs-authorization distinction.
 
-**CompTIA PenTest+ (PT0-003).** The current exam (released December 2024, replacing PT0-002 which sunset mid-2025). Domain 3 (*Attacks and Exploits*) names IDOR in the web-application-attack taxonomy and tests candidates' ability to identify and exploit it in hands-on lab scenarios.
+**CompTIA PenTest+ (PT0-003).**[^cert-pentest-plus] The current exam (released December 2024, replacing PT0-002 which sunset mid-2025). Domain 3 (*Attacks and Exploits*) names IDOR in the web-application-attack taxonomy and tests candidates' ability to identify and exploit it in hands-on lab scenarios.
 
-**CompTIA CySA+ (CS0-003).** The current exam (released June 2023). Domain 2 (*Threat Intelligence*) covers IDOR detection patterns — log-based detection of cross-user access patterns is a named module.
+**CompTIA CySA+ (CS0-003).**[^cert-cysa] The current exam (released June 2023). Domain 2 (*Threat Intelligence*) covers IDOR detection patterns — log-based detection of cross-user access patterns is a named module.
 
-**(ISC)² CISSP.** Domain 3 (*Security Architecture and Engineering*) — the authentication / authorization distinction is a CISSP fundamental. The CBK chapters on access-control models (DAC, MAC, RBAC, ABAC) all cover the per-resource-check pattern.
+**(ISC)² CISSP.**[^cert-cissp] Domain 3 (*Security Architecture and Engineering*) — the authentication / authorization distinction is a CISSP fundamental. The CBK chapters on access-control models (DAC, MAC, RBAC, ABAC) all cover the per-resource-check pattern.
 
-**Offensive Security OSWA / OSWE / OSCP.** OffSec's web-focused certs spend substantial curriculum time on IDOR. The OSWE exam (Web Expert) includes IDOR-style challenges as a recurring test of the candidate's ability to identify authorization failures in real applications. The OSWA (Web Assessor) covers IDOR exploitation in its initial-attacks module. The OSCP touches IDOR briefly but the deep treatment lives in the web-specific certs.
+**Offensive Security OSWA / OSWE / OSCP.**[^cert-oswe][^cert-oscp] OffSec's web-focused certs spend substantial curriculum time on IDOR. The OSWE exam (Web Expert) includes IDOR-style challenges as a recurring test of the candidate's ability to identify authorization failures in real applications. The OSWA (Web Assessor) covers IDOR exploitation in its initial-attacks module. The OSCP touches IDOR briefly but the deep treatment lives in the web-specific certs.
 
-**SANS GIAC GWAPT (GIAC Web Application Penetration Tester).** Covers IDOR in depth. The associated course (SEC542) maps IDOR to its OWASP categorization and walks through detection in the labs.
+**SANS GIAC GWAPT (GIAC Web Application Penetration Tester).**[^cert-gwapt] Covers IDOR in depth. The associated course (SEC542) maps IDOR to its OWASP categorization and walks through detection in the labs.
 
 ## §7 — What a defender does
 
@@ -650,7 +650,7 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 
 ## §9 — Further reading
 
-*Last reviewed: May 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
 [^department-of-education-privacy-technical]: [Department of Education Privacy Technical Assistance Center (PTAC)](https://studentprivacy.ed.gov/). Notification templates, breach-response guides, FERPA training materials for university administrators.
 [^nist-800-171]: [NIST SP 800-171 Rev. 3](https://csrc.nist.gov/pubs/sp/800/171/r3/final). Published May 2024; the current standard for protecting CUI in non-federal systems.
@@ -665,6 +665,13 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 [^owasp-asvs-v5-0-v4]: [OWASP ASVS v5.0 — V4 Access Control](https://owasp.org/www-project-application-security-verification-standard/).
 [^krebs-on-security-usps-site]: [Krebs on Security — "USPS Site Exposed Data on 60 Million Users" (Nov 2018)](https://krebsonsecurity.com/2018/11/usps-site-exposed-data-on-60-million-users/). The original USPS Informed Visibility writeup.
 [^burp-suite-authorize-extension]: [Burp Suite Authorize extension](https://portswigger.net/bappstore/f9bbac8c4acf4aefa4d7dc92a991af2f).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
+[^cert-pentest-plus]: [CompTIA PenTest+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/pentest/).
+[^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^cert-oswe]: [OffSec WEB-300 / OSWE — course syllabus](https://www.offsec.com/courses/web-300/).
+[^cert-gwapt]: [GIAC GWAPT — Web Application Penetration Tester](https://www.giac.org/certifications/web-application-penetration-tester-gwapt).
 
 ### Further reading
 

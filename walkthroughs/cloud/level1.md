@@ -215,7 +215,7 @@ The third, indirectly: the **dormant-account lifecycle gap** in Coverline's appl
 | Contents | A broker-portal service credential, stored as a row in a database table |
 | The other signal | A single anomalous schema-enumeration query from 2026-05-20 02:14 UTC, with **no captured source IP** |
 | Escalates to | The broker-portal credential, which is `level2@cloud` |
-| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively |
+| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively[^nycrr-500] |
 
 **The table documented its own expiry and outlived it by two years.**
 Someone thought about lifecycle, wrote the TTL columns, and built nothing
@@ -302,9 +302,9 @@ The PostgreSQL-specific hardening guide is maintained per PostgreSQL major versi
 
 ### CWE
 
-- **CWE-798 (Use of Hard-Coded Credentials)** — primary mapping. Database rows with cleartext credential values are "hard-coded" in the sense the CWE intends (fixed location, retrievable via known lookup). Mapping status is **Allowed-with-Review**. Note: CWE-798 was on the CWE Top 25 list every year 2021-2024 but MITRE's methodology change in 2025 (removed normalization to abstract weaknesses) dropped CWE-798 off the published Top 25 — it remains a frequently-encountered Base-level weakness in practitioner reporting.
-- **CWE-540 (Inclusion of Sensitive Information in Source Code)** — applies if you treat DB schema + content as source.
-- **CWE-312 (Cleartext Storage of Sensitive Information)** — the rows are stored in plaintext VARCHAR columns.
+- **CWE-798 (Use of Hard-Coded Credentials)** — primary mapping.[^cwe-798] Database rows with cleartext credential values are "hard-coded" in the sense the CWE intends (fixed location, retrievable via known lookup). Mapping status is **Allowed-with-Review**. Note: CWE-798 was on the CWE Top 25 list every year 2021-2024 but MITRE's methodology change in 2025 (removed normalization to abstract weaknesses) dropped CWE-798 off the published Top 25 — it remains a frequently-encountered Base-level weakness in practitioner reporting.
+- **CWE-540 (Inclusion of Sensitive Information in Source Code)** — applies if you treat DB schema + content as source.[^cwe-540]
+- **CWE-312 (Cleartext Storage of Sensitive Information)** — the rows are stored in plaintext VARCHAR columns.[^cwe-312]
 - **CWE-200 (Exposure of Sensitive Information to an Unauthorized Actor)** — umbrella parent.[^cwe-200] Note: CWE-200's mapping status is **Discouraged** in current MITRE guidance — cite the more specific CWE-798 / CWE-540 / CWE-312 for direct mappings.
 
 ### NAIC Insurance Data Security Model Law (2017)
@@ -357,7 +357,7 @@ Includes database-security architecture as part of the broader cloud-architectur
 
 ### ISC2 CCSP (Certified Cloud Security Professional)
 
-Domain 2 (Cloud Data Security) and Domain 3 (Cloud Platform & Infrastructure Security) cover database encryption, key management, and secret management at the cloud-architecture level.
+Domain 2 (Cloud Data Security) and Domain 3 (Cloud Platform & Infrastructure Security) cover database encryption, key management, and secret management at the cloud-architecture level.[^cert-ccsp]
 
 ### CSA CCSK (Certificate of Cloud Security Knowledge) v5
 
@@ -373,11 +373,11 @@ The detection-engineering side. Pgaudit configuration, RDS log streaming to a SI
 
 ### CompTIA CySA+ (CS0-003 / CS0-004)
 
-CS0-004 launched in early 2026 for parallel availability; CS0-003 retires June 2026. Domain 1 (Security Operations) covers credential-leak detection and response workflows.
+CS0-004 launched on 23 June 2026; CS0-003 retires 22 December 2026.[^cert-cysa] Domain 1 (Security Operations) covers credential-leak detection and response workflows.
 
 ### ISC2 CISSP
 
-Domain 5 (Identity and Access Management) covers the credential lifecycle including the user-management gap. Domain 3 (Security Architecture and Engineering) covers secret-management as an architectural concern.
+Domain 5 (Identity and Access Management) covers the credential lifecycle including the user-management gap.[^cert-cissp] Domain 3 (Security Architecture and Engineering) covers secret-management as an architectural concern.
 
 ### PostgreSQL-specific
 
@@ -474,7 +474,7 @@ Both NAIC Model 668 and NYDFS § 500.17 run a 72-hour clock from the
 determination that a cybersecurity event occurred, and Coverline cannot
 make that determination here because the source address was never
 captured. A logging gap is not a neutral finding when the alternative to
-"we confirmed it was benign" is "we could not tell."
+"we confirmed it was benign" is "we could not tell."[^nycrr-500]
 
 ## §7.5 — Optional exploration
 
@@ -526,7 +526,7 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 
 ## §9 — Further reading
 
-*Last reviewed: June 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
 [^aws-secrets-manager]: [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/). The primary AWS-native secret store with automatic rotation for RDS and other services.
 [^aws-database-activity-streams]: [AWS Database Activity Streams](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/DBActivityStreams.html). Real-time DB query audit (Aurora MySQL/PostgreSQL, RDS for Oracle, RDS for SQL Server).
@@ -545,6 +545,9 @@ For Coverline's CC6.1 control re-attestation work post-this-engagement: every TT
 [^moveit-transfer-2023-cl0p-cisa]: [MOVEit Transfer 2023 (CL0P) — CISA advisory](https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-158a). The June 2023 CISA + FBI joint advisory.
 [^snowflake-customer-compromises-2024-mandiant]: [Snowflake customer compromises 2024 — Mandiant writeup](https://cloud.google.com/blog/topics/threat-intelligence/unc5537-snowflake-data-theft-extortion/). The UNC5537 threat-actor attribution.
 [^verizon-dbir-2026-latest-edition]: [Verizon DBIR 2026 (latest edition as of the review date)](https://www.verizon.com/business/resources/reports/dbir/).
+[^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
+[^cert-ccsp]: [ISC2 CCSP — certification exam outline](https://www.isc2.org/certifications/ccsp/ccsp-certification-exam-outline).
+[^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 
 ### Further reading
 

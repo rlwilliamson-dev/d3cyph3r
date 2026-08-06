@@ -257,7 +257,7 @@ There is also a fourth, account-level failure you'll surface in §7.5: the AWS a
 | Where the secret was | A leftover bootstrap-credentials file on the bastion |
 | Effective scope | Administrator, which is the whole account rather than any part of it |
 | Also surfaced | An orphaned terminated-employee account, a never-rotated 2019 key, and a root access key |
-| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively |
+| Regime | SOC 2, NAIC Model 668 and NYDFS 23 NYCRR 500 — 72 hours to the commissioner and to the superintendent respectively[^nycrr-500] |
 
 **An unused administrator key is not a smaller finding than a used one.**
 "Last used 2024" describes what happened, not what is possible. The
@@ -329,7 +329,7 @@ Coverline's SOC 2 attestation depends on the **CC6 (Logical and Physical Access)
 
 ### CWE
 
-- **CWE-269 Improper Privilege Management** — the admin-bound bot. (MITRE marks CWE-269 as *discouraged for mapping* — it's a high-level class; the Base-level **CWE-250** below is the more precise root-cause mapping for "ran with more privilege than needed.")
+- **CWE-269 Improper Privilege Management** — the admin-bound bot.[^cwe-269] (MITRE marks CWE-269 as *discouraged for mapping* — it's a high-level class; the Base-level **CWE-250** below is the more precise root-cause mapping for "ran with more privilege than needed.")
 - **CWE-250 Execution with Unnecessary Privileges** — the migration ran with far more privilege than it needed.
 - **CWE-798 Use of Hard-coded Credentials** / **CWE-312 Cleartext Storage of Sensitive Information** — the five plaintext secrets in `bootstrap-iam-keys.env`.
 
@@ -378,9 +378,9 @@ already have.
 
 **AWS Certified Solutions Architect – Associate (SAA-C03).** IAM fundamentals appear throughout: users versus roles, managed versus inline policies, least privilege as a design default, and — the architecturally correct answer to this whole level — preferring short-lived role credentials (`sts:AssumeRole`, IAM roles for service accounts/instances) over long-lived access keys, so there is no static secret to leak or rotate.
 
-**CompTIA Security+ (SY0-701).** Domain 4 (Security Operations) covers identity and access management: provisioning and deprovisioning, account types, least privilege, and privileged access management. A representative framing: *"A service account created for a one-time data migration still holds administrative rights several months later. Which principle was violated?"* — least privilege (with deprovisioning / account management as the supporting control).
+**CompTIA Security+ (SY0-701).**[^cert-security-plus] Domain 4 (Security Operations) covers identity and access management: provisioning and deprovisioning, account types, least privilege, and privileged access management. A representative framing: *"A service account created for a one-time data migration still holds administrative rights several months later. Which principle was violated?"* — least privilege (with deprovisioning / account management as the supporting control).
 
-**ISC2 CCSP.** Domain 5 (Cloud Security Operations) and the IAM content in Domain 3 cover the identity lifecycle, periodic entitlement reviews, and privileged-access management in cloud environments — the exact program-level controls whose absence produced `legacy-deploy-bot`.
+**ISC2 CCSP.**[^cert-ccsp] Domain 5 (Cloud Security Operations) and the IAM content in Domain 3 cover the identity lifecycle, periodic entitlement reviews, and privileged-access management in cloud environments — the exact program-level controls whose absence produced `legacy-deploy-bot`.
 
 ## §7 — What a defender does
 
@@ -489,7 +489,7 @@ The account-level summary reports that the AWS account **root user** has a long-
 
 ## §9 — Further reading
 
-*Last reviewed: June 2026 — links and version-specific claims (cert exam versions, framework revisions, CIS Benchmark control numbers, regulation citation IDs, breach-case figures and dates) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, CIS Benchmark control numbers, regulation citation IDs, breach-case figures and dates) verified current as of the review date. Standards drift; if you're reading this more than 6-12 months past the review date, re-check the cited versions before quoting them in audit work.*
 
 [^aws-iam-security-best-practices]: [AWS IAM security best practices](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html).
 [^aws-iam-access-analyzer-review]: [AWS IAM Access Analyzer: review unused access](https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-manage-unused.html).
@@ -498,6 +498,8 @@ The account-level summary reports that the AWS account **root user** has a long-
 [^cwe-269]: [MITRE CWE-269: Improper Privilege Management](https://cwe.mitre.org/data/definitions/269.html).
 [^palo-alto-networks-unit-42]: [Palo Alto Networks Unit 42 EleKtra-Leak: AWS access keys harvested from public GitHub](https://unit42.paloaltonetworks.com/malicious-operations-of-exposed-iam-keys-cryptojacking/).
 [^nycrr-500]: [NYDFS 23 NYCRR 500 (Cybersecurity Requirements, amended)](https://www.dfs.ny.gov/industry_guidance/cybersecurity).
+[^cert-ccsp]: [ISC2 CCSP — certification exam outline](https://www.isc2.org/certifications/ccsp/ccsp-certification-exam-outline).
+[^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
 
 ### Further reading
 
