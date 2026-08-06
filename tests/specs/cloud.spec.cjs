@@ -167,15 +167,18 @@ test.describe("cloud track", () => {
       expect(t).toMatch(/An error occurred \(AccessDenied\) when calling the GetObject/);
     });
 
-    test("lessons-learned.md cites the relevant frameworks", async ({ page }) => {
+    test("lessons-learned.md names its anchors and hands off to the walkthrough", async ({ page }) => {
       await dispatchCmd(page, "cat lessons-learned.md");
       const t = await terminalText(page);
-      expect(t).toContain("CC6.1");
-      expect(t).toContain("CWE-200");
+      expect(t).toContain("CWE-732");
       expect(t).toContain("CWE-798");
       expect(t).toContain("T1530");
-      expect(t).toContain("CIS AWS Foundations Benchmark");
-      expect(t).toContain("Block Public Access");
+      // the debrief contract: anchors, a handoff, and retrieval prompts
+      expect(t).toContain("CHECK YOURSELF");
+      expect(t).toContain("GO DEEPER");
+      expect(t).toContain("walkthroughs/cloud/level0");
+      // depth moved to the walkthrough; certs must NOT be enumerated here
+      expect(t).not.toContain("WHERE THIS SHOWS UP ON CERTIFICATIONS");
     });
 
     test("exit from level0@cloud returns to the lobby", async ({ page }) => {
@@ -339,23 +342,16 @@ test.describe("cloud track", () => {
         expect(t).toContain("SELECT and meta-commands only");
       });
 
-      test("lessons-learned.md cites the relevant frameworks", async ({ page }) => {
+      test("lessons-learned.md names its anchors and hands off to the walkthrough", async ({ page }) => {
         await dispatchCmd(page, "cat lessons-learned.md");
         const t = await terminalText(page);
         expect(t).toContain("CWE-798");
-        expect(t).toContain("CWE-540");
-        expect(t).toContain("IA-5(7)");
-        expect(t).toContain("T1078");
-        expect(t).toContain("T1213");
+        expect(t).toContain("CWE-312");
         expect(t).toContain("T1552.001");
-        expect(t).toContain("CC6.2");
-        expect(t).toContain("NAIC");
-        expect(t).toContain("72");
-        expect(t).toContain("500.07");
-        expect(t).toContain("500.17");
-        expect(t).toContain("314.5");
-        expect(t).toContain("Secrets Manager");
-        expect(t).toContain("Database Activity Streams");
+        expect(t).toContain("CHECK YOURSELF");
+        expect(t).toContain("GO DEEPER");
+        expect(t).toContain("walkthroughs/cloud/level1");
+        expect(t).not.toContain("WHERE THIS SHOWS UP ON CERTIFICATIONS");
       });
 
       test("whoami prints 'cloudsec' on the bastion", async ({ page }) => {
@@ -519,16 +515,18 @@ test.describe("cloud track", () => {
         expect(t).toContain("legacy-deploy-bot");
       });
 
-      test("lessons-learned.md cites the relevant frameworks", async ({ page }) => {
+      test("lessons-learned.md names its anchors and hands off to the walkthrough", async ({ page }) => {
         await dispatchCmd(page, "cat lessons-learned.md");
         const t = await terminalText(page);
-        expect(t).toContain("AC-6");
         expect(t).toContain("CWE-269");
         expect(t).toContain("CWE-250");
         expect(t).toContain("T1078.004");
-        expect(t).toContain("SCS-C03");
-        expect(t).toContain("500.07");
-        expect(t).toContain("least privilege");
+        // the persistence chain is the point of this level's mapping
+        expect(t).toContain("T1098.001");
+        expect(t).toContain("CHECK YOURSELF");
+        expect(t).toContain("GO DEEPER");
+        expect(t).toContain("walkthroughs/cloud/level2");
+        expect(t).not.toContain("WHERE THIS SHOWS UP ON CERTIFICATIONS");
       });
 
       test("whoami prints 'cloudsec' on the bastion", async ({ page }) => {

@@ -1126,6 +1126,60 @@ async function readPostMortems() {
  * walkthrough, and nothing noticed until the citation sets were compared
  * by hand months later.
  */
+// The in-game post-mortem's section banners, in required order.
+//
+// These are player-facing and read in a terminal, so consistency is more
+// visible than it is in the walkthroughs: a reader moving between levels
+// notices immediately when one is shaped differently. Two files used
+// short banner names where 22 used long ones, and level0@linux had its
+// first two sections in the opposite order, since it was written first
+// and the convention settled afterwards. Neither was caught by review.
+const PM_BANNERS = [
+  "THE BLUNT VERSION",
+  "THE CONSULTING-FIRM ANGLE",
+  "FRAMEWORKS THAT COVER THIS",
+  "MITRE ATT&CK MAPPING",
+  "WHAT A DEFENDER SHOULD ACTUALLY DO",
+  "CHECK YOURSELF",
+  "GO DEEPER",
+  "CLOSING THOUGHT",
+];
+
+/**
+ * Check one post-mortem against the debrief template.
+ *
+ * Enforces the banner set and order, and the two things the debrief
+ * contract requires that nothing else would catch: a link to the
+ * level's own walkthrough, and retrieval prompts. Three tracks shipped
+ * with no walkthrough reference at all before v2.6.0, so a player could
+ * finish them without ever learning the deeper material existed.
+ */
+function validatePostMortem(pm, level, track, slot) {
+  const problems = [];
+  const found = [...pm.matchAll(/───\s+([A-Z][A-Z0-9 ,'\-/&()]+?)\s+─+/g)]
+    .map((m) => m[1].trim());
+
+  if (found.join("|") !== PM_BANNERS.join("|")) {
+    const missing = PM_BANNERS.filter((b) => !found.includes(b));
+    const extra = found.filter((b) => !PM_BANNERS.includes(b));
+    problems.push(
+      `post-mortem sections wrong` +
+        (missing.length ? `, missing: ${missing.join(", ")}` : "") +
+        (extra.length ? `, unexpected: ${extra.join(", ")}` : "") +
+        (!missing.length && !extra.length ? ` (out of order)` : "")
+    );
+  }
+
+  if (!pm.includes(`walkthroughs/${track}/${slot}`)) {
+    problems.push(
+      `post-mortem does not link its own walkthrough ` +
+        `(GO DEEPER must name walkthroughs/${track}/${slot}.html)`
+    );
+  }
+
+  return problems.map((p) => `  ${level}: ${p}`);
+}
+
 function crossCheckCitations(postMortem, walkthrough, label) {
   const ids = (t) =>
     new Set([
@@ -1166,7 +1220,12 @@ async function main() {
     problems.push(...validate(md, label, shipped));
 
     const pm = postMortems.get(`${levelKey}@${trackKey}`);
-    if (pm) problems.push(...crossCheckCitations(pm, md, label));
+    if (pm) {
+      problems.push(...crossCheckCitations(pm, md, label));
+      problems.push(
+        ...validatePostMortem(pm, `${levelKey}@${trackKey}`, trackKey, levelKey)
+      );
+    }
   }
   if (problems.length) {
     console.error(

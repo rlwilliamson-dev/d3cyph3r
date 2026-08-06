@@ -122,12 +122,15 @@ test.describe("osint track", () => {
         .toMatch(/no breaches found for 'ahines@veridian-analytics\.com'/);
     });
 
-    test("lessons-learned.md cites NIST 800-63B / CWE-521 / T1110.004", async ({ page }) => {
+    test("lessons-learned.md names its anchors and hands off to the walkthrough", async ({ page }) => {
       await dispatchCmd(page, "cat lessons-learned.md");
       const t = await terminalText(page);
-      expect(t, "lessons-learned.md cites NIST SP 800-63B (breach-list screening)").toContain("800-63B");
-      expect(t, "lessons-learned.md cites CWE-521 (Weak Password Requirements)").toContain("CWE-521");
-      expect(t, "lessons-learned.md cites T1110.004 (Credential Stuffing)").toContain("T1110.004");
+      expect(t).toContain("800-63B");
+      expect(t).toContain("T1110.004");
+      expect(t).toContain("CHECK YOURSELF");
+      expect(t).toContain("GO DEEPER");
+      expect(t).toContain("walkthroughs/osint/level0");
+      expect(t).not.toContain("WHERE THIS SHOWS UP ON CERTIFICATIONS");
     });
 
     test("exit from level0@osint returns to lobby", async ({ page }) => {
@@ -259,16 +262,16 @@ test.describe("osint track", () => {
           .toContain("file 'nonexistent.py' not found");
       });
 
-      test("lessons-learned.md cites CWEs, NIST 800-218, MITRE TTPs, defender tools", async ({ page }) => {
+      test("lessons-learned.md names its anchors and hands off to the walkthrough", async ({ page }) => {
         await dispatchCmd(page, "cat lessons-learned.md");
         const t = await terminalText(page);
-        expect(t, "lessons-learned.md cites CWE-798 (Hard-Coded Credentials)").toContain("CWE-798");
-        expect(t, "lessons-learned.md cites CWE-540 (Sensitive Info in Source)").toContain("CWE-540");
-        expect(t, "lessons-learned.md cites NIST SP 800-218 SSDF").toContain("800-218");
-        expect(t, "lessons-learned.md cites MITRE T1593.003 (Code Repositories)").toContain("T1593.003");
-        expect(t, "lessons-learned.md cites MITRE T1552.001 (Credentials In Files)").toContain("T1552.001");
-        expect(t, "lessons-learned.md cites TruffleHog (defender tooling)").toContain("TruffleHog");
-        expect(t, "lessons-learned.md cites GitHub Secret Scanning").toContain("Secret Scanning");
+        expect(t).toContain("CWE-798");
+        expect(t).toContain("CWE-312");
+        expect(t).toContain("800-218");
+        expect(t).toContain("CHECK YOURSELF");
+        expect(t).toContain("GO DEEPER");
+        expect(t).toContain("walkthroughs/osint/level1");
+        expect(t).not.toContain("WHERE THIS SHOWS UP ON CERTIFICATIONS");
       });
 
       test("whoami prints 'intel' (in-world OSINT workstation identity)", async ({ page }) => {

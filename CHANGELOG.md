@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-08-06
+
+**The in-game post-mortem is now a debrief rather than a compressed walkthrough.** The two surfaces shared 99% of their weakness citations, which made the shorter one redundant and produced a maintenance liability that had already diverged. They now divide by purpose: the post-mortem is read immediately, in character, while the level is fresh; the walkthrough is the study session read afterwards.
+
+No gameplay changes.
+
+### Added
+
+- **Retrieval questions on every level.** Three per post-mortem, written so they cannot be answered by recall alone: "Halton rotates the Vault token this afternoon — which of the three failures does that fix, and which two survive?" The answers live in the walkthrough rather than inline. This is the best-evidenced technique in the learning literature and neither surface previously did it at all.
+- **A walkthrough handoff on every level.** Each post-mortem now names its walkthrough and says what is in it. Three tracks previously never mentioned walkthroughs existed, so a player could finish them without learning the deeper material was there.
+- **Explained ATT&CK chains in the walkthroughs.** The post-mortems named 25 techniques and weaknesses the walkthroughs never picked up. Nineteen were substantive and are now explained properly, concentrated where the technique *chain* is the teaching: what an attacker does with a dormant administrator key, what a public bucket enables next, why Valid Accounts spans four tactics at once. The walkthroughs previously only listed techniques as links.
+
+### Changed
+
+- **Post-mortems name anchors instead of enumerating frameworks.** Each carries its anchor weaknesses, one control principle, and the governing regime. The certifications section is gone from in-game entirely; it duplicated the walkthrough's own. The corpus went from 40,920 to 34,195 words, which is the duplication coming out.
+
+### Fixed
+
+- **Structural inconsistencies between levels.** Two post-mortems used short section names where 22 used long ones, and one had its first two sections in the opposite order to every other level. Both predate this work and neither was caught by review. All 24 now carry an identical structure, and the build enforces the section set, their order, and the walkthrough handoff.
+- **Citations named in-game but never explained.** A cross-check between each level's post-mortem and its walkthrough is now part of the build, so a weakness named to a player is guaranteed to be explained somewhere. It found 25 on its first run.
+- **The GLBA correction reached the player-facing side.** v2.5.0 fixed the walkthroughs; the four in-game Linux post-mortems still cited the FTC Safeguards Rule, which governs nonbank institutions rather than banks.
+
+
 ## [2.5.1] - 2026-08-05
 
 ### Added
