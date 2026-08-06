@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-08-06
+
+**Frameworks and certifications now cite their sources, and the corpus has been re-audited end to end.** v2.7.0 added citations but placed each source at its first mention, which is the academic convention and turned out to be the wrong one here: the sections that make the checkable claims restate a standard the introduction already named in passing, so the marker landed in the introduction and the claims got nothing. Blast radius had zero citations across all 24 walkthroughs. Cert exam relevance had nine.
+
+No gameplay changes.
+
+### Added
+
+- **A source on every framework and certification claim.** 380 markers became 629, and every §3.5, §5, §6 and §7 in the corpus now carries at least one. A source is cited once per claim-bearing section rather than once per document, because "what a control requires", "what an exam covers" and "what a regulator gives you 36 hours to do" are three separate assertions about the same standard.
+- **119 certification sources.** 18 of 24 walkthroughs discussed between one and six certifications and carried no certification source at all. Every CompTIA, ISC2, GIAC, OffSec, EC-Council and ISACA exam-outline URL was requested and confirmed before being written down.
+- **Citations in tables.** Blast radius is a table, and it holds the notification clocks and penalty figures. Table rows had been excluded from citation, which is why that section was empty.
+
+### Fixed
+
+- **29 stale certification and framework claims across 13 walkthroughs.** CySA+ CS0-004 launched 23 June 2026 rather than "early 2026", and CS0-003 retires 22 December 2026 rather than June — wrong in thirteen files. PenTest+ PT0-003 launched December 2024, not December 2023. CEH v13 launched September 2024, not April. The CISSP exam outline was refreshed 15 April 2024, not May. Two walkthroughs disagreed with each other about CIS Controls v8.1, which was published in June 2024.
+- **A regulatory mis-citation.** Three Linux walkthroughs pointed the blast-radius regime row at the FTC Safeguards Rule, a source those same files list as a counter-example because it governs nonbank institutions. Halton is a bank. The tool that placed it now refuses to auto-cite anything a walkthrough marks as a contrast.
+- **Review dates that had quietly diverged.** Two walkthroughs still read "Last reviewed: April 2026" while their neighbours read July, and the April ones carried four of the errors above. All 24 are re-audited and dated August 2026. The build now fails a walkthrough whose review date falls more than three months behind the freshest in the corpus, and fails one missing the line entirely — so a level build re-audits every walkthrough, not just the new one.
+
 ## [2.7.0] - 2026-08-06
 
 **Walkthrough claims now cite their sources.** Every walkthrough already ended in a list of links. Which link backed which sentence was left to the reader to guess, so "DFARS gives contractors 72 hours to report" sat near twenty-five sources and was supported by none of them in particular. Claims now carry a numbered marker that jumps to the source, and each source links back to every place it was cited.
@@ -4000,7 +4018,8 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.4.2...v2.5.0

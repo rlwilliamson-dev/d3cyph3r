@@ -462,6 +462,21 @@ credentials usage was actually wrong — the correct ID is CWE-1392).
 Historical-case attributions accumulate corrections over time
 (McAfee's hotel attribution, BTK's metadata-recovery attribution).
 
+**The audit covers the WHOLE CORPUS, not just the walkthrough you
+touched.** Certification versions and framework revisions move on their
+own schedule, not on ours, and a claim written a year ago goes stale
+whether or not anyone edits its file. Auditing only the new level is
+what let a CySA+ retirement date be wrong in thirteen walkthroughs at
+once, and left two files sitting at "Last reviewed: April 2026" while
+their neighbours said July.
+
+The build enforces this: a walkthrough whose review date falls more
+than three months behind the freshest one in the corpus fails, and so
+does one missing the line. The check compares files against each other
+rather than against today, so a fresh clone never fails on checkout —
+what it catches is one walkthrough being re-audited while the rest are
+left behind.
+
 Every walkthrough PR — *including small edits to an existing
 walkthrough* — must run a link-audit pass before merge.
 

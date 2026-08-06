@@ -129,6 +129,22 @@
 //      checklist, NOT a follow-up cleanup. If facts haven't been
 //      verified, the walkthrough isn't ready to push.
 //
+//      SCOPE IS THE WHOLE CORPUS, NOT THE NEW LEVEL (tightened
+//      2026-08-06). Certification versions and framework revisions move
+//      on their own schedule; a claim written a year ago goes stale
+//      whether or not anyone edits its file. Auditing only the level
+//      being shipped is what allowed a CySA+ retirement date to be
+//      wrong in thirteen walkthroughs simultaneously, a PenTest+ launch
+//      year to be off by one, and two files to sit at "Last reviewed:
+//      April 2026" while their neighbours said July.
+//
+//      The build enforces it: a walkthrough whose review date falls
+//      more than three months behind the freshest one in the corpus
+//      fails, as does one missing the line. The comparison is against
+//      the corpus rather than against today, so a clone built years
+//      from now does not fail on checkout; what it catches is one
+//      walkthrough being re-audited while the rest are left behind.
+//
 //      Audit BOTH on every walkthrough PR (including small content
 //      edits to an existing walkthrough):
 //        a. The walkthrough itself:
@@ -305,6 +321,6 @@
 // VERSION_DISPLAY is the player-visible form shown in the topbar
 // and lobby tagline — full semver with a leading "v" (e.g. "v0.13.0").
 
-export const VERSION = "2.7.0";
+export const VERSION = "2.8.0";
 
 export const VERSION_DISPLAY = "v" + VERSION;
