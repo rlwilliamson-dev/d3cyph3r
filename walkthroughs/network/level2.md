@@ -333,6 +333,62 @@ Atlas can produce records showing who else asked.
 
 **Generate a TLS configuration with the Mozilla TLS generator.** The [Mozilla TLS Generator](https://ssl-config.mozilla.org/) produces ready-to-paste Apache / nginx / HAProxy / Caddy configs for the modern (intermediate / modern) TLS profiles. The "modern" profile aligns with NIST SP 800-52 Rev 2 and CIS Control 3.10. Operators who use the generator land on safe-by-default configs; operators who copy-paste a 2019 stackoverflow answer land on Atlas's 2023 config.
 
+### Sample detection rule (Sigma)
+
+The certificate disclosure cannot be detected after the fact, because
+Certificate Transparency is append-only and the inventory is already
+public. It can be *monitored* going forward. The mailbox behaviour, by
+contrast, is detectable in the mail logs today, and it is the half that
+grants access rather than merely describing the estate.
+
+```yaml
+title: Automated mailbox reply containing credential material
+status: experimental
+description: >
+  Detects auto-generated replies sent from service mailboxes whose body
+  or subject indicates credential content. Autoresponders configured to
+  answer password-reset requests will send credentials in cleartext to
+  whoever asked, over a channel that looks like ordinary helpdesk
+  traffic.
+logsource:
+  product: m365
+  service: message_trace
+detection:
+  service_sender:
+    SenderAddress|startswith:
+      - 'devops-ci@'
+      - 'noreply@'
+      - 'automation@'
+  generated_reply:
+    MessageType: 'AutoReply'
+  credential_context:
+    Subject|contains:
+      - 'password'
+      - 'credential'
+      - 'reset'
+      - 'access'
+  condition: service_sender and generated_reply and credential_context
+falsepositives:
+  - Legitimate password-reset workflows that send a time-limited link
+    rather than a credential. These are the correct pattern and should be
+    excluded once verified, by subject template rather than by sender.
+  - Out-of-office replies that happen to quote a subject line containing
+    one of these words.
+level: high
+```
+
+Pair this with continuous Certificate Transparency monitoring, which is
+the only control that addresses the certificate half. Subscribe to CT
+feeds for the organisation's domains through [crt.sh](https://crt.sh/) or
+a monitoring service, and alert on any newly issued certificate whose SAN
+list contains internal hostnames. That does not un-publish what is already
+logged, but it turns the next occurrence into a same-day finding instead
+of one an auditor discovers.
+
+The underlying fix is neither detection: stop putting internal hostnames
+in publicly-trusted certificates, and run an internal CA for internal
+names.
+
 ## §7.5 — Optional exploration
 
 Both bonus finds trigger on the same `openssl x509 -text -noout -in /etc/apache2/ssl/audit-bypass.crt` command. They surface the two specific failures that make the cert worse than a generic "old self-signed cert" finding.

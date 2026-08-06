@@ -365,6 +365,59 @@ Coverline's SOC 2 attestation depends on the **CC6 (Logical and Physical Access)
 - **Wire HR offboarding to IAM deprovisioning** (IAM Identity Center + SCIM), so a termination automatically revokes cloud access. This closes the joiner-mover-leaver gap that left `vikram.shah` live.
 - **GuardDuty** for anomalous credential use — a dormant key suddenly active from a new region or ASN is a high-fidelity alert.
 
+### Sample detection rule (Sigma)
+
+A dormant administrator key is dangerous precisely because nothing about
+it generates events until the day it does. Two rules are worth running:
+one on the credential, one on the privilege.
+
+```yaml
+title: Privileged action by a dormant or legacy IAM principal
+status: experimental
+description: >
+  Detects API activity from principals outside the current operational
+  set, particularly those holding broad managed policies. Migration bots,
+  departed employees, and long-lived automation accumulate because
+  nothing retires them, and each remains as capable as the day it was
+  created.
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  legacy_principals:
+    userIdentity.userName|contains:
+      - 'legacy-'
+      - 'deploy-bot'
+      - 'migration'
+  privileged_action:
+    eventName|startswith:
+      - 'Create'
+      - 'Delete'
+      - 'Put'
+      - 'Attach'
+      - 'Assume'
+  condition: legacy_principals and privileged_action
+falsepositives:
+  - Automation that is genuinely still in service under a legacy name.
+    That is a naming problem worth fixing rather than an exclusion worth
+    adding, and each instance should be renamed or retired.
+level: high
+```
+
+The second rule needs no tuning and should be enabled everywhere: alert on
+**any** use of the account root credential. AWS's own guidance is that
+root access keys should not exist, so the correct expected volume is zero
+and any hit is either an emergency or an incident.
+
+Detection is the weaker control here, and the finding should be written to
+say so. The pattern across the four accounts in this level is a single
+identity-lifecycle process that creates principals and never retires them,
+and no alert fixes that. An
+[IAM credential report](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html)
+reviewed on a schedule, plus automated disablement past a dormancy
+threshold, addresses the class. Deactivating these four addresses the
+instances, and the next migration will produce the next set.
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section — recovering `legacy-deploy-bot`'s key from `bootstrap-iam-keys.env` is all level3 needs. But `level2@cloud` seeds **three** hidden bonus finds that fire when you run specific commands during the audit. `progress --detail` from any prompt lists what you've unlocked.

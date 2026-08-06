@@ -563,6 +563,53 @@ Assume the application-level authz check will, at some point, be missing. Belt-a
 
 The principle: any single layer that can be bypassed by a missing check (the application authz, the database RLS, the gateway policy) is meaningfully harder to bypass when all three are present.
 
+### Sample detection rule (Sigma)
+
+Every request in this attack is authenticated and well-formed, so no
+single request is anomalous. The signal is in the aggregate: one session
+retrieving many different students' transcripts.
+
+```yaml
+title: Single session retrieving transcripts for many distinct students
+status: experimental
+description: >
+  Detects horizontal enumeration of an object-id parameter. The endpoint
+  authenticates correctly and authorises nothing, so individual requests
+  are indistinguishable from legitimate use and only the distribution of
+  requested ids separates a student from a scraper.
+logsource:
+  category: webserver
+detection:
+  transcript_fetch:
+    cs-uri-stem|contains: '/transcript/download'
+    sc-status: 200
+  timeframe: 10m
+  condition: transcript_fetch | count(distinct(student_id)) by session_id > 5
+falsepositives:
+  - Registrar and advising staff, who legitimately access many students'
+    records. Exclude by role rather than by account, and revisit whenever
+    the role membership changes.
+  - Automated report generation and accreditation exports, which should
+    run under a service identity rather than a staff session.
+level: high
+```
+
+The aggregation syntax is Sigma's correlation form and needs a backend
+that supports it. Splunk, Elastic, and Sentinel all do; a simple
+regex-matching pipeline does not, which is worth confirming before this
+rule is promised in a remediation plan.
+
+Choosing a threshold is a judgement call and should be documented as one.
+Five distinct students in ten minutes is a starting point derived from
+what a normal student session looks like, not a standard. Tune it against
+a week of real traffic, and expect the registrar exclusion to matter more
+than the number.
+
+None of this is the fix. An authorisation check comparing the requested
+`student_id` against the session's own identity makes the enumeration
+impossible, and the detection is only covering the interval until that
+ships.
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` lists what you've unlocked.

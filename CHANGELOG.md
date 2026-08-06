@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-08-05
+
+### Added
+
+- **A detection rule on every walkthrough.** Nine carried one; fifteen did not, which meant §7 was uniformly good advice but only sometimes actionable. All 24 now ship a Sigma rule with a log source, an explicit condition, an honest false-positive list, and a severity.
+
+  The rules are written for the finding rather than around it. `crypto/level1` matches the base64url prefix of an `alg: none` JOSE header, which is one of the few authentication flaws with a reliable signature. `network/level1` allowlists the authorised secondaries and alerts on every other zone-transfer request. `web/level1` counts distinct student ids per session, because every individual request in that attack is authenticated and unremarkable. `forensics/level2` is rated low on purpose and says why: after-hours work is not an offence, and a rule that pages on it gets switched off within a week.
+
+  Where a platform-native control beats a SIEM rule, the walkthrough says so instead of pretending otherwise, and points at GuardDuty, IAM credential reports, Certificate Transparency monitoring, or a pre-receive secret scan.
+
+### Changed
+
+- **The authoring guide now requires the detection rule, and the build enforces it.** A walkthrough missing any of title, log source, detection, condition, false positives, or severity fails, so a rule cannot ship in a state where the receiving team would disable it.
+- **The "If you got stuck" note is now required for level0 and level1 only.** The rule previously applied to every walkthrough, and nine of 24 complied, all of them level0 or level1. That was the right instinct applied inconsistently rather than drift: a reader three levels into a track does not need to be told how to check their working directory. The standard now matches the practice.
+
+
 ## [2.5.0] - 2026-08-05
 
 **Every walkthrough now sizes its finding, and the Linux track cites the right law.** Naming a vulnerability is half of an assessment; the other half is how much is exposed, for how long, and what it opens next. That half was missing from all 24 walkthroughs. Adding it surfaced a regulatory citation error that had been shipped for months.

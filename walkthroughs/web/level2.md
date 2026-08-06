@@ -349,6 +349,57 @@ The through-line across all four: SQL injection's prevalence has fallen, but its
 
 **Scan for the pattern in CI.** The "glue input into SQL" shape repeats across a codebase. [Semgrep](https://semgrep.dev/) and [CodeQL](https://codeql.github.com/) both ship SQL-injection rule packs that flag string-concatenated queries at the pull-request gate. Find every query built by concatenation, not just this one — and add a lint rule that fails the build on new ones.
 
+### Sample detection rule (Sigma)
+
+Union-based extraction leaves distinctive strings in the query string, and
+because the endpoint is public and unauthenticated there is no session to
+correlate against. The request itself is all the evidence there is.
+
+```yaml
+title: SQL injection patterns in a search query parameter
+status: stable
+description: >
+  Detects union-based and schema-enumeration payloads in HTTP query
+  parameters. The information_schema references are the strongest signal:
+  a legitimate course search has no reason to name database metadata.
+logsource:
+  category: webserver
+detection:
+  union_extraction:
+    cs-uri-query|contains:
+      - 'union select'
+      - 'union all select'
+      - 'information_schema'
+      - 'order by 1--'
+  error_probing:
+    cs-uri-query|contains:
+      - "' or '1'='1"
+      - "' and 1=2--"
+      - 'sleep('
+      - 'benchmark('
+  condition: union_extraction or error_probing
+falsepositives:
+  - Course titles that genuinely contain these words. "Database Design"
+    will not match, but a catalogue containing a course on SQL might
+    produce a hit on a bare keyword, which is why the patterns above are
+    multi-word rather than single tokens.
+  - Authorised scanning. sqlmap is deliberately noisy and will generate
+    many matches; correlate to the engagement schedule.
+level: high
+```
+
+Verbose database errors are worth their own rule, and it is the cheaper
+of the two. Alert on any response body containing a MySQL error code such
+as `1064`, because that is the feedback loop turning blind injection into
+a guided conversation. Suppressing those errors to the client is a
+one-line change that makes the same vulnerability substantially more
+expensive to exploit.
+
+A caution for the report, though: pattern-matching on query strings is a
+detection of *known payload shapes*, and encoding, comment insertion, and
+case variation defeat it routinely. It belongs in the plan as a tripwire
+while the query is being parameterised, never as the remediation itself.
+
 ## §7.5 — Optional exploration
 
 Both bonus finds surface the conditions that made the injection worse than it had to be.

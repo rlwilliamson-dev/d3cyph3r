@@ -554,6 +554,53 @@ If admin auth is materially important — and for systems that can rotate produc
 
 The retrofit is non-trivial but reduces the surface dramatically. For a system that already has a JWT-based auth model, the migration path is usually "swap the verifier middleware for the IdP's SDK" — one library swap, one redeploy, plus key-rotation coordination.
 
+### Sample detection rule (Sigma)
+
+An `alg: none` token is trivially recognisable before it is decoded,
+because the JOSE header is base64url of a short, fixed JSON object. That
+makes this one of the few authentication flaws with a reliable signature.
+
+```yaml
+title: JWT presented with the "none" algorithm
+status: stable
+description: >
+  Detects Authorization headers carrying a JWT whose header declares
+  alg "none". base64url of {"alg":"none" begins eyJhbGciOiJub25lIg,
+  and of {"alg":"None" begins eyJhbGciOiJOb25lIg. Case variants exist
+  because some libraries compare the algorithm name case-insensitively.
+logsource:
+  category: proxy
+  product: nginx
+detection:
+  none_alg:
+    cs-header|contains:
+      - 'eyJhbGciOiJub25lIg'
+      - 'eyJhbGciOiJOb25lIg'
+      - 'eyJhbGciOiJOT05FIg'
+  condition: none_alg
+falsepositives:
+  - Security scanners and internal penetration tests. These should be
+    correlated to a scheduled engagement, and their absence from the
+    schedule is itself the finding.
+level: critical
+```
+
+Severity is `critical` rather than `high` because a match is not a
+suspicious pattern that needs interpreting. There is no legitimate reason
+for a client to present an unsigned token to an API that expects signed
+ones. Every hit is either an attack or a test.
+
+Two caveats worth carrying into the SIEM work. The rule inspects the
+header the client sends, so it fires whether or not the application
+accepts the token, which is what you want: rejected attempts are the
+early warning. And it only sees tokens in a header the proxy logs, so
+tokens moved into a cookie or a POST body need a corresponding rule
+against whatever field carries them.
+
+None of this substitutes for the fix. Until `jwt.verify` is called with an
+explicit algorithms allowlist, the application is accepting forged
+identities and the rule is only telling you how often.
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command — `progress --detail` from any prompt lists what you've unlocked.

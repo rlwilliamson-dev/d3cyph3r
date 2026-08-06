@@ -443,6 +443,57 @@ Three parallel remediation tracks: Aaron specifically, Veridian as the employer,
 
 **Note the adjacent findings, don't pursue them.** The Strava presence in `sherlock` output is interesting OPSEC adjacent — Aaron's segment leaderboards in his own neighborhood are how the LinkedIn DM's "her school in Coolidge Corner" intel could have been derived. Worth flagging in the writeup as an adjacent observation; explicitly out of scope for active investigation today.
 
+### Sample detection rule (Sigma)
+
+Nothing about this is visible in Veridian's logs, because the exposure is
+on a personal repository outside the company. What *is* visible is the
+consequence: a leaked key being used.
+
+```yaml
+title: AWS access key used from outside expected networks
+status: experimental
+description: >
+  Detects API activity authenticated by a long-lived access key from a
+  source outside the organisation's known egress ranges and cloud
+  regions. A key published in a public repository is typically exercised
+  by automated scanners within minutes of the commit.
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  long_lived_key:
+    userIdentity.type: 'IAMUser'
+    userIdentity.accessKeyId|startswith: 'AKIA'
+  expected_sources:
+    sourceIPAddress|cidr:
+      - '203.0.113.0/24'    # corporate egress
+      - '198.51.100.0/24'   # CI runners
+  condition: long_lived_key and not expected_sources
+falsepositives:
+  - Engineers working remotely with long-lived keys, which is itself the
+    problem this rule keeps surfacing. The durable fix is federated
+    short-lived credentials, after which any remaining AKIA usage is
+    genuinely exceptional.
+  - Third-party integrations authorised to call the account. Give each
+    one its own principal so it can be excluded by identity rather than
+    by address.
+level: high
+```
+
+Two AWS-native controls do more here than any rule. Turn on
+[GuardDuty](https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_finding-types-iam.html),
+whose credential-exfiltration findings are built for exactly this and
+which detects use of a key from an unexpected principal or location
+without any tuning. And know that AWS itself scans public repositories and
+applies a quarantine policy to keys it finds, which is a safety net rather
+than a control, but it has saved a great many accounts.
+
+The organisational control is the uncomfortable one and belongs in the
+report anyway: long-lived access keys should not exist. Federated
+short-lived credentials remove the artifact that can be committed at all,
+and every finding in this class is downstream of the decision to issue
+`AKIA` keys to humans.
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run the sherlock command — `progress --detail` lists what you've unlocked.

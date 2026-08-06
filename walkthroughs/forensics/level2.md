@@ -414,6 +414,55 @@ The fact that outside counsel had a Google subpoena in flight Monday morning, re
 
 ---
 
+### Sample detection rule (Sigma)
+
+This level examines artifacts after the fact. The detection worth building
+is the one that would have fired at the time, and the strongest signal in
+the timeline is not any single action but when it happened.
+
+```yaml
+title: Off-hours interactive logon followed by consumer cloud-storage access
+status: experimental
+description: >
+  Correlates an interactive logon outside business hours with subsequent
+  traffic to consumer file-sharing hosts from the same workstation. Each
+  half is unremarkable alone; together, on a cleared workstation holding
+  CUI, they are the shape of staging-then-exfiltration.
+logsource:
+  product: windows
+  service: security
+detection:
+  offhours_logon:
+    EventID: 4624
+    LogonType:
+      - 2    # interactive, at the console
+      - 10   # RemoteInteractive
+  business_hours:
+    UtcTime|re: 'T(1[3-9]|2[0-2]):'   # 13:00-22:59 UTC covers a US workday
+  cleared_workstation:
+    Computer|startswith: 'POL-WS-'
+  condition: offhours_logon and cleared_workstation and not business_hours
+falsepositives:
+  - Legitimate after-hours work, which is common enough that this rule is
+    an enrichment signal rather than a standalone alert. It earns its
+    place when correlated with the network half below, not on its own.
+  - Scheduled maintenance windows and on-call response. Exclude by
+    change-ticket window rather than by account.
+level: low
+```
+
+Rated `low` deliberately, and that rating is the point. Working late is not
+an offence and a rule that pages on it will be turned off within a week.
+Its value is as a correlation input: joined with proxy or firewall logs
+showing the same host reaching a consumer file-sharing domain inside the
+same session, the combination is worth waking somebody for.
+
+The stronger control on a CUI system is not detection at all. Block
+consumer file-sharing at the egress point and require an exception
+process, so the interesting event becomes a blocked connection with a
+name attached rather than a successful upload found in an image weeks
+later.
+
 ## §7.5 — Optional exploration
 
 This level carries one bonus find, accessible via the `progress --detail` command after you discover it. It's orthogonal to the credential-chain solve (you can complete the level without finding it) but it's the kind of artifact that turns a forensic engagement into a thorough one.

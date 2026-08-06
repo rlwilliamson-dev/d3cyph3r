@@ -291,6 +291,58 @@ Five remediation actions, ordered by reversibility (most-reversible first; the i
 
 **Bonus: monitor what you're already capturing.** Halton's audit policy required the snapshot trace to exist. The trace existing is fine. The trace *not being audited* is the structural finding. The minimum bar is a periodic (daily, weekly, on-rotation) scan of recently-written log files in `/var/log/` for credential patterns. CrowdStrike Falcon, SentinelOne, gitleaks, trufflehog, and Microsoft Purview's data-loss-prevention engine all do this; pick one and run it.
 
+### Sample detection rule (Sigma)
+
+The secret is written by a job that is behaving exactly as configured, so
+there is no malicious event to catch. What can be caught is somebody
+*reading* the file the job leaves behind. Watch the log directory and
+alert on any reader that is neither root nor the job's own account.
+
+```yaml
+title: Scheduled-job log read by an account that does not own it
+status: experimental
+description: >
+  Detects read access to scheduled-job log output by accounts other than
+  root or the job owner. Shell tracing (set -x, BASH_XTRACEFD) echoes
+  command arguments into these logs, so any secret passed as an argument
+  ends up on disk at whatever mode the job created the file with.
+  Requires an auditd watch: -w /var/log/halton/ -p r -k job_logs
+logsource:
+  product: linux
+  service: auditd
+detection:
+  log_read:
+    type: 'SYSCALL'
+    syscall:
+      - 'open'
+      - 'openat'
+    key: 'job_logs'
+  expected_readers:
+    uid:
+      - '0'      # root
+      - '997'    # the job's own service account
+      - '998'    # log-shipping agent
+  condition: log_read and not expected_readers
+falsepositives:
+  - Log-shipping and backup agents running under service accounts. Add
+    their UIDs to expected_readers rather than widening the watch path.
+  - On-call engineers reading job output during an incident. These should
+    be rare enough to review individually and correlate to a ticket.
+level: medium
+```
+
+This alerts on the harvest, not the exposure, and that is a deliberate
+compromise: it fires only once somebody has already gone looking. The
+control that prevents the exposure is upstream and is not a detection at
+all. Stop passing the passphrase as a command argument, and set
+`umask 077` in the job so anything it does write is unreadable by others.
+
+Worth pairing with a configuration check rather than a log rule: grep the
+crontab and the scripts it calls for `set -x` and `BASH_XTRACEFD`, and
+treat every hit on a job that touches credentials as a finding. That scan
+is cheap, runs anywhere, and catches the next occurrence before it writes
+anything.
+
 ## §7.5 — Optional exploration
 
 Two bonus finds on this level seed orthogonal lessons. `progress --detail` from anywhere shows your discovered list. Neither find changes the breadcrumb chain.

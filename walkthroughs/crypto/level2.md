@@ -302,6 +302,61 @@ misunderstanding the whole level exists to correct.
 
 **Educate.** The `hash-id` → `john` → `cat README.rockyou` sequence is identical to what every intro-tier red-team / blue-team training program teaches. Engineers shipping production credentials should be aware of how cheap the offline attack is. [The HashCat wiki](https://hashcat.net/wiki/) and [Hashcat Crackstation](https://hashcat.net/wiki/doku.php?id=cracking_wpawpa2) have the canonical defender-side reference material.
 
+### Sample detection rule (Sigma)
+
+The commit itself is best caught before it lands, by scanning rather than
+by a log rule. What a SIEM *can* see is the offline attack that follows:
+password-cracking tools running on corporate hosts.
+
+```yaml
+title: Password-cracking tool executed on a corporate endpoint
+status: experimental
+description: >
+  Detects execution of offline credential-recovery tooling. These have
+  legitimate uses on authorised assessment hosts and almost none
+  elsewhere, so the signal is the location rather than the binary.
+logsource:
+  product: linux
+  service: auditd
+detection:
+  cracker:
+    type: 'EXECVE'
+    proctitle|contains:
+      - 'john '
+      - 'hashcat'
+      - 'ophcrack'
+  wordlist_use:
+    proctitle|contains:
+      - 'rockyou'
+      - '--wordlist'
+      - '-w /usr/share/wordlists'
+  assessment_hosts:
+    hostname:
+      - 'driftwood-assess-01'
+      - 'driftwood-assess-02'
+  condition: (cracker or wordlist_use) and not assessment_hosts
+falsepositives:
+  - Authorised security assessments running outside the designated hosts.
+    These should be rare and ticketed; if they are neither, the exclusion
+    list is wrong rather than the alert.
+  - Security training and CTF practice on developer workstations, which
+    is worth knowing about even when benign.
+level: medium
+```
+
+The more valuable control here is not a detection at all. Hashes committed
+to a repository are caught by secret scanning at the pre-receive hook,
+before the object exists anywhere else, and both
+[Gitleaks](https://github.com/gitleaks/gitleaks) and
+[TruffleHog](https://github.com/trufflesecurity/trufflehog) will flag a
+file of hash-and-label pairs. Once it is committed, history rewriting is
+required, and every clone taken in the meantime is out of reach.
+
+Worth stating plainly for the report: detecting the cracking tells you
+somebody is working on the hashes. It does not tell you they have
+succeeded, and with unsalted MD5 and a public wordlist the gap between
+those two is under a second.
+
 ## §7.5 — Optional exploration
 
 Both bonus finds in this level surface auxiliary lessons the main finding doesn't directly require. Each captures a distinct dimension of the broader password-storage problem space.

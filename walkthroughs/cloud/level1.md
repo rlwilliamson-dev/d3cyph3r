@@ -423,6 +423,59 @@ Every query we ran today, with the timestamp, the database, the table queried, a
 
 Database rows are a credential-storage anti-pattern that organizations underestimate. The intuition is "the database is protected by the application, so row contents are safe." That intuition breaks the moment any credential that opens the database leaks — at which point every credential STORED IN the database also leaks. The defensive answer is layered: never put credentials in the database in the first place (use Secrets Manager / Parameter Store / Vault), enforce that policy through automated detection (entropy scanners, schema-column-name scanners), and treat any historical credential-row finding as a structural sign that the prevention layer is broken upstream.
 
+### Sample detection rule (Sigma)
+
+The anomalous query in this level has no source IP because `pgaudit` was
+never enabled, so the honest first step is not a rule but a prerequisite:
+without statement-level audit logging there is nothing for a rule to read.
+
+```yaml
+title: Database schema enumeration from an application credential
+status: experimental
+description: >
+  Detects catalogue and metadata queries issued by accounts that exist to
+  serve an application. Application code queries its own tables by name
+  and has no reason to enumerate the schema; a human or a tool exploring
+  the database does exactly that first.
+  Requires pgaudit: shared_preload_libraries = 'pgaudit',
+  pgaudit.log = 'read,ddl,misc'
+logsource:
+  product: postgresql
+  service: pgaudit
+detection:
+  enumeration:
+    statement|contains:
+      - 'information_schema.tables'
+      - 'information_schema.columns'
+      - 'pg_catalog.pg_tables'
+      - '\\dt'
+  application_accounts:
+    user:
+      - 'coverline_app'
+      - 'coverline_reporting'
+  condition: enumeration and application_accounts
+falsepositives:
+  - ORM startup and migration tooling, which legitimately inspects the
+    schema on connect. Exclude by the specific statements those tools
+    emit rather than by disabling the rule for the account.
+  - Schema-diff and monitoring agents. Give them their own database role
+    so they can be excluded by identity.
+level: high
+```
+
+Add an off-hours condition and the rule sharpens considerably, because the
+event in this level occurred at 02:14 UTC. Schema enumeration by an
+application credential in the middle of the night is a very specific
+shape, and it is worth alerting on even when the daytime equivalent is
+only logged.
+
+The regulatory point belongs in the write-up alongside the technical one.
+Both NAIC Model 668 and NYDFS § 500.17 run a 72-hour clock from the
+determination that a cybersecurity event occurred, and Coverline cannot
+make that determination here because the source address was never
+captured. A logging gap is not a neutral finding when the alternative to
+"we confirmed it was benign" is "we could not tell."
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you query `migration_artifacts` — `progress --detail` lists what you've unlocked.

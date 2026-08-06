@@ -295,6 +295,59 @@ argument left open in the previous level.
 
 **7. Write the report so it survives opposition.** State what each artifact shows, cite the artifact, avoid characterizing intent, and make every conclusion reproducible by someone working from the same evidence. "The Date header is inconsistent with the receiving server's trace field by approximately 34 hours" survives cross-examination. "Reed faked it" does not.
 
+### Sample detection rule (Sigma)
+
+The forged message failed every authentication check at the gateway. The
+question a defender should ask is why it was delivered anyway, and the
+answer is almost always that the gateway is configured to observe policy
+rather than enforce it.
+
+```yaml
+title: Inbound mail failing DMARC while claiming an internal sender
+status: stable
+description: >
+  Detects inbound messages whose From: domain belongs to the organisation
+  but which fail DMARC evaluation. This is the executive-impersonation
+  pattern, and where the claimed domain publishes p=reject the message
+  should not have been delivered at all.
+logsource:
+  product: m365
+  service: message_trace
+detection:
+  claims_internal:
+    HeaderFrom|endswith:
+      - '@polaris-defense.com'
+  auth_failed:
+    AuthenticationResults|contains:
+      - 'dmarc=fail'
+      - 'dmarc=none'
+  inbound:
+    Direction: 'Inbound'
+  condition: claims_internal and auth_failed and inbound
+falsepositives:
+  - Mailing lists and forwarding services, which break SPF by design and
+    are the reason DKIM alignment carries the decision. Legitimate senders
+    should be brought into the SPF record or given a DKIM signature rather
+    than excluded from the rule.
+  - Third-party senders authorised to send as the domain, such as payroll
+    and marketing platforms. Every one of these should be enumerated;
+    discovering an unenumerated one is a finding.
+level: high
+```
+
+The genuinely important number here is not the alert count. It is whether
+the domain publishes `p=reject` and whether the gateway honours it. A
+domain at `p=none` is collecting telemetry and delivering the mail, which
+is a reasonable place to start a DMARC rollout and an unreasonable place
+to stay.
+
+Retention matters as much as detection in this case, and it is worth a
+separate line in the remediation plan. This investigation was possible
+because full headers were preserved. A gateway that retains metadata but
+discards headers would have left the forgery unprovable, and
+DFARS 252.204-7012's ninety-day preservation requirement is the floor,
+not the target.
+
 ## §7.5 — Optional exploration
 
 Two bonus finds. `progress --detail` shows your discovered list. Neither changes the breadcrumb chain.

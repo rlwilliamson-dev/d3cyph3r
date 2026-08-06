@@ -312,6 +312,53 @@ Three tracks: Aaron specifically, Veridian as employer, and Driftwood for our ow
 
 **Stop at the first concrete finding.** Marisol asked for a *light* sweep. You found a live credential exposure; that's the deliverable. Enumerating Aaron's entire pseudonymous life beyond the security finding is scope creep, and (for any third parties who appear in his hobby spaces) an ethics problem.
 
+### Sample detection rule (Sigma)
+
+The lesson of this level is that deleting the repository changed nothing,
+because the key was never rotated. The detection that matters is
+therefore about key age and dormancy, not about the archive.
+
+```yaml
+title: Access key used after prolonged dormancy
+status: experimental
+description: >
+  Detects API activity from an access key with no recorded use in the
+  preceding 90 days. A credential that goes quiet and then wakes up is
+  either a forgotten integration or somebody who has just found it, and
+  both warrant an answer.
+logsource:
+  product: aws
+  service: cloudtrail
+detection:
+  key_activity:
+    userIdentity.type: 'IAMUser'
+    userIdentity.accessKeyId|startswith: 'AKIA'
+  known_active_keys:
+    userIdentity.accessKeyId:
+      - 'AKIA_CI_RUNNER_KEY'
+      - 'AKIA_BACKUP_AGENT_KEY'
+  condition: key_activity and not known_active_keys
+falsepositives:
+  - Genuinely seasonal automation, such as annual reporting jobs. These
+    should be enumerated in known_active_keys with a comment recording
+    their cadence, so the exclusion is a decision rather than an
+    accumulation.
+level: medium
+```
+
+Detection is the weaker half here, and the report should say so. The
+preventive control is a credential-lifecycle policy enforced by an
+[IAM credential report](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html):
+list every key with its age and last-used date, and disable anything that
+crosses the threshold. That converts "we would notice if it were used"
+into "it cannot be used," which is a materially different assurance.
+
+There is also a control this level demonstrates has no detection at all.
+Once a secret reaches a public archive it stays reachable regardless of
+what the origin does, so the only remediation is rotation at the provider.
+Any plan whose first step is "remove the content" has the order wrong, and
+the Wayback captures in this level exist to make that concrete.
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section. `level2@osint` seeds two bonus finds; `progress --detail` lists what you've unlocked.

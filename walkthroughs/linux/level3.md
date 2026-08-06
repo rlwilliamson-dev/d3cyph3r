@@ -238,6 +238,51 @@ Six actions, ordered most-reversible first.
 
 **6. Prefer short-lived, scoped, audited privilege.** The durable fix for the whole class is architectural: no NOPASSWD on anything that touches secrets; sudo grants scoped to exact commands (not wildcarded paths); privileged actions logged centrally (`AC-6(9)`); and, where possible, just-in-time elevation (a broker that grants a time-boxed, audited grant on request) instead of standing sudoers lines that outlive the reason they were written. A grant that expires on its own can't be the thing an attacker finds 18 months later.
 
+### Sample detection rule (Sigma)
+
+Two things are worth alerting on here, and they arrive in order:
+enumeration first, then the privileged read. Catching the first buys time;
+catching the second is the incident.
+
+```yaml
+title: Privileged read of production backup material via sudo
+status: experimental
+description: >
+  Detects sudo-executed reads of files under the production backup tree.
+  Wildcard sudoers grants scoped by path glob permit any file the backup
+  process later places there, so the grant cannot be evaluated safely
+  from the sudoers entry alone and must be watched at use time.
+logsource:
+  product: linux
+  service: auditd
+detection:
+  sudo_read:
+    type: 'USER_CMD'
+    cmd|contains|all:
+      - '/bin/cat'
+      - '/var/backups/'
+  platform_team:
+    uid:
+      - '1001'   # backup-verification service account
+  condition: sudo_read and not platform_team
+falsepositives:
+  - Scheduled backup-verification runs. These execute under a known
+    service account and on a predictable cadence; exclude by UID and
+    review any run that falls outside its window.
+level: high
+```
+
+A second, cheaper rule catches the reconnaissance: alert on `sudo -l` from
+any interactive account outside the platform team. Legitimate operators
+already know what they can run. An account enumerating its own privileges
+is either a new engineer or somebody establishing what a foothold is
+worth, and both are worth a look.
+
+The detection does not fix the grant. A `NOPASSWD` rule ending in a
+wildcard is a standing bet that the directory's future contents stay
+harmless, and rewriting it to name specific files is the actual
+remediation. Detection is what covers the window between now and then.
+
 ## §7.5 — Optional exploration
 
 Two bonus finds seed orthogonal lessons. `progress --detail` shows your discovered list. Neither changes the breadcrumb chain.

@@ -534,6 +534,55 @@ Current commercial offerings: **Microsoft Defender External Attack Surface Manag
 
 For internal-perimeter visibility specifically, **Project Sonar** (Rapid7's continuous internet-wide scanning project) publishes its data; you can query Sonar for your own org's exposed services. The value of running an ASM tool against your own org is the same as the value of running today's AXFR query — you find out what an attacker would find, before they look.
 
+### Sample detection rule (Sigma)
+
+Zone transfer is a legitimate protocol operation with a very small set of
+legitimate initiators, which makes it one of the cleanest detections in
+this corpus: enumerate the secondaries, alert on everyone else.
+
+```yaml
+title: DNS zone transfer requested by a host that is not a secondary
+status: stable
+description: >
+  Detects AXFR and IXFR requests from sources outside the authorised
+  secondary-nameserver allowlist. A successful transfer discloses the
+  full contents of the zone, which for internal DNS is an inventory of
+  the estate and, where TXT records are used as a key-value store, may
+  include credential material.
+logsource:
+  product: zeek
+  service: dns
+detection:
+  transfer:
+    qtype_name:
+      - 'AXFR'
+      - 'IXFR'
+  authorised_secondaries:
+    id.orig_h:
+      - '10.20.0.11'
+      - '10.20.0.12'
+  condition: transfer and not authorised_secondaries
+falsepositives:
+  - A newly provisioned secondary not yet added to the allowlist. This is
+    the expected false positive and is the reason the rule is allowlist
+    based: the fix is a one-line change made deliberately, not a
+    broadening of the detection.
+  - Monitoring or inventory tooling configured to pull zones. Give it a
+    dedicated source address and allowlist that instead of the subnet.
+level: high
+```
+
+The rule detects the request whether or not the server honours it, which
+matters: a refused transfer from an unexpected source is reconnaissance
+worth investigating even though nothing was disclosed.
+
+Detection is the backstop, not the control. Restricting transfers to the
+secondaries with `allow-transfer` (BIND) or the equivalent, and using TSIG
+so the allowlist is cryptographic rather than address-based, is what
+closes the finding. Separately, and independently of DNS configuration:
+audit TXT records for secrets, because DNS answers anyone who asks, keeps
+no meaningful access log, and is rarely in scope for secret scanning.
+
 ## §7.5 — Optional exploration
 
 The credential lifts straight out of the AXFR TXT record; you don't need anything below to solve the level. This section is *bonus* — a set of cross-check commands the level supports so you can confirm in-band what the zone transfer told you out-of-band. The commands shipped with the engine in v1.7.0, but the walkthrough above predates them.

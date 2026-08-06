@@ -321,6 +321,32 @@ function validate(md, label) {
     );
   }
 
+  // §7 must carry a usable detection rule.
+  //
+  // Checked by required FIELDS rather than by heading text, because the
+  // rules predating v2.5.1 introduce themselves as a bold numbered item
+  // and the newer ones as an h3. The heading style is cosmetic; what
+  // makes a rule usable is not.
+  //
+  // `falsepositives` is enforced deliberately. A rule shipped without one
+  // gets disabled the first week it fires, so omitting it produces
+  // something that looks like a deliverable and functions as noise.
+  const RULE_FIELDS = [
+    "title:",
+    "logsource:",
+    "detection:",
+    "condition:",
+    "falsepositives:",
+    "level:",
+  ];
+  const missingRuleFields = RULE_FIELDS.filter((f) => !md.includes(f));
+  if (missingRuleFields.length) {
+    problems.push(
+      `detection rule incomplete or absent (§7) — missing: ` +
+        missingRuleFields.map((f) => f.replace(":", "")).join(", ")
+    );
+  }
+
   return problems.map((p) => `  ${label}: ${p}`);
 }
 

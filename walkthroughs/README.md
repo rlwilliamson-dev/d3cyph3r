@@ -102,13 +102,13 @@ section dividers when starting a new file.
 |---|-------------------------------|--------------------------------------------------------------------------|
 | — | Spoiler warning               | An unnumbered blockquote starting with `⚠`, above §1 — auto-styled as a red callout |
 | 1 | The setup (in-world)          | Driftwood + client + character context. Sets the stage                   |
-| 2 | The solve (mechanical)        | Step-by-step commands with outputs. Include "If you got stuck" sub-note  |
+| 2 | The solve (mechanical)        | Step-by-step commands with outputs. "If you got stuck" sub-note **required for level0 and level1**, optional beyond (see note) |
 | 3 | The vulnerability             | Name the stacked failures. Why each is independently a finding           |
 | 3.5 | Blast radius                | Size the finding: what it reaches, how much is in scope, for how long, what it opens next, and which regime applies. Table of six dimensions plus 2–3 judgement pull-outs. Every figure sourced from level content; regime per the reference table below |
 | 4 | Real-world parallels          | 2–3 named, well-documented incidents. Include the *response* angle       |
 | 5 | Frameworks, deep dive         | Every NIST/CWE/MITRE/regulation cited in the in-game post-mortem         |
 | 6 | Cert exam relevance           | Equal-depth treatment of every cert cited. Sample exam-question framings |
-| 7 | What a defender does          | Concrete tools, sample detection rules, audit evidence                   |
+| 7 | What a defender does          | Concrete tools, audit evidence, and a **required** `### Sample detection rule (Sigma)` subsection (see note) |
 | 7.5 | Optional exploration        | Bonus finds + any optional content (pivot hosts, verification commands). Spoiler-tolerant section; see template below |
 | 8 | Key takeaways                 | 3–5 bullet study-guide summary                                           |
 | 9 | Further reading              | Primary sources, vendor docs, books — links only, no commentary needed   |
@@ -142,6 +142,44 @@ documented destination for spoiling those bonuses:
   verification commands that aren't part of the solve.
 - **Section anchor is literally `## §7.5 — Optional exploration`**,
   placed between §7 (What a defender does) and §8 (Key takeaways).
+
+### "If you got stuck" — required for level0 and level1 only
+
+The rule used to say every §2 carries one. In practice nine of 24 did,
+and all nine were level0 or level1. That was not drift; it was the right
+instinct applied inconsistently. A reader on `level3@crypto` has solved
+three levels in that track and does not need to be told how to check
+their working directory, while a reader on any level0 may be seeing the
+terminal for the first time.
+
+So the rule now matches the instinct: required on level0 and level1,
+optional after. Add one to a later level when the solve has a genuine
+trap, not as a formality.
+
+### The detection rule is required, and it has a shape
+
+Every §7 carries a `### Sample detection rule (Sigma)` subsection. Nine
+walkthroughs had one before v2.5.1 and fifteen did not, which meant §7
+was uniformly good advice but only sometimes actionable.
+
+Each rule must carry `title`, `logsource`, `detection` with an explicit
+`condition`, `falsepositives`, and `level`. The `falsepositives` block is
+not optional padding: a rule shipped without one is a rule the receiving
+team will disable the first week it fires, and naming the benign causes is
+what makes it survivable.
+
+Three things worth doing in the prose around the rule:
+
+- **Say what the rule does not fix.** Most of these are tripwires covering
+  the interval until a real control ships. Write that down, so the
+  detection is never mistaken for the remediation.
+- **Rate honestly, and explain a low rating.** `forensics/level2`'s rule is
+  `level: low` because after-hours work is not an offence and a rule that
+  pages on it gets switched off. That reasoning belongs next to the rule.
+- **Prefer the native control where one exists.** GuardDuty, an IAM
+  credential report, CT-log monitoring, or a pre-receive secret scan will
+  often beat anything a SIEM rule can do, and saying so is more useful
+  than pretending the rule is the whole answer.
 
 ### Section formatting
 

@@ -271,6 +271,57 @@ Six actions, ordered by urgency rather than effort.
 
 **6. Close the governance loop.** VES-SEC-004 already prohibits everything found here, which means publishing the policy was not the missing piece. Add a control that *verifies* it: a scheduled automated scan of backups, exports, and logs for PAN and SAD patterns, alerting on hits. That catches the next instance in days instead of at the next annual assessment.
 
+### Sample detection rule (Sigma)
+
+A passphrase supplied on the command line is visible in the process table
+to every user on the host and lands in shell history, so the decryption
+event and a second credential exposure happen together.
+
+```yaml
+title: Backup archive decrypted with a passphrase on the command line
+status: experimental
+description: >
+  Detects openssl enc decryption where the passphrase is passed via -k or
+  -pass pass:, which exposes it in ps output and shell history. Also
+  flags decryption of archives outside the backup service account, which
+  is the access that matters for cardholder data.
+logsource:
+  product: linux
+  service: auditd
+detection:
+  openssl_decrypt:
+    type: 'EXECVE'
+    proctitle|contains|all:
+      - 'openssl'
+      - 'enc'
+      - '-d'
+  passphrase_on_cli:
+    proctitle|contains:
+      - ' -k '
+      - '-pass pass:'
+  backup_service:
+    uid:
+      - '1200'   # backup-restore service account
+  condition: openssl_decrypt and not backup_service
+falsepositives:
+  - Authorised restore testing. This should run under the backup service
+    account on a schedule; a restore test under an engineer's own UID is
+    worth a question even when the answer is benign.
+level: high
+```
+
+Two independent findings are visible in one event, and they should be
+reported separately. `-k` on the command line is a credential-handling
+defect that applies to every invocation regardless of who runs it. The
+decryption by a non-backup account is an access question about cardholder
+data. Fixing the first does nothing about the second.
+
+The detection is also the wrong layer to be relying on, and the report
+should say so. Archives holding cardholder data should be encrypted under
+keys held in a managed KMS with per-principal access policies and their
+own audit trail, at which point the question "who decrypted this" is
+answered by the key store rather than inferred from process arguments.
+
 ## §7.5 — Optional exploration
 
 Two bonus finds. `progress --detail` shows your discovered list. Neither changes the breadcrumb chain.
