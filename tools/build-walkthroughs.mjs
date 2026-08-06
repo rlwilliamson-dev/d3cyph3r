@@ -198,6 +198,11 @@ function plain(s) {
     .replace(/`([^`]*)`/g, "$1")
     .replace(/\*\*([^*]*)\*\*/g, "$1")
     .replace(/\*([^*]*)\*/g, "$1")
+    // Citation markers and definition labels. Both would otherwise reach
+    // search snippets and meta descriptions as literal "[^cwe-250]"
+    // noise. Has to run before the link strip below, which does not
+    // match a marker (no "(url)" part) and would leave it behind.
+    .replace(/\[\^[A-Za-z0-9][A-Za-z0-9._-]*\]:?/g, "")
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/\s+/g, " ")
     .trim();
@@ -418,6 +423,178 @@ function readingTime(words) {
   return `${mins} min read`;
 }
 
+// ─── Citations ────────────────────────────────────────────────────
+//
+// A walkthrough makes a lot of checkable claims: that a regulator gives
+// you 72 hours, that a named breach cost a named amount, that a standard
+// says a specific thing in a specific control. Before this, §9 carried a
+// pile of links at the bottom and the reader had to guess which link
+// backed which sentence. Now a claim carries a numbered marker and the
+// marker jumps to the source.
+//
+// AUTHORING
+// ---------
+// In the body, put the marker directly after the claim it supports:
+//
+//     DFARS gives contractors 72 hours to report.[^dfars-7012]
+//
+// In §9, define it once:
+//
+//     [^dfars-7012]: [DFARS 252.204-7012](https://www.ecfr.gov/...).
+//         Optional sentence about what the source is good for.
+//
+// That is GitHub-flavoured footnote syntax, chosen so the raw .md files
+// stay readable on GitHub, where the same markers render as a numbered
+// reference list with backlinks. Nothing here is a private dialect.
+//
+// Numbering is by order of first citation, assigned during rendering, so
+// authors never write a number and cannot get one wrong.
+//
+// Sources worth listing but not tied to a specific claim (a tool, a
+// course, a standing reference) go in a plain bullet list under a
+// "### Further reading" H3 inside §9. Those are pointers, not citations,
+// and they stay unnumbered.
+//
+// WHAT IS ENFORCED
+// ----------------
+// Unknown key, duplicate definition, uncited definition, malformed
+// definition, and a marker inside a definition all fail the build. The
+// uncited rule is the load-bearing one: it is what keeps §9 a list of
+// sources that were actually used rather than a pile of links that
+// accumulate because deleting one feels like losing something.
+
+// Placeholder swapped for the rendered reference list after parsing.
+//
+// Position, not string surgery on the output: markdown rendering moves
+// everything around, so the only reliable way to put the list exactly
+// where the definitions were is to leave a token behind and substitute
+// it afterwards. Deliberately alphanumeric, so no markdown construct and
+// no HTML escaping can touch it in transit.
+const REFS_TOKEN = "D3CREFERENCELISTANCHOR7F3A";
+
+// A definition line: [^key]: content, at the start of a line.
+const DEF_RE = /^\[\^([A-Za-z0-9][A-Za-z0-9._-]*)\]:[ \t]*(.*)$/;
+
+/**
+ * Split citation definitions out of a walkthrough's markdown.
+ *
+ * Returns { md, defs, problems } where `md` has the definition block
+ * replaced by REFS_TOKEN and `defs` maps key -> raw markdown content.
+ *
+ * Definitions may wrap onto continuation lines indented by two or more
+ * spaces, which is what keeps a long annotation from becoming an
+ * unreadable single line in the source file.
+ */
+function extractDefinitions(md, label) {
+  const problems = [];
+  const defs = new Map();
+  const lines = md.split("\n");
+  const kept = [];
+  let firstDefAt = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = DEF_RE.exec(lines[i]);
+    if (!m) {
+      kept.push(lines[i]);
+      continue;
+    }
+
+    const [, key, head] = m;
+    if (firstDefAt < 0) firstDefAt = kept.length;
+
+    // Absorb indented continuation lines.
+    const parts = [head.trim()];
+    while (i + 1 < lines.length && /^[ \t]{2,}\S/.test(lines[i + 1])) {
+      parts.push(lines[++i].trim());
+    }
+    const content = parts.join(" ").trim();
+
+    if (defs.has(key)) {
+      problems.push(`duplicate citation definition: [^${key}]`);
+      continue;
+    }
+    if (!content) {
+      problems.push(`empty citation definition: [^${key}]`);
+      continue;
+    }
+    // One link, so the reference list always has exactly one destination
+    // and "go to the source" is never ambiguous.
+    const links = content.match(/\]\((https?:\/\/[^\s)]+)\)|<(https?:\/\/[^\s>]+)>/g) || [];
+    if (links.length === 0) {
+      problems.push(`citation [^${key}] has no link (needs one [title](url))`);
+    } else if (links.length > 1) {
+      problems.push(
+        `citation [^${key}] has ${links.length} links; split it into ` +
+          `one definition per source`
+      );
+    }
+    if (/\[\^/.test(content)) {
+      problems.push(`citation [^${key}] contains a marker; definitions cannot cite`);
+    }
+    defs.set(key, content);
+  }
+
+  // Drop blank lines left where the block used to be, then mark the spot.
+  if (firstDefAt >= 0) {
+    let start = firstDefAt;
+    while (start > 0 && kept[start - 1].trim() === "") start--;
+    let end = firstDefAt;
+    while (end < kept.length && kept[end].trim() === "") end++;
+    kept.splice(start, end - start, "", REFS_TOKEN, "");
+  }
+
+  return { md: kept.join("\n"), defs, problems: problems.map((p) => `  ${label}: ${p}`) };
+}
+
+/**
+ * Build the reference list markup.
+ *
+ * `numbers` is key -> assigned number and `counts` is key -> how many
+ * times the key was cited, both filled in during rendering. Entries come
+ * out ordered by number, which is order of first citation.
+ *
+ * Each entry links back to every place it was cited. With one citation
+ * that is a single arrow; with several it is a lettered run (a, b, c),
+ * the convention Wikipedia uses, because numbering the backlinks would
+ * collide visually with the reference numbers themselves.
+ */
+function renderRefList(defs, numbers, counts, renderInline) {
+  const ordered = [...numbers.entries()]
+    .filter(([key]) => defs.has(key))
+    .sort((a, b) => a[1] - b[1]);
+
+  if (!ordered.length) return "";
+
+  const items = ordered
+    .map(([key, num]) => {
+      const n = counts.get(key) || 1;
+      const back =
+        n === 1
+          ? `<a class="ref-back" href="#cite-${esc(key)}-1" ` +
+            `aria-label="Back to the citation of source ${num}">&#8617;</a>`
+          : `<span class="ref-back-group">` +
+            Array.from({ length: n }, (_, i) =>
+              `<a class="ref-back" href="#cite-${esc(key)}-${i + 1}" ` +
+                `aria-label="Back to citation ${i + 1} of source ${num}">` +
+                `${String.fromCharCode(97 + (i % 26))}</a>`
+            ).join("") +
+            `</span>`;
+
+      return (
+        `<li id="ref-${num}">${back}` +
+        `<span class="ref-text">${renderInline(defs.get(key))}</span></li>`
+      );
+    })
+    .join("\n");
+
+  return (
+    `<section class="refs">\n` +
+    `<h3 id="sources">Sources</h3>\n` +
+    `<ol class="ref-list">\n${items}\n</ol>\n` +
+    `</section>\n`
+  );
+}
+
 // ─── Markdown rendering ───────────────────────────────────────────
 
 // Scheme allowlist, carried over verbatim from the client reader.
@@ -432,11 +609,24 @@ const SAFE_URL = /^(?:https?:|mailto:|tel:|#|\/|\.\.?\/)/i;
  * second parse so the ids in the markup and the ids in the rail are
  * guaranteed to agree.
  */
-function renderMarkdown(md) {
+function renderMarkdown(md, label = "") {
   const toc = [];
   const used = new Set();
   // Only the first blockquote is eligible for the spoiler treatment.
   let seenBlockquote = false;
+
+  // Reserved so an author's H3 cannot slug-collide with the generated
+  // "Sources" heading and steal its anchor.
+  used.add("sources");
+
+  const { md: body, defs, problems } = extractDefinitions(md, label);
+
+  // key -> reference number, assigned on first citation; key -> how many
+  // times cited, for the backlinks. Both are filled by the renderer
+  // below, which marked calls in document order.
+  const numbers = new Map();
+  const counts = new Map();
+  const unknown = new Set();
 
   const renderer = {
     // Assign an id to every heading and record H2/H3 in the TOC.
@@ -518,15 +708,85 @@ function renderMarkdown(md) {
     },
   };
 
+  // The inline extension that turns [^key] into a numbered marker.
+  //
+  // Registered as an extension rather than handled by a pre-pass regex
+  // because marked runs extension tokenizers as part of normal inline
+  // lexing, which means a marker inside a code span or a fenced block is
+  // left alone for free. A regex sweep over the raw markdown would
+  // rewrite `[^x]` inside a shell example, and several of these
+  // walkthroughs quote regexes.
+  const citation = {
+    name: "citation",
+    level: "inline",
+    start(src) {
+      const i = src.indexOf("[^");
+      return i < 0 ? undefined : i;
+    },
+    tokenizer(src) {
+      const m = /^\[\^([A-Za-z0-9][A-Za-z0-9._-]*)\]/.exec(src);
+      if (m) return { type: "citation", raw: m[0], key: m[1] };
+      return undefined;
+    },
+    renderer(token) {
+      const { key } = token;
+
+      // An undefined key is a build failure, but rendering has to
+      // produce something. Emitting the raw marker keeps the sentence
+      // readable in the (unreachable, because the build fails) output
+      // rather than dropping the text on the floor.
+      if (!defs.has(key)) {
+        unknown.add(key);
+        return `[^${esc(key)}]`;
+      }
+
+      if (!numbers.has(key)) numbers.set(key, numbers.size + 1);
+      const num = numbers.get(key);
+      const nth = (counts.get(key) || 0) + 1;
+      counts.set(key, nth);
+
+      return (
+        `<sup class="cite">` +
+        `<a id="cite-${esc(key)}-${nth}" href="#ref-${num}" ` +
+        `aria-label="Source ${num}">${num}</a></sup>`
+      );
+    },
+  };
+
   // A fresh Marked instance per file. Reusing a global one would let
   // the `used` slug set and `toc` array leak across walkthroughs, since
   // the renderer closes over both.
   const inst = new Marked();
-  inst.use({ renderer });
+  inst.use({ renderer, extensions: [citation] });
 
-  const html = inst.parse(md);
+  let html = inst.parse(body);
+
+  // The reference list is rendered after the body so the numbering is
+  // settled. parseInline on the same instance means definitions get the
+  // same link treatment as the rest of the page (scheme allowlist,
+  // target=_blank), rather than a second, subtly different renderer.
+  const refs = renderRefList(defs, numbers, counts, (s) => inst.parseInline(s));
+  html = html.replace(new RegExp(`<p>\\s*${REFS_TOKEN}\\s*</p>\\s*`), refs);
+
+  for (const key of unknown) {
+    problems.push(`  ${label}: cites [^${key}], which has no definition in §9`);
+  }
+  for (const key of defs.keys()) {
+    if (!numbers.has(key)) {
+      problems.push(
+        `  ${label}: [^${key}] is defined but never cited ` +
+          `(cite it in the body, or move it to the "Further reading" list)`
+      );
+    }
+  }
+  if (defs.size && html.includes(REFS_TOKEN)) {
+    problems.push(`  ${label}: internal error, the reference-list anchor survived rendering`);
+  }
+
+  // Word count comes from the original markdown so adding citations does
+  // not silently inflate the reading-time estimate.
   const words = md.split(/\s+/).filter(Boolean).length;
-  return { html, toc, words };
+  return { html, toc, words, problems, citations: numbers.size };
 }
 
 // ─── Page template ────────────────────────────────────────────────
@@ -644,7 +904,7 @@ const BRAND_GLYPHS =
 
 // Bumped in lockstep with js/engine/version.js so a release busts the
 // stylesheet cache for returning readers (release checklist step 2b).
-const CSS_VERSION = "2.5.0";
+const CSS_VERSION = "2.7.0";
 
 // ─── TOC rail ─────────────────────────────────────────────────────
 
@@ -764,14 +1024,19 @@ function pagerHtml({ prev, next }) {
   );
 }
 
-/** Build one walkthrough page. */
-async function buildLevel(trackKey, levelKey) {
+/**
+ * Build one walkthrough page.
+ *
+ * `rendered` is the result main() already produced during validation.
+ * Rendering is where citation problems surface, and main() promises to
+ * validate the whole corpus before writing anything, so the render has
+ * to happen up there; passing it back down avoids doing it twice.
+ */
+async function buildLevel(trackKey, levelKey, rendered) {
   const track = MANIFEST[trackKey];
   const lvl = track.levels[levelKey];
-  const mdPath = join(WT, trackKey, `${levelKey}.md`);
-  const md = await readFile(mdPath, "utf8");
 
-  const { html, toc, words } = renderMarkdown(md);
+  const { html, toc, words } = rendered;
   const canonical = `${SITE}${levelUrl(trackKey, levelKey)}`;
   const title = `${levelKey}@${trackKey} — ${lvl.title} — D3CYPH3R Walkthroughs`;
 
@@ -1214,10 +1479,18 @@ async function main() {
   const postMortems = await readPostMortems();
 
   const problems = [];
+  const rendered = new Map();
   for (const { trackKey, levelKey } of seq) {
     const md = await readFile(join(WT, trackKey, `${levelKey}.md`), "utf8");
     const label = `${trackKey}/${levelKey}.md`;
     problems.push(...validate(md, label, shipped));
+
+    // Rendering doubles as citation validation: unknown keys and
+    // uncited definitions are only knowable once the body has been
+    // walked. Held for buildLevel() rather than recomputed.
+    const r = renderMarkdown(md, label);
+    problems.push(...r.problems);
+    rendered.set(`${trackKey}/${levelKey}`, r);
 
     const pm = postMortems.get(`${levelKey}@${trackKey}`);
     if (pm) {
@@ -1247,7 +1520,9 @@ async function main() {
 
   const levels = [];
   for (const { trackKey, levelKey } of seq) {
-    levels.push(await buildLevel(trackKey, levelKey));
+    levels.push(
+      await buildLevel(trackKey, levelKey, rendered.get(`${trackKey}/${levelKey}`))
+    );
   }
   for (const trackKey of Object.keys(MANIFEST)) {
     await buildTrack(trackKey);
@@ -1266,6 +1541,20 @@ async function main() {
   console.log(`sitemap.xml: ${urlCount} URLs`);
   console.log(`search-index.json: ${sectionCount} sections`);
   console.log(`llms.txt: written`);
+
+  const cites = [...rendered.values()].reduce((a, r) => a + r.citations, 0);
+  const uncited = levels.filter(
+    (l) => !rendered.get(`${l.trackKey}/${l.levelKey}`).citations
+  );
+  console.log(
+    `citations: ${cites} sources cited across ` +
+      `${levels.length - uncited.length}/${levels.length} walkthroughs` +
+      (uncited.length
+        ? `\n  no citations yet: ${uncited
+            .map((l) => `${l.trackKey}/${l.levelKey}`)
+            .join(", ")}`
+        : "")
+  );
   console.log(`total corpus: ${words.toLocaleString("en-US")} words`);
 }
 

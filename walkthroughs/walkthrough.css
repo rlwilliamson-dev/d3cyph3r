@@ -552,6 +552,78 @@ body {
 }
 .doc blockquote p { margin: 0.5em 0; }
 
+/* ── Citations ──────────────────────────────────────────────────
+   Inline markers and the numbered source list they point at. Both
+   are emitted by tools/build-walkthroughs.mjs; see the "Citations"
+   section there for the authoring format. */
+
+/* The marker has to be findable without being loud. A reader
+   skimming for the argument should be able to ignore these
+   entirely, and a reader checking a claim should be able to hit
+   one without aiming carefully, hence the padding: the visible
+   digit is small, the click target is not. */
+.doc .cite {
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: super;
+  margin-left: 1px;
+}
+.doc .cite a {
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0 0.15em;
+  border-radius: 2px;
+}
+.doc .cite a::before { content: "["; opacity: 0.5; }
+.doc .cite a::after  { content: "]"; opacity: 0.5; }
+.doc .cite a:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+.doc .cite a:hover::before,
+.doc .cite a:hover::after { opacity: 0.7; }
+
+.doc .refs { margin-top: 2em; }
+.doc .refs h3 { margin-top: 0; }
+
+.doc .ref-list {
+  margin-left: 0;
+  padding-left: 2.2em;
+  font-size: 0.94em;
+}
+.doc .ref-list li {
+  margin: 0.5em 0;
+  padding-left: 0.2em;
+}
+.doc .ref-list li::marker { color: var(--dim); }
+
+/* Backlinks sit before the reference text rather than after it so
+   they line up in a column down the left edge of the list. Trailing
+   arrows would land at ragged right ends and read as punctuation. */
+.doc .ref-back {
+  color: var(--dim);
+  text-decoration: none;
+  margin-right: 0.5em;
+  font-size: 0.9em;
+}
+.doc .ref-back:hover { color: var(--accent); }
+.doc .ref-back-group .ref-back { margin-right: 0.3em; font-style: italic; }
+
+/* Jumping to a source should make it obvious which line was landed
+   on: an ordered list of 25 near-identical rows is otherwise very
+   easy to lose your place in. Same treatment in reverse for a
+   backlink into the body. */
+.doc .ref-list li:target,
+.doc .cite a:target {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-radius: 3px;
+}
+.doc .ref-list li:target { box-shadow: -0.4em 0 0 0.4em color-mix(in srgb, var(--accent) 16%, transparent); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .doc .ref-list li:target { transition: background 0.3s ease; }
+}
+
 .doc hr {
   border: 0;
   border-top: 1px solid var(--border);
