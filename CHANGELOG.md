@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A test that runs every command the walkthroughs tell you to try.** §7.5 points players at commands that unlock each level's bonus finds. Nothing connected those instructions to the engine, so a renamed flag or a moved file would break one silently and the player would assume they mistyped it. All 17 triggers across 15 levels now execute in their own level on every run. They all pass today; the point is that they cannot quietly stop.
+
 ## [2.10.0] - 2026-08-06
 
 **Every figure in the corpus was checked against a source, and the ones that hold now cite it.** 26 sentences asserted a dollar amount, a record count or a court date about a real incident with nothing behind them. All were verified; two were wrong.
