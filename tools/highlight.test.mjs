@@ -118,6 +118,23 @@ test("shell: a trailing comment IS a comment", () => {
   assert.equal(tok(r.html, "com"), "# list everything");
 });
 
+test("shell: sudo does not swallow the verb it runs", () => {
+  // `cat x` lights cat; `sudo cat x` must light both, or the same word is
+  // coloured two ways on consecutive lines. In level3@linux the whole
+  // lesson is that `cat` is what runs as root.
+  const r = highlight("daniel@host:~$ sudo cat /etc/shadow", "bash");
+  const cmds = [...r.html.matchAll(/<span class="tok-cmd">([^<]*)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(cmds, ["sudo", "cat"]);
+});
+
+test("shell: a redirect's file descriptor is not mistaken for a verb", () => {
+  // The trap the rule above opens: sudo keeps the verb slot open, -l is a
+  // flag, so the next bare word is `2` from `2>/dev/null`.
+  const r = highlight("daniel@host:~$ sudo -l 2>/dev/null", "bash");
+  const cmds = [...r.html.matchAll(/<span class="tok-cmd">([^<]*)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(cmds, ["sudo"]);
+});
+
 test("shell: NAME=value before the verb is not the verb", () => {
   const r = highlight("DEBUG=1 ./run.sh", "bash");
   assert.equal(tok(r.html, "cmd"), "./run.sh");

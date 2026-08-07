@@ -325,10 +325,10 @@ D. Notifying the affected client of the credential exposure</p>
 <p>Level0@linux is essentially the entry-level OSCP enumeration drill. The OSCP candidate would, at minimum, run:</p>
 <pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">ls</span> <span class="tok-flag">-la</span> ~
 <span class="tok-cmd">cat</span> ~/.bash_history
-<span class="tok-cmd">cat</span> ~/.zsh_history <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span>
-<span class="tok-cmd">grep</span> <span class="tok-flag">-r</span> <span class="tok-flag">-i</span> <span class="tok-str">&quot;pass\|pwd\|secret\|api[_-]key\|token&quot;</span> ~/ <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span>
-<span class="tok-cmd">find</span> / <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.conf&quot;</span> <span class="tok-flag">-readable</span> <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span> <span class="tok-op">|</span> <span class="tok-cmd">head</span>
-<span class="tok-cmd">find</span> / <span class="tok-flag">-name</span> <span class="tok-str">&quot;*creds*&quot;</span> <span class="tok-flag">-readable</span> <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span>
+<span class="tok-cmd">cat</span> ~/.zsh_history <span class="tok-num">2</span><span class="tok-op">&gt;</span>/dev/null
+<span class="tok-cmd">grep</span> <span class="tok-flag">-r</span> <span class="tok-flag">-i</span> <span class="tok-str">&quot;pass\|pwd\|secret\|api[_-]key\|token&quot;</span> ~/ <span class="tok-num">2</span><span class="tok-op">&gt;</span>/dev/null
+<span class="tok-cmd">find</span> / <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.conf&quot;</span> <span class="tok-flag">-readable</span> <span class="tok-num">2</span><span class="tok-op">&gt;</span>/dev/null <span class="tok-op">|</span> <span class="tok-cmd">head</span>
+<span class="tok-cmd">find</span> / <span class="tok-flag">-name</span> <span class="tok-str">&quot;*creds*&quot;</span> <span class="tok-flag">-readable</span> <span class="tok-num">2</span><span class="tok-op">&gt;</span>/dev/null
 <span class="tok-cmd">env</span> <span class="tok-op">|</span> <span class="tok-cmd">grep</span> <span class="tok-flag">-i</span> <span class="tok-str">&quot;pass\|key\|token&quot;</span>
 </code></pre>
 <p>The grep one-liner is the OSCP-canonical move for credentials-in-files. Anyone studying for OSCP should be able to write that line from memory.</p>

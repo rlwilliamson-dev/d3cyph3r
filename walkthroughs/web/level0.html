@@ -388,7 +388,7 @@ D. Procure additional cyber-insurance coverage to limit financial exposure to fu
 <span class="tok-cmd">curl</span> https://target.example.edu/sitemap.xml
 
 <span class="tok-com"># 3. For every status-200 path that's non-obvious, fetch it</span>
-<span class="tok-cmd">curl</span> https://target.example.edu/<span class="tok-op">&lt;</span><span class="tok-cmd">path</span><span class="tok-op">&gt;</span><span class="tok-cmd">/</span> <span class="tok-flag">-L</span>
+<span class="tok-cmd">curl</span> https://target.example.edu/<span class="tok-op">&lt;</span>path<span class="tok-op">&gt;</span>/ <span class="tok-flag">-L</span>
 
 <span class="tok-com"># 4. If autoindex shows a directory listing, enumerate every file</span>
 <span class="tok-com"># 5. For every file, check the content for credentials, paths, references</span>

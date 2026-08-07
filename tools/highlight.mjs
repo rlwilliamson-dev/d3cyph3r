@@ -86,6 +86,32 @@ const PROMPT = /^([\w.-]+@[\w.-]+(?::[^\n$#]*)?[$#])( +)/;
 // walkthroughs print verbatim and which is typed, not output.
 const PASSWORD_LINE = /^([^\n:]*'s password:)( *)(.*)$/;
 
+// Commands that RUN another command. The verb after one of these is
+// still a verb, so `sudo cat x` lights both words.
+//
+// Without this, `cat x` lights `cat` and `sudo cat x` does not, and the
+// same word is coloured two different ways on consecutive lines of the
+// same page. Worse for this corpus specifically: level3@linux turns on
+// the reader noticing that `cat` is what runs as root. Painting it like
+// an argument to sudo argues against the lesson.
+//
+// The corpus only ever uses the bare form (`sudo cat`, `sudo systemctl`)
+// plus `sudo -l`, never `sudo -u USER cmd`. That matters because the
+// simple rule below would light USER as the command. If that form is
+// ever written, this needs to learn which flags take values.
+const PREFIX_COMMANDS = new Set([
+  "sudo",
+  "doas",
+  "env",
+  "time",
+  "nohup",
+  "xargs",
+  "watch",
+  "nice",
+  "command",
+  "exec",
+]);
+
 /** Reserved words per language. Shallow by design. */
 const KEYWORDS = {
   javascript:
@@ -180,18 +206,27 @@ function shellSegments(src, first = true) {
     }
 
     // Operators. A pipe or && ends the current command, so the next bare
-    // word is a command name again: `cat x | grep y` colours both verbs.
+    // word is a verb again: `cat x | grep y` colours both.
+    //
+    // A REDIRECT does not. What follows `>` is a filename, so treating it
+    // like a pipe paints /dev/null in `sudo -l 2>/dev/null` as a command.
+    // Splitting on whether the operator contains < or > covers `>`, `>>`,
+    // `<`, and `2>&1` without enumerating them.
     if ((m = /^(\|\||&&|[|;&><]+)/.exec(rest))) {
       push(m[0], "tok-op");
       i += m[0].length;
-      wantCommand = true;
+      wantCommand = !/[<>]/.test(m[0]);
       continue;
     }
 
     // A bare word: command name if we are expecting one, else an argument.
     if ((m = /^[^\s"'|;&><$#]+/.exec(rest))) {
       const word = m[0];
-      if (wantCommand) {
+      // A bare number is never a command, even where one is expected.
+      // `sudo -l 2>/dev/null` reaches here with the verb slot still open
+      // (sudo is a prefix command and -l is a flag), and without this the
+      // redirect's file descriptor gets painted as the verb.
+      if (wantCommand && !/^\d+$/.test(word)) {
         // NAME=value before the verb is an env assignment, not the verb.
         if (/^[A-Za-z_][\w]*=/.test(word)) {
           const eq = word.indexOf("=");
@@ -199,7 +234,8 @@ function shellSegments(src, first = true) {
           push(word.slice(eq + 1), "tok-str");
         } else {
           push(word, "tok-cmd");
-          wantCommand = false;
+          // `sudo cat x`: the word after a prefix command is still a verb.
+          wantCommand = PREFIX_COMMANDS.has(word);
         }
       } else if (/^\d[\d.]*$/.test(word)) {
         push(word, "tok-num");

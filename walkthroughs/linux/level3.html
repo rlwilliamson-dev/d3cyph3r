@@ -109,7 +109,7 @@ cat: /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env: Permission de
 </code></pre>
 <p>Permission denied. When <code>halton-build-runner</code> ingests a delivered backup, a root process re-owns everything under <code>/var/backups/halton-prod/</code> to <code>root:root</code>, mode 0600 — a common hardening so the pushing account can&#39;t tamper with backups after delivery. The irony is that the same hardening means Daniel can&#39;t read back the files his own cron shipped. Normally that&#39;s a wall.</p>
 <p>Except Daniel has the grant. Put <code>sudo</code> in front:</p>
-<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">sudo</span> cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">sudo</span> <span class="tok-cmd">cat</span> /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env
 # Halton production Vault agent environment
 # /etc/halton/secrets.d/prod-vault.env
 # DO NOT BACK UP. DO NOT COMMIT. (both happened anyway.)
