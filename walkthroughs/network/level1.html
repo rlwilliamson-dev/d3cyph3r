@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -66,18 +66,18 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The puzzle path is short. The reading around it is what makes the lesson land.</p>
 <h3 id="step-1-confirm-the-credential-and-what-it-bought-you">Step 1: Confirm the credential and what it bought you<a class="anchor" href="#step-1-confirm-the-credential-and-what-it-bought-you" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@network
-level1@network&#39;s password: atlas-default-2025
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level1@network
+<span class="tok-prompt">level1@network's password:</span> <span class="tok-str">atlas-default-2025</span>
 Connected: level1@network
-dbadmin@network:~$ whoami
+<span class="tok-prompt">dbadmin@network:~$</span> <span class="tok-cmd">whoami</span>
 dbadmin
-dbadmin@network:~$ pwd
+<span class="tok-prompt">dbadmin@network:~$</span> <span class="tok-cmd">pwd</span>
 /home/dbadmin
 </code></pre>
 <p>You are now logged into Atlas&#39;s staging database server as the default vendor service account. This is the same access you found leaking yesterday — the same access an attacker who ran the same perimeter scan and read the same engagement-notes leak would have. You&#39;re standing where they would stand.</p>
 <p>Read what&#39;s in front of you before you do anything else.</p>
 <h3 id="step-2-read-the-engagement-context">Step 2: Read the engagement context<a class="anchor" href="#step-2-read-the-engagement-context" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">dbadmin@network:~$ ls
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">dbadmin@network:~$</span> <span class="tok-cmd">ls</span>
 .bash_history       atlas-internal.txt    lessons-learned.md
 priya-note.md       welcome.md
 </code></pre>
@@ -91,10 +91,10 @@ priya-note.md       welcome.md
 </ul>
 <h3 id="step-3-run-the-zone-transfer">Step 3: Run the zone transfer<a class="anchor" href="#step-3-run-the-zone-transfer" aria-label="Link to this section">#</a></h3>
 <p>One command:</p>
-<pre><code class="language-bash">dbadmin@network:~$ dig atlas.internal AXFR
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">dbadmin@network:~$</span> <span class="tok-cmd">dig</span> atlas.internal AXFR
 </code></pre>
 <p>What comes back is the full zone, top to bottom:</p>
-<pre><code>; &lt;&lt;&gt;&gt; DiG 9.18.4 &lt;&lt;&gt;&gt; atlas.internal AXFR
+<pre data-kind="plain"><code class="hl">; &lt;&lt;&gt;&gt; DiG 9.18.4 &lt;&lt;&gt;&gt; atlas.internal AXFR
 ;; global options: +cmd
 
 atlas.internal.                  3600  IN  SOA   dns.atlas.internal. ops.atlas.health. 2026040901 7200 3600 1209600 3600
@@ -132,7 +132,7 @@ atlas.internal.                  3600  IN  SOA   dns.atlas.internal. ops.atlas.h
 <p><strong>Backup tier (10.40.40/24).</strong> <code>backups.atlas.internal</code>. Backup systems are a recurring high-value target for ransomware operators specifically — the playbook for healthcare ransomware is now to encrypt or destroy backups <em>first</em> (the December 2024 update to CISA&#39;s #StopRansomware guide on the healthcare-sector advisory walks through exactly this pattern), then encrypt the production tier, leaving the victim with no recovery option except payment. A named backup host in the DNS zone is operationally a target.</p>
 <p><strong>Shadow tier (10.40.99/24).</strong> <code>audit-bypass.atlas.internal</code>. This is the smoking gun. The hostname doesn&#39;t match the tiered scheme (10.40.99/24 isn&#39;t in the staging / prod / PHI / backups plan); the name itself implies &quot;bypass&quot; (i.e., this exists to route around some other control); and the IP range is one segment higher than any other tier, suggesting somebody dropped it into a &quot;miscellaneous&quot; subnet so it wouldn&#39;t show up in tier-level inventory queries. The naming convention of <code>audit-bypass</code> paired with the unusual subnet placement is a deliberate camouflage move that wasn&#39;t subtle enough to survive an AXFR.</p>
 <p>And then the TXT record.</p>
-<pre><code>audit-bypass.atlas.internal.     3600  IN  TXT   &quot;audit-bypass DEPRECATED creds — user=audit-svc pass=atlas-audit-bypass-2026 — added 2025-09-12 for Tessera Q4 dry-run, scheduled removal end of Q4&quot;
+<pre data-kind="plain"><code class="hl">audit-bypass.atlas.internal.     3600  IN  TXT   &quot;audit-bypass DEPRECATED creds — user=audit-svc pass=atlas-audit-bypass-2026 — added 2025-09-12 for Tessera Q4 dry-run, scheduled removal end of Q4&quot;
 </code></pre>
 <p>A free-form text record carrying a literal username, a literal password, the date it was added, the reason it was added (a vendor audit dry-run with &quot;Tessera,&quot; whoever that is), and the scheduled-removal date that obviously passed without anyone removing it. Whoever wrote this TXT record needed somewhere to stash the credential, didn&#39;t have a secrets-management tool already wired up for this use case, and decided &quot;well, DNS is internal anyway&quot; was a good enough justification.</p>
 <p>It wasn&#39;t.</p>
@@ -147,12 +147,12 @@ atlas.internal.                  3600  IN  SOA   dns.atlas.internal. ops.atlas.h
 <li><strong>The blast radius of <code>atlas-default-2025</code> extends past staging-db</strong> to anything <code>audit-bypass.atlas.internal</code> provides access to, and to anything an attacker would have done with the internal map between the credential&#39;s first exposure and Friday&#39;s rotation.</li>
 </ol>
 <p>Send the report to Priya. She&#39;ll route it to Marcus&#39;s CISO with the day-one report attached. Exit the level.</p>
-<pre><code class="language-bash">dbadmin@network:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">dbadmin@network:~$</span> <span class="tok-cmd">exit</span>
 </code></pre>
 <h3 id="step-5-game-world-only-use-the-credential">Step 5 (game-world only): Use the credential<a class="anchor" href="#step-5-game-world-only-use-the-credential" aria-label="Link to this section">#</a></h3>
 <p>In a real engagement, today ends here. In D3CYPH3R the credential chain continues into <code>level2@network</code>, where the audit-bypass account becomes the entry point. The mechanic is the same as it was for <code>level0@network → level1@network</code>: yesterday&#39;s leaked password gates today&#39;s level. Today&#39;s TXT-disclosed credential will gate tomorrow&#39;s.</p>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@network
-level2@network&#39;s password: atlas-audit-bypass-2026
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level2@network
+<span class="tok-prompt">level2@network's password:</span> <span class="tok-str">atlas-audit-bypass-2026</span>
 </code></pre>
 <p><code>level2@network</code> is playable, and its walkthrough picks up from here.</p>
 <h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
@@ -184,7 +184,7 @@ level2@network&#39;s password: atlas-audit-bypass-2026
 <p>The pattern fails the same way at every organization that has ever set up a temporary access path: the access gets created with the best of intentions, an expiration date gets discussed in passing, no automated mechanism enforces the expiration, the people who set it up move on or forget, and the account remains live indefinitely. The IAM-platform answer (CyberArk PAM, BeyondTrust Privileged Identity, HashiCorp Vault with TTL-bound dynamic secrets) exists precisely because spreadsheets-of-expiration-dates don&#39;t work.</p>
 <h3 id="the-compound-effect">The compound effect<a class="anchor" href="#the-compound-effect" aria-label="Link to this section">#</a></h3>
 <p>Each failure in isolation is a manageable finding. Compound them, and you get today&#39;s level.</p>
-<pre><code>  unrotated default credential
+<pre data-kind="plain"><code class="hl">  unrotated default credential
     ↓
   service account with interactive shell
     ↓
@@ -347,7 +347,7 @@ business running an interactive session.</p>
 <h3 id="1-restrict-axfr-at-the-authoritative-nameserver">1. Restrict AXFR at the authoritative nameserver<a class="anchor" href="#1-restrict-axfr-at-the-authoritative-nameserver" aria-label="Link to this section">#</a></h3>
 <p>The configuration is one line in the right place. The harder work is identifying which nameserver software you&#39;re actually running and what its config syntax is.</p>
 <p><strong>BIND (ISC BIND 9.x).</strong> The most common authoritative DNS implementation. In <code>named.conf</code> (or the per-zone include):</p>
-<pre><code>zone &quot;atlas.internal&quot; {
+<pre data-kind="plain"><code class="hl">zone &quot;atlas.internal&quot; {
     type primary;
     file &quot;atlas.internal.zone&quot;;
     allow-transfer { key &quot;tsig-atlas-internal&quot;; };
@@ -362,45 +362,45 @@ key &quot;tsig-atlas-internal&quot; {
 </code></pre>
 <p>The shared secret is configured on both the primary and each secondary (the secondaries reference the key in their <code>masters</code> block). Rotate the secret periodically; treat it as credential-grade.</p>
 <p><strong>Knot DNS.</strong> Knot&#39;s <code>knot.conf</code> syntax:</p>
-<pre><code class="language-yaml">key:
-  - id: tsig-atlas-internal
-    algorithm: hmac-sha256
-    secret: &lt;base64-encoded-shared-secret&gt;
+<pre data-kind="source"><code class="hl language-yaml">key<span class="tok-op">:</span>
+  - id<span class="tok-op">:</span> tsig-atlas-internal
+    algorithm<span class="tok-op">:</span> hmac-sha256
+    secret<span class="tok-op">:</span> &lt;base64-encoded-shared-secret&gt;
 
-acl:
-  - id: acl_xfr_atlas
-    address: [10.40.0.11, 10.40.0.12]
-    key: tsig-atlas-internal
-    action: transfer
+acl<span class="tok-op">:</span>
+  - id<span class="tok-op">:</span> acl_xfr_atlas
+    address<span class="tok-op">:</span> [<span class="tok-num">10.40</span>.<span class="tok-num">0.11</span>, <span class="tok-num">10.40</span>.<span class="tok-num">0.12</span>]
+    key<span class="tok-op">:</span> tsig-atlas-internal
+    action<span class="tok-op">:</span> transfer
 
-zone:
-  - domain: atlas.internal
-    file: atlas.internal.zone
-    acl: acl_xfr_atlas
+zone<span class="tok-op">:</span>
+  - domain<span class="tok-op">:</span> atlas.internal
+    file<span class="tok-op">:</span> atlas.internal.zone
+    acl<span class="tok-op">:</span> acl_xfr_atlas
 </code></pre>
 <p>Knot is increasingly common in deployments that have outgrown BIND&#39;s memory profile or want the more modern operational tooling.</p>
 <p><strong>PowerDNS Authoritative.</strong> PowerDNS uses a backend-driven model (zone data in a database, typically MySQL/PostgreSQL). AXFR restriction is set per-zone in the database or via <code>pdns.conf</code> directives:</p>
-<pre><code>allow-axfr-ips=10.40.0.11,10.40.0.12
+<pre data-kind="plain"><code class="hl">allow-axfr-ips=10.40.0.11,10.40.0.12
 also-notify=10.40.0.11,10.40.0.12
 </code></pre>
 <p>TSIG keys are managed via <code>pdnsutil add-tsig-key</code> and assigned to zones via metadata. The setup is more involved than BIND but gives finer-grained per-zone control.</p>
 <p><strong>Microsoft Active Directory DNS.</strong> Often forgotten because it&#39;s &quot;just AD,&quot; but Windows DNS supports AXFR and the default for AD-integrated zones is &quot;to any server&quot; in some configuration paths. The PowerShell remediation:</p>
-<pre><code class="language-powershell">Set-DnsServerPrimaryZone -Name &quot;atlas.internal&quot; -SecureSecondaries TransferToZoneNameServer
+<pre data-kind="source"><code class="hl language-powershell">Set-DnsServerPrimaryZone -Name <span class="tok-str">&quot;atlas.internal&quot;</span> -SecureSecondaries TransferToZoneNameServer
 </code></pre>
 <p>Or for zones with explicit secondaries:</p>
-<pre><code class="language-powershell">Set-DnsServerPrimaryZone -Name &quot;atlas.internal&quot; -SecureSecondaries TransferToSecureServers -SecondaryServers &lt;list&gt;
+<pre data-kind="source"><code class="hl language-powershell">Set-DnsServerPrimaryZone -Name <span class="tok-str">&quot;atlas.internal&quot;</span> -SecureSecondaries TransferToSecureServers -SecondaryServers &lt;list&gt;
 </code></pre>
 <p>If you have an AD-integrated DNS in your environment, audit it — the defaults are not always restrictive.</p>
 <h3 id="2-audit-existing-txt-records-for-stashed-credentials">2. Audit existing TXT records for stashed credentials<a class="anchor" href="#2-audit-existing-txt-records-for-stashed-credentials" aria-label="Link to this section">#</a></h3>
 <p>The fast version:</p>
-<pre><code class="language-bash">dig @&lt;your-ns&gt; &lt;your-zone&gt; AXFR | grep -E &#39;(TXT|SPF)&#39; &gt; /tmp/txt-audit.txt
-# review /tmp/txt-audit.txt
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">dig</span> @<span class="tok-op">&lt;</span><span class="tok-cmd">your-ns</span><span class="tok-op">&gt;</span> <span class="tok-op">&lt;</span><span class="tok-cmd">your-zone</span><span class="tok-op">&gt;</span> <span class="tok-cmd">AXFR</span> <span class="tok-op">|</span> <span class="tok-cmd">grep</span> <span class="tok-flag">-E</span> <span class="tok-str">'(TXT|SPF)'</span> <span class="tok-op">&gt;</span> <span class="tok-cmd">/tmp/txt-audit.txt</span>
+<span class="tok-com"># review /tmp/txt-audit.txt</span>
 </code></pre>
 <p>Run this from a trusted host with AXFR access (after you&#39;ve configured the restriction). What you&#39;re looking for: anything that doesn&#39;t match a known verification-token pattern (Google site verification, MS365 verification, DKIM, DMARC, SPF) or a known vendor-mandated record. Anything that looks like a credential, a key, an admin note, or a free-form comment is a finding.</p>
 <p>For ongoing monitoring, a daily scheduled job that diffs the TXT records against an approved baseline catches drift. Tools like <code>dnscontrol</code> (StackExchange&#39;s DNS-as-code tool) make this trivial — the approved zone lives in version control, anything that diverges from the file gets reverted.</p>
 <h3 id="3-monitor-for-axfr-attempts">3. Monitor for AXFR attempts<a class="anchor" href="#3-monitor-for-axfr-attempts" aria-label="Link to this section">#</a></h3>
 <p>BIND logs AXFR requests under the <code>xfer-out</code> log category. Enable structured logging in <code>named.conf</code>:</p>
-<pre><code>logging {
+<pre data-kind="plain"><code class="hl">logging {
     channel xfer-log {
         file &quot;/var/log/named/xfer.log&quot;;
         severity info;
@@ -434,35 +434,35 @@ also-notify=10.40.0.11,10.40.0.12
 <p>Zone transfer is a legitimate protocol operation with a very small set of
 legitimate initiators, which makes it one of the cleanest detections in
 this corpus: enumerate the secondaries, alert on everyone else.</p>
-<pre><code class="language-yaml">title: DNS zone transfer requested by a host that is not a secondary
-status: stable
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> DNS zone transfer requested by a host that is not a secondary
+status<span class="tok-op">:</span> stable
+description<span class="tok-op">:</span> &gt;
   Detects AXFR and IXFR requests from sources outside the authorised
   secondary-nameserver allowlist. A successful transfer discloses the
   full contents of the zone, which for internal DNS is an inventory of
   the estate and, where TXT records are used as a key-value store, may
   include credential material.
-logsource:
-  product: zeek
-  service: dns
-detection:
-  transfer:
-    qtype_name:
-      - &#39;AXFR&#39;
-      - &#39;IXFR&#39;
-  authorised_secondaries:
-    id.orig_h:
-      - &#39;10.20.0.11&#39;
-      - &#39;10.20.0.12&#39;
-  condition: transfer and not authorised_secondaries
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> zeek
+  service<span class="tok-op">:</span> dns
+detection<span class="tok-op">:</span>
+  transfer<span class="tok-op">:</span>
+    qtype_name<span class="tok-op">:</span>
+      - <span class="tok-str">'AXFR'</span>
+      - <span class="tok-str">'IXFR'</span>
+  authorised_secondaries<span class="tok-op">:</span>
+    id.orig_h<span class="tok-op">:</span>
+      - <span class="tok-str">'10.20.0.11'</span>
+      - <span class="tok-str">'10.20.0.12'</span>
+  condition<span class="tok-op">:</span> transfer and not authorised_secondaries
+falsepositives<span class="tok-op">:</span>
   - A newly provisioned secondary not yet added to the allowlist. This is
-    the expected false positive and is the reason the rule is allowlist
-    based: the fix is a one-line change made deliberately, not a
+    the expected <span class="tok-key">false</span> positive and is the reason the rule is allowlist
+    based<span class="tok-op">:</span> the fix is a one-line change made deliberately, not a
     broadening of the detection.
   - Monitoring or inventory tooling configured to pull zones. Give it a
     dedicated source address and allowlist that instead of the subnet.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>The rule detects the request whether or not the server honours it, which
 matters: a refused transfer from an unexpected source is reconnaissance
@@ -476,12 +476,12 @@ no meaningful access log, and is rarely in scope for secret scanning.</p>
 <h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
 <p>The credential lifts straight out of the AXFR TXT record; you don&#39;t need anything below to solve the level. This section is <em>bonus</em> — a set of cross-check commands the level supports so you can confirm in-band what the zone transfer told you out-of-band. The commands shipped with the engine in v1.7.0, but the walkthrough above predates them.</p>
 <p>After the solve, on <code>staging-db.atlas.health</code>, you can run:</p>
-<pre><code class="language-bash">ip addr            # confirm you&#39;re on Atlas&#39;s internal staging segment
-ip route           # see which gateway you&#39;d traverse to reach the puzzle targets
-arp -a             # ARP cache shows hosts staging-db has already talked to
-nslookup atlas.internal
-ping audit-bypass.atlas.internal
-traceroute audit-bypass.atlas.internal
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">ip</span> addr            <span class="tok-com"># confirm you're on Atlas's internal staging segment</span>
+<span class="tok-cmd">ip</span> route           <span class="tok-com"># see which gateway you'd traverse to reach the puzzle targets</span>
+<span class="tok-cmd">arp</span> <span class="tok-flag">-a</span>             <span class="tok-com"># ARP cache shows hosts staging-db has already talked to</span>
+<span class="tok-cmd">nslookup</span> atlas.internal
+<span class="tok-cmd">ping</span> audit-bypass.atlas.internal
+<span class="tok-cmd">traceroute</span> audit-bypass.atlas.internal
 </code></pre>
 <p>What you&#39;ll see:</p>
 <ul>

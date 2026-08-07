@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -51,13 +51,13 @@
 <h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
 <p>Day three at Vesta Retail. Yesterday&#39;s level1 finding (Theo&#39;s homegrown JWT middleware accepting <code>alg: none</code> tokens) closed clean on the technical side — Theo took the news, his patched verify middleware is in code review, and the rotation is scheduled. But Saanvi (CISO) escalated. After Priya walked her through the JWT decode in the morning, Saanvi pulled the PCI QSA call forward to noon and gave the same instruction she always gives in that situation: <em>&quot;I want to know what else Theo shipped recently that I should be looking at.&quot;</em> Priya spent an hour walking Theo&#39;s recent commits with her. Most are fine. One is not.</p>
 <p>From the deploy repo, six months ago:</p>
-<pre><code>commit a9c1f0e Theo Hassan
+<pre data-kind="plain"><code class="hl">commit a9c1f0e Theo Hassan
 Date:   2024-06-15 14:22
 Subject: backup-passwords: safer than plaintext
 
-Md5&#39;d all the production passwords so they&#39;re not
+Md5'd all the production passwords so they're not
 plaintext in the repo anymore. Hashes are safer right?
-Don&#39;t share lol.
+Don't share lol.
 </code></pre>
 <p>The file is <code>backup-passwords.txt</code> — 200 lines, two columns. The left column is an MD5 hash. The right column is a label naming the production system the password gates. Theo&#39;s commit comment is the entire engineering rationale.</p>
 <p>You used the <code>vesta-admin-handoff-2026</code> token from yesterday&#39;s JWT decode to ssh into Vesta&#39;s admin host (<code>admin.vesta.internal</code>). The prompt now reads <code>vesta-admin@admin:~$</code>. Saanvi has 15 minutes before the QSA call and wants the exact number of cracked hashes, the exact plaintexts, and the exact label-to-plaintext mapping. The QSA needs to know whether the AES backup encryption Theo did last quarter is, by the control&#39;s definition, encrypted.</p>
@@ -72,27 +72,27 @@ Don&#39;t share lol.
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Four commands. The crypto-track discipline this level is in reading the john output slowly. The first thing the player wants to do after running <code>john</code> is grab the breadcrumb and pivot — but every cracked line is part of the finding Saanvi has to take to the QSA call.</p>
 <h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@crypto
-level2@crypto&#39;s password: vesta-admin-handoff-2026
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level2@crypto
+<span class="tok-prompt">level2@crypto's password:</span> <span class="tok-str">vesta-admin-handoff-2026</span>
 </code></pre>
 <p>The password is the <code>handoff_token</code> claim you decoded from yesterday&#39;s alg:none JWT in <code>admin-access.log</code>. The token&#39;s empty signature didn&#39;t matter; the value was right there in the payload, base64url-encoded. Theo&#39;s homegrown verify middleware passed the token because <code>alg: none</code> told it not to verify. Atlas&#39;s logging caught the issue; Saanvi pulled the wider review. Same chain: every Driftwood crypto-track finding ends up surfacing the next one.</p>
 <p>The connection banner identifies the host (<code>admin.vesta.internal</code>) and the tier (Routine, ~15 min). Read <code>welcome.md</code> first — it introduces <code>hash-id</code> and <code>john</code>, explains why hashes aren&#39;t a safety net, and outlines the order of operations.</p>
-<pre><code class="language-bash">vesta-admin@admin:~$ cat welcome.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@admin:~$</span> <span class="tok-cmd">cat</span> welcome.md
 </code></pre>
 <p><code>welcome.md</code> documents the day-three context, the new commands, and the conceptual frame (&quot;a hash function is not a safety net if the input is in a wordlist somebody already has&quot;). The 5-step HOW TO PLAY block names the exact command sequence.</p>
 <h3 id="step-2-read-priyas-note-the-backup-passwords-file">Step 2: Read Priya&#39;s note + the backup-passwords file<a class="anchor" href="#step-2-read-priyas-note-the-backup-passwords-file" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@admin:~$ cat priya-note.md
-vesta-admin@admin:~$ cat backup-passwords.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@admin:~$</span> <span class="tok-cmd">cat</span> priya-note.md
+<span class="tok-prompt">vesta-admin@admin:~$</span> <span class="tok-cmd">cat</span> backup-passwords.txt
 </code></pre>
 <p>Priya&#39;s note carries the rules of engagement (don&#39;t ssh anywhere else, don&#39;t authenticate to production with anything you crack — the QSA wants the <em>finding</em>, not the <em>demonstration</em>) and the framing Saanvi will use for the QSA call. The note specifically calls out the <code>aes-backup</code> label as the high-priority item: if the plaintext for that label cracks, the encrypted payment-card token backup is functionally plaintext from a PCI standpoint.</p>
 <p><code>backup-passwords.txt</code> opens with Theo&#39;s commit comment as a header, then 200 hash-and-label rows. The header reads:</p>
-<pre><code># backup-passwords.txt
-# Theo&#39;s safer prod creds file (md5&#39;d) — 2024-06-15 commit
-# (don&#39;t share lol)
+<pre data-kind="plain"><code class="hl"># backup-passwords.txt
+# Theo's safer prod creds file (md5'd) — 2024-06-15 commit
+# (don't share lol)
 # format: &lt;md5-hex&gt;  &lt;label&gt;
 </code></pre>
 <p>The first few data rows:</p>
-<pre><code>e10adc3949ba59abbe56e057f20f883e  theo@admin
+<pre data-kind="plain"><code class="hl">e10adc3949ba59abbe56e057f20f883e  theo@admin
 21232f297a57a5a743894a0e4a801fc3  theo@db-prod
 482c811da5d5b4bc6d497ffa98491e38  aes-backup
 da25e54ef34fb0d8a35a78fcbb8db95f  s3-readonly
@@ -101,7 +101,7 @@ ee11cbb19052e40b07aac0ca060c23ee  monitoring-svc
 </code></pre>
 <p>The label column is the production system the password gates. The MD5 column is what Theo &quot;made safe.&quot;</p>
 <h3 id="step-3-hash-id-confirms-md5">Step 3: hash-id confirms MD5<a class="anchor" href="#step-3-hash-id-confirms-md5" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@admin:~$ hash-id backup-passwords.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@admin:~$</span> <span class="tok-cmd">hash-id</span> backup-passwords.txt
 Analyzing: e10adc3949ba59abbe56e057f20f883e
 (file contains 38 hashes — analyzing the first)
 
@@ -115,7 +115,7 @@ Analyzing: e10adc3949ba59abbe56e057f20f883e
 <p>The 32-hex-character pattern matches MD5, MD4, and NTLM. NTLM is Windows-side, MD4 is rare. In a 2024-vintage password file committed by a web developer, MD5 is the overwhelming default. The hint at the bottom is the engine&#39;s prompt — <code>john backup-passwords.txt</code> is the next step.</p>
 <p>(The &quot;38 hashes&quot; line is the engine&#39;s count of visible hash rows in the on-disk file; Theo&#39;s actual file contains 200 — the displayed truncation is for readability. The <code>hash-id</code> extension shipped in v1.27.0 was added specifically so multi-hash files surface this count rather than failing to detect a format from the first non-comment line.)</p>
 <h3 id="step-4-john-cracks-four-hashes-all-the-same-plaintext">Step 4: john cracks four hashes — all the same plaintext<a class="anchor" href="#step-4-john-cracks-four-hashes-all-the-same-plaintext" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@admin:~$ john backup-passwords.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@admin:~$</span> <span class="tok-cmd">john</span> backup-passwords.txt
 Using default input encoding: UTF-8
 Loaded 200 password hashes (Raw-MD5)
 Using wordlist: /usr/share/wordlists/rockyou.txt
@@ -132,8 +132,8 @@ TheoVesta!1          (s3-readonly)
 4g 0:00:00:00 DONE (2024-01-01 12:00) 4/200 cracked
 Session completed.
 
-  ✦ Bonus find unlocked: The same plaintext cracks four of Theo&#39;s hashes
-    john&#39;s session summary shows 4g cracked — four hashes, all the same plaintext (TheoVesta!1). Theo reused one weak password across the admin login, the prod-DB account, the AES backup encryption, and the S3 read-only credential. Same-string-different-system collapses four security boundaries into one credential rotation; CWE-521 + CWE-262 in textbook form. (Halton Bank&#39;s policy in the linux track has the same shape — different industry, same antipattern.)
+  ✦ Bonus find unlocked: The same plaintext cracks four of Theo's hashes
+    john's session summary shows 4g cracked — four hashes, all the same plaintext (TheoVesta!1). Theo reused one weak password across the admin login, the prod-DB account, the AES backup encryption, and the S3 read-only credential. Same-string-different-system collapses four security boundaries into one credential rotation; CWE-521 + CWE-262 in textbook form. (Halton Bank's policy in the linux track has the same shape — different industry, same antipattern.)
 </code></pre>
 <p>Four observations.</p>
 <p><strong>Observation one: 4 out of 200 cracked in zero seconds of wall-clock time.</strong> That&#39;s a 2% crack rate against the default rockyou wordlist with no mangling rules applied. With rockyou&#39;s mangling rule set (john&#39;s <code>--rules</code> flag invokes the default Single rule, which produces a few hundred mutations per dictionary word: capitalization, common digit-and-symbol appends like <code>!</code>, <code>1</code>, <code>123</code>, leet-speak substitutions like <code>o→0</code> / <code>a→@</code>), the crack rate against an unsalted-MD5 file like Theo&#39;s would climb into the 15-30% range in another minute. The four hashes that cracked first are the ones whose plaintexts are exact matches for entries in the wordlist&#39;s main body — i.e., common passwords by any definition.</p>
@@ -141,10 +141,10 @@ Session completed.
 <p><strong>Observation three: <code>aes-backup</code> is in the cracked set.</strong> Last quarter&#39;s payment-card token backup was encrypted with <code>TheoVesta!1</code>. PCI-DSS v4.0.1 §3.5.1 requires strong cryptography for stored account data; the working PCI Council definition of &quot;strong cryptography&quot; includes BOTH the cipher AND the key. The cipher Theo used (AES-128) qualifies. The key (<code>TheoVesta!1</code>, recoverable in &lt;1 second from rockyou.txt) does not. The encrypted backup is, by the control&#39;s definition, functionally plaintext.</p>
 <p><strong>Observation four: the bonus banner.</strong> The Theo-password-reuse bonus fires on the <code>4g</code> session-summary string in the john output. The bonus name and hint articulate the four-systems-one-rotation math directly.</p>
 <h3 id="step-5-the-2009-rockyou-provenance-optional-exploration">Step 5: The 2009 RockYou provenance (optional exploration)<a class="anchor" href="#step-5-the-2009-rockyou-provenance-optional-exploration" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@admin:~$ cat /usr/share/wordlists/README.rockyou
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@admin:~$</span> <span class="tok-cmd">cat</span> /usr/share/wordlists/README.rockyou
 </code></pre>
 <p>The wordlist next to <code>rockyou.txt</code> ships a README documenting where the dictionary came from. The opening paragraph names the 2009 RockYou.com SQL-injection breach (~14.3M plaintext passwords), the technical reason it became the canonical wordlist for offline dictionary attacks (large, plaintext, mangling-rule-friendly, free), and the historical context (RockYou had been storing passwords unhashed; the SQL injection exposed the entire production user database).</p>
-<pre><code>README.rockyou — distribution notes
+<pre data-kind="plain"><code class="hl">README.rockyou — distribution notes
 
 The rockyou.txt wordlist shipped with this distribution is
 derived from the December 2009 RockYou.com SQL-injection breach,
@@ -156,7 +156,7 @@ the RockYou social-game accounts database.
 </code></pre>
 <p>The point of the bonus isn&#39;t trivia. The argument &quot;we used a unique password&quot; only holds against an attacker whose wordlist is a known fixed set. rockyou.txt has been in the public domain for 15+ years; every modern wordlist-based attack chain still descends from it; &quot;unique&quot; against rockyou requires demonstrating your password is not a near-neighbor of any of the 14 million entries (or any combination produced by standard mangling rules against any of them). That&#39;s a higher bar than most users understand.</p>
 <h3 id="step-6-return-to-the-lobby-with-the-finding">Step 6: Return to the lobby with the finding<a class="anchor" href="#step-6-return-to-the-lobby-with-the-finding" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@admin:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@admin:~$</span> <span class="tok-cmd">exit</span>
 </code></pre>
 <p>You have the finding. Saanvi has the meeting. The deliverable is short: 4 hashes cracked in zero seconds; 1 plaintext (<code>TheoVesta!1</code>) gates 4 systems including the AES backup; the AES backup is functionally plaintext from a PCI standpoint; coordinated rotation across all four systems is non-negotiable; longer-term remediation is move-to-Argon2id + adopt a secrets manager + repo-credential scanning at the commit gate.</p>
 <h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
@@ -271,39 +271,39 @@ misunderstanding the whole level exists to correct.</p>
 <p>The commit itself is best caught before it lands, by scanning rather than
 by a log rule. What a SIEM <em>can</em> see is the offline attack that follows:
 password-cracking tools running on corporate hosts.</p>
-<pre><code class="language-yaml">title: Password-cracking tool executed on a corporate endpoint
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Password-cracking tool executed <span class="tok-key">on</span> a corporate endpoint
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects execution of offline credential-recovery tooling. These have
-  legitimate uses on authorised assessment hosts and almost none
+  legitimate uses <span class="tok-key">on</span> authorised assessment hosts and almost none
   elsewhere, so the signal is the location rather than the binary.
-logsource:
-  product: linux
-  service: auditd
-detection:
-  cracker:
-    type: &#39;EXECVE&#39;
-    proctitle|contains:
-      - &#39;john &#39;
-      - &#39;hashcat&#39;
-      - &#39;ophcrack&#39;
-  wordlist_use:
-    proctitle|contains:
-      - &#39;rockyou&#39;
-      - &#39;--wordlist&#39;
-      - &#39;-w /usr/share/wordlists&#39;
-  assessment_hosts:
-    hostname:
-      - &#39;driftwood-assess-01&#39;
-      - &#39;driftwood-assess-02&#39;
-  condition: (cracker or wordlist_use) and not assessment_hosts
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> linux
+  service<span class="tok-op">:</span> auditd
+detection<span class="tok-op">:</span>
+  cracker<span class="tok-op">:</span>
+    type<span class="tok-op">:</span> <span class="tok-str">'EXECVE'</span>
+    proctitle|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'john '</span>
+      - <span class="tok-str">'hashcat'</span>
+      - <span class="tok-str">'ophcrack'</span>
+  wordlist_use<span class="tok-op">:</span>
+    proctitle|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'rockyou'</span>
+      - <span class="tok-str">'--wordlist'</span>
+      - <span class="tok-str">'-w /usr/share/wordlists'</span>
+  assessment_hosts<span class="tok-op">:</span>
+    hostname<span class="tok-op">:</span>
+      - <span class="tok-str">'driftwood-assess-01'</span>
+      - <span class="tok-str">'driftwood-assess-02'</span>
+  condition<span class="tok-op">:</span> (cracker or wordlist_use) and not assessment_hosts
+falsepositives<span class="tok-op">:</span>
   - Authorised security assessments running outside the designated hosts.
     These should be rare and ticketed; if they are neither, the exclusion
     list is wrong rather than the alert.
-  - Security training and CTF practice on developer workstations, which
+  - Security training and CTF practice <span class="tok-key">on</span> developer workstations, which
     is worth knowing about even when benign.
-level: medium
+level<span class="tok-op">:</span> medium
 </code></pre>
 <p>The more valuable control here is not a detection at all. Hashes committed
 to a repository are caught by secret scanning at the pre-receive hook,

@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -58,23 +58,23 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The puzzle path is short and rewards reading the schema in order rather than guessing.</p>
 <h3 id="step-1-enter-the-bastion">Step 1: Enter the bastion<a class="anchor" href="#step-1-enter-the-bastion" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@cloud
-level1@cloud&#39;s password: Cl41ms-Pr0d-M4st3r-2024
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level1@cloud
+<span class="tok-prompt">level1@cloud's password:</span> <span class="tok-str">Cl41ms-Pr0d-M4st3r-2024</span>
 Connected: level1@cloud
-cloudsec@cloud:~$ whoami
+<span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">whoami</span>
 cloudsec
 </code></pre>
 <p>You used the credential exposed in Friday&#39;s <code>migrate-rds.sh</code> script. Same credential Coverline is about to rotate. While it&#39;s live, the bastion&#39;s <code>~/.pgpass</code> resolves it automatically for any <code>psql</code> invocation — you don&#39;t need to pass <code>-h</code> or <code>-U</code> on the command line.</p>
 <h3 id="step-2-read-the-four-engagement-files">Step 2: Read the four engagement files<a class="anchor" href="#step-2-read-the-four-engagement-files" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ ls
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">ls</span>
 bastion-handoff.txt   lessons-learned.md
 engagement-notes.md   welcome.md
 </code></pre>
 <p><code>welcome.md</code> introduces the new <code>psql</code> command, explains the three meta-commands (<code>\l</code>, <code>\dt</code>, <code>\d</code>) and the SELECT patterns supported, and lays out the workflow. <code>engagement-notes.md</code> is Priya&#39;s update with what happened between Friday&#39;s finding and Monday morning — the IR triage call, outside counsel&#39;s pull-string, the scope addendum. <code>bastion-handoff.txt</code> is Jordan&#39;s connection brief with the cluster endpoint, the explicit out-of-scope reminders (no INSERT/UPDATE/DELETE/DROP/ALTER, no <code>coverline_billing</code> cross-DB queries, no IAM enumeration), and the deliverable deadline (COB Tuesday).</p>
 <h3 id="step-3-confirm-the-connection">Step 3: Confirm the connection<a class="anchor" href="#step-3-confirm-the-connection" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ psql --version
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">psql</span> <span class="tok-flag">--version</span>
 psql (PostgreSQL) 15.4
-cloudsec@cloud:~$ psql &quot;\l&quot;
+<span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">psql</span> <span class="tok-str">&quot;\l&quot;</span>
                   List of databases
        Name        |      Owner      | Encoding
 -------------------+-----------------+----------
@@ -88,7 +88,7 @@ cloudsec@cloud:~$ psql &quot;\l&quot;
 </code></pre>
 <p>Five databases on the cluster. Two Coverline application databases (<code>coverline_claims</code> and <code>coverline_billing</code>) and three PostgreSQL system databases (<code>postgres</code>, <code>template0</code>, <code>template1</code> — standard on any RDS PostgreSQL cluster). The bastion-handoff brief scopes today&#39;s work to <code>coverline_claims</code> only; <code>coverline_billing</code> is a separate engagement.</p>
 <h3 id="step-4-list-tables-in-coverline-claims">Step 4: List tables in coverline_claims<a class="anchor" href="#step-4-list-tables-in-coverline-claims" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ psql -d coverline_claims &quot;\dt&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">psql</span> <span class="tok-flag">-d</span> coverline_claims <span class="tok-str">&quot;\dt&quot;</span>
             List of relations
  Schema |        Name         | Type  |      Owner
 --------+---------------------+-------+-----------------
@@ -106,7 +106,7 @@ cloudsec@cloud:~$ psql &quot;\l&quot;
 <p>Eight tables. The obvious operational ones — <code>claims</code>, <code>customers</code>, <code>policies</code>, <code>adjusters</code> — are the canonical source for the data exposed in Friday&#39;s S3 finding. Worth reading once to confirm the data category but not where the actionable findings live.</p>
 <p>The interesting ones for today are <code>integrations</code> (covers the credential-handling pattern Coverline uses for active integrations), <code>migration_artifacts</code> (the table whose name is a tell), <code>users</code> (account-lifecycle audit surface), and <code>audit_log</code> (historical-activity surface).</p>
 <h3 id="step-5-read-integrations-first-establishes-coverlines-baseline">Step 5: Read <code>integrations</code> first — establishes Coverline&#39;s baseline<a class="anchor" href="#step-5-read-integrations-first-establishes-coverlines-baseline" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ psql -d coverline_claims &quot;SELECT * FROM integrations&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">psql</span> <span class="tok-flag">-d</span> coverline_claims <span class="tok-str">&quot;SELECT * FROM integrations&quot;</span>
  integration_id |    service_name    |                  api_endpoint                  |  status  |           credential_ref            | updated_at
 ----------------+--------------------+------------------------------------------------+----------+-------------------------------------+------------
  INT-001        | naic-data-exchange | https://api.naic.org/data-exchange/v2/         | active   | secrets-manager:naic-api-prod       | 2026-04-15
@@ -120,10 +120,10 @@ cloudsec@cloud:~$ psql &quot;\l&quot;
 <p>Two things matter here. <strong>First</strong>, every active integration references its credentials via <code>secrets-manager:&lt;name&gt;</code> pointers rather than embedding the credential in the row. Coverline IS using AWS Secrets Manager for current credential storage.<sup class="cite"><a id="cite-aws-secrets-manager-1" href="#ref-3" aria-label="Source 3">3</a></sup> The pattern is correct; the table is well-designed.</p>
 <p><strong>Second</strong>, integration INT-002 (broker-portal) points at <code>secrets-manager:broker-portal-prod</code>. Remember that name — it will become important in the next table.</p>
 <h3 id="step-6-read-migration-artifacts-the-smoking-gun">Step 6: Read <code>migration_artifacts</code> — the smoking gun<a class="anchor" href="#step-6-read-migration-artifacts-the-smoking-gun" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ psql -d coverline_claims &quot;SELECT * FROM migration_artifacts&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">psql</span> <span class="tok-flag">-d</span> coverline_claims <span class="tok-str">&quot;SELECT * FROM migration_artifacts&quot;</span>
  id |       artifact_type        |     artifact_name      |        credential_value         |                                              notes                                              | created_at | ttl_expires_at
 ----+----------------------------+------------------------+---------------------------------+-------------------------------------------------------------------------------------------------+------------+----------------
-  1 | service_account_password   | rds-migration-runner   | rds-mig-2024-svc-Tmp9pQ7rT      | Service account for RDS Aurora us-east-1 -&gt; us-east-2 migration. Used by vikram.shah&#39;s deploy pipeline. Delete after Q2 2024 once cutover is verified.                                                                                                              | 2024-02-15 | 2024-06-30
+  1 | service_account_password   | rds-migration-runner   | rds-mig-2024-svc-Tmp9pQ7rT      | Service account for RDS Aurora us-east-1 -&gt; us-east-2 migration. Used by vikram.shah's deploy pipeline. Delete after Q2 2024 once cutover is verified.                                                                                                              | 2024-02-15 | 2024-06-30
   2 | broker_portal_credential   | broker-portal-svc      | Cv-BrokerSvc-Pr0d-2024-Migration| Used to seed broker-portal service accounts during data backfill phase of the migration. Migrate consumers to Secrets Manager and delete after broker reconciliation completes (target Q2 2024).                                                                  | 2024-02-15 | 2024-06-30
   3 | sftp_naic_handoff          | naic-sftp-handoff      | naic-handoff-2024-Q1-7Kp9       | One-time SFTP credential for NAIC quarterly data handoff cutover. Rotated 2024-04-15 per NAIC quarterly schedule; this row is historical only.                                                                                                                    | 2024-02-15 | 2024-04-15
 
@@ -135,7 +135,7 @@ cloudsec@cloud:~$ psql &quot;\l&quot;
 <p>The credential is <code>Cv-BrokerSvc-Pr0d-2024-Migration</code>. That string is the level2 breadcrumb. In the in-game continuation, a follow-on engagement would use it to authenticate against the broker portal (<code>https://brokers.coverline-insurance.com/api/v1/</code>) and enumerate what&#39;s there.</p>
 <p><strong>Row 3</strong> — <code>naic-sftp-handoff</code>: A one-time SFTP credential for the NAIC quarterly data handoff cutover. The notes say &quot;Rotated 2024-04-15 per NAIC quarterly schedule; this row is historical only.&quot; This one is properly handled — the credential was rotated on schedule, the row in <code>migration_artifacts</code> is historical (the actual rotation happened in the upstream system; the row content is no longer the live credential). Good behavior on Coverline&#39;s part. Worth flagging in the report as &quot;this is what the cleanup pattern should look like for rows 1 and 2.&quot;</p>
 <h3 id="step-7-read-users-the-dormant-account-finding">Step 7: Read <code>users</code> — the dormant-account finding<a class="anchor" href="#step-7-read-users-the-dormant-account-finding" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ psql -d coverline_claims &quot;SELECT * FROM users&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">psql</span> <span class="tok-flag">-d</span> coverline_claims <span class="tok-str">&quot;SELECT * FROM users&quot;</span>
  user_id |    username     |                  email                   |     role      |   status   |     last_login
 ---------+-----------------+------------------------------------------+---------------+------------+---------------------
  USR-001 | kim.chen        | kim.chen@coverline-insurance.com         | adjuster      | active     | 2026-05-22 09:14:08
@@ -151,7 +151,7 @@ cloudsec@cloud:~$ psql &quot;\l&quot;
 <p><strong>USR-004 (vikram.shah)</strong> is terminated as of 2024-01-31 (matching the Friday script&#39;s &quot;rolled off Q1 2024&quot; comment), but the database account is still present — status is &quot;terminated&quot; but the row exists in the application&#39;s users table, which means the application&#39;s authorization logic still has this user&#39;s identity to reference. This is a CC6.2 (System User Management) gap: terminated employees&#39; application-tier credentials should be removed, not just marked. The standard SaaS pattern (SCIM-based deprovisioning) doesn&#39;t extend natively to RDS; Coverline needs a custom Lambda subscribed to the HR-system termination event to deactivate the RDS account.</p>
 <p><strong>USR-006 (coverline_admin)</strong> is the RDS master account — the one whose credential was leaked. The <code>last_login</code> timestamp is <strong>2026-05-20 02:14:42</strong>. Hold that timestamp in mind for the next query.</p>
 <h3 id="step-8-read-audit-log-the-maybe-someone-already-used-it-finding">Step 8: Read <code>audit_log</code> — the maybe-someone-already-used-it finding<a class="anchor" href="#step-8-read-audit-log-the-maybe-someone-already-used-it-finding" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ psql -d coverline_claims &quot;SELECT * FROM audit_log&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">psql</span> <span class="tok-flag">-d</span> coverline_claims <span class="tok-str">&quot;SELECT * FROM audit_log&quot;</span>
   event_id  |        event_type        |                actor                 |        target         |     timestamp
 ------------+--------------------------+--------------------------------------+-----------------------+---------------------
  EVT-1029401| claim_status_changed     | kim.chen@coverline-insurance.com     | CL-019824             | 2024-03-15 14:22:08
@@ -381,37 +381,37 @@ thing examined.</p>
 <p>The anomalous query in this level has no source IP because <code>pgaudit</code> was
 never enabled, so the honest first step is not a rule but a prerequisite:
 without statement-level audit logging there is nothing for a rule to read.</p>
-<pre><code class="language-yaml">title: Database schema enumeration from an application credential
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Database schema enumeration from an application credential
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects catalogue and metadata queries issued by accounts that exist to
   serve an application. Application code queries its own tables by name
-  and has no reason to enumerate the schema; a human or a tool exploring
+  and has <span class="tok-key">no</span> reason to enumerate the schema; a human or a tool exploring
   the database does exactly that first.
-  Requires pgaudit: shared_preload_libraries = &#39;pgaudit&#39;,
-  pgaudit.log = &#39;read,ddl,misc&#39;
-logsource:
-  product: postgresql
-  service: pgaudit
-detection:
-  enumeration:
-    statement|contains:
-      - &#39;information_schema.tables&#39;
-      - &#39;information_schema.columns&#39;
-      - &#39;pg_catalog.pg_tables&#39;
-      - &#39;\\dt&#39;
-  application_accounts:
-    user:
-      - &#39;coverline_app&#39;
-      - &#39;coverline_reporting&#39;
-  condition: enumeration and application_accounts
-falsepositives:
+  Requires pgaudit<span class="tok-op">:</span> shared_preload_libraries = <span class="tok-str">'pgaudit'</span>,
+  pgaudit.log = <span class="tok-str">'read,ddl,misc'</span>
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> postgresql
+  service<span class="tok-op">:</span> pgaudit
+detection<span class="tok-op">:</span>
+  enumeration<span class="tok-op">:</span>
+    statement|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'information_schema.tables'</span>
+      - <span class="tok-str">'information_schema.columns'</span>
+      - <span class="tok-str">'pg_catalog.pg_tables'</span>
+      - <span class="tok-str">'\\dt'</span>
+  application_accounts<span class="tok-op">:</span>
+    user<span class="tok-op">:</span>
+      - <span class="tok-str">'coverline_app'</span>
+      - <span class="tok-str">'coverline_reporting'</span>
+  condition<span class="tok-op">:</span> enumeration and application_accounts
+falsepositives<span class="tok-op">:</span>
   - ORM startup and migration tooling, which legitimately inspects the
-    schema on connect. Exclude by the specific statements those tools
+    schema <span class="tok-key">on</span> connect. Exclude by the specific statements those tools
     emit rather than by disabling the rule for the account.
   - Schema-diff and monitoring agents. Give them their own database role
     so they can be excluded by identity.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>Add an off-hours condition and the rule sharpens considerably, because the
 event in this level occurred at 02:14 UTC. Schema enumeration by an

@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -60,17 +60,17 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The puzzle path is short. Read fifteen lines of code, decode one cookie, curl four URLs.</p>
 <h3 id="step-1-confirm-the-credential-and-what-it-bought-you">Step 1: Confirm the credential and what it bought you<a class="anchor" href="#step-1-confirm-the-credential-and-what-it-bought-you" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@web
-level1@web&#39;s password: M3rid14n!2023-prod
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level1@web
+<span class="tok-prompt">level1@web's password:</span> <span class="tok-str">M3rid14n!2023-prod</span>
 Connected: level1@web
-webapp_admin@web:~$ whoami
+<span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">whoami</span>
 webapp_admin
-webapp_admin@web:~$ pwd
+<span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">pwd</span>
 /home/webapp_admin
 </code></pre>
 <p>You used the still-live DB credential from <code>level0@web</code>&#39;s <code>db-creds.txt</code>. Same access an attacker pulling the same credential from the same exposed backup directory would have. Same access that prompted Carlos&#39;s Friday rotation. You&#39;re sitting on <code>portal.meridian.edu</code>, the student-portal webapp host, where Carlos&#39;s transcript endpoint runs and where the access logs are mirrored for observability.</p>
 <h3 id="step-2-read-the-day-two-context">Step 2: Read the day-two context<a class="anchor" href="#step-2-read-the-day-two-context" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">webapp_admin@web:~$ ls
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">ls</span>
 admin-access.log  is not here.  Try:
 id-conventions.md       priya-note.md         transcript-api.js
 lessons-learned.md      session.txt           welcome.md
@@ -84,47 +84,47 @@ lessons-learned.md      session.txt           welcome.md
 <li><strong>The legal frame</strong>: same controlled-exception authorization as <code>level0@web</code> plus an explicit &quot;do not enumerate at scale&quot; constraint — targeted validation only.</li>
 </ul>
 <h3 id="step-3-read-carloss-verify-middleware">Step 3: Read Carlos&#39;s verify middleware<a class="anchor" href="#step-3-read-carloss-verify-middleware" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">webapp_admin@web:~$ cat transcript-api.js
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">cat</span> transcript-api.js
 </code></pre>
 <p>The relevant code:</p>
-<pre><code class="language-javascript">import express from &quot;express&quot;;
-import { requireMeridianSSO } from &quot;./middleware/sso.js&quot;;
-import { db } from &quot;./db.js&quot;;
+<pre data-kind="source"><code class="hl language-javascript"><span class="tok-key">import</span> express <span class="tok-key">from</span> <span class="tok-str">&quot;express&quot;</span>;
+<span class="tok-key">import</span> { requireMeridianSSO } <span class="tok-key">from</span> <span class="tok-str">&quot;./middleware/sso.js&quot;</span>;
+<span class="tok-key">import</span> { db } <span class="tok-key">from</span> <span class="tok-str">&quot;./db.js&quot;</span>;
 
-export const router = express.Router();
+<span class="tok-key">export</span> <span class="tok-key">const</span> router = express.Router();
 
-// Require an active Meridian SSO session for ALL routes in this router.
+<span class="tok-com">// Require an active Meridian SSO session for ALL routes in this router.</span>
 router.use(requireMeridianSSO);
 
-router.get(&quot;/api/transcript&quot;, async (req, res) =&gt; {
-  const studentId = req.query.student_id;
-  if (!studentId) {
-    return res.status(400).json({ error: &quot;missing student_id&quot; });
+router.get(<span class="tok-str">&quot;/api/transcript&quot;</span>, <span class="tok-key">async</span> (req, res) =&gt; {
+  <span class="tok-key">const</span> studentId = req.query.student_id;
+  <span class="tok-key">if</span> (!studentId) {
+    <span class="tok-key">return</span> res.status(<span class="tok-num">400</span>).json({ error: <span class="tok-str">&quot;missing student_id&quot;</span> });
   }
 
-  const transcript = await db.transcripts.findOne({ student_id: studentId });
-  if (!transcript) {
-    return res.status(404).json({ error: &quot;not found&quot; });
+  <span class="tok-key">const</span> transcript = <span class="tok-key">await</span> db.transcripts.findOne({ student_id: studentId });
+  <span class="tok-key">if</span> (!transcript) {
+    <span class="tok-key">return</span> res.status(<span class="tok-num">404</span>).json({ error: <span class="tok-str">&quot;not found&quot;</span> });
   }
 
-  return res.json(transcript);
+  <span class="tok-key">return</span> res.json(transcript);
 });
 </code></pre>
 <p>Read it slowly. The middleware on the router does its job — <code>requireMeridianSSO</code> populates <code>req.session</code> with the authenticated user&#39;s identity (<code>req.session.studentId</code>, <code>req.session.email</code>, etc.) and rejects requests without a valid SSO cookie. That part is correct.</p>
 <p>The handler then reads <code>req.query.student_id</code> (the URL parameter, user-controlled), looks up the matching transcript in the database, and returns it. The handler <strong>never compares <code>req.query.student_id</code> against <code>req.session.studentId</code></strong>. Whatever student_id the caller asks for is the student_id the API responds with — provided the caller is <em>some</em> authenticated Meridian user.</p>
 <p>The fix is one line. The current code:</p>
-<pre><code class="language-javascript">const studentId = req.query.student_id;
+<pre data-kind="source"><code class="hl language-javascript"><span class="tok-key">const</span> studentId = req.query.student_id;
 </code></pre>
 <p>would, in a correct implementation, be followed by:</p>
-<pre><code class="language-javascript">if (studentId !== req.session.studentId) {
-  return res.status(403).json({ error: &quot;forbidden&quot; });
+<pre data-kind="source"><code class="hl language-javascript"><span class="tok-key">if</span> (studentId !== req.session.studentId) {
+  <span class="tok-key">return</span> res.status(<span class="tok-num">403</span>).json({ error: <span class="tok-str">&quot;forbidden&quot;</span> });
 }
 </code></pre>
 <p>(Or, for non-self queries by registrar staff, a role check; or a centralized authz helper that handles both cases.) The check is missing.</p>
 <h3 id="step-4-confirm-youre-authenticated">Step 4: Confirm you&#39;re authenticated<a class="anchor" href="#step-4-confirm-youre-authenticated" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">webapp_admin@web:~$ cookies https://portal.meridian.edu
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">cookies</span> https://portal.meridian.edu
 </code></pre>
-<pre><code>Cookies for: https://portal.meridian.edu
+<pre data-kind="plain"><code class="hl">Cookies for: https://portal.meridian.edu
 ──────────────────────────────────────────
   MeridianSSO          = eyJzaWQiOiJ3ZWJhcHAtc3ZjLW1vbml0b3JpbmctMjAyNiIsImV4cCI6MjA5MTM0MTY0MH0
   csrf                 = Y2RmYTczNGItOWY4Yi00ZWQwLWFhMzgtZjQ4ZTQyZjZkM2Q0
@@ -135,53 +135,53 @@ Tip: base64-looking values can be decoded with: base64 -d &lt;value&gt;
 <p>The captured session is for <code>webapp-svc-monitoring</code> — a synthetic account Carlos set up for the nightly health-check job that pings the transcript endpoint to confirm uptime. It&#39;s the same shape as a regular Meridian student session; the middleware doesn&#39;t distinguish.</p>
 <h3 id="step-5-exercise-the-endpoint-against-student-ids-you-already-have">Step 5: Exercise the endpoint against student IDs you already have<a class="anchor" href="#step-5-exercise-the-endpoint-against-student-ids-you-already-have" aria-label="Link to this section">#</a></h3>
 <p>You have eight student IDs from yesterday&#39;s <code>students_export_2023.csv</code> — the BluePier-leaked dataset of 4,217 records. Aisha Patel was <code>M-1872941</code>; Marcus Reyes was <code>M-1872995</code>; Jordan Smith was <code>M-1873041</code>; Linh Tran, Tyler Brooks, Sara Kapoor, Dmitri Volkov, Olivia Chen rounded out the eight. Per Priya&#39;s rules of engagement, you curl <em>a handful</em> (not the whole list, not scripted) and document what comes back.</p>
-<pre><code class="language-bash">webapp_admin@web:~$ curl &#39;https://portal.meridian.edu/api/transcript?student_id=M-1872941&#39;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">'https://portal.meridian.edu/api/transcript?student_id=M-1872941'</span>
 </code></pre>
-<pre><code class="language-json">{
-  &quot;student_id&quot;: &quot;M-1872941&quot;,
-  &quot;first_name&quot;: &quot;Aisha&quot;,
-  &quot;last_name&quot;: &quot;Patel&quot;,
-  &quot;email&quot;: &quot;patel.a@meridian.edu&quot;,
-  &quot;major&quot;: &quot;Computer Science&quot;,
-  &quot;gpa&quot;: 3.91,
-  &quot;enrollment_status&quot;: &quot;Active&quot;,
-  &quot;courses_completed&quot;: [
-    {&quot;code&quot;: &quot;CS-301&quot;, &quot;name&quot;: &quot;Algorithms&quot;, &quot;term&quot;: &quot;Fall 2025&quot;, &quot;grade&quot;: &quot;A&quot;},
-    {&quot;code&quot;: &quot;CS-340&quot;, &quot;name&quot;: &quot;Operating Systems&quot;, &quot;term&quot;: &quot;Fall 2025&quot;, &quot;grade&quot;: &quot;A-&quot;},
-    {&quot;code&quot;: &quot;MATH-220&quot;, &quot;name&quot;: &quot;Linear Algebra&quot;, &quot;term&quot;: &quot;Spring 2026&quot;, &quot;grade&quot;: &quot;A&quot;},
-    {&quot;code&quot;: &quot;ENGL-202&quot;, &quot;name&quot;: &quot;Advanced Composition&quot;, &quot;term&quot;: &quot;Spring 2026&quot;, &quot;grade&quot;: &quot;B+&quot;}
+<pre data-kind="source"><code class="hl language-json">{
+  <span class="tok-str">&quot;student_id&quot;</span>: <span class="tok-str">&quot;M-1872941&quot;</span>,
+  <span class="tok-str">&quot;first_name&quot;</span>: <span class="tok-str">&quot;Aisha&quot;</span>,
+  <span class="tok-str">&quot;last_name&quot;</span>: <span class="tok-str">&quot;Patel&quot;</span>,
+  <span class="tok-str">&quot;email&quot;</span>: <span class="tok-str">&quot;patel.a@meridian.edu&quot;</span>,
+  <span class="tok-str">&quot;major&quot;</span>: <span class="tok-str">&quot;Computer Science&quot;</span>,
+  <span class="tok-str">&quot;gpa&quot;</span>: <span class="tok-num">3.91</span>,
+  <span class="tok-str">&quot;enrollment_status&quot;</span>: <span class="tok-str">&quot;Active&quot;</span>,
+  <span class="tok-str">&quot;courses_completed&quot;</span>: [
+    {<span class="tok-str">&quot;code&quot;</span>: <span class="tok-str">&quot;CS-301&quot;</span>, <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;Algorithms&quot;</span>, <span class="tok-str">&quot;term&quot;</span>: <span class="tok-str">&quot;Fall 2025&quot;</span>, <span class="tok-str">&quot;grade&quot;</span>: <span class="tok-str">&quot;A&quot;</span>},
+    {<span class="tok-str">&quot;code&quot;</span>: <span class="tok-str">&quot;CS-340&quot;</span>, <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;Operating Systems&quot;</span>, <span class="tok-str">&quot;term&quot;</span>: <span class="tok-str">&quot;Fall 2025&quot;</span>, <span class="tok-str">&quot;grade&quot;</span>: <span class="tok-str">&quot;A-&quot;</span>},
+    {<span class="tok-str">&quot;code&quot;</span>: <span class="tok-str">&quot;MATH-220&quot;</span>, <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;Linear Algebra&quot;</span>, <span class="tok-str">&quot;term&quot;</span>: <span class="tok-str">&quot;Spring 2026&quot;</span>, <span class="tok-str">&quot;grade&quot;</span>: <span class="tok-str">&quot;A&quot;</span>},
+    {<span class="tok-str">&quot;code&quot;</span>: <span class="tok-str">&quot;ENGL-202&quot;</span>, <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;Advanced Composition&quot;</span>, <span class="tok-str">&quot;term&quot;</span>: <span class="tok-str">&quot;Spring 2026&quot;</span>, <span class="tok-str">&quot;grade&quot;</span>: <span class="tok-str">&quot;B+&quot;</span>}
   ],
-  &quot;advisor&quot;: &quot;Dr. Maria Sanchez&quot;,
-  &quot;advisor_notes&quot;: &quot;On track for May 2026 graduation. Strong candidate for graduate study; encouraged to apply to CMU and UWashington.&quot;,
-  &quot;issued_at&quot;: &quot;2026-04-09T14:23:00Z&quot;
+  <span class="tok-str">&quot;advisor&quot;</span>: <span class="tok-str">&quot;Dr. Maria Sanchez&quot;</span>,
+  <span class="tok-str">&quot;advisor_notes&quot;</span>: <span class="tok-str">&quot;On track for May 2026 graduation. Strong candidate for graduate study; encouraged to apply to CMU and UWashington.&quot;</span>,
+  <span class="tok-str">&quot;issued_at&quot;</span>: <span class="tok-str">&quot;2026-04-09T14:23:00Z&quot;</span>
 }
 </code></pre>
 <p>Aisha&#39;s full transcript came back. Grades, GPA, advisor notes, the courses she&#39;s taken — all of it. The session that authenticated the request belongs to <code>webapp-svc-monitoring</code>. Aisha&#39;s session doesn&#39;t enter the picture.</p>
 <p>Try another:</p>
-<pre><code class="language-bash">webapp_admin@web:~$ curl &#39;https://portal.meridian.edu/api/transcript?student_id=M-1873041&#39;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">'https://portal.meridian.edu/api/transcript?student_id=M-1873041'</span>
 </code></pre>
-<pre><code class="language-json">{
-  &quot;student_id&quot;: &quot;M-1873041&quot;,
-  &quot;first_name&quot;: &quot;Jordan&quot;,
-  &quot;last_name&quot;: &quot;Smith&quot;,
-  &quot;major&quot;: &quot;Mechanical Engineering&quot;,
-  &quot;gpa&quot;: 2.88,
-  &quot;enrollment_status&quot;: &quot;Active — Academic Probation (since Spring 2026)&quot;,
-  &quot;courses_completed&quot;: [
-    {&quot;code&quot;: &quot;ME-301&quot;, &quot;name&quot;: &quot;Thermodynamics&quot;, &quot;term&quot;: &quot;Fall 2025&quot;, &quot;grade&quot;: &quot;C-&quot;},
-    {&quot;code&quot;: &quot;ME-302&quot;, &quot;name&quot;: &quot;Fluid Mechanics&quot;, &quot;term&quot;: &quot;Spring 2026&quot;, &quot;grade&quot;: &quot;D+&quot;}
+<pre data-kind="source"><code class="hl language-json">{
+  <span class="tok-str">&quot;student_id&quot;</span>: <span class="tok-str">&quot;M-1873041&quot;</span>,
+  <span class="tok-str">&quot;first_name&quot;</span>: <span class="tok-str">&quot;Jordan&quot;</span>,
+  <span class="tok-str">&quot;last_name&quot;</span>: <span class="tok-str">&quot;Smith&quot;</span>,
+  <span class="tok-str">&quot;major&quot;</span>: <span class="tok-str">&quot;Mechanical Engineering&quot;</span>,
+  <span class="tok-str">&quot;gpa&quot;</span>: <span class="tok-num">2.88</span>,
+  <span class="tok-str">&quot;enrollment_status&quot;</span>: <span class="tok-str">&quot;Active — Academic Probation (since Spring 2026)&quot;</span>,
+  <span class="tok-str">&quot;courses_completed&quot;</span>: [
+    {<span class="tok-str">&quot;code&quot;</span>: <span class="tok-str">&quot;ME-301&quot;</span>, <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;Thermodynamics&quot;</span>, <span class="tok-str">&quot;term&quot;</span>: <span class="tok-str">&quot;Fall 2025&quot;</span>, <span class="tok-str">&quot;grade&quot;</span>: <span class="tok-str">&quot;C-&quot;</span>},
+    {<span class="tok-str">&quot;code&quot;</span>: <span class="tok-str">&quot;ME-302&quot;</span>, <span class="tok-str">&quot;name&quot;</span>: <span class="tok-str">&quot;Fluid Mechanics&quot;</span>, <span class="tok-str">&quot;term&quot;</span>: <span class="tok-str">&quot;Spring 2026&quot;</span>, <span class="tok-str">&quot;grade&quot;</span>: <span class="tok-str">&quot;D+&quot;</span>}
   ],
-  &quot;advisor&quot;: &quot;Dr. Henry Park&quot;,
-  &quot;advisor_notes&quot;: &quot;Academic probation as of Spring 2026 (GPA fell below 3.0). Recommend tutoring referral + check-in with student wellness.&quot;,
-  &quot;issued_at&quot;: &quot;2026-04-09T14:23:00Z&quot;
+  <span class="tok-str">&quot;advisor&quot;</span>: <span class="tok-str">&quot;Dr. Henry Park&quot;</span>,
+  <span class="tok-str">&quot;advisor_notes&quot;</span>: <span class="tok-str">&quot;Academic probation as of Spring 2026 (GPA fell below 3.0). Recommend tutoring referral + check-in with student wellness.&quot;</span>,
+  <span class="tok-str">&quot;issued_at&quot;</span>: <span class="tok-str">&quot;2026-04-09T14:23:00Z&quot;</span>
 }
 </code></pre>
 <p>Jordan&#39;s transcript. Including his academic-probation status and his advisor&#39;s notes about referring him to tutoring and student wellness. None of this is information Jordan would consent to sharing with any other student. The advisor&#39;s wellness referral specifically is the kind of detail FERPA treats as sensitive even within the broader education-record category — disability-coded information has additional protections.</p>
 <p>The IDOR is confirmed at this point. You don&#39;t need to enumerate further to prove the bug. But there&#39;s one more class of finding worth surfacing — the legacy ID range.</p>
 <h3 id="step-6-read-the-id-conventions-and-try-a-legacy-id">Step 6: Read the ID conventions and try a legacy ID<a class="anchor" href="#step-6-read-the-id-conventions-and-try-a-legacy-id" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">webapp_admin@web:~$ cat id-conventions.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">cat</span> id-conventions.md
 </code></pre>
-<pre><code>Current students:      M-187xxxx   (issued 2018-onward, sequential
+<pre data-kind="plain"><code class="hl">Current students:      M-187xxxx   (issued 2018-onward, sequential
                                     by enrollment date)
 Former students:       M-XXXXXXX   (range varies — 100000-999999
                                     depending on enrollment year)
@@ -191,28 +191,28 @@ Legacy / system:       M-000xxxx   (BluePier-era, created 2021-2023
 </code></pre>
 <p>The legacy range is the interesting one. BluePier left things behind in <code>/backup/</code> — the level0 finding. They also left things behind in the database, per Carlos&#39;s comment: &quot;We never finished migrating off the legacy M-000xxxx range. They&#39;re still in the database. The student-facing UI hides them but the API doesn&#39;t filter.&quot;</p>
 <p>Try the lowest one:</p>
-<pre><code class="language-bash">webapp_admin@web:~$ curl &#39;https://portal.meridian.edu/api/transcript?student_id=M-0000001&#39;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">'https://portal.meridian.edu/api/transcript?student_id=M-0000001'</span>
 </code></pre>
-<pre><code class="language-json">{
-  &quot;student_id&quot;: &quot;M-0000001&quot;,
-  &quot;first_name&quot;: &quot;Test&quot;,
-  &quot;last_name&quot;: &quot;Student&quot;,
-  &quot;email&quot;: &quot;test@meridian.edu&quot;,
-  &quot;major&quot;: &quot;[SYSTEM ACCOUNT — NOT A REAL STUDENT]&quot;,
-  &quot;gpa&quot;: 4.00,
-  &quot;enrollment_status&quot;: &quot;Service / QA Account&quot;,
-  &quot;courses_completed&quot;: [],
-  &quot;advisor&quot;: &quot;BluePier Digital (legacy)&quot;,
-  &quot;advisor_notes&quot;: &quot;BLUEPIER DEMO ACCOUNT — DO NOT DELETE. Created 2023-08-12 by James for transcript-portal acceptance testing. Service account for end-to-end QA: portal-svc / pw=meridian-portal-svc-2026 / used by the automated nightly check that validates the registrar integration. Carlos: don&#39;t decommission this yet, the cutover to the new check is scheduled Q4 2024. — James, BluePier 2023-08-12&quot;,
-  &quot;issued_at&quot;: &quot;2026-04-09T14:23:00Z&quot;
+<pre data-kind="source"><code class="hl language-json">{
+  <span class="tok-str">&quot;student_id&quot;</span>: <span class="tok-str">&quot;M-0000001&quot;</span>,
+  <span class="tok-str">&quot;first_name&quot;</span>: <span class="tok-str">&quot;Test&quot;</span>,
+  <span class="tok-str">&quot;last_name&quot;</span>: <span class="tok-str">&quot;Student&quot;</span>,
+  <span class="tok-str">&quot;email&quot;</span>: <span class="tok-str">&quot;test@meridian.edu&quot;</span>,
+  <span class="tok-str">&quot;major&quot;</span>: <span class="tok-str">&quot;[SYSTEM ACCOUNT — NOT A REAL STUDENT]&quot;</span>,
+  <span class="tok-str">&quot;gpa&quot;</span>: <span class="tok-num">4.00</span>,
+  <span class="tok-str">&quot;enrollment_status&quot;</span>: <span class="tok-str">&quot;Service / QA Account&quot;</span>,
+  <span class="tok-str">&quot;courses_completed&quot;</span>: [],
+  <span class="tok-str">&quot;advisor&quot;</span>: <span class="tok-str">&quot;BluePier Digital (legacy)&quot;</span>,
+  <span class="tok-str">&quot;advisor_notes&quot;</span>: <span class="tok-str">&quot;BLUEPIER DEMO ACCOUNT — DO NOT DELETE. Created 2023-08-12 by James for transcript-portal acceptance testing. Service account for end-to-end QA: portal-svc / pw=meridian-portal-svc-2026 / used by the automated nightly check that validates the registrar integration. Carlos: don't decommission this yet, the cutover to the new check is scheduled Q4 2024. — James, BluePier 2023-08-12&quot;</span>,
+  <span class="tok-str">&quot;issued_at&quot;</span>: <span class="tok-str">&quot;2026-04-09T14:23:00Z&quot;</span>
 }
 </code></pre>
 <p>The BluePier demo account is still in the database. Its <code>advisor_notes</code> field carries a credential in plain text. The cutover that James referenced was scheduled for Q4 2024 — eighteen months before today&#39;s audit — and clearly didn&#39;t happen. The service-account credential <code>meridian-portal-svc-2026</code> is still live, the demo account is still queryable through the same IDOR vector, and the credential is now in your possession.</p>
 <p>This is the level2 breadcrumb. It&#39;s there because BluePier needed somewhere to stash the credential during 2023 acceptance testing, picked an <code>advisor_notes</code> field on a demo account as &quot;a reasonable place,&quot; and never came back to clean up. The same anti-pattern that put Theo&#39;s audit-bypass credential in a DNS TXT record back in <code>level1@network</code>; the same anti-pattern that put a credential in a JWT payload claim back in <code>level1@crypto</code>; the same anti-pattern, three different &quot;convenient places&quot; engineers chose to &quot;just stash it&quot; because the surface they had didn&#39;t enforce any access control on what got written into it.</p>
 <h3 id="step-7-confirm-the-api-does-return-404-for-invalid-ids">Step 7: Confirm the API does return 404 for invalid IDs<a class="anchor" href="#step-7-confirm-the-api-does-return-404-for-invalid-ids" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">webapp_admin@web:~$ curl &#39;https://portal.meridian.edu/api/transcript?student_id=M-9999999&#39;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">'https://portal.meridian.edu/api/transcript?student_id=M-9999999'</span>
 </code></pre>
-<pre><code class="language-json">{&quot;error&quot;:&quot;not found&quot;}
+<pre data-kind="source"><code class="hl language-json">{<span class="tok-str">&quot;error&quot;</span>:<span class="tok-str">&quot;not found&quot;</span>}
 </code></pre>
 <p>Not a bug confirmation — a sanity check. The API does distinguish &quot;valid ID, here&#39;s the record&quot; from &quot;no such ID.&quot; That means the responses you got for Aisha and Jordan and the BluePier demo weren&#39;t generic stubs or honeypots; they were genuine database hits. Documentation point worth including in the report.</p>
 <h3 id="step-8-document-and-stop">Step 8: Document and stop<a class="anchor" href="#step-8-document-and-stop" aria-label="Link to this section">#</a></h3>
@@ -227,12 +227,12 @@ Legacy / system:       M-000xxxx   (BluePier-era, created 2021-2023
 <li><strong>Session-token observation</strong>: the captured SSO session&#39;s <code>exp</code> claim decodes to 2036-04-09, ten years out. Long-lived service-account tokens are a separate finding under NIST SP 800-63B-4 §5 <em>Session Management</em> — short-lived tokens with proper refresh are the modern standard.<sup class="cite"><a id="cite-nist-800-63b-1" href="#ref-2" aria-label="Source 2">2</a></sup></li>
 </ol>
 <p>Send the report to Carlos with general counsel cc&#39;d. He&#39;ll have the fix shipped before lunch.</p>
-<pre><code class="language-bash">webapp_admin@web:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">webapp_admin@web:~$</span> <span class="tok-cmd">exit</span>
 </code></pre>
 <h3 id="step-9-game-world-only-use-the-breadcrumb">Step 9 (game-world only): Use the breadcrumb<a class="anchor" href="#step-9-game-world-only-use-the-breadcrumb" aria-label="Link to this section">#</a></h3>
 <p>In a real engagement, today ends here. In D3CYPH3R the credential chain continues into <code>level2@web</code>, where the <code>portal-svc</code> account becomes the entry point.</p>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@web
-level2@web&#39;s password: meridian-portal-svc-2026
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level2@web
+<span class="tok-prompt">level2@web's password:</span> <span class="tok-str">meridian-portal-svc-2026</span>
 </code></pre>
 <p><code>level2@web</code> is playable, and its walkthrough picks up from here.</p>
 <h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
@@ -374,26 +374,26 @@ attacker would actually use.</p>
 <p>The bulleted version is in the in-game <code>lessons-learned.md</code>. This section expands each with the specific operational details.</p>
 <h3 id="1-fix-the-endpoint">1. Fix the endpoint<a class="anchor" href="#1-fix-the-endpoint" aria-label="Link to this section">#</a></h3>
 <p>The minimal fix for Carlos&#39;s specific case:</p>
-<pre><code class="language-javascript">router.get(&quot;/api/transcript&quot;, async (req, res) =&gt; {
-  const studentId = req.query.student_id;
-  if (!studentId) {
-    return res.status(400).json({ error: &quot;missing student_id&quot; });
+<pre data-kind="source"><code class="hl language-javascript">router.get(<span class="tok-str">&quot;/api/transcript&quot;</span>, <span class="tok-key">async</span> (req, res) =&gt; {
+  <span class="tok-key">const</span> studentId = req.query.student_id;
+  <span class="tok-key">if</span> (!studentId) {
+    <span class="tok-key">return</span> res.status(<span class="tok-num">400</span>).json({ error: <span class="tok-str">&quot;missing student_id&quot;</span> });
   }
 
-  // Authorization check: the authenticated student can only request
-  // their own transcript. Non-self queries require the registrar role.
-  if (studentId !== req.session.studentId) {
-    if (!req.session.roles?.includes(&quot;registrar&quot;)) {
-      return res.status(403).json({ error: &quot;forbidden&quot; });
+  <span class="tok-com">// Authorization check: the authenticated student can only request</span>
+  <span class="tok-com">// their own transcript. Non-self queries require the registrar role.</span>
+  <span class="tok-key">if</span> (studentId !== req.session.studentId) {
+    <span class="tok-key">if</span> (!req.session.roles?.includes(<span class="tok-str">&quot;registrar&quot;</span>)) {
+      <span class="tok-key">return</span> res.status(<span class="tok-num">403</span>).json({ error: <span class="tok-str">&quot;forbidden&quot;</span> });
     }
   }
 
-  const transcript = await db.transcripts.findOne({ student_id: studentId });
-  if (!transcript) {
-    return res.status(404).json({ error: &quot;not found&quot; });
+  <span class="tok-key">const</span> transcript = <span class="tok-key">await</span> db.transcripts.findOne({ student_id: studentId });
+  <span class="tok-key">if</span> (!transcript) {
+    <span class="tok-key">return</span> res.status(<span class="tok-num">404</span>).json({ error: <span class="tok-str">&quot;not found&quot;</span> });
   }
 
-  return res.json(transcript);
+  <span class="tok-key">return</span> res.json(transcript);
 });
 </code></pre>
 <p>Three lines added. The check enforces the most basic ownership constraint (student requesting their own transcript) and an explicit role exception for the registrar&#39;s office.</p>
@@ -447,28 +447,28 @@ attacker would actually use.</p>
 <p>Every request in this attack is authenticated and well-formed, so no
 single request is anomalous. The signal is in the aggregate: one session
 retrieving many different students&#39; transcripts.</p>
-<pre><code class="language-yaml">title: Single session retrieving transcripts for many distinct students
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Single session retrieving transcripts for many distinct students
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects horizontal enumeration of an object-id parameter. The endpoint
   authenticates correctly and authorises nothing, so individual requests
   are indistinguishable from legitimate use and only the distribution of
   requested ids separates a student from a scraper.
-logsource:
-  category: webserver
-detection:
-  transcript_fetch:
-    cs-uri-stem|contains: &#39;/transcript/download&#39;
-    sc-status: 200
-  timeframe: 10m
-  condition: transcript_fetch | count(distinct(student_id)) by session_id &gt; 5
-falsepositives:
-  - Registrar and advising staff, who legitimately access many students&#39;
-    records. Exclude by role rather than by account, and revisit whenever
+logsource<span class="tok-op">:</span>
+  category<span class="tok-op">:</span> webserver
+detection<span class="tok-op">:</span>
+  transcript_fetch<span class="tok-op">:</span>
+    cs-uri-stem|contains<span class="tok-op">:</span> <span class="tok-str">'/transcript/download'</span>
+    sc-status<span class="tok-op">:</span> <span class="tok-num">200</span>
+  timeframe<span class="tok-op">:</span> <span class="tok-num">10</span>m
+  condition<span class="tok-op">:</span> transcript_fetch | count(distinct(student_id)) by session_id &gt; <span class="tok-num">5</span>
+falsepositives<span class="tok-op">:</span>
+  - Registrar and advising staff, who legitimately access many students<span class="tok-str">'
+</span>    records. Exclude by role rather than by account, and revisit whenever
     the role membership changes.
   - Automated report generation and accreditation exports, which should
     run under a service identity rather than a staff session.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>The aggregation syntax is Sigma&#39;s correlation form and needs a backend
 that supports it. Splunk, Elastic, and Sentinel all do; a simple

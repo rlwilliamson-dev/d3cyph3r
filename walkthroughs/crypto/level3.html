@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -88,20 +88,20 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Seven steps. The whole level turns on one command — <code>openssl enc -d</code> — and one idea: a cipher is a statement about an algorithm, and the question that decides whether data is protected is <em>where the key came from</em>.</p>
 <h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level3@crypto
-level3@crypto&#39;s password: TheoVesta!1
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level3@crypto
+<span class="tok-prompt">level3@crypto's password:</span> <span class="tok-str">TheoVesta!1</span>
 </code></pre>
 <p>The password is the plaintext <code>john</code> recovered in level2. It works here because Theo set the backup host&#39;s admin login to the same string he used everywhere else. The connection banner names the host (<code>backup.vesta.internal</code>) and the tier (Routine, ~14 min).</p>
-<pre><code class="language-bash">vesta-admin@backup:~$ cat welcome.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@backup:~$</span> <span class="tok-cmd">cat</span> welcome.md
 </code></pre>
 <p><code>welcome.md</code> introduces <code>openssl enc -d</code>, explains what &quot;encrypted at rest&quot; does and does not tell you, and — importantly — explains why you have to supply the passphrase inline in this sandbox.</p>
 <h3 id="step-2-see-whats-on-the-box">Step 2: See what&#39;s on the box<a class="anchor" href="#step-2-see-whats-on-the-box" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@backup:~$ ls -la
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@backup:~$</span> <span class="tok-cmd">ls</span> <span class="tok-flag">-la</span>
 </code></pre>
 <p>Five things matter: <code>vesta-prod-backup-2026-01-15.enc</code> (the ciphertext, and note it is mode 644 — world-readable), <code>backup-notes.md</code> (Theo&#39;s notes), <code>make-backup.sh</code> (the job that produces the backup), <code>retention-policy.md</code> (Vesta&#39;s own standard), and the usual briefing docs.</p>
 <p>The file mode on the ciphertext is already a small finding, and Theo&#39;s reasoning for it is in his notes: the file is encrypted, so who cares who can read it? That reasoning is defensible <em>only</em> if the key is genuinely out of reach. Hold it against what you find in step 6.</p>
 <h3 id="step-3-confirm-that-ciphertext-is-not-readable">Step 3: Confirm that ciphertext is not readable<a class="anchor" href="#step-3-confirm-that-ciphertext-is-not-readable" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@backup:~$ cat vesta-prod-backup-2026-01-15.enc
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@backup:~$</span> <span class="tok-cmd">cat</span> vesta-prod-backup-2026-01-15.enc
 Salted__Ñ¶Cù.Ä{â5ªÐh
 ò¼]ç1«Ïré´XÓ
 ...
@@ -110,13 +110,13 @@ Salted__Ñ¶Cù.Ä{â5ªÐh
 <p>That header is a genuine forensic tell. If you find a file in an incident that starts with <code>Salted__</code>, you are looking at openssl-<code>enc</code> output specifically, not GPG, not a zip, not LUKS. It tells you which tool made it — and therefore which flags you need to read it back.</p>
 <p>What the header does <em>not</em> tell you is the cipher. AES-256-CBC, AES-128-CBC and DES all produce a file that starts the same way. You have to know the algorithm from somewhere else, which is why Theo&#39;s notes matter.</p>
 <h3 id="step-4-get-the-cipher-from-theos-notes">Step 4: Get the cipher from Theo&#39;s notes<a class="anchor" href="#step-4-get-the-cipher-from-theos-notes" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@backup:~$ cat backup-notes.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@backup:~$</span> <span class="tok-cmd">cat</span> backup-notes.md
 </code></pre>
-<pre><code>  Cipher:  aes-256-cbc
+<pre data-kind="plain"><code class="hl">  Cipher:  aes-256-cbc
   KDF:     pbkdf2 (added 2025-11 after the openssl upgrade
            warned about the old derivation)
   Passphrase: the usual one. Same as the admin login here, so
-           you don&#39;t need to look it up. If you don&#39;t know it,
+           you don't need to look it up. If you don't know it,
            ask me.
 </code></pre>
 <p>Three things to extract.</p>
@@ -125,12 +125,12 @@ Salted__Ñ¶Cù.Ä{â5ªÐh
 <p>But a KDF multiplies the cost <em>per guess</em>. It cannot add entropy that was never in the passphrase. <code>TheoVesta!1</code> is a rockyou-class password; the wordlist finds it in the first handful of guesses. Ten thousand PBKDF2 iterations times &quot;the first few guesses&quot; is still a rounding error. <strong>A strong KDF plus a weak passphrase is still a weak key.</strong> Type <code>what-is KDF</code> in game for the longer version.</p>
 <p><strong>&quot;The usual one.&quot;</strong> The passphrase is documented as being the same as the admin login. Theo wrote down the reuse, in a file next to the backup, without recognizing it as a finding.</p>
 <h3 id="step-5-decrypt">Step 5: Decrypt<a class="anchor" href="#step-5-decrypt" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@backup:~$ openssl enc -d -aes-256-cbc -pbkdf2 -k &#39;TheoVesta!1&#39; -in vesta-prod-backup-2026-01-15.enc
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@backup:~$</span> <span class="tok-cmd">openssl</span> enc <span class="tok-flag">-d</span> <span class="tok-flag">-aes-256-cbc</span> <span class="tok-flag">-pbkdf2</span> <span class="tok-flag">-k</span> <span class="tok-str">'TheoVesta!1'</span> <span class="tok-flag">-in</span> vesta-prod-backup-2026-01-15.enc
 </code></pre>
 <p>Flag by flag: <code>-d</code> decrypt (as opposed to <code>-e</code>); <code>-aes-256-cbc</code> the cipher from Theo&#39;s notes; <code>-pbkdf2</code> the key-derivation function it was encrypted with (get this wrong and the key comes out different, so it fails); <code>-k</code> the passphrase inline; <code>-in</code> the ciphertext.</p>
 <p>On a real terminal you would normally omit <code>-k</code> and let openssl prompt, so the passphrase never lands in your shell history or the process table. This sandbox can&#39;t prompt, so <code>-k</code> is how you pass it here — but see §7 item 4, because &quot;never put a secret on a command line&quot; is a real-world habit worth building.</p>
 <p>The output:</p>
-<pre><code>-- Vesta Retail — payments.transactions export
+<pre data-kind="plain"><code class="hl">-- Vesta Retail — payments.transactions export
 -- Generated 2026-01-15T03:14:22Z by /opt/vesta/make-backup.sh
 -- Source:  prod-db-01.vesta.internal   database: vesta_payments
 -- Rows:    48,219   (archive header shows the first 6)
@@ -146,7 +146,7 @@ TXN-88412908,2026-01-14T18:22:51Z,M OKONKWO,5555555555554444,03/27,908,B3M77P,21
 <p>(The card numbers in the dump are the standard published test PANs — <code>4111111111111111</code>, <code>5555555555554444</code>, <code>378282246310005</code>, and friends — that appear in every payment processor&#39;s documentation. They are non-functional and instantly recognizable to anyone who works in payments. A training level should never contain real or real-shaped card data.)</p>
 <h3 id="step-6-read-to-the-bottom-the-level4-breadcrumb">Step 6: Read to the bottom — the level4 breadcrumb<a class="anchor" href="#step-6-read-to-the-bottom-the-level4-breadcrumb" aria-label="Link to this section">#</a></h3>
 <p>Keep reading past the rows:</p>
-<pre><code>-- ─── embedded restore configuration ──────────────────────────
+<pre data-kind="plain"><code class="hl">-- ─── embedded restore configuration ──────────────────────────
 RESTORE_TARGET=prod-db-01.vesta.internal
 RESTORE_DB=vesta_payments
 HSM_ENDPOINT=hsm-01.vesta.internal:9000
@@ -161,11 +161,11 @@ HSM_UNWRAP_CREDENTIAL=vesta-hsm-mk7-unwrap-2026Q1
 <p><code>vesta-hsm-mk7-unwrap-2026Q1</code> is your <code>level4@crypto</code> credential. Hold it.</p>
 <p>Theo&#39;s note is the root cause stated by the person who caused it. Vesta <em>has</em> a hardware security module. The architecture document <em>says</em> the backup key belongs in it. The ticket to do that work exists and has a number. It was deprioritized twice, and in the meantime a passphrase on disk stood in for a key-management program for a year and a half. Most real cryptographic findings look exactly like this: not a wrong decision, an unfinished one.</p>
 <p>If you want just the breadcrumb without scrolling, pipe it:</p>
-<pre><code class="language-bash">vesta-admin@backup:~$ openssl enc -d -aes-256-cbc -pbkdf2 -k &#39;TheoVesta!1&#39; -in vesta-prod-backup-2026-01-15.enc | grep HSM
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@backup:~$</span> <span class="tok-cmd">openssl</span> enc <span class="tok-flag">-d</span> <span class="tok-flag">-aes-256-cbc</span> <span class="tok-flag">-pbkdf2</span> <span class="tok-flag">-k</span> <span class="tok-str">'TheoVesta!1'</span> <span class="tok-flag">-in</span> vesta-prod-backup-2026-01-15.enc <span class="tok-op">|</span> <span class="tok-cmd">grep</span> HSM
 </code></pre>
 <h3 id="step-7-post-mortem-then-out">Step 7: Post-mortem, then out<a class="anchor" href="#step-7-post-mortem-then-out" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-admin@backup:~$ cat lessons-learned.md
-vesta-admin@backup:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-admin@backup:~$</span> <span class="tok-cmd">cat</span> lessons-learned.md
+<span class="tok-prompt">vesta-admin@backup:~$</span> <span class="tok-cmd">exit</span>
 </code></pre>
 <p><code>exit</code> returns you to the lobby and records your solve time; <code>progress --detail</code> shows the run and any bonus finds.</p>
 <h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
@@ -279,36 +279,36 @@ unlocks answers that badly.</p>
 <p>A passphrase supplied on the command line is visible in the process table
 to every user on the host and lands in shell history, so the decryption
 event and a second credential exposure happen together.</p>
-<pre><code class="language-yaml">title: Backup archive decrypted with a passphrase on the command line
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Backup archive decrypted with a passphrase <span class="tok-key">on</span> the command line
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects openssl enc decryption where the passphrase is passed via -k or
-  -pass pass:, which exposes it in ps output and shell history. Also
+  -pass pass<span class="tok-op">:</span>, which exposes it in ps output and shell history. Also
   flags decryption of archives outside the backup service account, which
   is the access that matters for cardholder data.
-logsource:
-  product: linux
-  service: auditd
-detection:
-  openssl_decrypt:
-    type: &#39;EXECVE&#39;
-    proctitle|contains|all:
-      - &#39;openssl&#39;
-      - &#39;enc&#39;
-      - &#39;-d&#39;
-  passphrase_on_cli:
-    proctitle|contains:
-      - &#39; -k &#39;
-      - &#39;-pass pass:&#39;
-  backup_service:
-    uid:
-      - &#39;1200&#39;   # backup-restore service account
-  condition: openssl_decrypt and not backup_service
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> linux
+  service<span class="tok-op">:</span> auditd
+detection<span class="tok-op">:</span>
+  openssl_decrypt<span class="tok-op">:</span>
+    type<span class="tok-op">:</span> <span class="tok-str">'EXECVE'</span>
+    proctitle|contains|all<span class="tok-op">:</span>
+      - <span class="tok-str">'openssl'</span>
+      - <span class="tok-str">'enc'</span>
+      - <span class="tok-str">'-d'</span>
+  passphrase_on_cli<span class="tok-op">:</span>
+    proctitle|contains<span class="tok-op">:</span>
+      - <span class="tok-str">' -k '</span>
+      - <span class="tok-str">'-pass pass:'</span>
+  backup_service<span class="tok-op">:</span>
+    uid<span class="tok-op">:</span>
+      - <span class="tok-str">'1200'</span>   <span class="tok-com"># backup-restore service account</span>
+  condition<span class="tok-op">:</span> openssl_decrypt and not backup_service
+falsepositives<span class="tok-op">:</span>
   - Authorised restore testing. This should run under the backup service
-    account on a schedule; a restore test under an engineer&#39;s own UID is
-    worth a question even when the answer is benign.
-level: high
+    account <span class="tok-key">on</span> a schedule; a restore test under an engineer<span class="tok-str">'s own UID is
+</span>    worth a question even when the answer is benign.
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>Two independent findings are visible in one event, and they should be
 reported separately. <code>-k</code> on the command line is a credential-handling

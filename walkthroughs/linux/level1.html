@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -63,25 +63,25 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Four commands. The Linux discipline is in reading the permissions column before the contents column.</p>
 <h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@linux
-level1@linux&#39;s password: please-rotate-me
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level1@linux
+<span class="tok-prompt">level1@linux's password:</span> <span class="tok-str">please-rotate-me</span>
 app_admin@linux:~$
 </code></pre>
 <p>The password <code>please-rotate-me</code> is the credential you recovered from <code>creds.txt</code> at the end of <code>level0@linux</code>. The fact that it <em>works</em> — that nothing has rotated it, that no MFA stops you, that no anomaly-detection layer flagged the SSH from Driftwood&#39;s audit IP block — is the first finding of the level. The MSA-required quarterly credential rotation that Halton&#39;s ops team committed to in their last attestation cycle clearly did not happen.</p>
 <h3 id="step-2-orient">Step 2: Orient<a class="anchor" href="#step-2-orient" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">app_admin@linux:~$ pwd
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">pwd</span>
 /home/app_admin
 
-app_admin@linux:~$ whoami
+<span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">whoami</span>
 app_admin
 </code></pre>
 <p>You&#39;re in <code>app_admin</code>&#39;s home directory. The prompt confirms <code>app_admin@linux</code>, not <code>daniel@linux</code>. This is a <em>different shell context</em> than level0 — different identity, different host. Yesterday you were sitting on Daniel&#39;s offboarded laptop as Daniel&#39;s still-active local account; today you&#39;re sitting on Halton&#39;s jumphost as Halton&#39;s still-active staging service account. The threat-model difference matters: yesterday&#39;s exposure was an audit liability that hadn&#39;t yet been exploited; today&#39;s exposure <em>is being exploited</em> (by you, with authorization, as part of the engagement — but functionally identical to what an attacker would be doing).</p>
 <h3 id="step-3-read-the-welcome-briefing">Step 3: Read the welcome briefing<a class="anchor" href="#step-3-read-the-welcome-briefing" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">app_admin@linux:~$ cat welcome.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">cat</span> welcome.md
 </code></pre>
 <p>The welcome file explains the new commands you&#39;ll use today: <strong><code>ls -l</code></strong> (long format, adding permission and ownership columns) and <strong><code>ls -la</code></strong> (long format plus hidden files). It also walks through how to read the ten-character permissions string at the start of each <code>ls -l</code> line — file type, owner permissions (rwx), group permissions, other permissions. If you&#39;re new to Unix permissions, this is the time to read carefully. The level&#39;s entire technical content lives in noticing the difference between two specific permission strings: <code>-rw-------</code> (owner-only read) and <code>-rw-r--r--</code> (everyone read).</p>
 <h3 id="step-4-read-daniels-handoff-note">Step 4: Read Daniel&#39;s handoff note<a class="anchor" href="#step-4-read-daniels-handoff-note" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">app_admin@linux:~$ cat handoff.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">cat</span> handoff.md
 </code></pre>
 <p>This is Daniel&#39;s note to whoever rotates onto this account. Three things in it matter for today&#39;s solve:</p>
 <ol>
@@ -94,7 +94,7 @@ app_admin
 </ol>
 <p>The handoff note is documenting the exact failure path. That&#39;s the consultancy version of helpful, and it&#39;s also the kind of internal evidence that defense counsel hates because it establishes that the engineer knew what they were doing was wrong.</p>
 <h3 id="step-5-read-the-permissions-column">Step 5: Read the permissions column<a class="anchor" href="#step-5-read-the-permissions-column" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">app_admin@linux:~$ ls -la
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">ls</span> <span class="tok-flag">-la</span>
 total 64
 drwxr-xr-x  4 app_admin app_admin  4096 2026-03-15 03:42 .
 drwxr-xr-x  3 root      root       4096 2024-08-14 11:20 ..
@@ -114,14 +114,14 @@ drwxr-xr-x  3 root      root       4096 2024-08-14 11:20 ..
 <p>The first file is the legitimate copy of the systemd override — owned by root, mode 600 (owner can read and write; group and other can do nothing). The presence of a root-owned mode-600 file in <code>app_admin</code>&#39;s home is unusual but explainable: when Daniel did the <code>sudo cp</code> of the systemd override into <code>~</code>, the source file&#39;s ownership was preserved by default, but the destination filename was different. (Or the <code>cp -p</code> preserve-ownership flag was used. Or the file was placed there by a separate sudo command — the exact mechanism doesn&#39;t matter for the finding.)</p>
 <p>The second file — the <code>.bak</code> — is the <em>shadow copy</em>. Owned by <code>app_admin</code>, mode 644 (owner read-write, group read, other read). The world-readable mode is Apache <code>umask 022</code> default behavior; when Daniel chowned the copy to himself with <code>sudo chown app_admin:app_admin staging-worker.env.bak</code>, the file&#39;s mode wasn&#39;t changed and stayed at the default Daniel&#39;s session umask produced. This is the CWE-732 instance — <em>Incorrect Permission Assignment for Critical Resource</em> — and it&#39;s the entire technical content of the level.<sup class="cite"><a id="cite-cwe-732-1" href="#ref-3" aria-label="Source 3">3</a></sup></p>
 <h3 id="step-6-confirm-the-legitimate-file-is-locked-down">Step 6: Confirm the legitimate file is locked down<a class="anchor" href="#step-6-confirm-the-legitimate-file-is-locked-down" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">app_admin@linux:~$ cat staging-worker.env
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">cat</span> staging-worker.env
 cat: staging-worker.env: Permission denied
 </code></pre>
 <p>The kernel&#39;s file-system layer rejects the read. As <code>app_admin</code> (not root, not in the root group), you have no permission to read a mode-600 root-owned file. This is the access-enforcement layer working <em>exactly as designed</em>. NIST 800-53 AC-3 <em>(Access Enforcement)</em> is being honored here; the legitimate file&#39;s protection is operationally correct.<sup class="cite"><a id="cite-nist-800-53-1" href="#ref-4" aria-label="Source 4">4</a></sup> Halton&#39;s ops team did the right thing for this specific file at this specific location.</p>
 <h3 id="step-7-read-the-shadow-copy">Step 7: Read the shadow copy<a class="anchor" href="#step-7-read-the-shadow-copy" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">app_admin@linux:~$ cat staging-worker.env.bak
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">cat</span> staging-worker.env.bak
 # Halton Bank — staging-worker production override
-# Daniel&#39;s debug copy from the November staging-worker incident.
+# Daniel's debug copy from the November staging-worker incident.
 # TODO: delete this. (Never did.)
 # TODO: also rotate the prod creds. (Never did either.)
 
@@ -144,7 +144,7 @@ PG_SSLMODE=require
 <li>The two <code># TODO:</code> comments at the top of the file confirm Daniel knew the file shouldn&#39;t be there and that the credentials it contained needed rotation. Both intents were documented; neither was acted on. The handoff note we read in Step 4 is the audit trail of <em>why</em> the file was created (the November debugging incident); these TODO comments are the audit trail of <em>Daniel knew it was a problem and didn&#39;t fix it</em>.</li>
 </ul>
 <h3 id="step-8-confirm-via-bash-history">Step 8: Confirm via <code>.bash_history</code><a class="anchor" href="#step-8-confirm-via-bash-history" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">app_admin@linux:~$ cat .bash_history
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">cat</span> .bash_history
 ls -la
 sudo systemctl status staging-worker
 sudo journalctl -u staging-worker -n 200
@@ -168,17 +168,17 @@ exit
 </ol>
 <p>That last command line is worth its own paragraph. The shell history doesn&#39;t include the password — but it shows Daniel using <code>svc_prod_worker</code> against the production database, which is the exact pattern a hostile actor with the leaked credential would execute. The credential leak isn&#39;t theoretical; it has been demonstrated to work, on the production system, by the engineer who later left the credential in a readable file.</p>
 <h3 id="step-9-look-at-backupsh-briefly">Step 9: Look at backup.sh (briefly)<a class="anchor" href="#step-9-look-at-backupsh-briefly" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">app_admin@linux:~$ cat backup.sh
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">app_admin@linux:~$</span> <span class="tok-cmd">cat</span> backup.sh
 #!/bin/bash
-# Halton-staging schema backup. Daniel&#39;s hand-rolled job.
+# Halton-staging schema backup. Daniel's hand-rolled job.
 # Runs at 02:00 UTC via root crontab. Output ships to the bastion
-# via ssh — Priya&#39;s key is on the receiving end.
+# via ssh — Priya's key is on the receiving end.
 
 set -euo pipefail
 
 # Load the staging-worker environment override so we have the DB
 # connection string. The override file is the canonical place
-# Halton&#39;s ops team stashed the credentials.
+# Halton's ops team stashed the credentials.
 source /etc/systemd/system/staging-worker.service.d/override.conf
 
 OUT=&quot;/tmp/halton-staging-$(date +%F).sql.gz&quot;
@@ -348,16 +348,16 @@ D. Engagement of outside counsel to assess GLBA Safeguards Rule notification obl
 <h3 id="oscp-pen-200-privilege-escalation-via-misconfigured-files">OSCP / PEN-200 — Privilege Escalation via Misconfigured Files<a class="anchor" href="#oscp-pen-200-privilege-escalation-via-misconfigured-files" aria-label="Link to this section">#</a></h3>
 <p>The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.<sup class="cite"><a id="cite-cert-oscp-1" href="#ref-25" aria-label="Source 25">25</a></sup> The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward.</p>
 <p>The OSCP curriculum specifically teaches <strong>Linux privilege escalation via misconfigured files</strong> as a standalone module — and the level1@linux scenario is the textbook entry-level example. The OSCP candidate&#39;s standard post-compromise enumeration sweep includes:</p>
-<pre><code class="language-bash"># Look for files with sensitive content in unusual locations
-find /home -type f \( -name &quot;*.env*&quot; -o -name &quot;*config*&quot; -o -name &quot;*backup*&quot; -o -name &quot;*creds*&quot; -o -name &quot;*pass*&quot; -o -name &quot;*.bak&quot; -o -name &quot;*.tmp&quot; \) 2&gt;/dev/null
-# Look for files readable by the current user containing credential-like patterns
-grep -r -i &quot;pass\|pwd\|secret\|api[_-]key\|token&quot; /home 2&gt;/dev/null | head -50
-# Look at sudoers configuration
-sudo -l 2&gt;/dev/null
-# Look at command history for any user whose history is readable
-cat /home/*/.bash_history 2&gt;/dev/null
-# Look for SUID binaries that might allow privilege escalation
-find / -perm -u=s -type f 2&gt;/dev/null
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-com"># Look for files with sensitive content in unusual locations</span>
+<span class="tok-cmd">find</span> /home <span class="tok-flag">-type</span> f \( <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.env*&quot;</span> <span class="tok-flag">-o</span> <span class="tok-flag">-name</span> <span class="tok-str">&quot;*config*&quot;</span> <span class="tok-flag">-o</span> <span class="tok-flag">-name</span> <span class="tok-str">&quot;*backup*&quot;</span> <span class="tok-flag">-o</span> <span class="tok-flag">-name</span> <span class="tok-str">&quot;*creds*&quot;</span> <span class="tok-flag">-o</span> <span class="tok-flag">-name</span> <span class="tok-str">&quot;*pass*&quot;</span> <span class="tok-flag">-o</span> <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.bak&quot;</span> <span class="tok-flag">-o</span> <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.tmp&quot;</span> \) <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span>
+<span class="tok-com"># Look for files readable by the current user containing credential-like patterns</span>
+<span class="tok-cmd">grep</span> <span class="tok-flag">-r</span> <span class="tok-flag">-i</span> <span class="tok-str">&quot;pass\|pwd\|secret\|api[_-]key\|token&quot;</span> /home <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span> <span class="tok-op">|</span> <span class="tok-cmd">head</span> -50
+<span class="tok-com"># Look at sudoers configuration</span>
+<span class="tok-cmd">sudo</span> <span class="tok-flag">-l</span> <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span>
+<span class="tok-com"># Look at command history for any user whose history is readable</span>
+<span class="tok-cmd">cat</span> /home/*/.bash_history <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span>
+<span class="tok-com"># Look for SUID binaries that might allow privilege escalation</span>
+<span class="tok-cmd">find</span> / <span class="tok-flag">-perm</span> <span class="tok-flag">-u</span>=s <span class="tok-flag">-type</span> f <span class="tok-num">2</span><span class="tok-op">&gt;</span><span class="tok-cmd">/dev/null</span>
 </code></pre>
 <p>The Halton scenario specifically demonstrates two patterns the OSCP candidate would recognize immediately:</p>
 <ol>
@@ -390,38 +390,38 @@ find / -perm -u=s -type f 2&gt;/dev/null
 <li><strong>Scope sudo permissions narrowly.</strong> Per-account <code>sudoers.d</code> files with specific command allowlists. The legacy &quot;<code>app_admin ALL=(ALL) ALL</code>&quot; pattern is the anti-pattern; every staging or production service account should follow the narrow-allowlist pattern.</li>
 </ul>
 <p><strong>4. Sample detection rule (Sigma, generic Linux auditd):</strong></p>
-<pre><code class="language-yaml">title: Sensitive system file copied to user home directory
-status: experimental
-description: Detects sudo cp operations where the source is a sensitive
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Sensitive system file copied to user home directory
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> Detects sudo cp operations where the source is a sensitive
   system path and the destination is a user home directory. The
-  &quot;shadow copy&quot; anti-pattern that produces CWE-732 findings.
-logsource:
-  product: linux
-  service: auditd
-detection:
-  selection:
-    type: &#39;EXECVE&#39;
-    proctitle|contains:
-      - &#39;cp &#39;
-      - &#39;cp\\ &#39;
-    args|contains|all:
-      - &#39;/etc/systemd/system/&#39;
-      - &#39;/home/&#39;
-  selection_alt:
-    type: &#39;EXECVE&#39;
-    proctitle|contains:
-      - &#39;cp &#39;
-    args|contains:
-      - &#39;/etc/shadow&#39;
-      - &#39;/etc/ssh/&#39;
-      - &#39;.ssh/id_&#39;
-  uid|not:
-    - &#39;0&#39;   # exclude legitimate root operations
-  euid:
-    - &#39;0&#39;   # but flag if running with sudo-escalated effective UID
-  condition: (selection or selection_alt) and euid
-level: high
-falsepositives:
+  <span class="tok-str">&quot;shadow copy&quot;</span> anti-pattern that produces CWE-732 findings.
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> linux
+  service<span class="tok-op">:</span> auditd
+detection<span class="tok-op">:</span>
+  selection<span class="tok-op">:</span>
+    type<span class="tok-op">:</span> <span class="tok-str">'EXECVE'</span>
+    proctitle|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'cp '</span>
+      - <span class="tok-str">'cp\\ '</span>
+    args|contains|all<span class="tok-op">:</span>
+      - <span class="tok-str">'/etc/systemd/system/'</span>
+      - <span class="tok-str">'/home/'</span>
+  selection_alt<span class="tok-op">:</span>
+    type<span class="tok-op">:</span> <span class="tok-str">'EXECVE'</span>
+    proctitle|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'cp '</span>
+    args|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'/etc/shadow'</span>
+      - <span class="tok-str">'/etc/ssh/'</span>
+      - <span class="tok-str">'.ssh/id_'</span>
+  uid|not<span class="tok-op">:</span>
+    - <span class="tok-str">'0'</span>   <span class="tok-com"># exclude legitimate root operations</span>
+  euid<span class="tok-op">:</span>
+    - <span class="tok-str">'0'</span>   <span class="tok-com"># but flag if running with sudo-escalated effective UID</span>
+  condition<span class="tok-op">:</span> (selection or selection_alt) and euid
+level<span class="tok-op">:</span> high
+falsepositives<span class="tok-op">:</span>
   - Legitimate forensic-imaging operations by authorized incident-
     response personnel (review against IR ticket list)
 </code></pre>
@@ -435,7 +435,7 @@ falsepositives:
 <h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>
 <p>The solve above ends when you&#39;ve recovered the production DB credential and read <code>lessons-learned.md</code>. Everything in this section is <em>bonus</em> — no breadcrumb to level2 lives down this path, and you can skip it without missing anything load-bearing.</p>
 <p>That said, the staging-worker box (this level) isn&#39;t the <em>destination</em> of Daniel&#39;s exfil pattern; it&#39;s the <em>source</em>. Daniel&#39;s nightly <code>backup.sh</code> script (referenced in <code>cron.d/</code>) tar&#39;s the staging-worker home directory and ships the archive to a separate host. That host is reachable from here via agent-forwarded SSH:</p>
-<pre><code class="language-bash">ssh dbsvc@halton-bastion
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">ssh</span> dbsvc@halton-bastion
 </code></pre>
 <p>No password — Daniel set up agent forwarding so the cron job could run unattended. You&#39;ll land in <code>dbsvc</code>&#39;s home directory with read access to the backup landing zone (<code>~/backups/</code>) and the staging-worker service journal that ships alongside (<code>~/logs/postgresql.log</code>).</p>
 <p>What&#39;s there that&#39;s useful:</p>

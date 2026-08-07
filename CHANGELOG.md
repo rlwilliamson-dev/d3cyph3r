@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.11.0] - 2026-08-07
+
+**Walkthrough code blocks are highlighted, and the highlighting knows the difference between what you type and what the machine says back.** No gameplay changes.
+
 ### Added
 
+- **Syntax highlighting on all 285 walkthrough code blocks**, applied when the pages are generated. There is no library and no client-side JavaScript: the colours are in the served HTML and are correct with scripting disabled. Cost is 159 bytes gzipped on a 20 KB page.
+- **Transcript-aware rendering, which is the actual point.** Most blocks in these guides are not source code, they are terminal sessions: a prompt, a command you are meant to type, and the program's reply. A normal syntax highlighter reads `uid=1042(daniel) gid=1042(daniel)` as three variable assignments and paints `groups` like a command, which tells the reader that output is something they typed. So the prompt recedes, the command is lit, and **output is left completely alone**. Blocks with no language tag are program output and stay plain for the same reason.
 - **A test that runs every command the walkthroughs tell you to try.** §7.5 points players at commands that unlock each level's bonus finds. Nothing connected those instructions to the engine, so a renamed flag or a moved file would break one silently and the player would assume they mistyped it. All 17 triggers across 15 levels now execute in their own level on every run. They all pass today; the point is that they cannot quietly stop.
+- **Two build guards, because they fail differently.** The generator proves highlighting is lossless: strip the markup, and what remains must equal the input exactly, so a tokeniser that drops a character from a command cannot ship. That check cannot see the quieter failure, where the tokeniser stops *recognising* something and every transcript is silently reclassified while the text still round-trips perfectly, so classification is asserted separately.
+
+### Fixed
+
+- **The prompt was unreadable in several themes.** Dimmed text is tuned against the page background, but code blocks sit on a raised surface that some palettes lift a long way. On nord that put the prompt at 1.36:1 against its own backdrop, which is not subtle, it is invisible; dracula and solarized-light were also below any usable threshold. Colours are now mixed against the surface they actually sit on, which measures better than the dim text the rest of the site already ships in ten of the eleven themes. This matters more than it sounds: the prompt carries the hostname, and telling `daniel@halton-build-runner` from `root@` is the entire lesson of a privilege-escalation walkthrough.
 
 ## [2.10.0] - 2026-08-06
 

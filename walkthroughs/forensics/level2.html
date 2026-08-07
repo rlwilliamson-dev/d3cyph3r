@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -62,39 +62,39 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The solve path is five queries plus a sanity check. None of them require SQL you haven&#39;t seen as a SQL Server / Postgres user with intermediate experience, and the engine&#39;s <code>sqlite3</code> command implements a deliberately small grammar so the queries you compose stay tight to forensic-relevant forms.</p>
 <h3 id="step-1-land-orient">Step 1 — Land + orient<a class="anchor" href="#step-1-land-orient" aria-label="Link to this section">#</a></h3>
-<pre><code>ssh level2@forensics
+<pre data-kind="plain"><code class="hl">ssh level2@forensics
 P0l4r1s-IR-L3ad-2026!
 </code></pre>
 <p>The shell prompt switches to <code>ir-audit@forensics:~</code>. You&#39;re on Polaris IR&#39;s forensic-analysis workstation as the service account Maya provisioned. Run <code>ls</code> to see what&#39;s in the working directory:</p>
-<pre><code>welcome.md
+<pre data-kind="plain"><code class="hl">welcome.md
 case-notes.md
 chain-of-custody.txt
 Reed/
 lessons-learned.md
 </code></pre>
 <p>The <code>Reed/</code> subdirectory holds the two browser-artifact files; the rest is documentation. Read in this order:</p>
-<pre><code>cat welcome.md           # explains the new sqlite3 command
-cat case-notes.md        # Maya&#39;s brief for today
+<pre data-kind="plain"><code class="hl">cat welcome.md           # explains the new sqlite3 command
+cat case-notes.md        # Maya's brief for today
 cat chain-of-custody.txt # the hash baseline
 </code></pre>
 <p><code>welcome.md</code> introduces the <code>sqlite3</code> command and the subset SQL grammar it supports. <code>case-notes.md</code> is Maya&#39;s scope: query the History DB for Reed&#39;s recent online activity, pivot to Cookies if you find a webmail visit worth following up, extract any live session token, do NOT read message content. <code>chain-of-custody.txt</code> gives you the SHA-256 baseline.</p>
 <h3 id="step-2-confirm-the-hash-baseline">Step 2 — Confirm the hash baseline<a class="anchor" href="#step-2-confirm-the-hash-baseline" aria-label="Link to this section">#</a></h3>
 <p>Forensic procedure: hash before, hash after, compare. Both must match for any query result to be relied on as evidence.</p>
-<pre><code>sha256sum Reed/History.sqlite
+<pre data-kind="plain"><code class="hl">sha256sum Reed/History.sqlite
 </code></pre>
 <p>Expected output (matches the <code>chain-of-custody.txt</code> baseline):</p>
-<pre><code>8c4f1d2e93b56a087c1f4a72d9e83c61a5f2b40e7c93a18d6f25b91e7d34a8c2  Reed/History.sqlite
+<pre data-kind="plain"><code class="hl">8c4f1d2e93b56a087c1f4a72d9e83c61a5f2b40e7c93a18d6f25b91e7d34a8c2  Reed/History.sqlite
 </code></pre>
 <p>Same exercise for <code>Reed/Cookies.sqlite</code>:</p>
-<pre><code>sha256sum Reed/Cookies.sqlite
+<pre data-kind="plain"><code class="hl">sha256sum Reed/Cookies.sqlite
 # 3a7d92f5b8e14c620d9f471a8e63b95c2d1e84f0a76b3e5c9d28f147b62a503e  Reed/Cookies.sqlite
 </code></pre>
 <p>Both match. You can query. (In a real engagement, the analysis bench&#39;s sqlite3 client opens the file in <code>mode=ro</code> or <code>immutable=1</code> form; this engine doesn&#39;t expose that flag because the command is read-only by design — but in real forensic work the explicit-read-only open is the discipline.)</p>
 <h3 id="step-3-map-the-history-database-schema">Step 3 — Map the History database schema<a class="anchor" href="#step-3-map-the-history-database-schema" aria-label="Link to this section">#</a></h3>
 <p>You&#39;ve never seen this particular schema before. <code>sqlite3</code>&#39;s <code>.tables</code> dot-command lists the tables, and <code>.schema</code> shows the <code>CREATE TABLE</code> statement for any one of them:</p>
-<pre><code>sqlite3 Reed/History.sqlite &quot;.tables&quot;
+<pre data-kind="plain"><code class="hl">sqlite3 Reed/History.sqlite &quot;.tables&quot;
 </code></pre>
-<pre><code>downloads
+<pre data-kind="plain"><code class="hl">downloads
 keyword_search_terms
 urls
 visits
@@ -107,50 +107,50 @@ visits
 <li><code>keyword_search_terms</code> — search-box queries (linked to the corresponding URL in <code>urls</code>)</li>
 </ul>
 <p><code>.schema urls</code> shows the columns you&#39;ll query:</p>
-<pre><code>sqlite3 Reed/History.sqlite &quot;.schema urls&quot;
+<pre data-kind="plain"><code class="hl">sqlite3 Reed/History.sqlite &quot;.schema urls&quot;
 </code></pre>
-<pre><code class="language-sql">CREATE TABLE urls(
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+<pre data-kind="source"><code class="hl language-sql"><span class="tok-key">CREATE</span> <span class="tok-key">TABLE</span> urls(
+  id              INTEGER <span class="tok-key">PRIMARY</span> <span class="tok-key">KEY</span> AUTOINCREMENT,
   url             LONGVARCHAR,
   title           LONGVARCHAR,
-  visit_count     INTEGER DEFAULT 0 NOT NULL,
-  typed_count     INTEGER DEFAULT 0 NOT NULL,
-  last_visit_time INTEGER NOT NULL,
-  hidden          INTEGER DEFAULT 0 NOT NULL
+  visit_count     INTEGER DEFAULT <span class="tok-num">0</span> <span class="tok-key">NOT</span> <span class="tok-key">NULL</span>,
+  typed_count     INTEGER DEFAULT <span class="tok-num">0</span> <span class="tok-key">NOT</span> <span class="tok-key">NULL</span>,
+  last_visit_time INTEGER <span class="tok-key">NOT</span> <span class="tok-key">NULL</span>,
+  hidden          INTEGER DEFAULT <span class="tok-num">0</span> <span class="tok-key">NOT</span> <span class="tok-key">NULL</span>
 );
 </code></pre>
 <p><code>last_visit_time</code> is the column you&#39;ll sort on; <code>url</code> and <code>title</code> are the columns you&#39;ll filter on; <code>typed_count</code> is interesting (it counts when the URL was typed into the omnibox vs. clicked from a link or autocompleted from history — high typed_count + low visit_count signals the URL was something the user actively went out of their way to type, not stumbled across).</p>
 <h3 id="step-4-sweep-recent-activity">Step 4 — Sweep recent activity<a class="anchor" href="#step-4-sweep-recent-activity" aria-label="Link to this section">#</a></h3>
 <p>You don&#39;t know what you&#39;re looking for yet; you know the badge-in was 09:42 Saturday and you know Maya saw something at 02:47. Sort the urls table by <code>last_visit_time</code> descending and show the most-recent activity:</p>
-<pre><code>sqlite3 -header Reed/History.sqlite &quot;SELECT url, title, last_visit_time FROM urls ORDER BY last_visit_time DESC LIMIT 20&quot;
+<pre data-kind="plain"><code class="hl">sqlite3 -header Reed/History.sqlite &quot;SELECT url, title, last_visit_time FROM urls ORDER BY last_visit_time DESC LIMIT 20&quot;
 </code></pre>
 <p>The <code>-header</code> flag adds a column-name row so the output is readable. You see ~15 URLs ordered by most-recent first. Normal Friday-evening browsing (ESPN, Reddit subreddit for Reed&#39;s soccer parents group, weather, Amazon). Then — interleaved into the chronology — a cluster of entries at 02:47 and 02:51 on Saturday morning that don&#39;t fit:</p>
-<pre><code>https://mail.google.com/mail/u/0/         Inbox (4) - rconnolly.personal@gmail.com  2026-03-14 02:47:21
+<pre data-kind="plain"><code class="hl">https://mail.google.com/mail/u/0/         Inbox (4) - rconnolly.personal@gmail.com  2026-03-14 02:47:21
 https://mail.google.com/mail/u/0/#sent    Sent Mail - rconnolly.personal@gmail.com  2026-03-14 02:51:08
 </code></pre>
 <p>Reed accessed his personal Gmail at 02:47 Saturday morning. That&#39;s seven hours before he badged into Bay 4. The title field gives you the account: <code>rconnolly.personal@gmail.com</code>. This is the lead.</p>
 <p>Two more entries from the same morning&#39;s search history are interleaved a few minutes later:</p>
-<pre><code>https://www.google.com/search?q=encryption+export+controls+EAR+penalties      2026-03-14 03:12:55
+<pre data-kind="plain"><code class="hl">https://www.google.com/search?q=encryption+export+controls+EAR+penalties      2026-03-14 03:12:55
 https://www.google.com/search?q=CUI+how+to+identify+if+a+document+is+marked   2026-03-14 03:14:38
 </code></pre>
 <p>These are exactly the searches a person who knows they&#39;re about to do something against the rules runs when they want to know how serious the rules are. Pre-meditation evidence. Not a smoking gun on its own (anyone with curiosity could run these searches), but in context — between a 02:47 personal-webmail visit and a 09:42 secured-bay badge-in — they read as deliberation.</p>
 <h3 id="step-5-filter-to-the-webmail-visits">Step 5 — Filter to the webmail visits<a class="anchor" href="#step-5-filter-to-the-webmail-visits" aria-label="Link to this section">#</a></h3>
 <p>Tighten the query to just webmail:</p>
-<pre><code>sqlite3 Reed/History.sqlite &quot;SELECT url, title FROM urls WHERE url LIKE &#39;%mail.google%&#39;&quot;
+<pre data-kind="plain"><code class="hl">sqlite3 Reed/History.sqlite &quot;SELECT url, title FROM urls WHERE url LIKE '%mail.google%'&quot;
 </code></pre>
 <p>Three rows: the 02:47 inbox visit, the 02:51 sent-folder visit, and a 11:33 drafts-folder visit (post-badge-in, a 90-minute return to the same account). The 11:33 timestamp is the staging or send moment. The 02:47 timestamp is the channel pre-positioning.</p>
 <p>The <code>title</code> column on the first row identifies the account: Reed accessed <code>rconnolly.personal@gmail.com</code>. This is the account outside counsel is subpoenaing. You&#39;re on the right thread.</p>
 <h3 id="step-6-pivot-to-cookies-for-the-session-token">Step 6 — Pivot to Cookies for the session token<a class="anchor" href="#step-6-pivot-to-cookies-for-the-session-token" aria-label="Link to this section">#</a></h3>
 <p>The Google subpoena will produce mail content under legal process eventually, but Maya wants a session token TODAY so outside counsel can expedite the review with Google&#39;s compliance team. Session tokens are in the Cookies database, keyed by <code>host_key</code>.</p>
-<pre><code>sqlite3 Reed/Cookies.sqlite &quot;.tables&quot;
+<pre data-kind="plain"><code class="hl">sqlite3 Reed/Cookies.sqlite &quot;.tables&quot;
 </code></pre>
-<pre><code>cookies
+<pre data-kind="plain"><code class="hl">cookies
 </code></pre>
 <p>One table. <code>.schema cookies</code> shows the structure (Chromium&#39;s cookies file has the same column layout it&#39;s used since the 2014 redesign — <code>host_key</code>, <code>name</code>, <code>value</code>, <code>path</code>, <code>expires_utc</code>, <code>is_secure</code>, <code>is_httponly</code>, <code>last_access_utc</code>, plus a few flags). Filter for the Gmail host:</p>
-<pre><code>sqlite3 -header Reed/Cookies.sqlite &quot;SELECT host_key, name, value FROM cookies WHERE host_key LIKE &#39;%mail.google%&#39;&quot;
+<pre data-kind="plain"><code class="hl">sqlite3 -header Reed/Cookies.sqlite &quot;SELECT host_key, name, value FROM cookies WHERE host_key LIKE '%mail.google%'&quot;
 </code></pre>
 <p>One row:</p>
-<pre><code>host_key         |name |value
+<pre data-kind="plain"><code class="hl">host_key         |name |value
 mail.google.com  |SID  |RC-Gmail-PreDawn-2026-03-14-T0247Z
 </code></pre>
 <p><code>SID</code> is Google&#39;s primary session cookie name. The <code>value</code> is the session token. The token&#39;s creation timestamp matches the 02:47 inbox visit; the <code>last_access_utc</code> (which you can pull in a second query if you want the timeline detail) matches the 11:33 drafts-folder visit. The cookie is alive and aligned to Reed&#39;s activity window.</p>
@@ -158,10 +158,10 @@ mail.google.com  |SID  |RC-Gmail-PreDawn-2026-03-14-T0247Z
 <p>The credential string is also the entry password for <code>level3@forensics</code> — the next puzzle, where Reed&#39;s outbound mail headers go under the microscope. The chain stays intact.</p>
 <h3 id="step-7-final-hash-lessons-learned">Step 7 — Final hash + lessons-learned<a class="anchor" href="#step-7-final-hash-lessons-learned" aria-label="Link to this section">#</a></h3>
 <p>Re-run the hashes to confirm the analysis didn&#39;t perturb the files:</p>
-<pre><code>sha256sum Reed/History.sqlite Reed/Cookies.sqlite
+<pre data-kind="plain"><code class="hl">sha256sum Reed/History.sqlite Reed/Cookies.sqlite
 </code></pre>
 <p>Both match the baseline. The deliverable is defensible. Read <code>lessons-learned.md</code>:</p>
-<pre><code>cat lessons-learned.md
+<pre data-kind="plain"><code class="hl">cat lessons-learned.md
 </code></pre>
 <p>The post-mortem is in the next four sections.</p>
 <hr>
@@ -312,7 +312,7 @@ restraint here is the professional standard being taught.</p>
 <p>These are enforced via Group Policy on Windows or via Chrome Enterprise&#39;s <a href="https://chromeenterprise.google/" target="_blank" rel="noopener noreferrer">cloud policy console</a>. The configuration is essentially a 30-minute exercise for a competent IT team.</p>
 <h3 id="dlp-rules-on-file-staging-paths">DLP rules on file-staging paths<a class="anchor" href="#dlp-rules-on-file-staging-paths" aria-label="Link to this section">#</a></h3>
 <p>Reed&#39;s exfil chain staged through <code>C:\Users\rconnolly\AppData\Local\Temp\sa-export.zip</code>. The pattern is recognizable: archive into Temp, then exfiltrate. Endpoint DLP products (Microsoft Purview, Trellix DLP, Forcepoint, etc.) can fire rules on this specific shape:</p>
-<pre><code>RULE: archive-stage-from-CUI
+<pre data-kind="plain"><code class="hl">RULE: archive-stage-from-CUI
   CONDITION: a .zip / .7z / .rar / .tar file is created
              AND the source files came from a path under D:\CUI\
              AND the destination is in %TEMP% or %APPDATA%
@@ -333,34 +333,34 @@ restraint here is the professional standard being taught.</p>
 <p>This level examines artifacts after the fact. The detection worth building
 is the one that would have fired at the time, and the strongest signal in
 the timeline is not any single action but when it happened.</p>
-<pre><code class="language-yaml">title: Off-hours interactive logon followed by consumer cloud-storage access
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Off-hours interactive logon followed by consumer cloud-storage access
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Correlates an interactive logon outside business hours with subsequent
   traffic to consumer file-sharing hosts from the same workstation. Each
-  half is unremarkable alone; together, on a cleared workstation holding
+  half is unremarkable alone; together, <span class="tok-key">on</span> a cleared workstation holding
   CUI, they are the shape of staging-then-exfiltration.
-logsource:
-  product: windows
-  service: security
-detection:
-  offhours_logon:
-    EventID: 4624
-    LogonType:
-      - 2    # interactive, at the console
-      - 10   # RemoteInteractive
-  business_hours:
-    UtcTime|re: &#39;T(1[3-9]|2[0-2]):&#39;   # 13:00-22:59 UTC covers a US workday
-  cleared_workstation:
-    Computer|startswith: &#39;POL-WS-&#39;
-  condition: offhours_logon and cleared_workstation and not business_hours
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> windows
+  service<span class="tok-op">:</span> security
+detection<span class="tok-op">:</span>
+  offhours_logon<span class="tok-op">:</span>
+    EventID<span class="tok-op">:</span> <span class="tok-num">4624</span>
+    LogonType<span class="tok-op">:</span>
+      - <span class="tok-num">2</span>    <span class="tok-com"># interactive, at the console</span>
+      - <span class="tok-num">10</span>   <span class="tok-com"># RemoteInteractive</span>
+  business_hours<span class="tok-op">:</span>
+    UtcTime|re<span class="tok-op">:</span> <span class="tok-str">'T(1[3-9]|2[0-2]):'</span>   <span class="tok-com"># 13:00-22:59 UTC covers a US workday</span>
+  cleared_workstation<span class="tok-op">:</span>
+    Computer|startswith<span class="tok-op">:</span> <span class="tok-str">'POL-WS-'</span>
+  condition<span class="tok-op">:</span> offhours_logon and cleared_workstation and not business_hours
+falsepositives<span class="tok-op">:</span>
   - Legitimate after-hours work, which is common enough that this rule is
     an enrichment signal rather than a standalone alert. It earns its
-    place when correlated with the network half below, not on its own.
+    place when correlated with the network half below, not <span class="tok-key">on</span> its own.
   - Scheduled maintenance windows and on-call response. Exclude by
     change-ticket window rather than by account.
-level: low
+level<span class="tok-op">:</span> low
 </code></pre>
 <p>Rated <code>low</code> deliberately, and that rating is the point. Working late is not
 an offence and a rule that pages on it will be turned off within a week.
@@ -376,10 +376,10 @@ later.</p>
 <p>This level carries one bonus find, accessible via the <code>progress --detail</code> command after you discover it. It&#39;s orthogonal to the credential-chain solve (you can complete the level without finding it) but it&#39;s the kind of artifact that turns a forensic engagement into a thorough one.</p>
 <h3 id="the-powershell-exfil-downloader-in-the-downloads-table">The PowerShell exfil downloader in the downloads table<a class="anchor" href="#the-powershell-exfil-downloader-in-the-downloads-table" aria-label="Link to this section">#</a></h3>
 <p>The <code>downloads</code> table in <code>History.sqlite</code> carries entries for every file Reed downloaded through Chrome. The query:</p>
-<pre><code>sqlite3 -header Reed/History.sqlite &quot;SELECT target_path, url, start_time FROM downloads&quot;
+<pre data-kind="plain"><code class="hl">sqlite3 -header Reed/History.sqlite &quot;SELECT target_path, url, start_time FROM downloads&quot;
 </code></pre>
 <p>Returns three rows. Two of them are unremarkable (a quarterly-budget XLSX from the Polaris intranet, a soccer-tournament schedule PDF from the Centreville Sports Complex). The third is the bonus find:</p>
-<pre><code>target_path                                                | url                                                  | start_time
+<pre data-kind="plain"><code class="hl">target_path                                                | url                                                  | start_time
 C:\Users\rconnolly\Downloads\rc-archive-helper.ps1         | https://www.dropbox.com/scl/fi/rc-archive-helper.ps1 | 2026-03-05 19:42:11
 </code></pre>
 <p>A PowerShell script named <code>rc-archive-helper.ps1</code>, downloaded from a personal Dropbox account, nine days before the Bay 4 incident. The same script that ran in level1&#39;s 4688 process-creation chain (Reed&#39;s PowerShell <code>Compress-Archive</code> invocation against <code>D:\CUI\Subsystem-A\*</code>).</p>

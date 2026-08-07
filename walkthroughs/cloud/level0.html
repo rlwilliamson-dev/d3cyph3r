@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -61,8 +61,8 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Six commands. Six rows on the worksheet. The cloud-audit discipline is in noticing the one that doesn&#39;t match and stopping there.</p>
 <h3 id="step-1-read-the-brief">Step 1: Read the brief<a class="anchor" href="#step-1-read-the-brief" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ cat engagement-notes.md
-cloudsec@cloud:~$ cat audit-worksheet.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">cat</span> engagement-notes.md
+<span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">cat</span> audit-worksheet.txt
 </code></pre>
 <p>The engagement notes establish the regulatory frame (SOC 2 + NAIC + NYDFS + GLBA), the client context (Coverline, Jordan, Sloane Becker the CISO referenced in the chain), and the auditor&#39;s preferred procedure (<code>aws s3 ls --no-sign-request</code> from outside the Coverline account). The audit worksheet is the deliverable: six buckets, the expected public-access state for each, and a <code>___</code> column for the verification result.</p>
 <p>The expected state per the worksheet:</p>
@@ -100,7 +100,7 @@ cloudsec@cloud:~$ cat audit-worksheet.txt
 </tbody></table>
 <p>Read the worksheet before you start probing. The audit deliverable isn&#39;t <em>&quot;what did the buckets do&quot;</em> — it&#39;s <em>&quot;did each bucket match its expected posture, and if not, what did you find inside.&quot;</em> The structure matters because the audit firm uses your output as evidence.</p>
 <h3 id="step-2-confirm-youre-probing-from-outside-coverlines-account">Step 2: Confirm you&#39;re probing from outside Coverline&#39;s account<a class="anchor" href="#step-2-confirm-youre-probing-from-outside-coverlines-account" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ aws sts get-caller-identity
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> sts get-caller-identity
 UserId:   AIDAEXAMPLE_DRIFTWOOD_CLOUDSEC
 Account:  778899012345
 Arn:      arn:aws:iam::778899012345:user/driftwood-cloudsec-readonly
@@ -108,23 +108,23 @@ Arn:      arn:aws:iam::778899012345:user/driftwood-cloudsec-readonly
 <p><code>778899012345</code> is the Driftwood AWS account, not a Coverline account. This is the auditor&#39;s &quot;external perspective&quot; exactly — Driftwood is a third party probing Coverline&#39;s public-facing surface. The output of every subsequent <code>aws s3 ls --no-sign-request</code> would behave identically if run from any internet-connected workstation with any AWS credentials (or no AWS credentials at all — the <code>--no-sign-request</code> flag bypasses authentication entirely).</p>
 <p>This step isn&#39;t strictly required for the walk, but the audit firm will appreciate it being in the chain-of-custody record: <em>&quot;the probes were issued from AWS account 778899012345 (Driftwood, not Coverline), with the <code>--no-sign-request</code> flag, on <code>&lt;date&gt;</code>.&quot;</em></p>
 <h3 id="step-3-walk-the-private-buckets">Step 3: Walk the private buckets<a class="anchor" href="#step-3-walk-the-private-buckets" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-static-assets
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> s3 ls <span class="tok-flag">--no-sign-request</span> s3://coverline-static-assets
 An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied
 
-cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-backups-prod
+<span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> s3 ls <span class="tok-flag">--no-sign-request</span> s3://coverline-backups-prod
 An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied
 
-cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-terraform-state
+<span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> s3 ls <span class="tok-flag">--no-sign-request</span> s3://coverline-terraform-state
 An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied
 
-cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-customer-exports
+<span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> s3 ls <span class="tok-flag">--no-sign-request</span> s3://coverline-customer-exports
 An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Access Denied
 </code></pre>
 <p>Four buckets, four <code>AccessDenied</code>. This is exactly what the worksheet expected. The plain-English read is: <em>&quot;these buckets exist (the response would be <code>NoSuchBucket</code> otherwise), but anonymous requests can&#39;t list their contents — the Public Access Block + bucket policy + IAM are all enforcing the deny.&quot;</em></p>
 <p><strong><code>AccessDenied</code> is what GOOD looks like for a private bucket probed from outside.</strong> This is the single most important framing in the entire walkthrough: a properly-secured production bucket returns <code>AccessDenied</code>, not silence and not <code>NoSuchBucket</code>. The bucket exists; the access control works. The audit&#39;s job is to confirm that response across the inventory.</p>
 <p>Four buckets verified, two to go.</p>
 <h3 id="step-4-walk-the-intentionally-public-bucket">Step 4: Walk the intentionally-public bucket<a class="anchor" href="#step-4-walk-the-intentionally-public-bucket" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-marketing-public
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> s3 ls <span class="tok-flag">--no-sign-request</span> s3://coverline-marketing-public
 2024-09-12 11:42:08  1842317  brochures/coverline-overview-2024.pdf
 2024-09-12 11:43:21   987142  brochures/coverline-small-business-faq.pdf
 2024-06-18 08:22:14    84327  logos/coverline-logo-color.png
@@ -134,7 +134,7 @@ An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Acces
 <p>Five objects, all of them either brochures, logos, or partner-kit decks. The worksheet flagged this bucket as <strong>intentionally public</strong> — the marketing team distributes assets to affiliates via the bucket&#39;s URL — so the listing is expected, not a finding. The cross-reference is the audit&#39;s value: confirm the listing matches the expected contents (marketing materials, no PII, no operational data). It does. <strong>MATCHES EXPECTATION.</strong></p>
 <p>This is the &quot;context matters&quot; beat. A public S3 bucket isn&#39;t categorically bad — for the use case of distributing public marketing assets, it&#39;s the right architecture. The findings live in the <em>gap between expected state and actual state</em>, not in any absolute property of the bucket configuration.</p>
 <h3 id="step-5-walk-the-misconfigured-bucket">Step 5: Walk the misconfigured bucket<a class="anchor" href="#step-5-walk-the-misconfigured-bucket" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 ls --no-sign-request s3://coverline-claims-uploads-prod
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> s3 ls <span class="tok-flag">--no-sign-request</span> s3://coverline-claims-uploads-prod
 2024-03-15 09:23:41   2147   2024-Q1-claims/claim-cl-019823.json
 2024-03-15 09:24:11   2089   2024-Q1-claims/claim-cl-019824.json
 2024-03-15 09:25:33   1934   2024-Q1-claims/claim-cl-019825.json
@@ -146,7 +146,7 @@ An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Acces
 <p>The object names alone tell the story before we even look at contents: three claim files in <code>2024-Q1-claims/</code> (almost certainly PII), a script in <code>legacy-deploy/migrate-rds.sh</code> (almost certainly a deploy artifact — and &quot;RDS&quot; is the AWS managed-database service, so the script almost certainly touches a database connection string), and a 4.6 MB <code>legacy-migration-snapshot/coverline_claims.dump</code> (almost certainly the output of a <code>pg_dump</code> of the production claims database).</p>
 <p>Three categories of finding stacked on one bucket: <strong>PII exposure, hardcoded credential leak, and a full database snapshot.</strong> Any one of these would be a critical SOC 2 finding; all three together raise immediate questions about whether the exposure rises to the breach-notification threshold under NAIC, NYDFS, and GLBA.</p>
 <h3 id="step-6-inspect-the-claim-files">Step 6: Inspect the claim files<a class="anchor" href="#step-6-inspect-the-claim-files" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 cp s3://coverline-claims-uploads-prod/2024-Q1-claims/claim-cl-019823.json -
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> s3 cp s3://coverline-claims-uploads-prod/2024-Q1-claims/claim-cl-019823.json -
 {
   &quot;claim_id&quot;: &quot;CL-019823&quot;,
   &quot;policy_number&quot;: &quot;CV-SB-2023-87432&quot;,
@@ -181,7 +181,7 @@ An error occurred (AccessDenied) when calling the ListObjectsV2 operation: Acces
 <p>The schema is exactly the shape of a production claims-processing record. The SSN is masked to the last four digits — Coverline&#39;s claims schema implements the <strong>PCI-DSS-adjacent &quot;show last four&quot; pattern</strong> even though they&#39;re not handling card data, because it&#39;s the same data-minimization principle. But every other field is NPI under GLBA, PII under NAIC, and personal information under every state breach-notification statute that applies to the claimant&#39;s residence (Connecticut, in this case — which means CT General Statutes § 36a-701b applies). The combination of name, date of birth, residential address, phone, email, and policy number is <strong>more than enough</strong> to satisfy the NAIC Model Law&#39;s definition of &quot;nonpublic information&quot; without needing the SSN at all.</p>
 <p>The other two claim files in the bucket follow the same shape with different claimants (Aisha Patel in New Haven CT, Dmitri Volkov in Waterbury CT). Three confirmed exposures of NPI for Connecticut residents — which means even the conservative reading of the regulatory cascade puts Coverline on the clock for state-AG notification, NYDFS notification (because Coverline is NY-licensed), NAIC notification to the Connecticut insurance commissioner, GLBA-rule consideration, and the SOC 2 audit deficiency. Five different regulatory clocks, started by one misconfigured bucket.</p>
 <h3 id="step-7-inspect-the-migration-script">Step 7: Inspect the migration script<a class="anchor" href="#step-7-inspect-the-migration-script" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">cloudsec@cloud:~$ aws s3 cp s3://coverline-claims-uploads-prod/legacy-deploy/migrate-rds.sh -
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">aws</span> s3 cp s3://coverline-claims-uploads-prod/legacy-deploy/migrate-rds.sh -
 #!/usr/bin/env bash
 # RDS bootstrap migration script
 # 2023-Q4 us-east-1 → us-east-2 region cutover
@@ -192,7 +192,7 @@ set -euo pipefail
 
 RDS_HOST=&quot;coverline-prod.cluster-xyz.us-east-2.rds.amazonaws.com&quot;
 RDS_USER=&quot;coverline_admin&quot;
-RDS_PASSWORD=&#39;Cl41ms-Pr0d-M4st3r-2024&#39;
+RDS_PASSWORD='Cl41ms-Pr0d-M4st3r-2024'
 DB_NAME=&quot;coverline_claims&quot;
 DUMP_BUCKET=&quot;coverline-claims-uploads-prod&quot;
 DUMP_PREFIX=&quot;legacy-migration-snapshot/&quot;
@@ -218,8 +218,8 @@ echo &quot;[+] Done.&quot;
 <p>The worksheet is now five rows of &quot;MATCHES EXPECTATION&quot; and one row of &quot;DEVIATION — see finding memo.&quot; The finding memo goes to Priya, who&#39;ll write the version that goes to Jordan, the audit firm, and Sloane (Coverline&#39;s CISO).</p>
 <h3 id="step-9-the-breadcrumb-game-world-only">Step 9: The breadcrumb (game-world only)<a class="anchor" href="#step-9-the-breadcrumb-game-world-only" aria-label="Link to this section">#</a></h3>
 <p>In a real engagement the work stops at the finding. In D3CYPH3R the breadcrumb pattern continues:</p>
-<pre><code class="language-bash">cloudsec@cloud:~$ ssh level1@cloud
-level1@cloud&#39;s password: Cl41ms-Pr0d-M4st3r-2024
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">cloudsec@cloud:~$</span> <span class="tok-cmd">ssh</span> level1@cloud
+<span class="tok-prompt">level1@cloud's password:</span> <span class="tok-str">Cl41ms-Pr0d-M4st3r-2024</span>
 </code></pre>
 <p>You&#39;re now inside the Coverline production database context (game-world; the real Driftwood engagement would not authenticate against RDS without separate authorization). The lesson of <code>level1@cloud</code> is what an attacker gains from a credential leak of this shape — that walkthrough comes later.</p>
 <h3 id="if-you-got-stuck">If you got stuck<a class="anchor" href="#if-you-got-stuck" aria-label="Link to this section">#</a></h3>
@@ -485,32 +485,32 @@ D. Enable AWS Macie on the bucket to detect future misconfigurations</p>
 <p><strong>3. For Coverline&#39;s credential-handling posture, this quarter.</strong> Audit every production codebase, script, container image, and S3 bucket for hardcoded credentials. Tools: <strong>gitleaks</strong>, <strong>TruffleHog</strong>, <strong>GitHub Advanced Security Secret Scanning</strong>, <strong>AWS Secrets Manager&#39;s &quot;find unused secrets&quot; automation</strong>, <strong>Snyk Code</strong>, <strong>Semgrep with the secret-detection ruleset</strong>. Migrate every hardcoded credential to <strong>AWS Secrets Manager</strong> (or Parameter Store with KMS encryption, or HashiCorp Vault). Scripts read from the secret store at runtime; the secret never appears in source. Set up rotation on every Secrets Manager secret — RDS has built-in rotation via Secrets Manager; use it. Enable <strong>IAM Access Analyzer</strong> with the external-access finding type — detects identity-based and resource-based policy paths that grant access to external principals (including <code>Principal: &quot;*&quot;</code>).</p>
 <p><strong>4. For Coverline&#39;s SOC 2 control evidence, going forward.</strong> The audit walk Driftwood just did SHOULD be a quarterly automated review, not an annual manual one. AWS Config + Macie + a custom Lambda that posts the bucket inventory + public-access state to a Slack channel weekly converts <em>&quot;evidence we walked it&quot;</em> into <em>&quot;evidence we monitor it.&quot;</em> The cost of the automation is days; the cost of NOT having the automation is what Coverline just lived through. Add the public-access-posture check to Coverline&#39;s internal control attestation cadence — every quarter, the cloud-platform team certifies in writing that the posture matches the documented inventory. For new buckets: bucket creation goes through Terraform with a module that enforces Block Public Access on creation. Manual creation through the AWS console is disabled via SCP.</p>
 <p><strong>5. Sample detection rule (Sigma, AWS CloudTrail S3 event):</strong></p>
-<pre><code class="language-yaml">title: S3 bucket made publicly accessible
-status: experimental
-description: Detects CloudTrail events indicating an S3 bucket
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> S3 bucket made publicly accessible
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> Detects CloudTrail events indicating an S3 bucket
   has been configured (or had its configuration changed) to allow
   anonymous public access. Should never fire in an environment
   where account-level Public Access Block is enabled via SCP.
-logsource:
-  product: aws
-  service: cloudtrail
-detection:
-  selection_acl:
-    eventSource: &#39;s3.amazonaws.com&#39;
-    eventName: &#39;PutBucketAcl&#39;
-    requestParameters|contains: &#39;AllUsers&#39;
-  selection_policy:
-    eventSource: &#39;s3.amazonaws.com&#39;
-    eventName: &#39;PutBucketPolicy&#39;
-    requestParameters|contains|all:
-      - &#39;&quot;Principal&quot;: &quot;*&quot;&#39;
-      - &#39;&quot;Effect&quot;: &quot;Allow&quot;&#39;
-  selection_bpa_disable:
-    eventSource: &#39;s3.amazonaws.com&#39;
-    eventName: &#39;DeletePublicAccessBlock&#39;
-  condition: selection_acl or selection_policy or selection_bpa_disable
-level: critical
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> aws
+  service<span class="tok-op">:</span> cloudtrail
+detection<span class="tok-op">:</span>
+  selection_acl<span class="tok-op">:</span>
+    eventSource<span class="tok-op">:</span> <span class="tok-str">'s3.amazonaws.com'</span>
+    eventName<span class="tok-op">:</span> <span class="tok-str">'PutBucketAcl'</span>
+    requestParameters|contains<span class="tok-op">:</span> <span class="tok-str">'AllUsers'</span>
+  selection_policy<span class="tok-op">:</span>
+    eventSource<span class="tok-op">:</span> <span class="tok-str">'s3.amazonaws.com'</span>
+    eventName<span class="tok-op">:</span> <span class="tok-str">'PutBucketPolicy'</span>
+    requestParameters|contains|all<span class="tok-op">:</span>
+      - <span class="tok-str">'&quot;Principal&quot;: &quot;*&quot;'</span>
+      - <span class="tok-str">'&quot;Effect&quot;: &quot;Allow&quot;'</span>
+  selection_bpa_disable<span class="tok-op">:</span>
+    eventSource<span class="tok-op">:</span> <span class="tok-str">'s3.amazonaws.com'</span>
+    eventName<span class="tok-op">:</span> <span class="tok-str">'DeletePublicAccessBlock'</span>
+  condition<span class="tok-op">:</span> selection_acl or selection_policy or selection_bpa_disable
+level<span class="tok-op">:</span> critical
+falsepositives<span class="tok-op">:</span>
   - Legitimate creation of an intentionally-public bucket (e.g.,
     a marketing-CDN bucket — tune per known-public-bucket
     allowlist)

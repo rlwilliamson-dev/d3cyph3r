@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -65,20 +65,20 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Six commands. The Network track&#39;s discipline this level is in reading X.509 extensions slowly — <code>what does the SAN list authorize this cert to claim</code>, <code>who does the Subject&#39;s OU identify</code>, <code>is the cert self-signed (issuer == subject) or chain-validated</code> — before you connect the cert&#39;s metadata to the autoresponder log that uses the same identifiers.</p>
 <h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@network
-level2@network&#39;s password: atlas-audit-bypass-2026
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level2@network
+<span class="tok-prompt">level2@network's password:</span> <span class="tok-str">atlas-audit-bypass-2026</span>
 </code></pre>
 <p>The password is the <code>audit-svc</code> credential you extracted from yesterday&#39;s AXFR TXT record on <code>audit-bypass.atlas.internal</code>. The Tessera Q4 dry-run note that left the cred in DNS also identified you as the user that would use it. Atlas&#39;s &quot;scheduled removal end of Q4&quot; promise was a free-form text comment with no follow-up workflow attached; the host is still here and the credential still works. The connection banner identifies the host (<code>audit-bypass.atlas.internal</code>) and the tier (Routine, ~12 min). Read <code>welcome.md</code> first — it explains the three new commands (<code>openssl s_client</code>, <code>openssl x509</code>, <code>crtsh</code>) and frames what a TLS cert actually contains.</p>
-<pre><code class="language-bash">audit-svc@audit-bypass:~$ cat welcome.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit-svc@audit-bypass:~$</span> <span class="tok-cmd">cat</span> welcome.md
 </code></pre>
 <p><code>welcome.md</code> documents the engagement context, introduces <code>openssl s_client</code> (handshake debugger), <code>openssl x509</code> (cert parser), and <code>crtsh</code> (CT-log search), explains the SAN list and CT-log concepts, and orients you toward the puzzle. It also reminds you that the cert was installed in 2023 for the same Tessera dry-run yesterday&#39;s TXT record mentioned — same date, same engineers, same forgotten-cleanup pattern.</p>
 <h3 id="step-2-read-priyas-note-the-scope-file">Step 2: Read Priya&#39;s note + the scope file<a class="anchor" href="#step-2-read-priyas-note-the-scope-file" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit-svc@audit-bypass:~$ cat priya-note.md
-audit-svc@audit-bypass:~$ cat atlas-cert-scope.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit-svc@audit-bypass:~$</span> <span class="tok-cmd">cat</span> priya-note.md
+<span class="tok-prompt">audit-svc@audit-bypass:~$</span> <span class="tok-cmd">cat</span> atlas-cert-scope.md
 </code></pre>
 <p>Priya&#39;s note carries the rules of engagement (same as yesterday — document and report, don&#39;t pivot off the host to neighboring services the cert names). The scope file documents what Apache is configured to do on this host: a vhost on :443 with TLS termination that forwards everything to <code>https://helpdesk-ticket.atlas.internal/</code>, an upstream that&#39;s been returning 502 since 2024-Q2. The host is functionally a TLS-handshake-then-502 forwarder. The cert it presents during the handshake is what we care about.</p>
 <h3 id="step-3-openssl-s-client-handshake-level-view">Step 3: openssl s_client — handshake-level view<a class="anchor" href="#step-3-openssl-s-client-handshake-level-view" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit-svc@audit-bypass:~$ openssl s_client -connect localhost:443
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit-svc@audit-bypass:~$</span> <span class="tok-cmd">openssl</span> s_client <span class="tok-flag">-connect</span> localhost:443
 CONNECTED(00000003)
 depth=0 C=US, ST=Washington, O=Atlas Health Internal CA - DELETE BEFORE PROD 2023, OU=devops-ci@atlas.health, CN=audit-bypass.atlas.internal
 verify return:0
@@ -107,7 +107,7 @@ SSL-Session:
 <p><strong>Observation three: the Subject&#39;s <code>OU=</code> field carries an email address — <code>devops-ci@atlas.health</code>.</strong> RFC 5280 specifies the X.500 name attribute types and explicitly allows free-form OU values; in practice, organizations use OU for departmental names (<code>Sales</code>, <code>IT-Operations</code>, <code>Engineering</code>). Atlas&#39;s habit is to stuff an internal service email in there instead. The mailbox at that address is, per Priya&#39;s note, the autoresponder we&#39;ll be reading shortly.</p>
 <p>The <code>New, TLSv1.2</code> line is also worth noting. Apache 2.4 default config on a 2023-vintage host won&#39;t necessarily have TLS 1.3 enabled (Apache&#39;s SSL config defaults vary by distribution and were progressively tightened across 2.4.x point releases). TLS 1.2 is still acceptable under NIST SP 800-52 Rev 2 §3.1 (the recommended TLS configuration), but the Forum&#39;s drift toward TLS-1.3-only baselines means a 2023-vintage TLS 1.2 endpoint is increasingly an audit finding by itself.<sup class="cite"><a id="cite-nist-800-52-1" href="#ref-6" aria-label="Source 6">6</a></sup></p>
 <h3 id="step-4-openssl-x509-the-full-cert-dump">Step 4: openssl x509 — the full cert dump<a class="anchor" href="#step-4-openssl-x509-the-full-cert-dump" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit-svc@audit-bypass:~$ openssl x509 -text -noout -in /etc/apache2/ssl/audit-bypass.crt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit-svc@audit-bypass:~$</span> <span class="tok-cmd">openssl</span> x509 <span class="tok-flag">-text</span> <span class="tok-flag">-noout</span> <span class="tok-flag">-in</span> /etc/apache2/ssl/audit-bypass.crt
 Certificate:
     Data:
         Version: 3 (0x2)
@@ -139,7 +139,7 @@ Certificate:
                 TLS Web Server Authentication, TLS Web Client Authentication
 
   ✦ Bonus find unlocked: Wildcard *.atlas.internal in the SAN list
-  ✦ Bonus find unlocked: Self-signed CA with &#39;DELETE BEFORE PROD&#39; in the Subject
+  ✦ Bonus find unlocked: Self-signed CA with 'DELETE BEFORE PROD' in the Subject
 </code></pre>
 <p>Five facts in one command output.</p>
 <p><strong>Fact one: the validity is 10 years.</strong> Not-Before is January 12, 2023. Not-After is January 12, 2033. The CA/Browser Forum baseline requirements have been progressively tightening server-cert lifetimes — 825 days (2018), 398 days (2020), with a phased reduction toward 47 days being voted forward in 2025 for completion by 2029. A 10-year self-signed cert is an order of magnitude over the modern public-CA baseline. Internal CAs aren&#39;t <em>required</em> to mirror the Forum&#39;s baseline, but the longer the cert lifetime the larger the blast radius of any single private-key compromise — which is exactly what NIST SP 800-57 Part 1 Rev 5 §5.3.6 (cryptoperiod selection) is saying when it warns against unbounded cryptoperiods.<sup class="cite"><a id="cite-nist-800-57-1" href="#ref-7" aria-label="Source 7">7</a></sup></p>
@@ -149,19 +149,19 @@ Certificate:
 <p><strong>Fact five: the Subject&#39;s OU field — <code>devops-ci@atlas.health</code>.</strong> RFC 5280 §4.1.2.4 specifies the subject field as a distinguished-name encoding from X.501, and §4.1.2.6 covers the subject&#39;s free-form attributes. Email addresses in OU are non-standard but valid syntactically; some certificate-management tooling will warn (&quot;OU should be a department name, not an email address&quot;), and most will accept the cert anyway. Atlas&#39;s habit of using OU for service emails means the cert metadata itself names the operational contact — useful for in-org coordination, catastrophic for adversary recon when the named mailbox is misconfigured.</p>
 <p>The Key Usage and Extended Key Usage extensions are unsurprising for a TLS server cert. <code>Digital Signature, Key Encipherment</code> are the standard server-cert key usages; <code>TLS Web Server Authentication, TLS Web Client Authentication</code> indicates the cert is configured for BOTH server-side termination AND client-side mutual TLS. The client-auth flag is unusual for a &quot;redirect to upstream&quot; host and suggests the original 2023 design contemplated mTLS that was never wired up.</p>
 <h3 id="step-5-crtsh-whats-in-the-public-ct-logs">Step 5: crtsh — what&#39;s in the public CT logs<a class="anchor" href="#step-5-crtsh-whats-in-the-public-ct-logs" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit-svc@audit-bypass:~$ crtsh atlas.health
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit-svc@audit-bypass:~$</span> <span class="tok-cmd">crtsh</span> atlas.health
 crt.sh — certificate transparency search
 
 Subdomain                          Issuer                             Issued
 ----------                         ------                             ------
-portal.atlas.health                Let&#39;s Encrypt (R10)                2026-03-15
-api.atlas.health                   Let&#39;s Encrypt (R10)                2026-03-15
-vpn.atlas.health                   Let&#39;s Encrypt (R10)                2026-03-15
-www.atlas.health                   Let&#39;s Encrypt (R10)                2026-03-15
-staging.atlas.health               Let&#39;s Encrypt (R3)                 2025-09-08
+portal.atlas.health                Let's Encrypt (R10)                2026-03-15
+api.atlas.health                   Let's Encrypt (R10)                2026-03-15
+vpn.atlas.health                   Let's Encrypt (R10)                2026-03-15
+www.atlas.health                   Let's Encrypt (R10)                2026-03-15
+staging.atlas.health               Let's Encrypt (R3)                 2025-09-08
 tessera-bridge.atlas.health        GoDaddy Secure CA-G2               2025-09-12
-marcus-test.atlas.health           Let&#39;s Encrypt (R3)                 2025-04-22
-patientportal-uat.atlas.health     Let&#39;s Encrypt (R3)                 2024-06-14
+marcus-test.atlas.health           Let's Encrypt (R3)                 2025-04-22
+patientportal-uat.atlas.health     Let's Encrypt (R3)                 2024-06-14
 *.atlas.health                     DigiCert SHA2 Secure Server        2023-11-02
 </code></pre>
 <p>Nine entries. Three of them are smoking guns.</p>
@@ -169,10 +169,10 @@ patientportal-uat.atlas.health     Let&#39;s Encrypt (R3)                 2024-0
 <p><strong><code>tessera-bridge.atlas.health</code> issued 2025-09-12.</strong> Yesterday&#39;s TXT-record date plus four days. Tessera was a vendor engagement we kept hearing about from the leftover credentials and dry-run notes. The CT log catalogued the fact that Atlas requested a public cert for a Tessera-themed hostname five months ago. GoDaddy issued it (a different CA than the modern Let&#39;s Encrypt issuances — GoDaddy was Atlas&#39;s pre-2024 CA of choice). The cert tells us the engagement was real and produced public-facing infrastructure that nobody told us about.</p>
 <p><strong><code>marcus-test.atlas.health</code> issued 2025-04-22.</strong> Marcus tested something. He used Let&#39;s Encrypt because that&#39;s the easiest CA to request a cert from. He didn&#39;t realize that requesting an LE cert PUBLISHES the hostname to crt.sh permanently. Whatever <code>marcus-test</code> was, the fact it existed is now in the public record. The cert issuance also implies Marcus had the ability to satisfy LE&#39;s domain-control validation (HTTP-01 or DNS-01 challenge), which means in April 2025 he had administrative control over the <code>atlas.health</code> zone. This is the kind of &quot;in-the-middle-of-the-night testing&quot; CT log entry that should generate an alert from Atlas&#39;s external-attack-surface monitoring — if Atlas has any. Almost certainly they don&#39;t.</p>
 <h3 id="step-6-the-autoresponder-log-the-breadcrumb">Step 6: The autoresponder log — the breadcrumb<a class="anchor" href="#step-6-the-autoresponder-log-the-breadcrumb" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit-svc@audit-bypass:~$ cat /var/log/exim/autoresponder.log
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit-svc@audit-bypass:~$</span> <span class="tok-cmd">cat</span> /var/log/exim/autoresponder.log
 </code></pre>
 <p>The log captures three outbound auto-reply bodies from the local exim instance, scoped to <code>devops-ci@atlas.health</code> (the mailbox the cert&#39;s OU named). Two are noise — a generic &quot;we moved the queue to platform-eng&quot; reply, and a Marcus-to-Marcus ACK about the post-AXFR cleanup ticket. The middle one is the finding:</p>
-<pre><code>2026-04-09 11:08:45 -- autoresponse body for devops-ci@atlas.health --
+<pre data-kind="plain"><code class="hl">2026-04-09 11:08:45 -- autoresponse body for devops-ci@atlas.health --
   PASSWORD RESET AUTORESPONDER — ticket HD-2026-Q2-8814
 
   Service account:      devops-ci@atlas.health
@@ -188,7 +188,7 @@ patientportal-uat.atlas.health     Let&#39;s Encrypt (R3)                 2024-0
 <p><code>T3mp-DevopsCI-HD8814!q2</code>. That&#39;s your level3 credential — the temporary password for <code>devops-ci@devops-ci.atlas.internal</code>, issued April 9 with 72-hour validity expiring April 12. As of &quot;right now in the engagement timeline&quot; (April 10, 2026) the cred is good for another two days. The autoresponder shipped it in cleartext to the helpdesk noreply address; the local exim instance logged the cleartext to disk; anyone with read access on this host (<code>audit-svc</code>, root, anyone in the <code>adm</code> group) gets the cred.</p>
 <p>That&#39;s CWE-532 (Insertion of Sensitive Information into Log File) at the autoresponder layer, layered on top of a separate finding — the autoresponder is <em>configured</em> to ship temporary credentials in the reply body in the first place.<sup class="cite"><a id="cite-cwe-532-1" href="#ref-9" aria-label="Source 9">9</a></sup> That&#39;s a process-design failure that the SIEM should flag and the helpdesk runbook should never have authorized. The defender section walks through what a modern password-reset flow looks like (portal-link-driven, IdP-mediated, never cleartext-in-email) but the short version is: this autoresponder pattern is roughly fifteen years out of date.</p>
 <h3 id="step-7-document-scope-return-to-lobby">Step 7: Document scope, return to lobby<a class="anchor" href="#step-7-document-scope-return-to-lobby" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit-svc@audit-bypass:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit-svc@audit-bypass:~$</span> <span class="tok-cmd">exit</span>
 </code></pre>
 <p>You found the cert. You found the SAN list. You found the OU field. You found the autoresponder log. You have the level3 credential. The deliverable to Priya is a memo: <em>the audit-bypass host is still serving production-grade TLS using a 2023-vintage self-signed cert that documents internal infrastructure in its SAN list and identifies a misconfigured autoresponder mailbox in its OU field; the autoresponder has been shipping cleartext temporary credentials to a helpdesk-noreply address; the temporary credential it shipped on 2026-04-09 is still valid through 2026-04-12</em>. The escalation path is Tier-1 (24-hour client notification, Atlas CISO loop-in, Marcus&#39;s manager).</p>
 <h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
@@ -296,39 +296,39 @@ Certificate Transparency is append-only and the inventory is already
 public. It can be <em>monitored</em> going forward. The mailbox behaviour, by
 contrast, is detectable in the mail logs today, and it is the half that
 grants access rather than merely describing the estate.</p>
-<pre><code class="language-yaml">title: Automated mailbox reply containing credential material
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Automated mailbox reply containing credential material
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects auto-generated replies sent from service mailboxes whose body
   or subject indicates credential content. Autoresponders configured to
   answer password-reset requests will send credentials in cleartext to
   whoever asked, over a channel that looks like ordinary helpdesk
   traffic.
-logsource:
-  product: m365
-  service: message_trace
-detection:
-  service_sender:
-    SenderAddress|startswith:
-      - &#39;devops-ci@&#39;
-      - &#39;noreply@&#39;
-      - &#39;automation@&#39;
-  generated_reply:
-    MessageType: &#39;AutoReply&#39;
-  credential_context:
-    Subject|contains:
-      - &#39;password&#39;
-      - &#39;credential&#39;
-      - &#39;reset&#39;
-      - &#39;access&#39;
-  condition: service_sender and generated_reply and credential_context
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> m365
+  service<span class="tok-op">:</span> message_trace
+detection<span class="tok-op">:</span>
+  service_sender<span class="tok-op">:</span>
+    SenderAddress|startswith<span class="tok-op">:</span>
+      - <span class="tok-str">'devops-ci@'</span>
+      - <span class="tok-str">'noreply@'</span>
+      - <span class="tok-str">'automation@'</span>
+  generated_reply<span class="tok-op">:</span>
+    MessageType<span class="tok-op">:</span> <span class="tok-str">'AutoReply'</span>
+  credential_context<span class="tok-op">:</span>
+    Subject|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'password'</span>
+      - <span class="tok-str">'credential'</span>
+      - <span class="tok-str">'reset'</span>
+      - <span class="tok-str">'access'</span>
+  condition<span class="tok-op">:</span> service_sender and generated_reply and credential_context
+falsepositives<span class="tok-op">:</span>
   - Legitimate password-reset workflows that send a time-limited link
     rather than a credential. These are the correct pattern and should be
     excluded once verified, by subject template rather than by sender.
   - Out-of-office replies that happen to quote a subject line containing
     one of these words.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>Pair this with continuous Certificate Transparency monitoring, which is
 the only control that addresses the certificate half. Subscribe to CT

@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -59,17 +59,17 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The puzzle path is short. Two files to read, one command to run on one extracted token.</p>
 <h3 id="step-1-confirm-the-credential-and-what-it-bought-you">Step 1: Confirm the credential and what it bought you<a class="anchor" href="#step-1-confirm-the-credential-and-what-it-bought-you" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@crypto
-level1@crypto&#39;s password: vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level1@crypto
+<span class="tok-prompt">level1@crypto's password:</span> <span class="tok-str">vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3</span>
 Connected: level1@crypto
-vesta-deploy@crypto:~$ whoami
+<span class="tok-prompt">vesta-deploy@crypto:~$</span> <span class="tok-cmd">whoami</span>
 vesta-deploy
-vesta-deploy@crypto:~$ pwd
+<span class="tok-prompt">vesta-deploy@crypto:~$</span> <span class="tok-cmd">pwd</span>
 /home/vesta-deploy
 </code></pre>
 <p>You used the still-live API key from <code>level0@crypto</code> — the value <code>vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3</code> recovered by <code>base64 api-key.b64</code> in level 0. The same access an attacker pulling the same key from Vesta&#39;s repo would have. The same access that prompted Saanvi to schedule the Friday rotation. You&#39;re sitting on <code>payment-deploy.vesta.internal</code>, where the admin-API logs are mirrored for observability.</p>
 <h3 id="step-2-read-the-day-two-context">Step 2: Read the day-two context<a class="anchor" href="#step-2-read-the-day-two-context" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-deploy@crypto:~$ ls
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-deploy@crypto:~$</span> <span class="tok-cmd">ls</span>
 admin-access.log     priya-note.md         verify-middleware.js
 lessons-learned.md   welcome.md
 </code></pre>
@@ -82,29 +82,29 @@ lessons-learned.md   welcome.md
 <li><strong>The shape of the suspicion</strong>: Priya doesn&#39;t say &quot;Theo&#39;s auth is broken.&quot; She says &quot;the same class of mistake as yesterday — confusing one cryptographic primitive for another, or applying one with the wrong parameters — shows up everywhere in junior engineers&#39; first crypto-adjacent code.&quot; That framing is the prep — you&#39;re walking in expecting to find a mistake of that shape.</li>
 </ul>
 <h3 id="step-3-read-theos-verify-middleware">Step 3: Read Theo&#39;s verify middleware<a class="anchor" href="#step-3-read-theos-verify-middleware" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-deploy@crypto:~$ cat verify-middleware.js
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-deploy@crypto:~$</span> <span class="tok-cmd">cat</span> verify-middleware.js
 </code></pre>
 <p>Fifteen lines of code. The relevant snippet:</p>
-<pre><code class="language-javascript">import jwt from &quot;jsonwebtoken&quot;;
-import { SIGNING_SECRET } from &quot;./config.js&quot;;
+<pre data-kind="source"><code class="hl language-javascript"><span class="tok-key">import</span> jwt <span class="tok-key">from</span> <span class="tok-str">&quot;jsonwebtoken&quot;</span>;
+<span class="tok-key">import</span> { SIGNING_SECRET } <span class="tok-key">from</span> <span class="tok-str">&quot;./config.js&quot;</span>;
 
-export function requireAdmin(req, res, next) {
-  const auth = req.headers.authorization || &quot;&quot;;
-  const token = auth.startsWith(&quot;Bearer &quot;) ? auth.slice(7) : null;
-  if (!token) return res.status(401).json({ error: &quot;missing token&quot; });
+<span class="tok-key">export</span> <span class="tok-key">function</span> requireAdmin(req, res, next) {
+  <span class="tok-key">const</span> auth = req.headers.authorization || <span class="tok-str">&quot;&quot;</span>;
+  <span class="tok-key">const</span> token = auth.startsWith(<span class="tok-str">&quot;Bearer &quot;</span>) ? auth.slice(<span class="tok-num">7</span>) : <span class="tok-key">null</span>;
+  <span class="tok-key">if</span> (!token) <span class="tok-key">return</span> res.status(<span class="tok-num">401</span>).json({ error: <span class="tok-str">&quot;missing token&quot;</span> });
 
-  try {
-    // Verify with our signing secret. The library reads the
-    // alg from the token header so we can rotate signing
-    // algorithms later without touching client code.
-    const claims = jwt.verify(token, SIGNING_SECRET);
-    if (claims.role !== &quot;admin&quot;) {
-      return res.status(403).json({ error: &quot;not admin&quot; });
+  <span class="tok-key">try</span> {
+    <span class="tok-com">// Verify with our signing secret. The library reads the</span>
+    <span class="tok-com">// alg from the token header so we can rotate signing</span>
+    <span class="tok-com">// algorithms later without touching client code.</span>
+    <span class="tok-key">const</span> claims = jwt.verify(token, SIGNING_SECRET);
+    <span class="tok-key">if</span> (claims.role !== <span class="tok-str">&quot;admin&quot;</span>) {
+      <span class="tok-key">return</span> res.status(<span class="tok-num">403</span>).json({ error: <span class="tok-str">&quot;not admin&quot;</span> });
     }
     req.adminClaims = claims;
-    return next();
-  } catch (err) {
-    return res.status(401).json({ error: &quot;invalid token&quot; });
+    <span class="tok-key">return</span> next();
+  } <span class="tok-key">catch</span> (err) {
+    <span class="tok-key">return</span> res.status(<span class="tok-num">401</span>).json({ error: <span class="tok-str">&quot;invalid token&quot;</span> });
   }
 }
 </code></pre>
@@ -112,9 +112,9 @@ export function requireAdmin(req, res, next) {
 <p>A token claiming <code>alg: none</code> asks for verification to be skipped. The library obliges. The verifier accepts the token.</p>
 <p>Theo&#39;s code comment reads: <em>&quot;The library reads the alg from the token header so we can rotate signing algorithms later without touching client code.&quot;</em> That sentence is the textbook description of what NOT to want. The convenience that allows server-side algorithm rotation without client coordination is the exact mechanism that allows an attacker to send a token with <code>alg: none</code> and have the server honor it.</p>
 <h3 id="step-4-read-the-access-log">Step 4: Read the access log<a class="anchor" href="#step-4-read-the-access-log" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-deploy@crypto:~$ cat admin-access.log
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-deploy@crypto:~$</span> <span class="tok-cmd">cat</span> admin-access.log
 </code></pre>
-<pre><code>[2026-04-09T07:14:23Z] admin-svc startup on :8443 (config: secrets v3.2)
+<pre data-kind="plain"><code class="hl">[2026-04-09T07:14:23Z] admin-svc startup on :8443 (config: secrets v3.2)
 [2026-04-09T07:14:23Z] verify-middleware loaded (jsonwebtoken @ default options)
 [2026-04-09T07:42:01Z] req=req_4K2J9 GET /admin/health → 200 (no auth — public endpoint)
 [2026-04-09T08:14:23Z] req=req_8H7K4 POST /admin/rotate-secret → 200
@@ -129,10 +129,10 @@ export function requireAdmin(req, res, next) {
 <p><strong>Second</strong>: the <code>verify-middleware loaded (jsonwebtoken @ default options)</code> line at startup is a tell. The library was loaded with no global options object. If the application code also calls <code>jwt.verify()</code> without an options object — and it does, you just read it — then nothing is constraining which algorithms will be accepted.</p>
 <p><strong>Third</strong>: the token is reused. The same caller hits two endpoints with the same JWT. JWTs are stateless precisely so they can be reused this way, but the reuse pattern means a single token disclosure has the blast radius of every request that token can authorize, not just the request the attacker observed.</p>
 <h3 id="step-5-decode-the-token">Step 5: Decode the token<a class="anchor" href="#step-5-decode-the-token" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">vesta-deploy@crypto:~$ jwt eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJ2ZXN0YS1hZG1pbi1zdmMiLCJzdWIiOiJhZG1pbi1zdmMtZGVwbG95IiwiYXVkIjoidmVzdGEtYWRtaW4tYXBpIiwiaWF0IjoxNzc1NzIyNDQwLCJleHAiOjIwOTEzNDE2NDAsInJvbGUiOiJhZG1pbiIsInNjb3BlIjoiKiIsImFjdG9yIjoidGhlb0B2ZXN0YS5leGFtcGxlIiwiaGFuZG9mZl90b2tlbiI6InZlc3RhLWFkbWluLWhhbmRvZmYtMjAyNiJ9.
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-deploy@crypto:~$</span> <span class="tok-cmd">jwt</span> eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJpc3MiOiJ2ZXN0YS1hZG1pbi1zdmMiLCJzdWIiOiJhZG1pbi1zdmMtZGVwbG95IiwiYXVkIjoidmVzdGEtYWRtaW4tYXBpIiwiaWF0IjoxNzc1NzIyNDQwLCJleHAiOjIwOTEzNDE2NDAsInJvbGUiOiJhZG1pbiIsInNjb3BlIjoiKiIsImFjdG9yIjoidGhlb0B2ZXN0YS5leGFtcGxlIiwiaGFuZG9mZl90b2tlbiI6InZlc3RhLWFkbWluLWhhbmRvZmYtMjAyNiJ9.
 </code></pre>
 <p>The decoder output:</p>
-<pre><code>Decoded JWT
+<pre data-kind="plain"><code class="hl">Decoded JWT
 ──────────────────────────────────────────
 
 Header:
@@ -158,7 +158,7 @@ Signature (raw, 0 bytes):
   (empty)
 
 Notes:
-  [!] alg: &#39;none&#39; — server-side acceptance of an unsigned token is a known CVE class (alg=none confusion). Anyone can forge claims.
+  [!] alg: 'none' — server-side acceptance of an unsigned token is a known CVE class (alg=none confusion). Anyone can forge claims.
   [!] Signature is empty. Verify the server is actually checking it.
   [*] exp: 2036-04-09T08:14:00.000Z (valid)
 </code></pre>
@@ -178,12 +178,12 @@ Notes:
 <li><strong>The signing secret should be considered compromised.</strong> Independent of whether anyone has actually exfiltrated it, the threat model now includes &quot;any historical admin action could have been driven by a forged token, not just authenticated ones.&quot; Rotation is required as part of the incident response.</li>
 </ol>
 <p>Send the report to Priya. She&#39;ll route it to Saanvi with yesterday&#39;s report attached. Exit the level.</p>
-<pre><code class="language-bash">vesta-deploy@crypto:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">vesta-deploy@crypto:~$</span> <span class="tok-cmd">exit</span>
 </code></pre>
 <h3 id="step-7-game-world-only-use-the-breadcrumb">Step 7 (game-world only): Use the breadcrumb<a class="anchor" href="#step-7-game-world-only-use-the-breadcrumb" aria-label="Link to this section">#</a></h3>
 <p>In a real engagement, today ends here. In D3CYPH3R the credential chain continues into <code>level2@crypto</code>, where the <code>handoff_token</code> you extracted becomes the entry point.</p>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@crypto
-level2@crypto&#39;s password: vesta-admin-handoff-2026
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level2@crypto
+<span class="tok-prompt">level2@crypto's password:</span> <span class="tok-str">vesta-admin-handoff-2026</span>
 </code></pre>
 <p><code>level2@crypto</code> is playable, and its walkthrough picks up from here.</p>
 <h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
@@ -204,7 +204,7 @@ level2@crypto&#39;s password: vesta-admin-handoff-2026
 <p>The fix is mechanical: redact the <code>Authorization</code> header at the proxy or middleware layer (modern WAF and API-gateway products all support header redaction; nginx&#39;s <code>log_format</code> directive supports it; OpenResty and Caddy do too; Splunk Universal Forwarder, Elastic Filebeat, Sentinel Azure Monitor Agent, and Datadog Agent all support log-scrubbing transforms on the pipeline side as a defense-in-depth backstop). The harder discipline is the rule that the application never writes a credential to its own logs in the first place — the redaction is a backstop, not the design.</p>
 <h3 id="the-compound-effect">The compound effect<a class="anchor" href="#the-compound-effect" aria-label="Link to this section">#</a></h3>
 <p>Each failure in isolation is a finding. Compound them, and you get today&#39;s level.</p>
-<pre><code>  Tokens with alg:none accepted (no signature verified)
+<pre data-kind="plain"><code class="hl">  Tokens with alg:none accepted (no signature verified)
     +
   Live credential placed in token payload
     +
@@ -348,37 +348,37 @@ Vesta&#39;s obligations to its acquirer have already started.</p>
 <h3 id="1-whitelist-algorithms-in-every-jwtverify-call">1. Whitelist algorithms in every JWT.verify() call<a class="anchor" href="#1-whitelist-algorithms-in-every-jwtverify-call" aria-label="Link to this section">#</a></h3>
 <p>The fix is one extra argument on every <code>verify</code> call. The harder work is finding every call.</p>
 <p><strong>Node.js (<code>jsonwebtoken</code>).</strong> The two-argument form is the vulnerability:</p>
-<pre><code class="language-javascript">// VULNERABLE — the token&#39;s alg header decides verification behavior
-const claims = jwt.verify(token, SIGNING_SECRET);
+<pre data-kind="source"><code class="hl language-javascript"><span class="tok-com">// VULNERABLE — the token's alg header decides verification behavior</span>
+<span class="tok-key">const</span> claims = jwt.verify(token, SIGNING_SECRET);
 
-// FIXED — only HS256-signed tokens are accepted
-const claims = jwt.verify(token, SIGNING_SECRET, {
-  algorithms: [&#39;HS256&#39;]
+<span class="tok-com">// FIXED — only HS256-signed tokens are accepted</span>
+<span class="tok-key">const</span> claims = jwt.verify(token, SIGNING_SECRET, {
+  algorithms: [<span class="tok-str">'HS256'</span>]
 });
 </code></pre>
 <p><strong>Node.js (<code>jose</code>).</strong> The <code>jose</code> library (a more modern alternative) makes this safer by binding the key to its algorithm:</p>
-<pre><code class="language-javascript">import { jwtVerify, importJWK } from &#39;jose&#39;;
+<pre data-kind="source"><code class="hl language-javascript"><span class="tok-key">import</span> { jwtVerify, importJWK } <span class="tok-key">from</span> <span class="tok-str">'jose'</span>;
 
-const key = await importJWK({ ... }, &#39;HS256&#39;);
-const { payload } = await jwtVerify(token, key, {
-  // jose still requires you to pass algorithms or it throws
-  algorithms: [&#39;HS256&#39;]
+<span class="tok-key">const</span> key = <span class="tok-key">await</span> importJWK({ ... }, <span class="tok-str">'HS256'</span>);
+<span class="tok-key">const</span> { payload } = <span class="tok-key">await</span> jwtVerify(token, key, {
+  <span class="tok-com">// jose still requires you to pass algorithms or it throws</span>
+  algorithms: [<span class="tok-str">'HS256'</span>]
 });
 </code></pre>
 <p><strong>Python (<code>PyJWT</code>).</strong> Same pattern — the <code>algorithms</code> keyword is required when verifying:</p>
-<pre><code class="language-python">import jwt
+<pre data-kind="source"><code class="hl language-python"><span class="tok-key">import</span> jwt
 
-# PyJWT 2.x raises InvalidAlgorithmError if you omit algorithms
-claims = jwt.decode(token, SIGNING_SECRET, algorithms=[&#39;HS256&#39;])
+<span class="tok-com"># PyJWT 2.x raises InvalidAlgorithmError if you omit algorithms</span>
+claims = jwt.decode(token, SIGNING_SECRET, algorithms=[<span class="tok-str">'HS256'</span>])
 </code></pre>
 <p>PyJWT was one of the libraries where, in older versions, omitting <code>algorithms</code> silently accepted any algorithm. Current versions require the parameter — but only since 2.x. If your application pins to PyJWT 1.x, this is a separate finding.</p>
 <p><strong>Go (<code>golang-jwt/jwt</code>).</strong> The Go library requires an explicit keyfunc that can inspect the alg:</p>
-<pre><code class="language-go">token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-  // Verify the alg is what we expect
-  if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-    return nil, fmt.Errorf(&quot;unexpected signing method: %v&quot;, token.Header[&quot;alg&quot;])
+<pre data-kind="source"><code class="hl language-go">token, err := jwt.Parse(tokenString, <span class="tok-key">func</span>(token *jwt.Token) (<span class="tok-key">interface</span>{}, error) {
+  <span class="tok-com">// Verify the alg is what we expect</span>
+  <span class="tok-key">if</span> _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+    <span class="tok-key">return</span> <span class="tok-key">nil</span>, fmt.Errorf(<span class="tok-str">&quot;unexpected signing method: %v&quot;</span>, token.Header[<span class="tok-str">&quot;alg&quot;</span>])
   }
-  return signingSecret, nil
+  <span class="tok-key">return</span> signingSecret, <span class="tok-key">nil</span>
 })
 </code></pre>
 <p><strong>Audit the codebase.</strong> A regex like <code>jwt\.verify\([^,]+,[^,]+\)</code> (Node.js) or <code>jwt\.decode\([^,]+,[^,]+\)</code> without <code>algorithms=</code> (Python) catches the two-argument form. Every hit is a finding. Static-analysis tools like Semgrep and CodeQL have community-maintained rule packs for the JWT-misconfiguration patterns; the Semgrep registry at <a href="https://semgrep.dev/r/" target="_blank" rel="noopener noreferrer">https://semgrep.dev/r/</a> has searchable rules for <code>javascript.jsonwebtoken</code>, <code>python.pyjwt</code>, and others.<sup class="cite"><a id="cite-semgrep-registry-jwt-rules-1" href="#ref-31" aria-label="Source 31">31</a></sup></p>
@@ -398,20 +398,20 @@ claims = jwt.decode(token, SIGNING_SECRET, algorithms=[&#39;HS256&#39;])
 <h3 id="4-stop-logging-authorization-headers">4. Stop logging Authorization headers<a class="anchor" href="#4-stop-logging-authorization-headers" aria-label="Link to this section">#</a></h3>
 <p>The redaction is mechanical:</p>
 <p><strong>nginx access log:</strong></p>
-<pre><code>log_format main_redacted &#39;$remote_addr - $remote_user [$time_local] &#39;
-                        &#39;&quot;$request&quot; $status $body_bytes_sent &#39;
-                        &#39;&quot;$http_referer&quot; &quot;$http_user_agent&quot; &#39;
-                        &#39;&quot;&lt;REDACTED&gt;&quot;&#39;;   # don&#39;t log Authorization
+<pre data-kind="plain"><code class="hl">log_format main_redacted '$remote_addr - $remote_user [$time_local] '
+                        '&quot;$request&quot; $status $body_bytes_sent '
+                        '&quot;$http_referer&quot; &quot;$http_user_agent&quot; '
+                        '&quot;&lt;REDACTED&gt;&quot;';   # don't log Authorization
 access_log /var/log/nginx/access.log main_redacted;
 </code></pre>
 <p><strong>Application-level (Node.js example with <code>morgan</code>):</strong></p>
-<pre><code class="language-javascript">morgan.token(&#39;redactedAuth&#39;, (req) =&gt; {
-  return req.headers.authorization ? &#39;&lt;REDACTED&gt;&#39; : &#39;-&#39;;
+<pre data-kind="source"><code class="hl language-javascript">morgan.token(<span class="tok-str">'redactedAuth'</span>, (req) =&gt; {
+  <span class="tok-key">return</span> req.headers.authorization ? <span class="tok-str">'&lt;REDACTED&gt;'</span> : <span class="tok-str">'-'</span>;
 });
-app.use(morgan(&#39;:method :url :status :res[content-length] :redactedAuth&#39;));
+app.use(morgan(<span class="tok-str">':method :url :status :res[content-length] :redactedAuth'</span>));
 </code></pre>
 <p><strong>Log-pipeline scrubbing (Splunk example using <code>transforms.conf</code>):</strong></p>
-<pre><code>[redact_authorization]
+<pre data-kind="plain"><code class="hl">[redact_authorization]
 REGEX = (Authorization:\s*Bearer\s+)[A-Za-z0-9-_\.]+
 FORMAT = $1&lt;REDACTED&gt;
 DEST_KEY = _raw
@@ -448,28 +448,28 @@ DEST_KEY = _raw
 <p>An <code>alg: none</code> token is trivially recognisable before it is decoded,
 because the JOSE header is base64url of a short, fixed JSON object. That
 makes this one of the few authentication flaws with a reliable signature.</p>
-<pre><code class="language-yaml">title: JWT presented with the &quot;none&quot; algorithm
-status: stable
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> JWT presented with the <span class="tok-str">&quot;none&quot;</span> algorithm
+status<span class="tok-op">:</span> stable
+description<span class="tok-op">:</span> &gt;
   Detects Authorization headers carrying a JWT whose header declares
-  alg &quot;none&quot;. base64url of {&quot;alg&quot;:&quot;none&quot; begins eyJhbGciOiJub25lIg,
-  and of {&quot;alg&quot;:&quot;None&quot; begins eyJhbGciOiJOb25lIg. Case variants exist
+  alg <span class="tok-str">&quot;none&quot;</span>. base64url of {<span class="tok-str">&quot;alg&quot;</span><span class="tok-op">:</span><span class="tok-str">&quot;none&quot;</span> begins eyJhbGciOiJub25lIg,
+  and of {<span class="tok-str">&quot;alg&quot;</span><span class="tok-op">:</span><span class="tok-str">&quot;None&quot;</span> begins eyJhbGciOiJOb25lIg. Case variants exist
   because some libraries compare the algorithm name case-insensitively.
-logsource:
-  category: proxy
-  product: nginx
-detection:
-  none_alg:
-    cs-header|contains:
-      - &#39;eyJhbGciOiJub25lIg&#39;
-      - &#39;eyJhbGciOiJOb25lIg&#39;
-      - &#39;eyJhbGciOiJOT05FIg&#39;
-  condition: none_alg
-falsepositives:
+logsource<span class="tok-op">:</span>
+  category<span class="tok-op">:</span> proxy
+  product<span class="tok-op">:</span> nginx
+detection<span class="tok-op">:</span>
+  none_alg<span class="tok-op">:</span>
+    cs-header|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'eyJhbGciOiJub25lIg'</span>
+      - <span class="tok-str">'eyJhbGciOiJOb25lIg'</span>
+      - <span class="tok-str">'eyJhbGciOiJOT05FIg'</span>
+  condition<span class="tok-op">:</span> none_alg
+falsepositives<span class="tok-op">:</span>
   - Security scanners and internal penetration tests. These should be
     correlated to a scheduled engagement, and their absence from the
     schedule is itself the finding.
-level: critical
+level<span class="tok-op">:</span> critical
 </code></pre>
 <p>Severity is <code>critical</code> rather than <code>high</code> because a match is not a
 suspicious pattern that needs interpreting. There is no legitimate reason

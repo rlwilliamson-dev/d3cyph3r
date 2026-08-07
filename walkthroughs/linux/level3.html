@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -58,24 +58,24 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Seven steps, but the whole level turns on one command — <code>sudo -l</code> — and one idea: a permission that was granted for a good reason, to a person who left, and never taken away.</p>
 <h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level3@linux
-level3@linux&#39;s password: H@lton-Snapshot-2024-Q4
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level3@linux
+<span class="tok-prompt">level3@linux's password:</span> <span class="tok-str">H@lton-Snapshot-2024-Q4</span>
 </code></pre>
 <p>The password is the SSH-key passphrase you recovered from <code>cron-daniel.log</code> on the bastion. The connection banner identifies the host (<code>halton-build-runner.driftwood.internal</code>) and the tier (Routine, ~12 min). Read <code>welcome.md</code> first:</p>
-<pre><code class="language-bash">daniel@halton-build-runner:~$ cat welcome.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">cat</span> welcome.md
 </code></pre>
 <p><code>welcome.md</code> sets up the engagement (you&#39;re Daniel, via his snapshot key), reiterates the audit-chroot layout, and introduces the one new command you need: <code>sudo -l</code>. It also plants the framing you should internalize before you run anything — <em>you are not root, but Daniel&#39;s account may have been left able to become root for specific commands.</em></p>
 <h3 id="step-2-confirm-who-you-are">Step 2: Confirm who you are<a class="anchor" href="#step-2-confirm-who-you-are" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@halton-build-runner:~$ id
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">id</span>
 uid=1042(daniel) gid=1042(daniel) groups=1042(daniel)
 
-daniel@halton-build-runner:~$ whoami
+<span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">whoami</span>
 daniel
 </code></pre>
 <p>You&#39;re <code>daniel</code>, uid 1042 — the same uid the bastion&#39;s <code>/etc/passwd</code> carried for the offboarded consultant. You have a normal, unprivileged account. Nothing you&#39;ve done so far touches root. Establishing your starting privilege level explicitly is not busywork; it&#39;s the baseline the <em>next</em> command is measured against.</p>
 <h3 id="step-3-enumerate-what-this-account-can-run-as-root">Step 3: Enumerate what this account can run as root<a class="anchor" href="#step-3-enumerate-what-this-account-can-run-as-root" aria-label="Link to this section">#</a></h3>
 <p>This is the command the whole level exists to teach:</p>
-<pre><code class="language-bash">daniel@halton-build-runner:~$ sudo -l
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">sudo</span> <span class="tok-flag">-l</span>
 Matching Defaults entries for daniel on halton-build-runner:
     env_reset, mail_badpass,
     secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin
@@ -92,24 +92,24 @@ User daniel may run the following commands on halton-build-runner:
 <p>The dangerous token is the <code>*</code>. A wildcard over a directory means &quot;anything that ever lands under <code>/var/backups/halton-prod/</code>, for as long as this line exists.&quot; You don&#39;t control what gets written there — the weekly cron does. The moment that backup contains something sensitive, this grant reads it as root. Least privilege (NIST AC-6) means the narrowest command on the <em>narrowest</em> path; a wildcard over a directory whose contents you don&#39;t control is the opposite of narrow.</p>
 <h3 id="step-4-walk-the-backup-the-grant-points-at">Step 4: Walk the backup the grant points at<a class="anchor" href="#step-4-walk-the-backup-the-grant-points-at" aria-label="Link to this section">#</a></h3>
 <p>Recall from level2 what the snapshot cron actually shipped here: <code>cp -a /etc/halton</code> and <code>cp -a /etc/systemd</code>, <code>rsync</code>&#39;d to <code>daniel@halton-build-runner:/var/backups/halton-prod/</code>. So the grant&#39;s wildcard covers a weekly copy of Halton&#39;s production <code>/etc/halton</code> config tree. Walk it:</p>
-<pre><code class="language-bash">daniel@halton-build-runner:~$ ls /var/backups/halton-prod/
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">ls</span> /var/backups/halton-prod/
 etc-halton  etc-systemd
 
-daniel@halton-build-runner:~$ ls /var/backups/halton-prod/etc-halton/
+<span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">ls</span> /var/backups/halton-prod/etc-halton/
 db  halton.conf  secrets.d
 
-daniel@halton-build-runner:~$ ls /var/backups/halton-prod/etc-halton/secrets.d/
+<span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">ls</span> /var/backups/halton-prod/etc-halton/secrets.d/
 prod-vault.env
 </code></pre>
 <p>A directory literally named <code>secrets.d/</code> sits inside a <em>config backup</em>. That is the finding forming under your hands: a routine snapshot of <code>/etc/halton</code> swept up a live secrets directory. <code>halton.conf</code> is harmless (and, being world-readable, you can <code>cat</code> it without sudo — go ahead and confirm the contrast). <code>secrets.d/prod-vault.env</code> and <code>db/</code> are not harmless.</p>
 <h3 id="step-5-read-the-secret-but-notice-you-cant-until-you-escalate">Step 5: Read the secret — but notice you <em>can&#39;t</em>, until you escalate<a class="anchor" href="#step-5-read-the-secret-but-notice-you-cant-until-you-escalate" aria-label="Link to this section">#</a></h3>
 <p>Try the obvious thing first:</p>
-<pre><code class="language-bash">daniel@halton-build-runner:~$ cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">cat</span> /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env
 cat: /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env: Permission denied
 </code></pre>
 <p>Permission denied. When <code>halton-build-runner</code> ingests a delivered backup, a root process re-owns everything under <code>/var/backups/halton-prod/</code> to <code>root:root</code>, mode 0600 — a common hardening so the pushing account can&#39;t tamper with backups after delivery. The irony is that the same hardening means Daniel can&#39;t read back the files his own cron shipped. Normally that&#39;s a wall.</p>
 <p>Except Daniel has the grant. Put <code>sudo</code> in front:</p>
-<pre><code class="language-bash">daniel@halton-build-runner:~$ sudo cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">sudo</span> cat /var/backups/halton-prod/etc-halton/secrets.d/prod-vault.env
 # Halton production Vault agent environment
 # /etc/halton/secrets.d/prod-vault.env
 # DO NOT BACK UP. DO NOT COMMIT. (both happened anyway.)
@@ -122,11 +122,11 @@ VAULT_TOKEN=hvs.HALTONr00tPr0dVault2024Q4Kp7mNq
 <p>There it is. <code>sudo cat</code> ran as root, which ignores the file&#39;s permission bits, so the root-owned <code>0600</code> file reads cleanly. <code>VAULT_TOKEN=hvs.HALTONr00tPr0dVault2024Q4Kp7mNq</code> is a <strong>production Vault ROOT token</strong> — the master credential for Halton&#39;s secrets store — sitting in plaintext inside a config backup, reachable by an offboarded contractor&#39;s account through a single leftover grant. It&#39;s also (per the comment, and per the <code>2024Q4</code> tell baked into the string) a token that was supposed to be rotated 18 months ago and never was.</p>
 <p>That token is the breadcrumb for <code>level4@linux</code>. Hold it. Also notice what you did NOT need: you never needed a sudo <em>password</em>, and you never needed a real exploit. You needed <code>sudo -l</code> and a wildcard.</p>
 <h3 id="step-6-read-the-post-mortem">Step 6: Read the post-mortem<a class="anchor" href="#step-6-read-the-post-mortem" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@halton-build-runner:~$ cat lessons-learned.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">cat</span> lessons-learned.md
 </code></pre>
 <p><code>lessons-learned.md</code> walks the failure stack in audit-deliverable language: blunt version → consulting-firm angle → frameworks → certs → MITRE → defender action → closing. Read it once per level; it&#39;s the shape of the executive summary you&#39;d hand Halton&#39;s CISO.</p>
 <h3 id="step-7-return-to-the-lobby">Step 7: Return to the lobby<a class="anchor" href="#step-7-return-to-the-lobby" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@halton-build-runner:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@halton-build-runner:~$</span> <span class="tok-cmd">exit</span>
 guest@d3cyph3r:~$
 </code></pre>
 <p><code>exit</code> (or <code>logout</code>, or <code>Ctrl-D</code>) returns you to the lobby and records your level-3 solve time. <code>progress --detail</code> shows the run and any bonus finds you triggered.</p>
@@ -240,31 +240,31 @@ a repository.</p>
 <p>Two things are worth alerting on here, and they arrive in order:
 enumeration first, then the privileged read. Catching the first buys time;
 catching the second is the incident.</p>
-<pre><code class="language-yaml">title: Privileged read of production backup material via sudo
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Privileged read of production backup material via sudo
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects sudo-executed reads of files under the production backup tree.
   Wildcard sudoers grants scoped by path glob permit any file the backup
   process later places there, so the grant cannot be evaluated safely
   from the sudoers entry alone and must be watched at use time.
-logsource:
-  product: linux
-  service: auditd
-detection:
-  sudo_read:
-    type: &#39;USER_CMD&#39;
-    cmd|contains|all:
-      - &#39;/bin/cat&#39;
-      - &#39;/var/backups/&#39;
-  platform_team:
-    uid:
-      - &#39;1001&#39;   # backup-verification service account
-  condition: sudo_read and not platform_team
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> linux
+  service<span class="tok-op">:</span> auditd
+detection<span class="tok-op">:</span>
+  sudo_read<span class="tok-op">:</span>
+    type<span class="tok-op">:</span> <span class="tok-str">'USER_CMD'</span>
+    cmd|contains|all<span class="tok-op">:</span>
+      - <span class="tok-str">'/bin/cat'</span>
+      - <span class="tok-str">'/var/backups/'</span>
+  platform_team<span class="tok-op">:</span>
+    uid<span class="tok-op">:</span>
+      - <span class="tok-str">'1001'</span>   <span class="tok-com"># backup-verification service account</span>
+  condition<span class="tok-op">:</span> sudo_read and not platform_team
+falsepositives<span class="tok-op">:</span>
   - Scheduled backup-verification runs. These execute under a known
-    service account and on a predictable cadence; exclude by UID and
+    service account and <span class="tok-key">on</span> a predictable cadence; exclude by UID and
     review any run that falls outside its window.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>A second, cheaper rule catches the reconnaissance: alert on <code>sudo -l</code> from
 any interactive account outside the platform team. Legitimate operators
