@@ -221,6 +221,44 @@ jobs:
         run: |
           rm -rf tests/ tools/
           rm -f CHANGELOG.md README.md CONTRIBUTING.md walkthroughs/README.md .gitignore .mailmap
+
+      - name: Decide deployment target
+        id: target
+        # A manual run on a feature branch must not reach production.
+        #
+        # The SWA action deploys to the PRODUCTION environment whenever
+        # `deployment_environment` is empty. That is correct for a push
+        # to main, and it is what makes `pull_request` runs safe too
+        # (the action creates a per-PR preview on its own). But
+        # `workflow_dispatch` had no such protection: dispatching this
+        # workflow on any branch published that branch to
+        # www.d3cyph3r.com.
+        #
+        # That is not hypothetical. On 2026-08-06 the `pull_request`
+        # event stopped being delivered, the workflow was dispatched by
+        # hand to get the checks to run, and unreviewed branch code went
+        # live for several hours while main sat six releases behind.
+        #
+        # workflow_dispatch is still the right escape hatch for forcing
+        # the playtest on a branch; it just gets a named preview instead
+        # of the production slot. Dispatching on main still deploys to
+        # production, which is the one case where that is intended.
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] \
+             && [ "${{ github.ref_name }}" != "main" ]; then
+            # Environment names become part of the preview hostname, so
+            # strip anything that is not host-safe and keep it short.
+            slug=$(printf '%s' "${{ github.ref_name }}" \
+                   | tr '[:upper:]' '[:lower:]' \
+                   | tr '/_' '--' \
+                   | tr -cd 'a-z0-9-' \
+                   | cut -c1-30)
+            echo "environment=manual-$slug" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Preview deploy::Manual run on '${{ github.ref_name }}' deploys to preview environment 'manual-$slug', NOT production."
+          else
+            echo "environment=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -228,6 +266,9 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_GROUND_062009210 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
+          # Empty = production. Set only for a manual run on a branch;
+          # see "Decide deployment target" above for why.
+          deployment_environment: ${{ steps.target.outputs.environment }}
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "/" # App source code path
