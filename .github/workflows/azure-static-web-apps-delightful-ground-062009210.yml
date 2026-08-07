@@ -221,6 +221,62 @@ jobs:
         run: |
           rm -rf tests/ tools/
           rm -f CHANGELOG.md README.md CONTRIBUTING.md walkthroughs/README.md .gitignore .mailmap
+
+      - name: Decide deployment target
+        id: target
+        # A manual run on a feature branch must not reach production.
+        #
+        # The SWA action deploys to the PRODUCTION environment whenever
+        # `deployment_environment` is empty. That is correct for a push
+        # to main, and it is what makes `pull_request` runs safe too
+        # (the action creates a per-PR preview on its own). But
+        # `workflow_dispatch` had no such protection: dispatching this
+        # workflow on any branch published that branch to
+        # www.d3cyph3r.com.
+        #
+        # That is not hypothetical. On 2026-08-06 the `pull_request`
+        # event stopped being delivered, the workflow was dispatched by
+        # hand to get the checks to run, and unreviewed branch code went
+        # live for several hours while main sat six releases behind.
+        #
+        # workflow_dispatch is still the right escape hatch for forcing
+        # the playtest on a branch; it just gets a named preview instead
+        # of the production slot. Dispatching on main still deploys to
+        # production, which is the one case where that is intended.
+        #
+        # Every manual run shares ONE environment, deliberately. The
+        # first draft of this used a per-branch name and that was wrong
+        # for two reasons, both found by actually dispatching it:
+        #
+        #   1. Azure rewrites the name. It strips every non-alphanumeric
+        #      character and truncates to 16, so the branch-derived
+        #      'manual-ci-no-accidental-prod-deploy' landed as
+        #      'manualcinoaccide'. The run would then report a URL that
+        #      did not exist, and two branches sharing a 16-char prefix
+        #      would silently collide anyway.
+        #
+        #   2. Nothing ever deletes them. close_pull_request_job cleans
+        #      up a PR preview because a PR emits a `closed` event; a
+        #      manual dispatch emits nothing, so each new branch would
+        #      consume a preview slot permanently. The Free plan allows
+        #      3 per app, which the PR previews already occupy, so the
+        #      second or third dispatch fails the deploy with
+        #      "maximum number of staging environments".
+        #
+        # A single fixed name fixes both: it survives truncation intact,
+        # and repeat dispatches overwrite it instead of accumulating. It
+        # costs one of the 3 slots once, forever, rather than one per
+        # branch. Which branch is deployed there is not lost: it is in
+        # the notice below and on the run itself.
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] \
+             && [ "${{ github.ref_name }}" != "main" ]; then
+            echo "environment=manual" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Preview deploy::Manual run on '${{ github.ref_name }}' deploys to the shared 'manual' preview environment, NOT production. It replaces whatever was there before."
+          else
+            echo "environment=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -228,6 +284,19 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_DELIGHTFUL_GROUND_062009210 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
           action: "upload"
+          # Empty = production. Set only for a manual run on a branch;
+          # see "Decide deployment target" above for why.
+          #
+          # The runner logs "Unexpected input(s) 'deployment_environment'"
+          # here. Ignore it, and do NOT delete this line to silence it.
+          # The input is the documented way to target a named preview
+          # environment (learn.microsoft.com/azure/static-web-apps/
+          # named-environments); the warning comes from the action.yml at
+          # the resolved v1 tag being older than the action's own docs.
+          # Undeclared inputs are still passed through as INPUT_* env
+          # vars, and the deploy honours it: the run log confirms with
+          # "You are using named preview environments".
+          deployment_environment: ${{ steps.target.outputs.environment }}
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "/" # App source code path
