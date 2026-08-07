@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -56,15 +56,15 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The puzzle path is short and rewards reading the file tree carefully. Four files in the workspace, one new command to learn, four GitHub repos to enumerate, one of them contains the finding.</p>
 <h3 id="step-1-open-the-workspace">Step 1: Open the workspace<a class="anchor" href="#step-1-open-the-workspace" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@osint
-level1@osint&#39;s password: BostonStrong#2013
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level1@osint
+<span class="tok-prompt">level1@osint's password:</span> <span class="tok-str">BostonStrong#2013</span>
 Connected: level1@osint
-intel@osint:~$ whoami
+<span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">whoami</span>
 intel
 </code></pre>
 <p>You used Aaron&#39;s recovered reused password as the entry gate — the meta-joke of the OSINT track, where the breadcrumb credential from level0 is the actual password being investigated. The shell drops you on the same Driftwood workstation as Friday, <code>intel</code> service account, same engagement working directory.</p>
 <h3 id="step-2-read-the-four-engagement-files">Step 2: Read the four engagement files<a class="anchor" href="#step-2-read-the-four-engagement-files" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ ls
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">ls</span>
 engagement-notes.md  lessons-learned.md  subject-update.txt  welcome.md
 </code></pre>
 <p>Four files. Read them in order.</p>
@@ -72,7 +72,7 @@ engagement-notes.md  lessons-learned.md  subject-update.txt  welcome.md
 <p><code>engagement-notes.md</code> is Priya&#39;s update. It covers what happened between Friday and Monday — Marisol&#39;s weekend conversation with the CPO and Aaron, the scope expansion (sherlock + github now authorized), the unchanged out-of-scope boundaries (no active credential testing, no family enumeration, no Veridian-domain accounts). It also flags the specific pattern to look for: a personal-project repo with a committed <code>.env</code>, <code>config.yaml</code>, or <code>.aws/credentials</code> file. Priya&#39;s note ends with the punchline: Aaron&#39;s GitHub handle is <code>aaron-hines-md</code>, derivable from his LinkedIn bio signature (&quot;github.com/aaron-hines-md&quot; — he linked it years ago and never removed it).</p>
 <p><code>subject-update.txt</code> is the formal case-file update. Same case ID as Friday (<code>VER-EXP-2026-002</code>), now scope-expanded. The notable section is Marisol&#39;s pre-written remediation guidance: if the player finds live committed AWS credentials, Aaron rotates today via AWS console, AWS GuardDuty review for any anomalous API calls under those credentials, and — critically — if the credentials gate a bucket that contained patient-identifying data from Aaron&#39;s clinical-era work, the HIPAA-exposure analysis runs through Veridian&#39;s GC and potentially Helix&#39;s GC.<sup class="cite"><a id="cite-aws-guardduty-1" href="#ref-4" aria-label="Source 4">4</a></sup> Marisol is pre-emptively framing the conversation that may follow the finding.</p>
 <h3 id="step-3-confirm-the-github-handle-with-sherlock">Step 3: Confirm the GitHub handle with sherlock<a class="anchor" href="#step-3-confirm-the-github-handle-with-sherlock" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ sherlock aaron-hines-md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">sherlock</span> aaron-hines-md
 Sherlock 0.14.4
 [*] Checking username &quot;aaron-hines-md&quot; across social platforms
 ──────────────────────────────────────────
@@ -91,7 +91,7 @@ Sherlock 0.14.4
 </code></pre>
 <p>Three things matter here. <strong>First</strong>, <code>aaron-hines-md</code> resolves on GitHub — Aaron&#39;s handle confirmed. <strong>Second</strong>, the Strava presence is interesting OPSEC adjacent — Aaron is a PRO subscriber with recent activity and segment leaderboards in his own neighborhood (Brookline / Newton); per the LinkedIn DM in level0 that referenced his home neighborhood, Strava is one of the public sources from which that intel would have been derived. Worth noting in the brief, but out of scope for today&#39;s narrow GitHub task. <strong>Third</strong>, the absence of Twitter / Reddit / Instagram / TikTok presence at this handle is itself a signal — Aaron either curates his public presence carefully or those platforms don&#39;t use his real-name-attached handle. Out of scope today; useful to know for the eventual writeup.</p>
 <h3 id="step-4-enumerate-aarons-github-profile">Step 4: Enumerate Aaron&#39;s GitHub profile<a class="anchor" href="#step-4-enumerate-aarons-github-profile" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ github aaron-hines-md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">github</span> aaron-hines-md
 github.com — user profile lookup
 ──────────────────────────────────────────
   Profile:        aaron-hines-md
@@ -114,7 +114,7 @@ Public repositories:
 <p>Aaron joined GitHub in September 2014, during his BIDMC clinical pharmacology fellowship. His follower / following counts are modest — this is a researcher&#39;s GitHub, not a developer&#39;s GitHub, used as a portfolio plus a place to park personal projects rather than as a primary identity. Four public repos, sorted by last-updated descending: <code>personal-pgx-tool</code> (the most recently touched, last commit March 2024), <code>marathon-pacer-log</code> (a CSV + R notebook for race-day pacing — interesting personal artifact but unlikely to carry secrets), <code>pgx-residency-notes</code> (lecture notes from his fellowship era), and <code>dotfiles</code> (the universal developer-vanity repo).</p>
 <p>The interesting one is <code>personal-pgx-tool</code>. Three reasons: it&#39;s the most recently touched, it&#39;s the one Aaron implicitly mentioned (&quot;clinical-data Python tooling back during his fellowship&quot;), and the description (&quot;Uses OpenFDA + PharmGKB APIs&quot;) signals that it makes outbound API calls — meaning it probably has API keys somewhere. The other three repos are decoys: a CSV + R notebook doesn&#39;t typically need credentials, Markdown lecture notes definitely don&#39;t, and a dotfiles repo only carries secrets if the developer is reckless enough to commit a <code>.gitconfig</code> with a personal access token (rare in modern practice; the GitHub PAT-in-gitconfig pattern was more common circa 2018 than today).</p>
 <h3 id="step-5-drill-into-personal-pgx-tool">Step 5: Drill into personal-pgx-tool<a class="anchor" href="#step-5-drill-into-personal-pgx-tool" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ github aaron-hines-md/personal-pgx-tool
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">github</span> aaron-hines-md/personal-pgx-tool
 github.com — repository
 ──────────────────────────────────────────
   Repository:     aaron-hines-md/personal-pgx-tool
@@ -147,7 +147,7 @@ To view a file: github aaron-hines-md/personal-pgx-tool file &lt;path&gt;
 </ol>
 <p>Aaron&#39;s repo has been public on GitHub since July 2023. That&#39;s almost three years of exposure.</p>
 <h3 id="step-6-read-the-env">Step 6: Read the .env<a class="anchor" href="#step-6-read-the-env" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ github aaron-hines-md/personal-pgx-tool file .env
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">github</span> aaron-hines-md/personal-pgx-tool file .env
 github.com — aaron-hines-md/personal-pgx-tool — .env
 ──────────────────────────────────────────
 # Personal PGx tool — local dev config
@@ -178,7 +178,7 @@ S3_CACHE_BUCKET=ahines-pgx-cache
 <p>The level2@osint breadcrumb is the AWS secret access key: <code>AaronHinesMD/Pers0nal+AWS/2024+BrightBlu</code>. In the in-game continuation, the next engagement would use that credential to enumerate Aaron&#39;s personal AWS account (<code>aws sts get-caller-identity</code>, <code>aws s3 ls</code>, etc.) under expanded authorization. That&#39;s <code>level2@osint</code> material; today the task ends at &quot;identified and reported.&quot;</p>
 <h3 id="step-7-verify-the-gitignore-irony">Step 7: Verify the .gitignore irony<a class="anchor" href="#step-7-verify-the-gitignore-irony" aria-label="Link to this section">#</a></h3>
 <p>The lesson is sharper with the contradiction in view. Read the <code>.gitignore</code>:</p>
-<pre><code class="language-bash">intel@osint:~$ github aaron-hines-md/personal-pgx-tool file .gitignore
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">github</span> aaron-hines-md/personal-pgx-tool file .gitignore
 github.com — aaron-hines-md/personal-pgx-tool — .gitignore
 ──────────────────────────────────────────
 # Local development
@@ -407,26 +407,26 @@ investigating.</p>
 <p>Nothing about this is visible in Veridian&#39;s logs, because the exposure is
 on a personal repository outside the company. What <em>is</em> visible is the
 consequence: a leaked key being used.</p>
-<pre><code class="language-yaml">title: AWS access key used from outside expected networks
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> AWS access key used from outside expected networks
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects API activity authenticated by a long-lived access key from a
-  source outside the organisation&#39;s known egress ranges and cloud
-  regions. A key published in a public repository is typically exercised
+  source outside the organisation<span class="tok-str">'s known egress ranges and cloud
+</span>  regions. A key published in a public repository is typically exercised
   by automated scanners within minutes of the commit.
-logsource:
-  product: aws
-  service: cloudtrail
-detection:
-  long_lived_key:
-    userIdentity.type: &#39;IAMUser&#39;
-    userIdentity.accessKeyId|startswith: &#39;AKIA&#39;
-  expected_sources:
-    sourceIPAddress|cidr:
-      - &#39;203.0.113.0/24&#39;    # corporate egress
-      - &#39;198.51.100.0/24&#39;   # CI runners
-  condition: long_lived_key and not expected_sources
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> aws
+  service<span class="tok-op">:</span> cloudtrail
+detection<span class="tok-op">:</span>
+  long_lived_key<span class="tok-op">:</span>
+    userIdentity.type<span class="tok-op">:</span> <span class="tok-str">'IAMUser'</span>
+    userIdentity.accessKeyId|startswith<span class="tok-op">:</span> <span class="tok-str">'AKIA'</span>
+  expected_sources<span class="tok-op">:</span>
+    sourceIPAddress|cidr<span class="tok-op">:</span>
+      - <span class="tok-str">'203.0.113.0/24'</span>    <span class="tok-com"># corporate egress</span>
+      - <span class="tok-str">'198.51.100.0/24'</span>   <span class="tok-com"># CI runners</span>
+  condition<span class="tok-op">:</span> long_lived_key and not expected_sources
+falsepositives<span class="tok-op">:</span>
   - Engineers working remotely with long-lived keys, which is itself the
     problem this rule keeps surfacing. The durable fix is federated
     short-lived credentials, after which any remaining AKIA usage is
@@ -434,7 +434,7 @@ falsepositives:
   - Third-party integrations authorised to call the account. Give each
     one its own principal so it can be excluded by identity rather than
     by address.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>Two AWS-native controls do more here than any rule. Turn on
 <a href="https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_finding-types-iam.html" target="_blank" rel="noopener noreferrer">GuardDuty</a>,

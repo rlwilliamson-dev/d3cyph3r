@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -65,31 +65,31 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Six commands. The Linux discipline is in reading the cron entry slowly — <code>who owns the job</code>, <code>where does its output go</code>, <code>is the destination a file the player can read</code> — before you run the command that prints the credential.</p>
 <h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@linux
-level2@linux&#39;s password: Halton-2024-Q3!
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level2@linux
+<span class="tok-prompt">level2@linux's password:</span> <span class="tok-str">Halton-2024-Q3!</span>
 </code></pre>
 <p>The password is the <code>DB_PROD_PASS</code> value you recovered from <code>staging-worker.env.bak</code> yesterday. Halton&#39;s password-reuse policy makes the same string the bastion login. The connection banner identifies the host (<code>halton-prod-bastion.driftwood.internal</code>) and the tier (Routine, ~12 min). Read <code>welcome.md</code> first — it sets up the audit-chroot layout (your home directory and the read-only system root point at the same node, which is why <code>ls ~</code> shows both briefing docs <em>and</em> system paths like <code>etc/</code>, <code>var/</code>, <code>opt/</code> as siblings).</p>
-<pre><code class="language-bash">audit@halton-prod-bastion:~$ cat welcome.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit@halton-prod-bastion:~$</span> <span class="tok-cmd">cat</span> welcome.md
 </code></pre>
 <p><code>welcome.md</code> documents the engagement (Halton CISO scope, audit-user identity, the chroot framing), introduces the new commands you&#39;ll need today (<code>crontab -l -u &lt;user&gt;</code>, <code>journalctl -u &lt;unit&gt;</code>, <code>cat /etc/cron.d/*</code>), and orients you toward the puzzle without revealing the breadcrumb. It also documents the convention that <code>cat /etc/cron.d/halton-weekly-snapshot</code> works the same here as it would on any Linux box — the unusual <code>ls ~</code> output is a sandboxing artifact, not a path-resolution oddity.</p>
 <h3 id="step-2-enumerate-the-system-wide-cron-entries">Step 2: Enumerate the system-wide cron entries<a class="anchor" href="#step-2-enumerate-the-system-wide-cron-entries" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit@halton-prod-bastion:~$ ls /etc/cron.d/
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit@halton-prod-bastion:~$</span> <span class="tok-cmd">ls</span> /etc/cron.d/
 halton-weekly-snapshot
 </code></pre>
 <p>One file. On a typical production-bastion you&#39;d expect a few — package-shipped cron entries (logrotate&#39;s, anacron&#39;s, the distribution&#39;s daily maintenance), plus whatever the operations team has dropped in over time. Halton&#39;s prod-bastion has exactly one <em>custom</em> entry. That&#39;s the file you came to inspect.</p>
 <p>Two background facts worth absorbing here. First, <code>/etc/cron.d/</code> is <em>one of</em> the system-wide cron locations on a Debian-family Linux box. The others are <code>/etc/crontab</code> (the legacy system crontab), <code>/etc/cron.{hourly,daily,weekly,monthly}/</code> (run-parts directories that fire on the named schedule), and <code>/var/spool/cron/</code> (per-user crontabs, managed via <code>crontab -e</code>). <code>/etc/cron.d/</code> is favored by package maintainers and ops engineers for jobs that need explicit time-of-day scheduling and want to run as a specific user — because the <code>/etc/cron.d/</code> format adds a sixth column between the schedule and the command: the username to run the job as. Per-user crontabs in <code>/var/spool/cron/</code> don&#39;t have that column because they&#39;re implicitly run as their owning user. <code>/etc/cron.d/</code> is the only place outside of root&#39;s own crontab where you can schedule a job to run <em>as someone else</em>. That&#39;s the property of <code>/etc/cron.d/</code> that matters for this finding.</p>
 <p>Second: the modern Linux scheduling primitive is <em>systemd timers</em>, not cron — systemd unit timers replace <code>/etc/cron.d/</code> entries in distributions that have fully transitioned to systemd-everything. Halton&#39;s bastion runs Debian-style cron because Daniel set this up in 2024 and didn&#39;t migrate. That&#39;s not a finding in itself, but it does mean <code>systemctl list-timers</code> won&#39;t show you this job — you have to enumerate <code>/etc/cron.d/</code> directly.</p>
 <h3 id="step-3-read-the-cron-entry">Step 3: Read the cron entry<a class="anchor" href="#step-3-read-the-cron-entry" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit@halton-prod-bastion:~$ cat /etc/cron.d/halton-weekly-snapshot
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit@halton-prod-bastion:~$</span> <span class="tok-cmd">cat</span> /etc/cron.d/halton-weekly-snapshot
 # Halton Bank — weekly prod-config snapshot
 # Owner: daniel (originally; he set this up Q4 2024 before
-#                rolling off and nobody&#39;s touched it since)
+#                rolling off and nobody's touched it since)
 # Installed: 2024-10-13 (per package manifest)
 # Purpose: ship a copy of /etc/halton + /etc/systemd to the
 #          off-bastion build runner for quarterly audit
 #          comparison
 #
-# Output is captured for retention per Halton&#39;s audit-trail
+# Output is captured for retention per Halton's audit-trail
 # policy. The script uses bash `set -x` so the run is fully
 # inspectable in /var/log/cron-daniel.log.
 
@@ -105,23 +105,23 @@ MAILTO=&quot;&quot;
 <p><strong>Fact two: the redirect target is a single, world-readable log file.</strong> <code>&gt;&gt; /var/log/cron-daniel.log 2&gt;&amp;1</code> appends both stdout and stderr to a file under <code>/var/log/</code>. The default mode of a file cron creates on first write is 644 — owner-readable-writable, group-and-world readable. There&#39;s no logrotate config restricting access; there&#39;s no daemon (like rsyslog) interposing on the path; there&#39;s just a plain file. Anyone with shell access on this box can <code>cat</code> it.</p>
 <p><strong>Fact three: the script the cron runs uses <code>set -x</code>.</strong> This is the part you don&#39;t know yet, because you haven&#39;t read the script — but the cron-file header comment block tells you. The audit-trail rationale (&quot;output captured for retention per Halton&#39;s audit-trail policy&quot;) is the reason <code>set -x</code> was <em>added</em>. Whoever decided that knew bash trace mode echoes every executed command line to stderr, and chose to use it deliberately. The choice produces the log file Halton&#39;s audit policy wants. It also produces a log file that contains every <code>export FOO=...</code> line in the script. If the script exports a credential, the trace puts the credential in the log.</p>
 <p>Before reading the log, let&#39;s confirm the third fact:</p>
-<pre><code class="language-bash">audit@halton-prod-bastion:~$ cat /opt/halton/snapshot-config.sh
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit@halton-prod-bastion:~$</span> <span class="tok-cmd">cat</span> /opt/halton/snapshot-config.sh
 #!/bin/bash
 # Halton weekly prod-config snapshot.
 # Daniel set this up Q4 2024. Never rotated.
 #
-# The set -x line is intentional: Halton&#39;s audit policy
+# The set -x line is intentional: Halton's audit policy
 # requires a complete trace of every prod-touching job so
 # the run can be reconstructed for SOX-ish review. Nobody
 # has audited the TRACE FILES themselves for what they
-# leak. (That&#39;s our finding today.)
+# leak. (That's our finding today.)
 
 set -euxo pipefail
 
 # Passphrase for the snapshot-rsync key, which authenticates
 # the rsync to halton-build-runner. ssh-add slurps it from
 # the env at call time.
-export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
+export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
 
 echo &quot;$SSH_KEY_PASSPHRASE&quot; | ssh-add -p /etc/halton/keys/snapshot-rsync.key
 
@@ -138,9 +138,9 @@ rm -rf &quot;$SNAPSHOT_DIR&quot;
 <p><code>set -euxo pipefail</code> — the <code>x</code> is the trace flag. Every executed command is echoed to stderr (or, here, to the redirected log). Including the <code>export SSH_KEY_PASSPHRASE=&#39;...&#39;</code> line. The script&#39;s comment block explicitly acknowledges the trace mode is intentional for audit retention, and explicitly notes that <em>nobody has audited the trace files themselves for what they leak</em>. That sentence is the finding, written by the engineer who built the bug. (Daniel&#39;s signature self-aware-but-undocumented anti-pattern, from level0 and level1, continues.)</p>
 <p>The breadcrumb credential <code>H@lton-Snapshot-2024-Q4</code> is now visible to you. You&#39;ve technically solved the level. But the puzzle&#39;s <em>audit</em> requires you to also observe what an attacker would see in the log file — because the executive summary needs to read <em>&quot;the credential leaked weekly into a 644-mode log going back six months,&quot;</em> not <em>&quot;the credential was hardcoded in a script.&quot;</em> Both are true; the log is the worse finding, because the attacker doesn&#39;t need read access to <code>/opt/halton/snapshot-config.sh</code> to extract it.</p>
 <h3 id="step-4-read-the-log">Step 4: Read the log<a class="anchor" href="#step-4-read-the-log" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit@halton-prod-bastion:~$ cat /var/log/cron-daniel.log
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit@halton-prod-bastion:~$</span> <span class="tok-cmd">cat</span> /var/log/cron-daniel.log
 === Sun Apr 19 03:00:01 UTC 2026 ===
-+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
 + echo H@lton-Snapshot-2024-Q4
 + ssh-add -p /etc/halton/keys/snapshot-rsync.key
 Identity added: /etc/halton/keys/snapshot-rsync.key (snapshot-2024@halton)
@@ -154,26 +154,26 @@ total size is 4,180,222  speedup is 1.00
 + rm -rf /tmp/halton-snapshot-2026-04-19
 
 === Sun Apr 26 03:00:01 UTC 2026 ===
-+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
 ...
 </code></pre>
 <p>Six weeks of weekly runs, each preserving the same <code>+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;</code> trace line. (The log actually goes back further than that, but logrotate truncates older history; the most recent six weeks are what survives in the current file.) The credential is shown explicitly <em>every</em> Sunday at 03:00:01 UTC — and every one of those events was a free copy for anyone with shell access on this box.</p>
 <p>If you want just the leaking line without the surrounding noise:</p>
-<pre><code class="language-bash">audit@halton-prod-bastion:~$ grep SSH_KEY_PASSPHRASE /var/log/cron-daniel.log
-+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
-+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
-+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
-+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
-+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
-+ export SSH_KEY_PASSPHRASE=&#39;H@lton-Snapshot-2024-Q4&#39;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit@halton-prod-bastion:~$</span> <span class="tok-cmd">grep</span> SSH_KEY_PASSPHRASE /var/log/cron-daniel.log
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
++ export SSH_KEY_PASSPHRASE='H@lton-Snapshot-2024-Q4'
 </code></pre>
 <p>Six identical lines — same passphrase, six weeks in a row. The breadcrumb credential for <code>level3@linux</code> is <code>H@lton-Snapshot-2024-Q4</code>. Hold it; you&#39;ll use it after the next level ships.</p>
 <h3 id="step-5-read-the-post-mortem">Step 5: Read the post-mortem<a class="anchor" href="#step-5-read-the-post-mortem" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit@halton-prod-bastion:~$ cat lessons-learned.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit@halton-prod-bastion:~$</span> <span class="tok-cmd">cat</span> lessons-learned.md
 </code></pre>
 <p><code>lessons-learned.md</code> walks the same three-failure stack from the start of this section in the language of a written audit deliverable: blunt version → consulting-firm angle → frameworks → certs → MITRE → defender action → closing. That&#39;s the canonical layout of the in-game post-mortem; it&#39;s also approximately the shape of the executive summary you&#39;d hand to Halton&#39;s CISO + Driftwood&#39;s engagement-management retro. The in-game version cites the specific control IDs your written report would cite; reading it once on each level is how the muscle memory builds.</p>
 <h3 id="step-6-return-to-the-lobby">Step 6: Return to the lobby<a class="anchor" href="#step-6-return-to-the-lobby" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">audit@halton-prod-bastion:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">audit@halton-prod-bastion:~$</span> <span class="tok-cmd">exit</span>
 guest@d3cyph3r:~$
 </code></pre>
 <p><code>exit</code> (or <code>logout</code>, or <code>Ctrl-D</code>) returns you to the lobby. Your level-2 solve time gets recorded against the level timer; <code>progress --detail</code> from anywhere will show the run.</p>
@@ -269,36 +269,36 @@ that III.C.1.f expects to exist.</p>
 there is no malicious event to catch. What can be caught is somebody
 <em>reading</em> the file the job leaves behind. Watch the log directory and
 alert on any reader that is neither root nor the job&#39;s own account.</p>
-<pre><code class="language-yaml">title: Scheduled-job log read by an account that does not own it
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Scheduled-job log read by an account that does not own it
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects read access to scheduled-job log output by accounts other than
   root or the job owner. Shell tracing (set -x, BASH_XTRACEFD) echoes
   command arguments into these logs, so any secret passed as an argument
-  ends up on disk at whatever mode the job created the file with.
-  Requires an auditd watch: -w /var/log/halton/ -p r -k job_logs
-logsource:
-  product: linux
-  service: auditd
-detection:
-  log_read:
-    type: &#39;SYSCALL&#39;
-    syscall:
-      - &#39;open&#39;
-      - &#39;openat&#39;
-    key: &#39;job_logs&#39;
-  expected_readers:
-    uid:
-      - &#39;0&#39;      # root
-      - &#39;997&#39;    # the job&#39;s own service account
-      - &#39;998&#39;    # log-shipping agent
-  condition: log_read and not expected_readers
-falsepositives:
+  ends up <span class="tok-key">on</span> disk at whatever mode the job created the file with.
+  Requires an auditd watch<span class="tok-op">:</span> -w /var/log/halton/ -p r -k job_logs
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> linux
+  service<span class="tok-op">:</span> auditd
+detection<span class="tok-op">:</span>
+  log_read<span class="tok-op">:</span>
+    type<span class="tok-op">:</span> <span class="tok-str">'SYSCALL'</span>
+    syscall<span class="tok-op">:</span>
+      - <span class="tok-str">'open'</span>
+      - <span class="tok-str">'openat'</span>
+    key<span class="tok-op">:</span> <span class="tok-str">'job_logs'</span>
+  expected_readers<span class="tok-op">:</span>
+    uid<span class="tok-op">:</span>
+      - <span class="tok-str">'0'</span>      <span class="tok-com"># root</span>
+      - <span class="tok-str">'997'</span>    <span class="tok-com"># the job's own service account</span>
+      - <span class="tok-str">'998'</span>    <span class="tok-com"># log-shipping agent</span>
+  condition<span class="tok-op">:</span> log_read and not expected_readers
+falsepositives<span class="tok-op">:</span>
   - Log-shipping and backup agents running under service accounts. Add
     their UIDs to expected_readers rather than widening the watch path.
   - On-call engineers reading job output during an incident. These should
     be rare enough to review individually and correlate to a ticket.
-level: medium
+level<span class="tok-op">:</span> medium
 </code></pre>
 <p>This alerts on the harvest, not the exposure, and that is a deliberate
 compromise: it fires only once somebody has already gone looking. The

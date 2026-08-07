@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -58,26 +58,26 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The whole level is <code>ls</code> plus <code>cat</code>. The lesson is in noticing what&#39;s in front of you.</p>
 <h3 id="step-1-orient">Step 1: Orient<a class="anchor" href="#step-1-orient" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@linux:~$ pwd
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">pwd</span>
 /home/daniel
 </code></pre>
 <p><code>pwd</code> (&quot;print working directory&quot;) tells you where you are in the filesystem. You&#39;re sitting in Daniel&#39;s home directory — <code>/home/daniel</code>. Every file you find here was either created by him or copied by him from somewhere else.</p>
 <h3 id="step-2-list-whats-there">Step 2: List what&#39;s there<a class="anchor" href="#step-2-list-whats-there" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@linux:~$ ls
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">ls</span>
 creds.txt  handoff.md  notes.txt  tasks.md  welcome.md
 </code></pre>
 <p>Five files. None of them shout &quot;credential.&quot; But notice <code>creds.txt</code> — that name should immediately register. Not because attackers grep for <code>creds*</code> (they do — but that&#39;s the <em>defender&#39;s</em> observation about what attackers do). Because the file is named after what it contains, and someone left it sitting in plain view.</p>
 <p>The <code>-a</code> flag exposes hidden files (anything whose name starts with <code>.</code>):</p>
-<pre><code class="language-bash">daniel@linux:~$ ls -a
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">ls</span> <span class="tok-flag">-a</span>
 .   ..   .bash_history   creds.txt   handoff.md   notes.txt   tasks.md   welcome.md
 </code></pre>
 <p><code>.bash_history</code> is the shell&#39;s per-user log of every command Daniel typed. That&#39;s the second find. We&#39;ll come back to it.</p>
 <h3 id="step-3-read-the-briefing">Step 3: Read the briefing<a class="anchor" href="#step-3-read-the-briefing" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@linux:~$ cat welcome.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">cat</span> welcome.md
 </code></pre>
 <p>This is the engine&#39;s in-world introduction. It explains who you are, where you are, and the commands you need today. In a real audit, you&#39;d read the engagement brief before touching anything; the walkthrough mirrors that.</p>
 <h3 id="step-4-read-the-handoff-document">Step 4: Read the handoff document<a class="anchor" href="#step-4-read-the-handoff-document" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@linux:~$ cat handoff.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">cat</span> handoff.md
 </code></pre>
 <p>This is Daniel&#39;s note to whoever picks up the Halton account next. Three things stand out:</p>
 <ol>
@@ -86,8 +86,8 @@ creds.txt  handoff.md  notes.txt  tasks.md  welcome.md
 <li>The voice. Daniel sounds tired, like a competent person who has stopped caring about a particular policy. The lesson here is that exhaustion and apathy are vulnerabilities. Security models that depend on &quot;the consultant will do the right thing on their last day&quot; routinely fail.</li>
 </ol>
 <h3 id="step-5-read-the-rest">Step 5: Read the rest<a class="anchor" href="#step-5-read-the-rest" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@linux:~$ cat tasks.md
-daniel@linux:~$ cat notes.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">cat</span> tasks.md
+<span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">cat</span> notes.txt
 </code></pre>
 <p><code>tasks.md</code> is Daniel&#39;s to-do list. Two items confirm the finding:</p>
 <ul>
@@ -97,7 +97,7 @@ daniel@linux:~$ cat notes.txt
 <p>Both unchecked. He intended to delete the file. He didn&#39;t.</p>
 <p><code>notes.txt</code> is engineering scratch notes about Daniel&#39;s Halton workflow — the production deploy pipeline (&quot;scp the artifact, ssh in, ./deploy.sh, pray&quot;) which is its own finding for a different day. The notes also list <em>every place</em> the staging DB password leaks beyond <code>creds.txt</code>: in <code>.bash_history</code>, in an exported <code>DB_PASS</code> env var, in a systemd override on Halton&#39;s jumphost. Daniel essentially wrote a credential exposure map for an attacker before leaving.</p>
 <h3 id="step-6-read-the-credential-file">Step 6: Read the credential file<a class="anchor" href="#step-6-read-the-credential-file" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@linux:~$ cat creds.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">cat</span> creds.txt
 # DO NOT COMMIT — Halton Bank staging-db credentials
 # Goal: rotate this. Then delete this file. Neither happened.
 
@@ -110,8 +110,8 @@ pass: please-rotate-me
 <p>The password is <code>please-rotate-me</code> — the file is literally named like a sticky note that says &quot;DELETE THIS.&quot; Daniel knew it should be rotated. Daniel knew it should be deleted. Daniel rolled off the engagement. Now it&#39;s someone else&#39;s problem.</p>
 <p>It is also the credential you&#39;ll use to enter <code>level1@linux</code>. The breadcrumb pattern in D3CYPH3R is that every level leaks the password for the next level in the same track — and you just found Halton&#39;s staging DB credential, which doubles as level1&#39;s gate.</p>
 <h3 id="step-7-use-the-credential">Step 7: Use the credential<a class="anchor" href="#step-7-use-the-credential" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">daniel@linux:~$ ssh level1@linux
-level1@linux&#39;s password: please-rotate-me
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">daniel@linux:~$</span> <span class="tok-cmd">ssh</span> level1@linux
+<span class="tok-prompt">level1@linux's password:</span> <span class="tok-str">please-rotate-me</span>
 </code></pre>
 <p>You&#39;re now on Halton Bank&#39;s jumphost, logged in as <code>app_admin</code>, sitting on a client production bastion using credentials that should have been rotated and weren&#39;t. A real attacker who pulled the same trick — recovered a workstation, found <code>creds.txt</code>, tried the staging DB cred against the jumphost — would be exactly here. That&#39;s the lesson of level1, and we&#39;ll cover it in its own walkthrough.</p>
 <h3 id="if-you-got-stuck">If you got stuck<a class="anchor" href="#if-you-got-stuck" aria-label="Link to this section">#</a></h3>
@@ -323,13 +323,13 @@ D. Notifying the affected client of the credential exposure</p>
 <li>SUID binaries that read protected files and print their contents</li>
 </ul>
 <p>Level0@linux is essentially the entry-level OSCP enumeration drill. The OSCP candidate would, at minimum, run:</p>
-<pre><code class="language-bash">ls -la ~
-cat ~/.bash_history
-cat ~/.zsh_history 2&gt;/dev/null
-grep -r -i &quot;pass\|pwd\|secret\|api[_-]key\|token&quot; ~/ 2&gt;/dev/null
-find / -name &quot;*.conf&quot; -readable 2&gt;/dev/null | head
-find / -name &quot;*creds*&quot; -readable 2&gt;/dev/null
-env | grep -i &quot;pass\|key\|token&quot;
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">ls</span> <span class="tok-flag">-la</span> ~
+<span class="tok-cmd">cat</span> ~/.bash_history
+<span class="tok-cmd">cat</span> ~/.zsh_history <span class="tok-num">2</span><span class="tok-op">&gt;</span>/dev/null
+<span class="tok-cmd">grep</span> <span class="tok-flag">-r</span> <span class="tok-flag">-i</span> <span class="tok-str">&quot;pass\|pwd\|secret\|api[_-]key\|token&quot;</span> ~/ <span class="tok-num">2</span><span class="tok-op">&gt;</span>/dev/null
+<span class="tok-cmd">find</span> / <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.conf&quot;</span> <span class="tok-flag">-readable</span> <span class="tok-num">2</span><span class="tok-op">&gt;</span>/dev/null <span class="tok-op">|</span> <span class="tok-cmd">head</span>
+<span class="tok-cmd">find</span> / <span class="tok-flag">-name</span> <span class="tok-str">&quot;*creds*&quot;</span> <span class="tok-flag">-readable</span> <span class="tok-num">2</span><span class="tok-op">&gt;</span>/dev/null
+<span class="tok-cmd">env</span> <span class="tok-op">|</span> <span class="tok-cmd">grep</span> <span class="tok-flag">-i</span> <span class="tok-str">&quot;pass\|key\|token&quot;</span>
 </code></pre>
 <p>The grep one-liner is the OSCP-canonical move for credentials-in-files. Anyone studying for OSCP should be able to write that line from memory.</p>
 <p>OSCP also tests the <em>recognition</em> that a found credential should be tried laterally — which is what you did when you ran <code>ssh level1@linux</code> with the staging-DB password. The exam grades that pivot explicitly.</p>
@@ -338,8 +338,8 @@ env | grep -i &quot;pass\|key\|token&quot;
 <p><strong>1. Automate Joiner-Mover-Leaver (JML).</strong> The IAM industry&#39;s term for the access-lifecycle process. Modern JML automation tools — Okta Lifecycle Management, Microsoft Entra ID Governance (formerly Azure AD Identity Governance), SailPoint IdentityIQ — connect to HR systems (Workday, BambooHR, ADP) and automatically provision/deprovision accounts based on HR events. The signal is the source of truth: HR records the termination → IAM disables the access → laptop is flagged for return → SIEM logs the deauthorization for audit. Without automation, this is a manual ticket chain, and manual chains fail at a rate that scales with how many systems and how many leavers you have.</p>
 <p><strong>2. Treat the workstation as a witness.</strong> When a consultant rolls off, the laptop is evidence, not stock. Before reimaging, image the disk for forensic preservation (FTK Imager, EnCase, or the open-source <code>dd</code> plus a write-blocker). Then run an automated credential scanner against the image. <em>Then</em> reimage. The &quot;audit-then-wipe&quot; sequence is what Driftwood&#39;s process is supposed to enforce — the fact that you&#39;re doing it manually on day one of your job means the process isn&#39;t automated.</p>
 <p><strong>3. Run credential scanners against home directories, not just repos.</strong> Most secret-scanning tools were built for source-code repositories. gitleaks, TruffleHog, GitHub secret scanning, GitGuardian — all of them work on filesystems too.<sup class="cite"><a id="cite-trufflehog-secret-scanning-1" href="#ref-19" aria-label="Source 19">19</a></sup> Configure them to scan <code>/home/*</code> on workstations at engagement closeout. The findings will be uncomfortable. They will also be the correct findings.</p>
-<pre><code class="language-bash"># Example: scan all home directories for credential patterns
-gitleaks dir /home --report-path /tmp/scan.json --no-git
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-com"># Example: scan all home directories for credential patterns</span>
+<span class="tok-cmd">gitleaks</span> dir /home <span class="tok-flag">--report-path</span> /tmp/scan.json <span class="tok-flag">--no-git</span>
 </code></pre>
 <p>The first time a firm runs this against a representative sample of consultant laptops, the results are universally bad. That&#39;s the value of doing it. The second time it&#39;s run, the results are better, because consultants have learned that the firm checks.</p>
 <p><strong>4. Vault credentials at the firm level, not the laptop level.</strong> Driftwood should run a vault — HashiCorp Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler, Bitwarden Secrets Manager — that consultants check credentials <em>out</em> of when they need them and that audits every access.<sup class="cite"><a id="cite-hashicorp-vault-getting-started-1" href="#ref-20" aria-label="Source 20">20</a></sup> Consultants who keep client credentials in files on their laptop are doing it because the alternative (the vault) is friction. Lower the friction. Make the vault the easiest path.</p>
@@ -347,29 +347,29 @@ gitleaks dir /home --report-path /tmp/scan.json --no-git
 <p><strong>6. Quarterly attestation walks.</strong> Even with automation, every quarter, a human walks a sample of consultant home directories with a credential scanner and a forensic audit checklist. The walk catches drift — the automation gap, the new client-specific file path that the scanner doesn&#39;t know about yet, the one consultant who&#39;s working around the vault because they think it&#39;s slow. The walk is a metric for the security program&#39;s effectiveness, not just a remediation activity.</p>
 <p><strong>7. Tabletop the breach.</strong> Run an annual tabletop exercise where the scenario is exactly level0@linux: &quot;A rolling-off consultant&#39;s laptop is found to contain client credentials. Walk us through the response.&quot; The exercise reveals which playbooks are documented, which aren&#39;t, which assumptions the team is making, which legal and contractual notifications are required, and which clients have to be told. The first time a firm runs this tabletop, it goes badly. That&#39;s the point — to find the gaps before the real incident does.</p>
 <p><strong>Sample detection rule (Sigma, generic Linux file-access):</strong><sup class="cite"><a id="cite-sigma-generic-signature-format-for-1" href="#ref-21" aria-label="Source 21">21</a></sup></p>
-<pre><code class="language-yaml">title: Credential file accessed in user home directory
-status: experimental
-description: Detects access to files matching common credential naming patterns
-  in user home directories on Linux endpoints.
-logsource:
-  product: linux
-  service: auditd
-detection:
-  selection:
-    type: &#39;PATH&#39;
-    name|contains:
-      - &#39;/home/&#39;
-    name|endswith:
-      - &#39;creds.txt&#39;
-      - &#39;credentials.json&#39;
-      - &#39;.aws/credentials&#39;
-      - &#39;id_rsa&#39;
-      - &#39;.git-credentials&#39;
-      - &#39;.netrc&#39;
-  condition: selection
-level: medium
-falsepositives:
-  - Legitimate use by the home directory&#39;s owner
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Credential file accessed in user home directory
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> Detects access to files matching common credential naming patterns
+  in user home directories <span class="tok-key">on</span> Linux endpoints.
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> linux
+  service<span class="tok-op">:</span> auditd
+detection<span class="tok-op">:</span>
+  selection<span class="tok-op">:</span>
+    type<span class="tok-op">:</span> <span class="tok-str">'PATH'</span>
+    name|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'/home/'</span>
+    name|endswith<span class="tok-op">:</span>
+      - <span class="tok-str">'creds.txt'</span>
+      - <span class="tok-str">'credentials.json'</span>
+      - <span class="tok-str">'.aws/credentials'</span>
+      - <span class="tok-str">'id_rsa'</span>
+      - <span class="tok-str">'.git-credentials'</span>
+      - <span class="tok-str">'.netrc'</span>
+  condition<span class="tok-op">:</span> selection
+level<span class="tok-op">:</span> medium
+falsepositives<span class="tok-op">:</span>
+  - Legitimate use by the home directory<span class="tok-str">'s owner</span>
 </code></pre>
 <p>This rule, tuned by replacing &quot;medium&quot; with &quot;high&quot; for service accounts and dropping the <code>/home/</code> filter for cases where credentials shouldn&#39;t be anywhere outside the vault, is the kind of detection a SOC would deploy at scale.</p>
 <h2 id="optional-exploration">§7.5 — Optional exploration<a class="anchor" href="#optional-exploration" aria-label="Link to this section">#</a></h2>

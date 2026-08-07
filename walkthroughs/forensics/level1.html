@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -57,23 +57,23 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The puzzle path is short and rewards filter discipline. Sixteen events, four interesting Event IDs, two distinct findings to extract.</p>
 <h3 id="step-1-open-the-workspace">Step 1: Open the workspace<a class="anchor" href="#step-1-open-the-workspace" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level1@forensics
-level1@forensics&#39;s password: POL-IIS-2026-0007-handoff
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level1@forensics
+<span class="tok-prompt">level1@forensics's password:</span> <span class="tok-str">POL-IIS-2026-0007-handoff</span>
 Connected: level1@forensics
-secops@forensics:~$ whoami
+<span class="tok-prompt">secops@forensics:~$</span> <span class="tok-cmd">whoami</span>
 secops
-secops@forensics:~$ pwd
+<span class="tok-prompt">secops@forensics:~$</span> <span class="tok-cmd">pwd</span>
 /home/secops
 </code></pre>
 <p>You used the single-use handoff password Sgt. Chen set on the archive. The same string that gated the archive gates this triage workspace; that&#39;s by design and the lessons-learned will explain why.</p>
 <h3 id="step-2-read-the-engagement-files">Step 2: Read the engagement files<a class="anchor" href="#step-2-read-the-engagement-files" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@forensics:~$ ls
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@forensics:~$</span> <span class="tok-cmd">ls</span>
 Security.evtx        engagement-notes.md   welcome.md
 case-summary.txt     lessons-learned.md
 </code></pre>
 <p>Five files. <code>welcome.md</code> is the mechanics file: it explains the new <code>evtx</code> command and the common Security-channel Event IDs (4624 successful logon, 4625 failed logon, 4634 logoff, 4663 object access, 4688 process creation).<sup class="cite"><a id="cite-event-4624-1" href="#ref-2" aria-label="Source 2">2</a></sup><sup class="cite"><a id="cite-event-4625-1" href="#ref-3" aria-label="Source 3">3</a></sup><sup class="cite"><a id="cite-event-4663-1" href="#ref-4" aria-label="Source 4">4</a></sup><sup class="cite"><a id="cite-event-4688-1" href="#ref-5" aria-label="Source 5">5</a></sup> <code>engagement-notes.md</code> is Priya&#39;s update — the day-two narrative, what happened between Friday and Tuesday, what Dana is asking for, and the foreshadowed &quot;second finding&quot; you&#39;ll need to extract alongside the Reed timeline. <code>case-summary.txt</code> is the formal case file: subject metadata, acquisition chain of custody (FTK Imager v4.7.1.2, live acquisition through OOB management, EnCase E01 split, single-use handoff password, hash placeholder), and the explicit Driftwood task — <em>(1)</em> reconstruct Reed&#39;s inside-the-OS activity during the badge window, <em>(2)</em> identify CUI access/exfil, <em>(3)</em> flag any other findings.</p>
 <h3 id="step-3-first-pass-dump-the-whole-log">Step 3: First pass — dump the whole log<a class="anchor" href="#step-3-first-pass-dump-the-whole-log" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@forensics:~$ evtx Security.evtx
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@forensics:~$</span> <span class="tok-cmd">evtx</span> Security.evtx
 Event log: Security.evtx
 Total events: 16
 
@@ -91,7 +91,7 @@ Computer:        POL-WS-0418.polaris-ds.local
 <p>Eleven events fall in the first window, five in the second. The two are easy to separate by date. Don&#39;t confuse them in your write-up — Dana cares about Reed.</p>
 <h3 id="step-4-filter-to-logon-events">Step 4: Filter to logon events<a class="anchor" href="#step-4-filter-to-logon-events" aria-label="Link to this section">#</a></h3>
 <p>The cleanest place to start is authentication. Logon events tell you who was where, when, and from where; everything else attaches to that scaffolding.</p>
-<pre><code class="language-bash">secops@forensics:~$ evtx -id 4624 Security.evtx
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@forensics:~$</span> <span class="tok-cmd">evtx</span> <span class="tok-flag">-id</span> <span class="tok-num">4624</span> Security.evtx
 Event log: Security.evtx
 Total events: 16   (filtered to ID 4624: 3 matches)
 </code></pre>
@@ -103,7 +103,7 @@ Total events: 16   (filtered to ID 4624: 3 matches)
 </ol>
 <p>Reed&#39;s interactive logon is what you&#39;d expect. The two Tuesday-night logons are Chen and Voss doing the acquisition. Nothing here is anomalous yet — but the third one, <code>mvoss</code> at 03:02 UTC, will become more interesting in a moment.</p>
 <h3 id="step-5-filter-to-failed-logons-the-smoking-gun">Step 5: Filter to failed logons — the smoking gun<a class="anchor" href="#step-5-filter-to-failed-logons-the-smoking-gun" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@forensics:~$ evtx -id 4625 Security.evtx
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@forensics:~$</span> <span class="tok-cmd">evtx</span> <span class="tok-flag">-id</span> <span class="tok-num">4625</span> Security.evtx
 Event log: Security.evtx
 Total events: 16   (filtered to ID 4625: 1 match)
 
@@ -145,7 +145,7 @@ Level:           Information
 <p>That&#39;s your second finding. It&#39;s also the breadcrumb credential for <code>level2@forensics</code>: a string the IR team needs to know about IMMEDIATELY (same-day rotation), and a string that — for the in-game continuity — represents an IR-team service account password whose rotation/recovery becomes the entry gate for the next engagement.</p>
 <h3 id="step-6-filter-to-process-creations-reeds-exfil-chain">Step 6: Filter to process creations — Reed&#39;s exfil chain<a class="anchor" href="#step-6-filter-to-process-creations-reeds-exfil-chain" aria-label="Link to this section">#</a></h3>
 <p>Now the case Dana actually asked about.</p>
-<pre><code class="language-bash">secops@forensics:~$ evtx -id 4688 Security.evtx
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@forensics:~$</span> <span class="tok-cmd">evtx</span> <span class="tok-flag">-id</span> <span class="tok-num">4688</span> Security.evtx
 Event log: Security.evtx
 Total events: 16   (filtered to ID 4688: 6 matches)
 </code></pre>
@@ -159,7 +159,7 @@ Total events: 16   (filtered to ID 4688: 6 matches)
 </ol>
 <p>That&#39;s the exfil chain: collect (CUI dir reads, visible separately under 4663) → archive (PowerShell Compress-Archive) → encode (certutil base64) → upload (chrome → mega.nz). Reed used valid credentials and legitimate Microsoft-signed binaries the whole way. None of these processes are individually anomalous; the <em>combination</em> of them in a 38-minute window is what makes the chain.</p>
 <h3 id="step-7-filter-to-file-access-what-he-read">Step 7: Filter to file access — what he read<a class="anchor" href="#step-7-filter-to-file-access-what-he-read" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@forensics:~$ evtx -id 4663 Security.evtx
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@forensics:~$</span> <span class="tok-cmd">evtx</span> <span class="tok-flag">-id</span> <span class="tok-num">4663</span> Security.evtx
 Event log: Security.evtx
 Total events: 16   (filtered to ID 4663: 4 matches)
 </code></pre>
@@ -327,35 +327,35 @@ investigation team is now part of the exposure it is investigating.</p>
 <h3 id="for-the-ir-team-credential-leak">For the IR-team credential leak<a class="anchor" href="#for-the-ir-team-credential-leak" aria-label="Link to this section">#</a></h3>
 <p>Same-day rotation of <code>mvoss</code>&#39;s password and any service account that credential string is keyed to. Same-day means before the audit-log file leaves Polaris&#39;s direct control on its way to any downstream handler. The credential preserved in the 4625 record is what it is — chain of custody prevents retroactive redaction — but the <em>live</em> credential it represents can and must be rotated immediately.</p>
 <p>Add a SIEM detection rule for the pattern going forward. The Sigma rule is straightforward:</p>
-<pre><code class="language-yaml">title: Credential Disclosure in 4625 TargetUserName
-id: pol-ir-4625-typed-password-v1
-description: |
-  Detects 4625 failed-logon events where SubStatus is 0xC0000064
-  (no such user) and TargetUserName does NOT look like a normal
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Credential Disclosure in <span class="tok-num">4625</span> TargetUserName
+id<span class="tok-op">:</span> pol-ir-4625-typed-password-v1
+description<span class="tok-op">:</span> |
+  Detects <span class="tok-num">4625</span> failed-logon events where SubStatus is <span class="tok-num">0xC0000064</span>
+  (<span class="tok-key">no</span> such user) and TargetUserName does NOT look like a normal
   username — i.e., contains symbols, mixed case + digits, or is
   unusually long. Typical signature of a password typed into the
   username field by mistake.
-status: experimental
-references:
-  - https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625
-logsource:
-  product: windows
-  service: security
-detection:
-  selection:
-    EventID: 4625
-    SubStatus: &#39;0xC0000064&#39;
-  filter_normal_username:
-    TargetUserName|re: &#39;^[a-zA-Z0-9._-]{1,16}$&#39;
-  condition: selection and not filter_normal_username
-fields:
+status<span class="tok-op">:</span> experimental
+references<span class="tok-op">:</span>
+  - https<span class="tok-op">:</span>//learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> windows
+  service<span class="tok-op">:</span> security
+detection<span class="tok-op">:</span>
+  selection<span class="tok-op">:</span>
+    EventID<span class="tok-op">:</span> <span class="tok-num">4625</span>
+    SubStatus<span class="tok-op">:</span> <span class="tok-str">'0xC0000064'</span>
+  filter_normal_username<span class="tok-op">:</span>
+    TargetUserName|re<span class="tok-op">:</span> <span class="tok-str">'^[a-zA-Z0-9._-]{1,16}$'</span>
+  condition<span class="tok-op">:</span> selection and not filter_normal_username
+fields<span class="tok-op">:</span>
   - TargetUserName
   - WorkstationName
   - IpAddress
   - TimeCreated
-level: high
-falsepositives:
-  - Service-account names that happen to be longer than 16 chars
+level<span class="tok-op">:</span> high
+falsepositives<span class="tok-op">:</span>
+  - Service-account names that happen to be longer than <span class="tok-num">16</span> chars
     and contain symbols (rare; tune the regex per environment)
   - Internal pentests that deliberately spray malformed usernames
 </code></pre>

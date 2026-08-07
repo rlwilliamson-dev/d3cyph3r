@@ -661,6 +661,73 @@ body {
   font-size: 1em;
 }
 
+/* ─── Highlighting ───────────────────────────────────────────────
+ *
+ * Applied at build time by tools/highlight.mjs, so the served HTML
+ * already carries these classes and the colours are correct with
+ * JavaScript disabled.
+ *
+ * Written entirely against the semantic theme variables, which all 11
+ * palettes define. That is what makes this one block instead of eleven:
+ * a new theme picks up highlighting for free the moment it declares its
+ * colours, and re-tinting a token type is one edit here rather than a
+ * sweep through every palette.
+ *
+ * The most important rule is the one that is missing. Program output
+ * inside a transcript gets NO class at all, so it inherits plain --fg
+ * and the contrast between "what I type" and "what comes back" is
+ * carried by the prompt and command being lit rather than by output
+ * being dimmed. Dimming output was the first attempt and it read as
+ * though the output were less important, which in a forensics
+ * walkthrough is precisely backwards.
+ */
+
+/* The prompt recedes but must stay READABLE, because in this corpus it
+ * is not decoration: "daniel@halton-build-runner" versus "root@..." is
+ * the entire point of a privilege-escalation walkthrough, and a reader
+ * who cannot tell which host a command ran on has lost the plot.
+ *
+ * var(--dim) was the obvious choice and it was broken. --dim is tuned
+ * against --bg, the page background, but code blocks sit on --bg-elev,
+ * which some palettes raise a long way: on nord that put the prompt at
+ * 1.36:1 against its own backdrop, which is not "subtle", it is
+ * invisible. dracula gave 1.94:1 and solarized-light 2.18:1.
+ *
+ * Mixing toward the foreground FROM the code background instead means
+ * the colour is always computed against the surface it actually sits
+ * on, so it cannot inflect the wrong way when a theme changes its
+ * elevation. Measured across all 11 palettes this beats the dim-text
+ * contrast the rest of the site already ships in 10 of them (nord
+ * 1.36 -> 4.74, dracula 1.94 -> 5.38, amber 2.60 -> 5.61). */
+.doc pre .tok-prompt { color: color-mix(in srgb, var(--fg) 72%, var(--bg-elev)); }
+.doc pre .tok-cmd    { color: var(--accent); font-weight: 600; }
+.doc pre .tok-flag   { color: var(--yellow); }
+.doc pre .tok-str    { color: var(--green); }
+.doc pre .tok-num    { color: var(--cyan); }
+.doc pre .tok-var    { color: var(--cyan); }
+.doc pre .tok-key    { color: var(--accent); }
+/* Structure, not alarm. Red was the first choice and it is wrong here:
+ * this site spends red on the spoiler warning and on failure states, so
+ * painting a benign pipe the same colour teaches the reader that `|` is
+ * something to worry about. Bright foreground makes the operators read
+ * as punctuation holding the command together, which is what they are. */
+.doc pre .tok-op     { color: var(--fg-bright); }
+
+/* Same mix as .tok-prompt, for the same reason: --dim is measured
+ * against the page, not against the raised code surface. */
+.doc pre .tok-com    { color: color-mix(in srgb, var(--fg) 72%, var(--bg-elev)); font-style: italic; }
+
+/* high-contrast exists to be readable, not tasteful: italics and
+ * mid-weight colour both work against that, so comments stay upright and
+ * the dimmed tokens borrow the brighter foreground. */
+body[data-theme="high-contrast"] .doc pre .tok-com,
+body[data-theme="high-contrast"] .doc pre .tok-prompt {
+  color: var(--fg);
+}
+body[data-theme="high-contrast"] .doc pre .tok-com {
+  font-style: normal;
+}
+
 /* ─── Tables ─────────────────────────────────────────────────── */
 
 .doc table {

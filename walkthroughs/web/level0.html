@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -58,13 +58,13 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Three commands. The reconnaissance discipline is in noticing what the server tells you.</p>
 <h3 id="step-1-read-the-brief">Step 1: Read the brief<a class="anchor" href="#step-1-read-the-brief" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@web:~$ cat engagement-notes.md
-secops@web:~$ cat meridian-scope.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">cat</span> engagement-notes.md
+<span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">cat</span> meridian-scope.txt
 </code></pre>
 <p>The engagement notes establish the regulatory frame (FERPA primary, GLBA for the financial-aid records, HIPAA for the student health center — out of today&#39;s scope), the client context (Carlos, the dismissed BluePier agency, the cyber-insurance carrier renewal pressure), and the worth-flagging detail that <strong>BluePier was not contractually obligated to clean up at exit</strong> — the contract dispute happened before any final handoff was agreed. That detail matters: it means there&#39;s no warranty work pending; everything BluePier left behind is now Meridian&#39;s responsibility regardless of who created it.</p>
 <p>The scope file is one line. Today&#39;s audit target: <code>https://www.meridian.edu</code>. Out of scope: any subdomain other than <code>www</code>, the student portal application (separate engagement, behind SSO), and any internal hostnames.</p>
 <h3 id="step-2-enumerate-paths-with-gobuster">Step 2: Enumerate paths with gobuster<a class="anchor" href="#step-2-enumerate-paths-with-gobuster" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@web:~$ gobuster https://www.meridian.edu
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">gobuster</span> https://www.meridian.edu
 /                     (Status: 200) [Size: 412]
 /about                (Status: 200) [Size: 8412]
 /admin                (Status: 401) [Size: 287]
@@ -83,7 +83,7 @@ secops@web:~$ cat meridian-scope.txt
 <li><strong><code>/backup</code></strong> returning HTTP 200 with a 1,183-byte response. That filename, combined with the engagement context (BluePier left artifacts on the production server), is the first finding signal.</li>
 </ul>
 <h3 id="step-3-read-robotstxt">Step 3: Read robots.txt<a class="anchor" href="#step-3-read-robotstxt" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@web:~$ curl https://www.meridian.edu/robots.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">curl</span> https://www.meridian.edu/robots.txt
 User-agent: *
 Disallow: /admin/
 Disallow: /backup/
@@ -95,7 +95,7 @@ Sitemap: https://www.meridian.edu/sitemap.xml
 <p>This is its own finding category. The <code>Disallow</code> entries were intended to keep search engines from crawling sensitive paths. What they actually do is <strong>publish a list of the exact URLs Meridian considers sensitive</strong> to anyone reading the robots.txt — which is, by definition, every reconnaissance script and every attacker. The pattern is so common that &quot;check robots.txt first&quot; is the canonical opening move in any web recon methodology. Security through robots.txt is a category mistake, and Meridian has it.</p>
 <p>For the current audit, robots.txt has now confirmed three additional paths worth checking: <code>/staging/</code>, <code>/private/</code>, and (already in our gobuster output) <code>/backup/</code>.</p>
 <h3 id="step-4-look-at-the-backup-directory">Step 4: Look at the backup directory<a class="anchor" href="#step-4-look-at-the-backup-directory" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@web:~$ curl https://www.meridian.edu/backup/
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">curl</span> https://www.meridian.edu/backup/
 &lt;html&gt;
 &lt;head&gt;&lt;title&gt;Index of /backup&lt;/title&gt;&lt;/head&gt;
 &lt;body&gt;
@@ -114,13 +114,13 @@ Sitemap: https://www.meridian.edu/sitemap.xml
 </code></pre>
 <p>There it is. Apache&#39;s default <code>mod_autoindex</code> is rendering a browsable directory listing for <code>/backup/</code> because the directory contains no <code>index.html</code>. Three files are listed: a README, a credential file, and a CSV of student records. The filenames alone are sufficient to grade the finding as critical: <code>db-creds.txt</code> plus <code>students_export_2023.csv</code> is the worst-case combination at a FERPA-covered institution.</p>
 <h3 id="step-5-confirm-the-readme">Step 5: Confirm the README<a class="anchor" href="#step-5-confirm-the-readme" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@web:~$ curl https://www.meridian.edu/backup/README.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">curl</span> https://www.meridian.edu/backup/README.txt
 BluePier Digital — Meridian University engagement
 Working directory for deploy artifacts and DB exports.
 
-This directory lives on the production server&#39;s filesystem at
+This directory lives on the production server's filesystem at
 /var/www/meridian/public/backup/ and is excluded from the
-site&#39;s static-build .gitignore. It is NOT excluded from Apache&#39;s
+site's static-build .gitignore. It is NOT excluded from Apache's
 autoindex configuration, which is on by default in /etc/apache2/
 mods-enabled/autoindex.conf for any directory under DocumentRoot
 that does not contain an index.html.
@@ -131,7 +131,7 @@ Will clean up after final invoice is paid.
 </code></pre>
 <p>The README documents — internally, by BluePier&#39;s own admission, two years before today&#39;s audit — that the directory was left publicly readable, the agency knew autoindex was on, and the cleanup was conditional on payment of the final invoice. The final invoice was never paid (contract dispute, per the engagement notes). The cleanup never happened. Two years of internet exposure.</p>
 <h3 id="step-6-confirm-the-credential-leak">Step 6: Confirm the credential leak<a class="anchor" href="#step-6-confirm-the-credential-leak" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@web:~$ curl https://www.meridian.edu/backup/db-creds.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">curl</span> https://www.meridian.edu/backup/db-creds.txt
 BluePier Digital — Meridian webapp environment notes
 Last updated by James 2023-08-14
 
@@ -142,14 +142,14 @@ Pass:     M3rid14n!2023-prod
 DB name:  meridian_portal
 
 NOTE FOR HANDOFF: rotate this before final acceptance.
-                  Carlos&#39;s team needs to pick a new value.
+                  Carlos's team needs to pick a new value.
                   Reminder: this credential is also baked into
                   the staging deployment until we cut over.
 </code></pre>
 <p><code>M3rid14n!2023-prod</code> is a live MySQL credential for Meridian&#39;s production database. The note from James says it should be rotated before final acceptance; the final acceptance never came; the credential is, as of the timestamp of this audit, almost certainly still active.</p>
 <p>That single string is the breadcrumb for <code>level1@web</code>. It is also, in a real engagement, the most urgent item on the remediation checklist that Carlos&#39;s team has to address today.</p>
 <h3 id="step-7-confirm-the-ferpa-grade-exposure">Step 7: Confirm the FERPA-grade exposure<a class="anchor" href="#step-7-confirm-the-ferpa-grade-exposure" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@web:~$ curl https://www.meridian.edu/backup/students_export_2023.csv
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">curl</span> https://www.meridian.edu/backup/students_export_2023.csv
 student_id,first_name,last_name,email,major,gpa
 M-1872941,Aisha,Patel,patel.a@meridian.edu,Computer Science,3.91
 M-1872995,Marcus,Reyes,reyes.m@meridian.edu,Biology,3.42
@@ -165,8 +165,8 @@ M-1873244,Olivia,Chen,chen.o@meridian.edu,Music Performance,3.88
 <p>4,217 student records, each containing the student&#39;s name, ID, email, major, and GPA. Every field is a FERPA &quot;education record&quot; under 34 CFR 99.3, except for &quot;directory information&quot; carve-outs that don&#39;t apply here (GPAs and academic majors specifically are NOT directory information and require explicit consent to disclose). The CSV has been publicly readable at a guessable URL for approximately 22 months.</p>
 <h3 id="step-8-use-the-credential-game-world-only">Step 8: Use the credential (game-world only)<a class="anchor" href="#step-8-use-the-credential-game-world-only" aria-label="Link to this section">#</a></h3>
 <p>In a real engagement the work stops here and the finding goes to Carlos within the contractually-defined SLA. In D3CYPH3R the breadcrumb pattern continues to the next level:</p>
-<pre><code class="language-bash">secops@web:~$ ssh level1@web
-level1@web&#39;s password: M3rid14n!2023-prod
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@web:~$</span> <span class="tok-cmd">ssh</span> level1@web
+<span class="tok-prompt">level1@web's password:</span> <span class="tok-str">M3rid14n!2023-prod</span>
 </code></pre>
 <p>You&#39;re now inside Meridian&#39;s webapp context, holding a live database credential that should have been rotated 22 months ago and wasn&#39;t. The lesson of level1@web is what an attacker would do next with this access — and we&#39;ll cover that in its own walkthrough.</p>
 <h3 id="if-you-got-stuck">If you got stuck<a class="anchor" href="#if-you-got-stuck" aria-label="Link to this section">#</a></h3>
@@ -333,7 +333,7 @@ D. Configure the directory to require Basic HTTP authentication</p>
 <p><strong>Sample question framing:</strong></p>
 <blockquote>
 <p>A penetration tester performing an authorized web assessment identifies the following gobuster output:</p>
-<pre><code>/backup               (Status: 200) [Size: 1183]
+<pre data-kind="plain"><code class="hl">/backup               (Status: 200) [Size: 1183]
 /robots.txt           (Status: 200) [Size: 142]
 /admin                (Status: 401) [Size: 287]
 </code></pre>
@@ -378,20 +378,20 @@ D. Procure additional cyber-insurance coverage to limit financial exposure to fu
 <h3 id="oscp-pen-200">OSCP / PEN-200<a class="anchor" href="#oscp-pen-200" aria-label="Link to this section">#</a></h3>
 <p>The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.<sup class="cite"><a id="cite-cert-oscp-1" href="#ref-24" aria-label="Source 24">24</a></sup> The exam is a 24-hour practical hands-on test against a set of target machines. The web-track material is at the heart of the OSCP curriculum.</p>
 <p>The methodology OSCP teaches for a web target maps directly to the Meridian solve:</p>
-<pre><code class="language-bash"># 1. Enumerate the web tree
-gobuster dir -u https://target.example.edu \
-  -w /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt \
-  -t 50 -x txt,php,html,bak,zip,sql
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-com"># 1. Enumerate the web tree</span>
+<span class="tok-cmd">gobuster</span> dir <span class="tok-flag">-u</span> https://target.example.edu \
+  <span class="tok-flag">-w</span> /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt \
+  <span class="tok-flag">-t</span> <span class="tok-num">50</span> <span class="tok-flag">-x</span> txt,php,html,bak,zip,sql
 
-# 2. Read robots.txt and sitemap.xml — never skip these
-curl https://target.example.edu/robots.txt
-curl https://target.example.edu/sitemap.xml
+<span class="tok-com"># 2. Read robots.txt and sitemap.xml — never skip these</span>
+<span class="tok-cmd">curl</span> https://target.example.edu/robots.txt
+<span class="tok-cmd">curl</span> https://target.example.edu/sitemap.xml
 
-# 3. For every status-200 path that&#39;s non-obvious, fetch it
-curl https://target.example.edu/&lt;path&gt;/ -L
+<span class="tok-com"># 3. For every status-200 path that's non-obvious, fetch it</span>
+<span class="tok-cmd">curl</span> https://target.example.edu/<span class="tok-op">&lt;</span>path<span class="tok-op">&gt;</span>/ <span class="tok-flag">-L</span>
 
-# 4. If autoindex shows a directory listing, enumerate every file
-# 5. For every file, check the content for credentials, paths, references
+<span class="tok-com"># 4. If autoindex shows a directory listing, enumerate every file</span>
+<span class="tok-com"># 5. For every file, check the content for credentials, paths, references</span>
 </code></pre>
 <p>The OSCP curriculum specifically teaches &quot;gobuster the target&quot; as a Phase-1 web-enumeration move, with <code>seclists/Discovery/Web-Content/directory-list-2.3-medium.txt</code> as the canonical wordlist. The exam&#39;s web machines almost universally include some variant of an exposed-directory finding — <code>/backup</code>, <code>/admin-old</code>, <code>/.git</code>, <code>/.svn</code>, <code>/test</code>, <code>/staging</code> — that yields either a credential, a configuration file, or a code snippet that enables the next step. The Meridian scenario is the entry-level version of this exam pattern.</p>
 <p>OSCP also covers the <em>defender&#39;s</em> side of the same skill: the candidate should be able to articulate why each exposed-directory finding is a misconfiguration, what control would have prevented it, and what tooling (gobuster, dirsearch, ffuf in the offensive direction; automated config scanners and CI-integrated linters in the defensive direction) would catch the issue continuously rather than at audit time.</p>
@@ -407,31 +407,31 @@ curl https://target.example.edu/&lt;path&gt;/ -L
 <p><strong>8. Pipeline discipline going forward.</strong> The longer-arc fix is to stand up a deployment pipeline that does not let working files land in DocumentRoot. CI/CD that builds artifacts in a build-temp directory and rsyncs only the build output to <code>/var/www/</code>. A <code>.htaccess</code> <code>Deny from all</code> in any directory not explicitly meant to be public. Code review on web-server configuration changes. Pre-commit linting that flags <code>.env</code> and <code>.bak</code> file extensions in repositories that publish to web roots.</p>
 <p><strong>9. Vendor offboarding playbook.</strong> The Meridian-BluePier dynamic — vendor relationship ends in dispute, no formal handoff, artifacts left behind indefinitely — is structurally common. Driftwood should help Meridian build a documented vendor-offboarding playbook: at the end of every vendor engagement, the institution performs (or contracts a third party to perform) a comprehensive enumeration of every system the vendor touched, with documented sign-off that cleanup is complete. The playbook lives in vendor-contract appendices so it&#39;s enforceable at renewal time.</p>
 <p><strong>10. Sample detection rule (Sigma, generic web-server access log):</strong></p>
-<pre><code class="language-yaml">title: External access to common-misconfig path
-status: experimental
-description: Detects external HTTP requests to URL paths that are
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> External access to common-misconfig path
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> Detects external HTTP requests to URL paths that are
   commonly associated with deployment artifacts left under
   DocumentRoot — sensitive content that, if reachable, should
   trigger investigation.
-logsource:
-  product: apache
-  service: access-log
-detection:
-  selection:
-    cs_uri_stem|contains:
-      - &#39;/backup/&#39;
-      - &#39;/.git/&#39;
-      - &#39;/.env&#39;
-      - &#39;/.svn/&#39;
-      - &#39;/staging/&#39;
-      - &#39;/private/&#39;
-      - &#39;/db-creds&#39;
-      - &#39;/db-backup&#39;
-      - &#39;/admin-old&#39;
-    sc_status: 200
-  condition: selection
-level: high
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> apache
+  service<span class="tok-op">:</span> access-log
+detection<span class="tok-op">:</span>
+  selection<span class="tok-op">:</span>
+    cs_uri_stem|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'/backup/'</span>
+      - <span class="tok-str">'/.git/'</span>
+      - <span class="tok-str">'/.env'</span>
+      - <span class="tok-str">'/.svn/'</span>
+      - <span class="tok-str">'/staging/'</span>
+      - <span class="tok-str">'/private/'</span>
+      - <span class="tok-str">'/db-creds'</span>
+      - <span class="tok-str">'/db-backup'</span>
+      - <span class="tok-str">'/admin-old'</span>
+    sc_status<span class="tok-op">:</span> <span class="tok-num">200</span>
+  condition<span class="tok-op">:</span> selection
+level<span class="tok-op">:</span> high
+falsepositives<span class="tok-op">:</span>
   - Legitimate staff access to documented public-facing paths
     (tune per-institution; the path list should be reviewed
     against your actual site map and reduced to truly suspicious

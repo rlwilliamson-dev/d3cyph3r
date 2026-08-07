@@ -349,10 +349,31 @@ statement stops being true.
 
 - Use `##` for the section title (e.g. `## §3 — The solve`).
 - Use `###` for subsections.
-- Code blocks: triple-backtick fenced, with `bash` or `text` language
-  tag. Terminal sessions use `bash`.
 - Inline code for commands, file paths, control IDs (e.g. `AC-2`).
 - External links open in a new tab automatically.
+
+### Code fences, and why the tag matters (v2.11.0)
+
+Blocks are highlighted at build time by `tools/highlight.mjs`, so the
+tag on the fence is not decoration: it decides how the block is read.
+
+| Fence | Treated as | Rendering |
+| --- | --- | --- |
+| ` ```bash ` **with** a `user@host:~$ ` line | transcript | prompt recedes, the typed command is lit, **output is left plain** |
+| ` ```bash ` **without** a prompt | commands to run | the whole block is lit as commands |
+| ` ``` ` no tag | program output | untouched |
+| ` ```yaml `, `json`, `javascript`, `sql`, `python`, `go`, `powershell` | source | comments, strings, numbers, keywords |
+
+The rule that matters: **do not tag a block of pure program output as
+`bash`.** Leave the fence bare. A tagged block with no prompt is read as
+a list of commands for the reader to run, and an AWS CLI table rendered
+that way tells them to type it.
+
+Conversely, keep the prompt on transcripts. It is what separates input
+from output, and the prompt string carries the host, which in a
+privilege-escalation walkthrough is the entire point.
+
+There is no `text` tag; an untagged fence is the way to say "plain".
 
 ## Voice
 

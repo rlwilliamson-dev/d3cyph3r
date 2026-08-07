@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -65,14 +65,14 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>One command. The OSINT discipline is in what <em>not</em> to do next.</p>
 <h3 id="step-1-read-the-brief">Step 1: Read the brief<a class="anchor" href="#step-1-read-the-brief" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ cat engagement-notes.md
-intel@osint:~$ cat subject-brief.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">cat</span> engagement-notes.md
+<span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">cat</span> subject-brief.txt
 </code></pre>
 <p>The engagement notes establish the regulatory frame (HIPAA Business Associate, HITRUST CSF v11, MA 201 CMR 17.00 for the Massachusetts-headquartered data security regulation, NIST 800-66 Rev. 2 as the HIPAA implementation guide), the client context (Veridian, Marisol, the Trial Transparency Action Network letter, the LinkedIn DM), and the <strong>scope discipline</strong> — what is and isn&#39;t authorized for today&#39;s lookup.<sup class="cite"><a id="cite-nist-800-66-1" href="#ref-3" aria-label="Source 3">3</a></sup></p>
 <p>The subject-brief is the formal artifact: Case ID <code>VER-EXP-2026-002</code>, Aaron&#39;s biographical summary (Boston University Medical School MD 2009, MGH residency, Beth Israel Deaconess fellowship, marathon runner, recreational sailor), and the <strong>single in-scope email address</strong>: <code>aaron.hines.md@gmail.com</code>. It also explicitly names the out-of-scope work email (<code>ahines@veridian-analytics.com</code>) with a <em>do not query</em> instruction.</p>
 <p>Read these before touching the lookup. The OSINT-engagement playbook is sequential: brief first, lookup second. Examining the breach corpus without the scope confirmation in hand produces findings that may have been authorized but cannot be easily proven authorized — and OSINT engagements live or die on the prove-authorized question if anything in the lookup later becomes contested.</p>
 <h3 id="step-2-run-the-hibp-lookup">Step 2: Run the HIBP lookup<a class="anchor" href="#step-2-run-the-hibp-lookup" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ hibp aaron.hines.md@gmail.com
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">hibp</span> aaron.hines.md@gmail.com
 </code></pre>
 <p>The output lists five breaches Aaron&#39;s address appears in. Each entry has the breach name, the disclosure date, the exposed-data categories, and — where the paid corpus enrichment has surfaced a cleartext recovery — a description noting which cracked-hash dump contained the recovered password.</p>
 <p><strong>The five breaches:</strong></p>
@@ -97,8 +97,8 @@ intel@osint:~$ cat subject-brief.txt
 <p>The forensic finding stands. Marisol decides next steps. The remediation recommendation is universal: every account Aaron owns gets a unique random password from a manager; every account that supports 2FA gets 2FA on (ideally phishing-resistant FIDO2/passkey, fallback to TOTP, never SMS for the high-value accounts); Veridian&#39;s identity controls assume Aaron&#39;s personal-side credentials are compromised and design accordingly.</p>
 <h3 id="step-5-the-breadcrumb-game-world-only">Step 5: The breadcrumb (game-world only)<a class="anchor" href="#step-5-the-breadcrumb-game-world-only" aria-label="Link to this section">#</a></h3>
 <p>In a real engagement the work stops at the finding. In D3CYPH3R the breadcrumb pattern continues:</p>
-<pre><code class="language-bash">intel@osint:~$ ssh level1@osint
-level1@osint&#39;s password: BostonStrong#2013
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">ssh</span> level1@osint
+<span class="tok-prompt">level1@osint's password:</span> <span class="tok-str">BostonStrong#2013</span>
 </code></pre>
 <p>This is the part that wouldn&#39;t happen in a real engagement (because we just said we don&#39;t test the credential). In the game-world, <code>level1@osint</code> simulates the next stage of the threat model: the credential actually works somewhere, and now we&#39;re examining what Aaron&#39;s reused-password footprint actually unlocked. The lesson of <code>level1@osint</code> is what an attacker gains from successful credential stuffing — that walkthrough comes later.</p>
 <h3 id="if-you-got-stuck">If you got stuck<a class="anchor" href="#if-you-got-stuck" aria-label="Link to this section">#</a></h3>
@@ -324,28 +324,28 @@ D. Engage outside counsel to determine HIPAA notification obligations</p>
 <p><strong>4. For the broader executive-OPSEC layer.</strong> Train executives on the personal-OPSEC threat model. Most executives don&#39;t know that their personal-account ecosystem is connected to their professional-account ecosystem through password reuse, recovery-email chaining, or shared device exposure. The training is 30 minutes of focused content per year for VP+ tier roles: what&#39;s in the breach corpora; how publicly-derivable passwords get enumerated; how to use a password manager day-to-day; how to recognize and respond to credential-recovery-targeting social engineering. Pair the training with internal materials specifically aimed at the personal-OPSEC layer.</p>
 <p><strong>5. For the threat-actor side of the Aaron case.</strong> Document the open-letter campaign and the LinkedIn DM as a low-confidence hostile-intent indicator, attached to Aaron&#39;s individual risk profile. If anything escalates — additional DMs, in-person sightings, social-media targeting of family members — the indicators move from low-confidence to medium-confidence, and the incident-response runbook routes to a coordinated executive-protection response (which may include private-security retention, residential-security review, and law-enforcement notification depending on the credible-threat threshold).</p>
 <p><strong>6. Sample detection rule (Sigma, generic credential-stuffing event against an externally-exposed application):</strong></p>
-<pre><code class="language-yaml">title: Possible credential-stuffing attempt against externally-exposed authentication endpoint
-status: experimental
-description: Detects authentication-event patterns consistent with
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Possible credential-stuffing attempt against externally-exposed authentication endpoint
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> Detects authentication-event patterns consistent with
   credential-stuffing campaigns — high-volume distinct username
   attempts from a single source or from a botnet-distributed set
   of sources, each attempt with a single password try (low ratio
   of attempts per username), and a high rate of failures.
-logsource:
-  product: application
-  service: authentication
-detection:
-  selection:
-    event_type: &#39;AuthenticationAttempt&#39;
-  time_window: 5m
-  group_by: source_ip
-  condition: selection
-  thresholds:
-    distinct_usernames: &#39;&gt; 50&#39;
-    attempts_per_username: &#39;&lt;= 2&#39;
-    failure_rate: &#39;&gt; 0.85&#39;
-level: high
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> application
+  service<span class="tok-op">:</span> authentication
+detection<span class="tok-op">:</span>
+  selection<span class="tok-op">:</span>
+    event_type<span class="tok-op">:</span> <span class="tok-str">'AuthenticationAttempt'</span>
+  time_window<span class="tok-op">:</span> <span class="tok-num">5</span>m
+  group_by<span class="tok-op">:</span> source_ip
+  condition<span class="tok-op">:</span> selection
+  thresholds<span class="tok-op">:</span>
+    distinct_usernames<span class="tok-op">:</span> <span class="tok-str">'&gt; 50'</span>
+    attempts_per_username<span class="tok-op">:</span> <span class="tok-str">'&lt;= 2'</span>
+    failure_rate<span class="tok-op">:</span> <span class="tok-str">'&gt; 0.85'</span>
+level<span class="tok-op">:</span> high
+falsepositives<span class="tok-op">:</span>
   - Legitimate corporate authentication from a NAT-shared egress IP
     (review against known corporate egress ranges)
   - Automated testing or load-generation traffic from CI/CD

@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -58,30 +58,30 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Three nmap commands and one cross-reference against the engagement notes. The work is small. The discipline is in noticing what doesn&#39;t match.</p>
 <h3 id="step-1-read-the-brief">Step 1: Read the brief<a class="anchor" href="#step-1-read-the-brief" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@network:~$ cat engagement-notes.md
-secops@network:~$ cat atlas-perimeter.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@network:~$</span> <span class="tok-cmd">cat</span> engagement-notes.md
+<span class="tok-prompt">secops@network:~$</span> <span class="tok-cmd">cat</span> atlas-perimeter.txt
 </code></pre>
 <p>The engagement notes name Atlas&#39;s compliance regime (HIPAA + HITECH, 400,000 patients, 60-day notification clock) and the in-scope hostnames. The perimeter scope file documents what <em>should</em> be open on each: 443/https on the three public-facing hostnames, nothing on <code>staging.atlas.health</code>. Anything else is a finding.</p>
 <p>This is the comparison you&#39;ll run nmap output against. Read the expected state first; otherwise you&#39;ll look at the nmap output and have to remember what was supposed to be there, which is the wrong direction of memory work.</p>
 <h3 id="step-2-scan-the-public-facing-hosts">Step 2: Scan the public-facing hosts<a class="anchor" href="#step-2-scan-the-public-facing-hosts" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@network:~$ nmap portal.atlas.health
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@network:~$</span> <span class="tok-cmd">nmap</span> portal.atlas.health
 Starting Nmap scan of portal.atlas.health
 PORT     STATE  SERVICE
 443/tcp  open   https
 
-secops@network:~$ nmap api.atlas.health
+<span class="tok-prompt">secops@network:~$</span> <span class="tok-cmd">nmap</span> api.atlas.health
 Starting Nmap scan of api.atlas.health
 PORT     STATE  SERVICE
 443/tcp  open   https
 
-secops@network:~$ nmap vpn.atlas.health
+<span class="tok-prompt">secops@network:~$</span> <span class="tok-cmd">nmap</span> vpn.atlas.health
 Starting Nmap scan of vpn.atlas.health
 PORT     STATE  SERVICE
 443/tcp  open   https
 </code></pre>
 <p>Three hostnames, each with only 443 open. Matches the engagement scope. Three of four targets clear; you can already start drafting the &quot;no findings on the public-facing tier&quot; sentence for the report.</p>
 <h3 id="step-3-scan-the-staging-hostname">Step 3: Scan the staging hostname<a class="anchor" href="#step-3-scan-the-staging-hostname" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@network:~$ nmap staging.atlas.health
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@network:~$</span> <span class="tok-cmd">nmap</span> staging.atlas.health
 Starting Nmap scan of staging.atlas.health
 PORT     STATE  SERVICE
 22/tcp   open   ssh
@@ -91,7 +91,7 @@ PORT     STATE  SERVICE
 <p>This is the moment. The engagement scope says staging.atlas.health should have nothing open from outside the VPN. The scan shows three ports.</p>
 <p>22/ssh is a finding on its own — exposed SSH on a staging host is a CIS Control 4-grade misconfiguration, but it requires a credential to exploit. 443/https might or might not be a finding depending on what&#39;s behind it; some teams put a documentation page on staging.* as a 404 catch. But 5432/postgresql is the headline. That&#39;s the staging <em>database</em>. The host that Marcus said was VPN-only. Listening on the open internet.</p>
 <h3 id="step-4-identify-the-service-version">Step 4: Identify the service version<a class="anchor" href="#step-4-identify-the-service-version" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">secops@network:~$ nmap -sV staging.atlas.health
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@network:~$</span> <span class="tok-cmd">nmap</span> <span class="tok-flag">-sV</span> staging.atlas.health
 Starting Nmap scan with version detection
 PORT     STATE  SERVICE     VERSION
 22/tcp   open   ssh         OpenSSH 8.9p1 Ubuntu
@@ -104,8 +104,8 @@ PORT     STATE  SERVICE     VERSION
 <p>The forensic finding stands without the confirmation. A defender (or an attacker) looking at the nmap output above and the engagement-notes mention of <code>atlas-default-2025</code> would draw the same conclusion you just did.</p>
 <h3 id="step-6-use-the-credential-in-the-game-world-only">Step 6: Use the credential (in the game world only)<a class="anchor" href="#step-6-use-the-credential-in-the-game-world-only" aria-label="Link to this section">#</a></h3>
 <p>This is the part that doesn&#39;t happen in a real engagement — but does happen in D3CYPH3R because the breadcrumb pattern walks you onto the next level:</p>
-<pre><code class="language-bash">secops@network:~$ ssh level1@network
-level1@network&#39;s password: atlas-default-2025
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">secops@network:~$</span> <span class="tok-cmd">ssh</span> level1@network
+<span class="tok-prompt">level1@network's password:</span> <span class="tok-str">atlas-default-2025</span>
 </code></pre>
 <p>You&#39;re now on Atlas Health&#39;s staging-db jumphost, logged in as the staging service account, sitting on a healthcare client&#39;s production-adjacent system using credentials that should have been rotated five quarters ago and weren&#39;t. A real attacker who pulled the same trick — Shodan-discovered the host, recognized the postgres banner version, tried <code>postgres</code>/<code>admin</code>/<code>atlas-default-2025</code> as the auth tuple — would be exactly here. That&#39;s the lesson of level1@network, in its own walkthrough.</p>
 <h3 id="if-you-got-stuck">If you got stuck<a class="anchor" href="#if-you-got-stuck" aria-label="Link to this section">#</a></h3>
@@ -301,17 +301,17 @@ D. Notifying the HHS Office for Civil Rights of the incident</p>
 <h3 id="oscp-pen-200">OSCP / PEN-200<a class="anchor" href="#oscp-pen-200" aria-label="Link to this section">#</a></h3>
 <p>The Offensive Security Certified Professional is the most-recognized hands-on offensive certification.<sup class="cite"><a id="cite-cert-oscp-1" href="#ref-25" aria-label="Source 25">25</a></sup> The exam is a 24-hour practical hands-on test against a set of target machines, with a separate report due afterward. The methodology OSCP teaches is, at its core, exactly what you just did to Atlas Health&#39;s perimeter — with the discipline that, on the OSCP exam, <em>you actually do attempt the credential</em> (because the exam scope authorizes it; the Atlas engagement scope did not).</p>
 <p>The OSCP enumeration loop, applied to a target like Atlas Health, looks like this:</p>
-<pre><code class="language-bash"># Initial sweep
-nmap -sV -sC -p- --min-rate=1000 &lt;target&gt;
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-com"># Initial sweep</span>
+<span class="tok-cmd">nmap</span> <span class="tok-flag">-sV</span> <span class="tok-flag">-sC</span> <span class="tok-flag">-p-</span> <span class="tok-flag">--min-rate</span>=1000 <span class="tok-op">&lt;</span>target<span class="tok-op">&gt;</span>
 
-# Targeted scan on interesting ports
-nmap -sV -sC -p 22,80,443,5432 -A &lt;target&gt;
+<span class="tok-com"># Targeted scan on interesting ports</span>
+<span class="tok-cmd">nmap</span> <span class="tok-flag">-sV</span> <span class="tok-flag">-sC</span> <span class="tok-flag">-p</span> 22,80,443,5432 <span class="tok-flag">-A</span> <span class="tok-op">&lt;</span>target<span class="tok-op">&gt;</span>
 
-# Service-specific enumeration once you&#39;ve identified the service
-nmap --script=postgres-brute &lt;target&gt; -p 5432
-psql -h &lt;target&gt; -U postgres -d postgres   # try defaults
-psql -h &lt;target&gt; -U admin    -d postgres
-psql -h &lt;target&gt; -U app_admin -d postgres -W   # with the recovered cred
+<span class="tok-com"># Service-specific enumeration once you've identified the service</span>
+<span class="tok-cmd">nmap</span> <span class="tok-flag">--script</span>=postgres-brute <span class="tok-op">&lt;</span>target<span class="tok-op">&gt;</span> <span class="tok-flag">-p</span> <span class="tok-num">5432</span>
+<span class="tok-cmd">psql</span> <span class="tok-flag">-h</span> <span class="tok-op">&lt;</span>target<span class="tok-op">&gt;</span> <span class="tok-flag">-U</span> postgres <span class="tok-flag">-d</span> postgres   <span class="tok-com"># try defaults</span>
+<span class="tok-cmd">psql</span> <span class="tok-flag">-h</span> <span class="tok-op">&lt;</span>target<span class="tok-op">&gt;</span> <span class="tok-flag">-U</span> admin    <span class="tok-flag">-d</span> postgres
+<span class="tok-cmd">psql</span> <span class="tok-flag">-h</span> <span class="tok-op">&lt;</span>target<span class="tok-op">&gt;</span> <span class="tok-flag">-U</span> app_admin <span class="tok-flag">-d</span> postgres <span class="tok-flag">-W</span>   <span class="tok-com"># with the recovered cred</span>
 </code></pre>
 <p>The OSCP exam tests this exact sequence: enumerate broadly, identify a service, attempt the canonical attacks (default credentials, known CVEs in the version returned, common misconfigurations), pivot once you have access. The exam grades the pivot — finding the exposed postgres is worth points; using the recovered credential to authenticate, then enumerating the database for further pivots, is worth more points.</p>
 <p>The Atlas Health scenario you just executed is the <em>defender&#39;s</em> version of the OSCP opening play. The same enumeration, with discipline about where to stop. OSCP candidates who become consulting-firm engagement leads after the cert tend to be very good at this discipline; the muscle memory of &quot;scan first, identify what&#39;s there, decide what to do&quot; transfers cleanly. The thing the cert doesn&#39;t teach, that consulting work does, is &quot;stop here even though you have the credential, because the engagement letter says so.&quot; That discipline comes from the contract review side, not the technical side.</p>
@@ -323,26 +323,26 @@ psql -h &lt;target&gt; -U app_admin -d postgres -W   # with the recovered cred
 <p><strong>4. Bastion or just-in-time access instead of static VPN.</strong> &quot;VPN-only&quot; as an access model has been increasingly displaced over the past decade by short-lived, individually-attributable connection brokers. HashiCorp Boundary, AWS Systems Manager Session Manager, Cloudflare Access, Teleport, Tailscale — any of them replaces the persistent-VPN model with per-session credentials, audit logs per session, and the ability to expire access immediately when a consultant rolls off an engagement.<sup class="cite"><a id="cite-hashicorp-boundary-just-in-time-1" href="#ref-26" aria-label="Source 26">26</a></sup> Atlas&#39;s current model puts the entire access policy on the VPN concentrator&#39;s identity provider, which works well in steady state but degrades during high-turnover periods.</p>
 <p><strong>5. PostgreSQL hardening specifically.</strong> For the database itself, the hardening checklist is short and standard: <code>listen_addresses</code> in <code>postgresql.conf</code> set to specific interface bindings (never <code>*</code>), <code>pg_hba.conf</code> configured to deny by default and allow only documented source CIDRs, <code>ssl = on</code> enforced with <code>hostssl</code> (not <code>host</code>) entries, no <code>trust</code> authentication for any host outside the local socket, role-based access with no use of the <code>postgres</code> superuser for application connections, and audit logging via the <code>pgaudit</code> extension. The CIS PostgreSQL Benchmark is the canonical checklist; Atlas&#39;s staging postgres almost certainly does not pass it as configured today.<sup class="cite"><a id="cite-cis-postgresql-benchmark-1" href="#ref-27" aria-label="Source 27">27</a></sup></p>
 <p><strong>6. Sample detection rule (generic Linux + auditd, for the host side):</strong></p>
-<pre><code class="language-yaml">title: Inbound connection to PostgreSQL from non-allowed source
-status: experimental
-description: Detects TCP connections to PostgreSQL (port 5432) from
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Inbound connection to PostgreSQL from non-allowed source
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> Detects TCP connections to PostgreSQL (port <span class="tok-num">5432</span>) from
   source IPs outside the documented Atlas-VPN range.
-logsource:
-  product: linux
-  service: auditd
-detection:
-  selection:
-    syscall: &#39;connect&#39;
-    daddr_port: 5432
-  filter_allowed:
-    saddr_cidr:
-      - &#39;10.42.0.0/16&#39;    # Atlas-VPN range
-      - &#39;127.0.0.1/32&#39;    # localhost
-  condition: selection and not filter_allowed
-level: high
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> linux
+  service<span class="tok-op">:</span> auditd
+detection<span class="tok-op">:</span>
+  selection<span class="tok-op">:</span>
+    syscall<span class="tok-op">:</span> <span class="tok-str">'connect'</span>
+    daddr_port<span class="tok-op">:</span> <span class="tok-num">5432</span>
+  filter_allowed<span class="tok-op">:</span>
+    saddr_cidr<span class="tok-op">:</span>
+      - <span class="tok-str">'10.42.0.0/16'</span>    <span class="tok-com"># Atlas-VPN range</span>
+      - <span class="tok-str">'127.0.0.1/32'</span>    <span class="tok-com"># localhost</span>
+  condition<span class="tok-op">:</span> selection and not filter_allowed
+level<span class="tok-op">:</span> high
+falsepositives<span class="tok-op">:</span>
   - Legitimate internal connections from app servers (should be
-    covered by the allowed_cidr list above; tune if false positives)
+    covered by the allowed_cidr list above; tune if <span class="tok-key">false</span> positives)
 </code></pre>
 <p>This rule, with the allowed CIDR list maintained as part of the firewall-as-code configuration, would alert on the first unauthorized connection to staging-db. The detection-as-code companion to the firewall-as-code remediation.</p>
 <p><strong>7. Quarterly perimeter checks remain the audit floor.</strong> The quarterly verification Driftwood performs continues to have value as an audit artifact and as the contractual evidence of due diligence. But it is the <em>floor</em> of the security program, not the ceiling. The ceiling is continuous monitoring; the floor is the documented quarterly walkthrough that exists so the audit report has the right signatures on it.</p>

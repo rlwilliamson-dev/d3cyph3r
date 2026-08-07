@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -61,46 +61,46 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>Eight steps, but really one move repeated: for every claim the disputed message makes, find the server-written header that either corroborates it or contradicts it.</p>
 <h3 id="step-1-enter-with-the-breadcrumb">Step 1: Enter with the breadcrumb<a class="anchor" href="#step-1-enter-with-the-breadcrumb" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level3@forensics
-level3@forensics&#39;s password: RC-Gmail-PreDawn-2026-03-14-T0247Z
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level3@forensics
+<span class="tok-prompt">level3@forensics's password:</span> <span class="tok-str">RC-Gmail-PreDawn-2026-03-14-T0247Z</span>
 </code></pre>
 <p>You land as <code>ir-audit</code> on the Polaris IR bench. Read <code>welcome.md</code> — it explains the sender-controlled versus server-written split, the three authentication checks, and the one rule people get backwards on their first header (see step 5).</p>
 <h3 id="step-2-read-the-production-cover-sheet">Step 2: Read the production cover sheet<a class="anchor" href="#step-2-read-the-production-cover-sheet" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">ir-audit@polaris-ir:~$ cat subpoena-return.txt
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">ir-audit@polaris-ir:~$</span> <span class="tok-cmd">cat</span> subpoena-return.txt
 </code></pre>
 <p>Three things to take from it.</p>
 <p><strong>The legal basis</strong>, covered above. Note the explicit sentence that the session artifact was used to identify the account and <em>not</em> to access it.</p>
 <p><strong>Timestamp normalization.</strong> Everything in the production has been normalized to US/Eastern so it can be laid directly against the badge and VPN logs already in evidence. February messages show EST (UTC−05:00) and March messages show EDT (UTC−04:00). Real productions often arrive in the provider&#39;s own timezone (Google&#39;s infrastructure typically stamps Pacific), and <strong>normalizing timestamps before comparing timelines is a genuine forensic step</strong> — cross-timezone comparison is one of the most common ways an analyst reaches a confidently wrong conclusion.</p>
 <p><strong>The integrity hash and the existing timeline</strong>: session established 02:47, badge-in 09:42.</p>
 <h3 id="step-3-read-the-disputed-message">Step 3: Read the disputed message<a class="anchor" href="#step-3-read-the-disputed-message" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">ir-audit@polaris-ir:~$ ls mail/
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">ir-audit@polaris-ir:~$</span> <span class="tok-cmd">ls</span> mail/
 01-authorization-claimed.eml  02-hutchins-genuine-2026-02-11.eml  03-outbound-0253.eml
 
-ir-audit@polaris-ir:~$ cat mail/01-authorization-claimed.eml
+<span class="tok-prompt">ir-audit@polaris-ir:~$</span> <span class="tok-cmd">cat</span> mail/01-authorization-claimed.eml
 </code></pre>
 <p>The body reads exactly as counsel described — Hutchins clearing Reed to take the drive home, telling him not to worry about the paperwork. If you stop at the body, the defense holds.</p>
 <p>Now read the header block. Four things are wrong, and each is independently sufficient.</p>
 <p><strong>Return-Path disagrees with From.</strong></p>
-<pre><code>Return-Path: &lt;reed.connolly@gmail.com&gt;
+<pre data-kind="plain"><code class="hl">Return-Path: &lt;reed.connolly@gmail.com&gt;
 From: &quot;Hutchins, Larry&quot; &lt;l.hutchins@polaris-defense.com&gt;
 </code></pre>
 <p><code>From:</code> is the letterhead — free text the composer types. <code>Return-Path</code> records the SMTP <em>envelope</em> sender, the address the sending server actually declared during the delivery transaction. Delivery worked, so that value had to be real. The message was sent by Reed&#39;s own Gmail account, and the name at the top says otherwise. This is the fastest spoof check in existence and it costs one line of reading.</p>
 <p><strong>All three authentication checks fail.</strong></p>
-<pre><code>Authentication-Results: mx.google.com;
+<pre data-kind="plain"><code class="hl">Authentication-Results: mx.google.com;
         dkim=none;
         spf=fail (... does not designate 209.85.222.180 as permitted sender)
         dmarc=fail (p=REJECT sp=REJECT dis=NONE) header.from=polaris-defense.com
 </code></pre>
 <p><code>spf=fail</code> — the sending server is not authorized to send for polaris-defense.com. <code>dkim=none</code> — note this is an <em>absence</em>, not a failed verification; there was no signature to check at all, and genuine Polaris mail is signed. <code>dmarc=fail</code> against a domain publishing <code>p=REJECT</code>, meaning Polaris explicitly instructs receivers to reject mail that fails alignment.</p>
 <p><strong>The Message-ID is from the wrong system.</strong></p>
-<pre><code>Message-ID: &lt;CAJ8v2mQ...@mail.gmail.com&gt;
+<pre data-kind="plain"><code class="hl">Message-ID: &lt;CAJ8v2mQ...@mail.gmail.com&gt;
 </code></pre>
 <p>Message-IDs are assigned by the system that first accepts a message. A genuine Polaris message gets an <code>@polaris-defense.com</code> ID. This one was minted by Gmail. Whatever composed this message never touched Polaris infrastructure.</p>
 <p><strong>The clock contradicts itself.</strong> This is the strongest one, and step 5 walks it.</p>
 <h3 id="step-4-pull-a-known-good-the-move-that-makes-it-a-finding">Step 4: Pull a known-good — the move that makes it a finding<a class="anchor" href="#step-4-pull-a-known-good-the-move-that-makes-it-a-finding" aria-label="Link to this section">#</a></h3>
 <p>Resist the urge to conclude yet. A single failing message is arguable: forwarded mail breaks SPF constantly, mailing lists break DKIM, misconfigured relays exist. Opposing counsel will make exactly that argument, and on one sample they might win.</p>
 <p>So get a genuine message from the same claimed sender:</p>
-<pre><code class="language-bash">ir-audit@polaris-ir:~$ cat mail/02-hutchins-genuine-2026-02-11.eml
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">ir-audit@polaris-ir:~$</span> <span class="tok-cmd">cat</span> mail/02-hutchins-genuine-2026-02-11.eml
 </code></pre>
 <p>Everything the disputed message fails, this one passes:</p>
 <table>
@@ -149,27 +149,27 @@ From: &quot;Hutchins, Larry&quot; &lt;l.hutchins@polaris-defense.com&gt;
 <p>Here is the rule everyone gets backwards the first time.</p>
 <p>Each server that handles a message <strong>prepends</strong> its <code>Received:</code> line. The block is therefore in <em>reverse</em> chronological order: the <strong>bottom</strong> entry is the <strong>first</strong> hop, and the top is the last server before delivery. Read it top-down and you will confidently identify the recipient&#39;s own mail server as the origin.</p>
 <p>Walk the disputed message&#39;s chain with line numbers:</p>
-<pre><code class="language-bash">ir-audit@polaris-ir:~$ grep -n received mail/01-authorization-claimed.eml
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">ir-audit@polaris-ir:~$</span> <span class="tok-cmd">grep</span> <span class="tok-flag">-n</span> received mail/01-authorization-claimed.eml
 </code></pre>
 <p>Reading bottom-up, the earliest hop is:</p>
-<pre><code>Received: from [100.64.18.203] ([100.64.18.203])
+<pre data-kind="plain"><code class="hl">Received: from [100.64.18.203] ([100.64.18.203])
         by smtp.gmail.com with ESMTPSA id ...
         Sat, 14 Mar 2026 02:51:06 -0400 (EDT)
 </code></pre>
 <p><code>ESMTPSA</code> is the tell: the <strong>A</strong> is <em>authenticated submission</em>. This is not a relay forwarding someone else&#39;s mail — it is a logged-in user handing Gmail a message to send. The message entered the world through an authenticated session on Reed&#39;s account, from Reed&#39;s address, at 02:51 on Saturday morning.</p>
 <p>Now compare that to what the sender claimed:</p>
-<pre><code>Date: Thu, 12 Mar 2026 16:04:22 -0400
+<pre data-kind="plain"><code class="hl">Date: Thu, 12 Mar 2026 16:04:22 -0400
 </code></pre>
 <p>The <code>Date:</code> header says Thursday afternoon. The servers say Saturday at 02:51 — roughly 34 hours later. A sender can put anything in <code>Date:</code>; it is client-supplied text. A sender cannot reach into Google&#39;s infrastructure and change the time it recorded accepting the message. <strong>The backdating is the intent.</strong> An accidental misconfiguration doesn&#39;t set the clock back to a date that would make a story plausible.</p>
 <h3 id="step-6-what-was-actually-sent">Step 6: What was actually sent<a class="anchor" href="#step-6-what-was-actually-sent" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">ir-audit@polaris-ir:~$ cat mail/03-outbound-0253.eml
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">ir-audit@polaris-ir:~$</span> <span class="tok-cmd">cat</span> mail/03-outbound-0253.eml
 </code></pre>
 <p>Two minutes after the forged authorization is stamped, at 02:53:44:</p>
-<pre><code>From: Reed Connolly &lt;reed.connolly@gmail.com&gt;
+<pre data-kind="plain"><code class="hl">From: Reed Connolly &lt;reed.connolly@gmail.com&gt;
 To: m.arroyo@ridgeline-consulting.net
 Subject: files
 </code></pre>
-<pre><code>  https://filedrop.example.net/d/8f21c40e
+<pre data-kind="plain"><code class="hl">  https://filedrop.example.net/d/8f21c40e
   passphrase: RC-FileDrop-2026-03-14-T0253Z
 </code></pre>
 <p>…and, in Reed&#39;s own words, <em>&quot;I&#39;ve got cover on my end for having the drive, so the timing shouldn&#39;t look strange if anyone asks.&quot;</em></p>
@@ -208,8 +208,8 @@ Subject: files
 </tbody></table>
 <p>He built the alibi <em>before</em> doing the thing the alibi was meant to excuse. Ordering is the argument.</p>
 <h3 id="step-8-post-mortem-then-out">Step 8: Post-mortem, then out<a class="anchor" href="#step-8-post-mortem-then-out" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">ir-audit@polaris-ir:~$ cat lessons-learned.md
-ir-audit@polaris-ir:~$ exit
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">ir-audit@polaris-ir:~$</span> <span class="tok-cmd">cat</span> lessons-learned.md
+<span class="tok-prompt">ir-audit@polaris-ir:~$</span> <span class="tok-cmd">exit</span>
 </code></pre>
 <h2 id="vulnerability">§3 — The vulnerability<a class="anchor" href="#vulnerability" aria-label="Link to this section">#</a></h2>
 <p>The weakness class is <strong>CWE-290: Authentication Bypass by Spoofing</strong> — asserting an identity in a field nothing authenticates.<sup class="cite"><a id="cite-cwe-290-1" href="#ref-2" aria-label="Source 2">2</a></sup></p>
@@ -299,28 +299,28 @@ argument left open in the previous level.</p>
 question a defender should ask is why it was delivered anyway, and the
 answer is almost always that the gateway is configured to observe policy
 rather than enforce it.</p>
-<pre><code class="language-yaml">title: Inbound mail failing DMARC while claiming an internal sender
-status: stable
-description: &gt;
-  Detects inbound messages whose From: domain belongs to the organisation
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Inbound mail failing DMARC while claiming an internal sender
+status<span class="tok-op">:</span> stable
+description<span class="tok-op">:</span> &gt;
+  Detects inbound messages whose From<span class="tok-op">:</span> domain belongs to the organisation
   but which fail DMARC evaluation. This is the executive-impersonation
   pattern, and where the claimed domain publishes p=reject the message
   should not have been delivered at all.
-logsource:
-  product: m365
-  service: message_trace
-detection:
-  claims_internal:
-    HeaderFrom|endswith:
-      - &#39;@polaris-defense.com&#39;
-  auth_failed:
-    AuthenticationResults|contains:
-      - &#39;dmarc=fail&#39;
-      - &#39;dmarc=none&#39;
-  inbound:
-    Direction: &#39;Inbound&#39;
-  condition: claims_internal and auth_failed and inbound
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> m365
+  service<span class="tok-op">:</span> message_trace
+detection<span class="tok-op">:</span>
+  claims_internal<span class="tok-op">:</span>
+    HeaderFrom|endswith<span class="tok-op">:</span>
+      - <span class="tok-str">'@polaris-defense.com'</span>
+  auth_failed<span class="tok-op">:</span>
+    AuthenticationResults|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'dmarc=fail'</span>
+      - <span class="tok-str">'dmarc=none'</span>
+  inbound<span class="tok-op">:</span>
+    Direction<span class="tok-op">:</span> <span class="tok-str">'Inbound'</span>
+  condition<span class="tok-op">:</span> claims_internal and auth_failed and inbound
+falsepositives<span class="tok-op">:</span>
   - Mailing lists and forwarding services, which break SPF by design and
     are the reason DKIM alignment carries the decision. Legitimate senders
     should be brought into the SPF record or given a DKIM signature rather
@@ -328,7 +328,7 @@ falsepositives:
   - Third-party senders authorised to send as the domain, such as payroll
     and marketing platforms. Every one of these should be enumerated;
     discovering an unenumerated one is a finding.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>The genuinely important number here is not the alert count. It is whether
 the domain publishes <code>p=reject</code> and whether the gateway honours it. A
@@ -346,8 +346,8 @@ not the target.</p>
 <p><strong>1. The envelope disagrees with the letterhead</strong> — Trigger: <code>cat mail/01-authorization-claimed.eml</code>. <code>Return-Path: &lt;reed.connolly@gmail.com&gt;</code> against <code>From: &quot;Hutchins, Larry&quot; &lt;l.hutchins@polaris-defense.com&gt;</code>. The envelope sender is what the sending server declared for delivery to actually happen; the <code>From:</code> header is composer-supplied display text. When they disagree, believe the envelope. This is the single fastest spoof check available and it is one line of reading — worth building into muscle memory, because in a real inbox you&#39;ll often have only seconds of attention to spend.</p>
 <p><strong>2. You compared against a known-good</strong> — Trigger: <code>cat mail/02-hutchins-genuine-2026-02-11.eml</code>. The find is awarded for the <em>analyst behavior</em>, not for a fact in the file. Establishing what normal looks like for this sender on this infrastructure is what converts an observation into a finding that holds up. Everything else in the level is reading; this is the part that is judgment.</p>
 <p>Worth doing while you&#39;re here: run the chain-walk on both messages back to back —</p>
-<pre><code class="language-bash">grep -n received mail/01-authorization-claimed.eml
-grep -n received mail/02-hutchins-genuine-2026-02-11.eml
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">grep</span> <span class="tok-flag">-n</span> received mail/01-authorization-claimed.eml
+<span class="tok-cmd">grep</span> <span class="tok-flag">-n</span> received mail/02-hutchins-genuine-2026-02-11.eml
 </code></pre>
 <p>— and notice that the genuine message has an extra hop (<code>EXCH07</code> → <code>mx04.polaris-defense.com</code>) that the forgery has no way to fabricate. Hop <em>count</em> and hop <em>identity</em> are both evidence.</p>
 <h2 id="takeaways">§8 — Key takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section">#</a></h2>

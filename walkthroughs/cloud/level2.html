@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -56,23 +56,23 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <h3 id="step-0-enter-the-level">Step 0 — Enter the level<a class="anchor" href="#step-0-enter-the-level" aria-label="Link to this section">#</a></h3>
 <p>From the lobby:</p>
-<pre><code class="language-bash">ssh level2@cloud
-# Password: Cv-BrokerSvc-Pr0d-2024-Migration
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">ssh</span> level2@cloud
+<span class="tok-com"># Password: Cv-BrokerSvc-Pr0d-2024-Migration</span>
 </code></pre>
 <p>That password is the breadcrumb you recovered yesterday from the <code>migration_artifacts</code> table in <code>coverline_claims</code> (level1&#39;s finding). It is <code>broker-portal-svc</code>&#39;s credential.</p>
 <p><code>cat welcome.md</code> introduces three new <code>aws iam</code> reads; <code>cat engagement-notes.md</code> is Sloane&#39;s tasking. The notes scope the hunt: focus on the non-human service identities from the 2024 migration, look for dormant-but-active keys and orphaned accounts, and check account-level posture. They also tell you where to start — Vikram&#39;s migration tooling is still on this bastion under <code>~/migration-2024</code>.</p>
 <h3 id="step-1-confirm-who-you-are">Step 1 — Confirm who you are<a class="anchor" href="#step-1-confirm-who-you-are" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">aws sts get-caller-identity
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">aws</span> sts get-caller-identity
 </code></pre>
-<pre><code>UserId:   AIDABROKERPORTALSVC01
+<pre data-kind="plain"><code class="hl">UserId:   AIDABROKERPORTALSVC01
 Account:  390210448812
 Arn:      arn:aws:iam::390210448812:user/broker-portal-svc
 </code></pre>
 <p>You are operating <em>inside</em> Coverline&#39;s AWS account (<code>390210448812</code>) as <code>broker-portal-svc</code>. That a portal service has enough IAM read to even run the rest of this audit is itself a least-privilege failure — but it&#39;s the failure that lets you find the bigger one.</p>
 <h3 id="step-2-enumerate-every-principal">Step 2 — Enumerate every principal<a class="anchor" href="#step-2-enumerate-every-principal" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">aws iam list-users
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">aws</span> iam list-users
 </code></pre>
-<pre><code>UserName              Arn
+<pre data-kind="plain"><code class="hl">UserName              Arn
 --------------------  -----------------------------------------------------
 sloane.becker         arn:aws:iam::390210448812:user/sloane.becker
 jordan.nguyen         arn:aws:iam::390210448812:user/jordan.nguyen
@@ -99,17 +99,17 @@ monitoring-svc        arn:aws:iam::390210448812:user/monitoring-svc
 <p>The engagement notes told you to start with the migration-era service accounts, so begin there.</p>
 <h3 id="step-3-inspect-attached-policies-the-finding">Step 3 — Inspect attached policies (the finding)<a class="anchor" href="#step-3-inspect-attached-policies-the-finding" aria-label="Link to this section">#</a></h3>
 <p>For each suspect, list what&#39;s attached:</p>
-<pre><code class="language-bash">aws iam list-attached-user-policies --user-name legacy-deploy-bot
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">aws</span> iam list-attached-user-policies <span class="tok-flag">--user-name</span> legacy-deploy-bot
 </code></pre>
-<pre><code>AttachedPolicies:
+<pre data-kind="plain"><code class="hl">AttachedPolicies:
 
   PolicyName:  AdministratorAccess
   PolicyArn:   arn:aws:iam::aws:policy/AdministratorAccess
 </code></pre>
 <p>There it is. <code>legacy-deploy-bot</code> — a &quot;temporary&quot; deploy identity from the 2024 migration — has the AWS-managed <code>AdministratorAccess</code> policy attached. Confirm what that grants:</p>
-<pre><code class="language-bash">aws iam get-policy --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">aws</span> iam get-policy <span class="tok-flag">--policy-arn</span> arn:aws:iam::aws:policy/AdministratorAccess
 </code></pre>
-<pre><code>Policy:
+<pre data-kind="plain"><code class="hl">Policy:
   PolicyName:       AdministratorAccess
   Arn:              arn:aws:iam::aws:policy/AdministratorAccess
   DefaultVersionId: v1
@@ -128,12 +128,12 @@ monitoring-svc        arn:aws:iam::390210448812:user/monitoring-svc
 </code></pre>
 <p><code>&quot;Action&quot;: &quot;*&quot;</code> on <code>&quot;Resource&quot;: &quot;*&quot;</code>. Every action, on every resource, in the account. That is the entire blast radius: read every bucket, assume every role, mint every credential, delete every log.</p>
 <p>Contrast that with a service account the same migration created <em>correctly</em>:</p>
-<pre><code class="language-bash">aws iam list-attached-user-policies --user-name migration-runner-bot
-# -&gt; coverline-migration-s3-scoped
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">aws</span> iam list-attached-user-policies <span class="tok-flag">--user-name</span> migration-runner-bot
+<span class="tok-com"># -&gt; coverline-migration-s3-scoped</span>
 
-aws iam get-policy --policy-arn arn:aws:iam::390210448812:policy/coverline-migration-s3-scoped
+<span class="tok-cmd">aws</span> iam get-policy <span class="tok-flag">--policy-arn</span> arn:aws:iam::390210448812:policy/coverline-migration-s3-scoped
 </code></pre>
-<pre><code>  Document:
+<pre data-kind="plain"><code class="hl">  Document:
     {
       &quot;Version&quot;: &quot;2012-10-17&quot;,
       &quot;Statement&quot;: [
@@ -152,9 +152,9 @@ aws iam get-policy --policy-arn arn:aws:iam::390210448812:policy/coverline-migra
 <p><code>migration-runner-bot</code> can read and write three actions on exactly the migration buckets — nothing else. That&#39;s least privilege done right. The two bots did the same job at the same time; one got a scalpel, the other got a master key. <strong>Checking the policy, not the name, is the whole skill</strong> — you cannot tell <code>legacy-deploy-bot</code> is dangerous and <code>migration-runner-bot</code> is fine from their names.</p>
 <h3 id="step-4-is-the-key-live-and-is-it-used">Step 4 — Is the key live, and is it used?<a class="anchor" href="#step-4-is-the-key-live-and-is-it-used" aria-label="Link to this section">#</a></h3>
 <p>A god-mode policy on a deleted-and-forgotten bot is harmless. A god-mode policy on a bot whose key still works is a standing catastrophe. Check:</p>
-<pre><code class="language-bash">aws iam list-access-keys --user-name legacy-deploy-bot
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">aws</span> iam list-access-keys <span class="tok-flag">--user-name</span> legacy-deploy-bot
 </code></pre>
-<pre><code>AccessKeyMetadata:
+<pre data-kind="plain"><code class="hl">AccessKeyMetadata:
 
   UserName:     legacy-deploy-bot
   AccessKeyId:  AKIA7X4DEPLOYB0T2024
@@ -162,9 +162,9 @@ aws iam get-policy --policy-arn arn:aws:iam::390210448812:policy/coverline-migra
   CreateDate:   2024-02-15
 </code></pre>
 <p><code>Status: Active</code>. The key still opens the door. Now the most important question in any credential-hygiene pass — <em>is anyone actually using it?</em></p>
-<pre><code class="language-bash">aws iam get-access-key-last-used --access-key-id AKIA7X4DEPLOYB0T2024
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">aws</span> iam get-access-key-last-used <span class="tok-flag">--access-key-id</span> AKIA7X4DEPLOYB0T2024
 </code></pre>
-<pre><code>UserName:  legacy-deploy-bot
+<pre data-kind="plain"><code class="hl">UserName:  legacy-deploy-bot
 AccessKeyLastUsed:
   LastUsedDate:  2024-03-02 07:41:55
   ServiceName:   s3
@@ -177,12 +177,12 @@ AccessKeyLastUsed:
 <h3 id="step-5-recover-the-secret-the-level3-breadcrumb">Step 5 — Recover the secret (the level3 breadcrumb)<a class="anchor" href="#step-5-recover-the-secret-the-level3-breadcrumb" aria-label="Link to this section">#</a></h3>
 <p>You&#39;ve proven <code>legacy-deploy-bot</code> is the dangerous identity. To carry the demonstration to level3 you need its <strong>secret</strong> access key — and here is the realistic part: AWS will never give it to you. A secret access key is shown exactly once, at creation, and is never retrievable through any API. <code>list-access-keys</code> returns the key <em>ID</em> and its status, never the secret.</p>
 <p>So where does a secret leak from? The same place dormant admin keys always leak from — a file someone left behind. The engagement notes pointed you at Vikram&#39;s migration tooling:</p>
-<pre><code class="language-bash">ls migration-2024/
-# README.txt  bootstrap-iam-keys.env
+<pre data-kind="shell"><code class="hl language-bash"><span class="tok-cmd">ls</span> migration-2024/
+<span class="tok-com"># README.txt  bootstrap-iam-keys.env</span>
 
-cat migration-2024/bootstrap-iam-keys.env
+<span class="tok-cmd">cat</span> migration-2024/bootstrap-iam-keys.env
 </code></pre>
-<pre><code># ... DELETE THIS FILE AFTER CUTOVER. — vshah, 2024-02-15
+<pre data-kind="plain"><code class="hl"># ... DELETE THIS FILE AFTER CUTOVER. — vshah, 2024-02-15
 # (cutover verified 2024-04-30; this file was never deleted)
 
 BROKER_PORTAL_SVC_ACCESS_KEY_ID=AKIABRKRPORTALSVC024
@@ -202,7 +202,7 @@ BACKUP_SVC_SECRET_ACCESS_KEY=bkupSvc+RDSsnapshot/2023scoped/Xq7Lm2
 </code></pre>
 <p>The file is a bulk credential dump — five service accounts&#39; key pairs, in cleartext, on a shared bastion. (Notice <code>broker-portal-svc</code>&#39;s secret is the very credential you logged in with — the same value the database row stored.) This is <em>why</em> IAM enumeration was the work: the file hands you five secrets, and only the enumeration tells you which one matters. <code>legacy-deploy-bot</code>&#39;s <code>AccessKeyId</code> here (<code>AKIA7X4DEPLOYB0T2024</code>) matches the Active, dormant, AdministratorAccess key you confirmed in Step 4.</p>
 <p><strong>The breadcrumb to <code>level3@cloud</code> is <code>legacy-deploy-bot</code>&#39;s secret access key:</strong></p>
-<pre><code>Ldb0t/Adm1nDeploy+Migr8/2024+us-east-2XQ
+<pre data-kind="plain"><code class="hl">Ldb0t/Adm1nDeploy+Migr8/2024+us-east-2XQ
 </code></pre>
 <p>In level3 you&#39;ll assume that identity and discover what an attacker who found this key in 2024 would have held — full control, for two years, unwatched.</p>
 <h3 id="if-you-got-stuck">If you got stuck<a class="anchor" href="#if-you-got-stuck" aria-label="Link to this section">#</a></h3>
@@ -369,36 +369,36 @@ already have.</p>
 <p>A dormant administrator key is dangerous precisely because nothing about
 it generates events until the day it does. Two rules are worth running:
 one on the credential, one on the privilege.</p>
-<pre><code class="language-yaml">title: Privileged action by a dormant or legacy IAM principal
-status: experimental
-description: &gt;
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Privileged action by a dormant or legacy IAM principal
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
   Detects API activity from principals outside the current operational
   set, particularly those holding broad managed policies. Migration bots,
   departed employees, and long-lived automation accumulate because
   nothing retires them, and each remains as capable as the day it was
   created.
-logsource:
-  product: aws
-  service: cloudtrail
-detection:
-  legacy_principals:
-    userIdentity.userName|contains:
-      - &#39;legacy-&#39;
-      - &#39;deploy-bot&#39;
-      - &#39;migration&#39;
-  privileged_action:
-    eventName|startswith:
-      - &#39;Create&#39;
-      - &#39;Delete&#39;
-      - &#39;Put&#39;
-      - &#39;Attach&#39;
-      - &#39;Assume&#39;
-  condition: legacy_principals and privileged_action
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> aws
+  service<span class="tok-op">:</span> cloudtrail
+detection<span class="tok-op">:</span>
+  legacy_principals<span class="tok-op">:</span>
+    userIdentity.userName|contains<span class="tok-op">:</span>
+      - <span class="tok-str">'legacy-'</span>
+      - <span class="tok-str">'deploy-bot'</span>
+      - <span class="tok-str">'migration'</span>
+  privileged_action<span class="tok-op">:</span>
+    eventName|startswith<span class="tok-op">:</span>
+      - <span class="tok-str">'Create'</span>
+      - <span class="tok-str">'Delete'</span>
+      - <span class="tok-str">'Put'</span>
+      - <span class="tok-str">'Attach'</span>
+      - <span class="tok-str">'Assume'</span>
+  condition<span class="tok-op">:</span> legacy_principals and privileged_action
+falsepositives<span class="tok-op">:</span>
   - Automation that is genuinely still in service under a legacy name.
     That is a naming problem worth fixing rather than an exclusion worth
     adding, and each instance should be renamed or retired.
-level: high
+level<span class="tok-op">:</span> high
 </code></pre>
 <p>The second rule needs no tuning and should be enabled everywhere: alert on
 <strong>any</strong> use of the account root credential. AWS&#39;s own guidance is that

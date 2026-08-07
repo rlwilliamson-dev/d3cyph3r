@@ -62,6 +62,7 @@ import { fileURLToPath } from "node:url";
 
 import { Marked } from "../walkthroughs/vendor/marked.esm.min.js";
 import { MANIFEST } from "../walkthroughs/manifest.mjs";
+import { highlight } from "./highlight.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const WT = join(ROOT, "walkthroughs");
@@ -165,6 +166,28 @@ function esc(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/**
+ * Exact inverse of highlighting: strip the token spans, undo esc().
+ *
+ * Used only to assert that highlighting is lossless (see the `code`
+ * renderer). It is safe to be this literal because the input is never
+ * arbitrary HTML: it is output this build just produced, whose only tags
+ * are the <span class="tok-*"> wrappers the highlighter emits.
+ *
+ * Entity order matters and is the reverse of esc(): &amp; must be undone
+ * LAST, otherwise "&amp;lt;" unescapes to "<" instead of "&lt;" and a
+ * block legitimately containing that text would report a false mismatch.
+ */
+function unhighlight(html) {
+  return html
+    .replace(/<span class="tok-[a-z]+">/g, "")
+    .replace(/<\/span>/g, "")
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
 }
 
 /**
@@ -831,6 +854,39 @@ function renderMarkdown(md, label = "") {
       }
       return `<blockquote>\n${quote}</blockquote>\n`;
     },
+    /**
+     * Highlight a fenced block, then prove the highlighting changed only
+     * the markup and not a single character of the code.
+     *
+     * The invariant is the point. A tokeniser that drops a character, or
+     * emits one twice, produces a block that still LOOKS plausible: it is
+     * monospaced, coloured, and subtly wrong, and the reader who copies
+     * the command out is the one who finds out. So the rendered HTML is
+     * stripped back down to text here and compared against the input. A
+     * mismatch is a build failure, not a warning.
+     *
+     * See tools/highlight.mjs for why this is transcript-aware rather
+     * than a general syntax highlighter.
+     */
+    code(text, infostring) {
+      const { html: inner, kind } = highlight(text, infostring);
+
+      if (unhighlight(inner) !== text) {
+        problems.push(
+          `  ${label}: highlighting altered the text of a ${kind} code block ` +
+            `(starts "${text.slice(0, 40).replace(/\n/g, "\\n")}")`
+        );
+      }
+
+      // The language and the chosen mode both land on the element, so a
+      // test can assert the classification instead of eyeballing colours.
+      const lang = String(infostring || "").trim().split(/\s+/)[0];
+      const langCls = lang ? ` language-${esc(lang)}` : "";
+      return (
+        `<pre data-kind="${esc(kind)}"><code class="hl${langCls}">` +
+        `${inner}\n</code></pre>\n`
+      );
+    },
     // Drop raw HTML tokens entirely.
     html: () => "",
     link(href, title, text) {
@@ -1064,7 +1120,7 @@ const BRAND_GLYPHS =
 
 // Bumped in lockstep with js/engine/version.js so a release busts the
 // stylesheet cache for returning readers (release checklist step 2b).
-const CSS_VERSION = "2.7.0";
+const CSS_VERSION = "2.11.0";
 
 // ─── TOC rail ─────────────────────────────────────────────────────
 

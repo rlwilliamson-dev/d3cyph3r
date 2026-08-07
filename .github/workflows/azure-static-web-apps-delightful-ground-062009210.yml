@@ -139,6 +139,15 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
+      # v2.11.0 — The generator asserts that highlighting is lossless, so
+      # a tokeniser that eats a character fails the build below. It cannot
+      # catch a tokeniser that stops RECOGNISING something: if the prompt
+      # pattern broke, every transcript would silently be reclassified and
+      # program output would start being painted as typed input, with the
+      # text still round-tripping perfectly. These assert classification
+      # directly. Builtin test runner, no install step.
+      - name: Unit-test the code-block highlighter
+        run: node --test tools/highlight.test.mjs
       - name: Regenerate walkthrough pages
         run: node tools/build-walkthroughs.mjs
       - name: Fail if generated output differs from what was committed

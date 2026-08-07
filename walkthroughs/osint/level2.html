@@ -14,7 +14,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="theme-color" content="#0d1117">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.7.0">
+  <link rel="stylesheet" href="/walkthroughs/walkthrough.css?v=2.11.0">
 </head>
 <body class="page-doc">
 
@@ -57,20 +57,20 @@
 <h2 id="solve">§2 — The solve<a class="anchor" href="#solve" aria-label="Link to this section">#</a></h2>
 <p>The path is a clean archive-recon chain: prove the deletion didn&#39;t remediate, then pivot from an old archived page to a forgotten identity, then read what that identity leaked. The new tool is <code>wayback</code>; you&#39;ll reuse <code>curl</code> to read archived snapshots and <code>sherlock</code> to pivot on a handle.</p>
 <h3 id="step-1-open-the-workspace-with-the-aws-key">Step 1: Open the workspace with the AWS key<a class="anchor" href="#step-1-open-the-workspace-with-the-aws-key" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">guest@d3cyph3r:~$ ssh level2@osint
-level2@osint&#39;s password: AaronHinesMD/Pers0nal+AWS/2024+BrightBlu
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">guest@d3cyph3r:~$</span> <span class="tok-cmd">ssh</span> level2@osint
+<span class="tok-prompt">level2@osint's password:</span> <span class="tok-str">AaronHinesMD/Pers0nal+AWS/2024+BrightBlu</span>
 Connected: level2@osint
-intel@osint:~$ whoami
+<span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">whoami</span>
 intel
 </code></pre>
 <p>The gate password is the secret access key from level1&#39;s <code>.env</code>. It works because the key was never rotated — which is the entire deletion-vs-rotation lesson in a single login.</p>
 <h3 id="step-2-read-the-three-engagement-files">Step 2: Read the three engagement files<a class="anchor" href="#step-2-read-the-three-engagement-files" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ ls
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">ls</span>
 engagement-notes.md  lessons-learned.md  subject-update.txt  welcome.md
 </code></pre>
 <p><code>welcome.md</code> introduces the <code>wayback</code> command and explains what the Internet Archive does: it decouples &quot;what&#39;s online now&quot; from &quot;what was ever online,&quot; and deleting content at the origin doesn&#39;t remove the captures. <code>engagement-notes.md</code> is Priya&#39;s update — Aaron deleted the repo, didn&#39;t confirm rotation, and Marisol wants the deletion-vs-rotation distinction made unmissable plus a light archive sweep. <code>subject-update.txt</code> is the formal case-file update carrying the two URLs in scope: the deleted repo and Aaron&#39;s old personal site (<code>http://www.aaronhines.net</code>, in the Wayback Machine since 2009 — it&#39;s how level0 dated his Gmail).</p>
 <h3 id="step-3-wayback-the-deleted-repo-the-remediation-check">Step 3: wayback the &quot;deleted&quot; repo — the remediation check<a class="anchor" href="#step-3-wayback-the-deleted-repo-the-remediation-check" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ wayback https://github.com/aaron-hines-md/personal-pgx-tool
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">wayback</span> https://github.com/aaron-hines-md/personal-pgx-tool
 Internet Archive — Wayback Machine
 URL: https://github.com/aaron-hines-md/personal-pgx-tool
 ──────────────────────────────────────────
@@ -85,7 +85,7 @@ URL: https://github.com/aaron-hines-md/personal-pgx-tool
 <p>There it is. The 2026-05-21 row is a <code>404</code> — that&#39;s the archive capturing the now-deleted live page <em>after</em> Aaron&#39;s Thursday-morning delete. But the 2023 and 2024 rows are all <code>200</code>, and they&#39;re still served. <strong>Deleting the live repo did nothing to the existing captures.</strong> Anyone can open the 2024-03-09 snapshot and browse the repo&#39;s file tree — including the <code>.env</code> — exactly as it stood at HEAD. The deletion changed only one thing: it made the <em>current</em> URL 404. It did not unpublish the repo, and it did not touch the only thing that actually matters — rotating the key.</p>
 <p>This fires the <strong>Deletion theatre</strong> bonus find (see §7.5).</p>
 <h3 id="step-4-wayback-the-old-personal-site-start-the-sweep">Step 4: wayback the old personal site — start the sweep<a class="anchor" href="#step-4-wayback-the-old-personal-site-start-the-sweep" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ wayback http://www.aaronhines.net
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">wayback</span> http://www.aaronhines.net
 Internet Archive — Wayback Machine
 URL: http://www.aaronhines.net
 ──────────────────────────────────────────
@@ -99,7 +99,7 @@ URL: http://www.aaronhines.net
 </code></pre>
 <p>Aaron&#39;s pre-residency personal site, captured from 2009 to 2013. Two captures are interesting: the 2011 homepage (the version of Aaron that linked his hobby accounts before he went professional) and a <code>robots.txt</code> capture (a map of what he wanted hidden — the bonus path in §7.5).</p>
 <h3 id="step-5-curl-the-2011-homepage-recover-the-scrubbed-handle">Step 5: curl the 2011 homepage — recover the scrubbed handle<a class="anchor" href="#step-5-curl-the-2011-homepage-recover-the-scrubbed-handle" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ curl https://web.archive.org/web/20110614093210/http://www.aaronhines.net/
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">curl</span> https://web.archive.org/web/20110614093210/http://www.aaronhines.net/
 [ Wayback Machine — captured 2011-06-14 09:32:10 ]
 [ Archived from: http://www.aaronhines.net/ ]
 
@@ -111,7 +111,7 @@ URL: http://www.aaronhines.net
   most of these are under a handle rather than my name:
 
     - Code (GitHub):          github.com/aaron-hines-md
-    - Sailing + homelab blog:  saltyhelm.net   &lt;- that one&#39;s me;
+    - Sailing + homelab blog:  saltyhelm.net   &lt;- that one's me;
                                I post as &quot;saltyhelm&quot;
     - Running log:             on Strava (ask me for the link)
   ...
@@ -119,7 +119,7 @@ URL: http://www.aaronhines.net
 </code></pre>
 <p>This is the pivot. The 2011 Aaron, before he had a professional reputation to manage, wrote down the link between his real-name identity and his pseudonymous one: <code>saltyhelm</code>, on <code>saltyhelm.net</code>. His <em>current</em> professional profiles don&#39;t link the blog — he scrubbed it when he became Dr. Aaron Hines, MD. But the 2011 page is in the archive, and the archive kept the version where he told everyone. Note the corroborating selector too: the same <code>aaron.hines.md@gmail.com</code> from level0 ties the page to Aaron without ambiguity. <strong>A pseudonym someone disconnected years ago is usually still sitting in a decade-old snapshot, one hop from their real name.</strong></p>
 <h3 id="step-6-sherlock-the-recovered-handle-map-the-other-life">Step 6: sherlock the recovered handle — map the other life<a class="anchor" href="#step-6-sherlock-the-recovered-handle-map-the-other-life" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ sherlock saltyhelm
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">sherlock</span> saltyhelm
 Sherlock 0.14.4
 [*] Checking username &quot;saltyhelm&quot; across social platforms
 ──────────────────────────────────────────
@@ -136,7 +136,7 @@ Sherlock 0.14.4
 </code></pre>
 <p>A whole second footprint: a self-hosted blog, a GitHub under the alias, Mastodon, Reddit. This is &quot;Aaron&#39;s other lives&quot; — the hobby identity he kept walled off from his professional one. The blog&#39;s latest post is flagged right there: <code>/posts/self-hosting-the-boat-logs</code>.</p>
 <h3 id="step-7-curl-the-homelab-blog-post-extract-the-level3-breadcrumb">Step 7: curl the homelab blog post — extract the level3 breadcrumb<a class="anchor" href="#step-7-curl-the-homelab-blog-post-extract-the-level3-breadcrumb" aria-label="Link to this section">#</a></h3>
-<pre><code class="language-bash">intel@osint:~$ curl http://www.saltyhelm.net/posts/self-hosting-the-boat-logs
+<pre data-kind="transcript"><code class="hl language-bash"><span class="tok-prompt">intel@osint:~$</span> <span class="tok-cmd">curl</span> http://www.saltyhelm.net/posts/self-hosting-the-boat-logs
 saltyhelm.net — Self-hosting my boat-maintenance logs on the cabin Pi
 posted 2022-03-19 by saltyhelm
 ...
@@ -305,31 +305,31 @@ what a live check returns and nothing about what an adversary holds.</p>
 <p>The lesson of this level is that deleting the repository changed nothing,
 because the key was never rotated. The detection that matters is
 therefore about key age and dormancy, not about the archive.</p>
-<pre><code class="language-yaml">title: Access key used after prolonged dormancy
-status: experimental
-description: &gt;
-  Detects API activity from an access key with no recorded use in the
-  preceding 90 days. A credential that goes quiet and then wakes up is
+<pre data-kind="source"><code class="hl language-yaml">title<span class="tok-op">:</span> Access key used after prolonged dormancy
+status<span class="tok-op">:</span> experimental
+description<span class="tok-op">:</span> &gt;
+  Detects API activity from an access key with <span class="tok-key">no</span> recorded use in the
+  preceding <span class="tok-num">90</span> days. A credential that goes quiet and then wakes up is
   either a forgotten integration or somebody who has just found it, and
   both warrant an answer.
-logsource:
-  product: aws
-  service: cloudtrail
-detection:
-  key_activity:
-    userIdentity.type: &#39;IAMUser&#39;
-    userIdentity.accessKeyId|startswith: &#39;AKIA&#39;
-  known_active_keys:
-    userIdentity.accessKeyId:
-      - &#39;AKIA_CI_RUNNER_KEY&#39;
-      - &#39;AKIA_BACKUP_AGENT_KEY&#39;
-  condition: key_activity and not known_active_keys
-falsepositives:
+logsource<span class="tok-op">:</span>
+  product<span class="tok-op">:</span> aws
+  service<span class="tok-op">:</span> cloudtrail
+detection<span class="tok-op">:</span>
+  key_activity<span class="tok-op">:</span>
+    userIdentity.type<span class="tok-op">:</span> <span class="tok-str">'IAMUser'</span>
+    userIdentity.accessKeyId|startswith<span class="tok-op">:</span> <span class="tok-str">'AKIA'</span>
+  known_active_keys<span class="tok-op">:</span>
+    userIdentity.accessKeyId<span class="tok-op">:</span>
+      - <span class="tok-str">'AKIA_CI_RUNNER_KEY'</span>
+      - <span class="tok-str">'AKIA_BACKUP_AGENT_KEY'</span>
+  condition<span class="tok-op">:</span> key_activity and not known_active_keys
+falsepositives<span class="tok-op">:</span>
   - Genuinely seasonal automation, such as annual reporting jobs. These
     should be enumerated in known_active_keys with a comment recording
     their cadence, so the exclusion is a decision rather than an
     accumulation.
-level: medium
+level<span class="tok-op">:</span> medium
 </code></pre>
 <p>Detection is the weaker half here, and the report should say so. The
 preventive control is a credential-lifecycle policy enforced by an
