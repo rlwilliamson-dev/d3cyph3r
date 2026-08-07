@@ -308,6 +308,24 @@ wildcard is a standing bet that the directory's future contents stay
 harmless, and rewriting it to name specific files is the actual
 remediation. Detection is what covers the window between now and then.
 
+### The same control on Windows and macOS
+
+The level is a Linux box, but the finding is not a Linux finding. It is
+"a standing grant outlived the reason it was written," and every desktop
+operating system has somewhere for that to hide.
+
+| Linux (this level) | Windows | macOS |
+| --- | --- | --- |
+| A `NOPASSWD` line in `/etc/sudoers.d/` scoped by wildcard | Membership in the local **Administrators** group. Windows has no per-command sudo, so you cannot narrow the grant the way rewriting a sudoers line narrows it. The nearest real control is **Just Enough Administration**, which brokers a session exposing only named cmdlets and can run them under a temporary virtual account, so the operator connects with non-admin credentials[^ms-jea] | The same file, `/etc/sudoers.d/`, with the same wildcard trap. macOS is BSD-derived and `sudo` behaves as it does here |
+| Sweep the fleet for `NOPASSWD` and wildcards | **Windows LAPS** rotates and escrows the local administrator password per device, which limits how far one recovered credential travels. It has been built into Windows since the 11 April 2023 update and is free on all supported platforms, so cost is not the reason it is missing[^ms-laps] | Pin the sudoers drop-in through an MDM configuration profile so a local edit is reverted at the next check-in rather than discovered at the next pentest |
+| auditd `USER_CMD` records the privileged invocation | Event ID **4688** on process creation. Note the trap: the **Process Command Line** field is empty by default and only populates once *Administrative Templates\System\Audit Process Creation\Include command line in process creation events* is enabled, so an estate that has 4688 but not that policy records the binary and loses the arguments[^ms-event-4688] | `sudo` invocations land in the unified log, readable with `log show`[^apple-unified-logging] |
+
+The Windows column is the one worth dwelling on, because the asymmetry
+runs the other way from what people expect. Linux lets you write a grant
+too narrow to be dangerous and administrators routinely write one too
+wide. Windows makes the narrow grant genuinely hard, so the answer is not
+a better-scoped grant but removing the standing membership altogether.
+
 ## §7.5 — Optional exploration
 
 Two bonus finds seed orthogonal lessons. `progress --detail` shows your discovered list. Neither changes the breadcrumb chain.
@@ -353,6 +371,10 @@ The bonus finds exist to exercise the systemic-root-cause pattern without leavin
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^t1552-001]: [MITRE ATT&CK — T1552.001: Unsecured Credentials: Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
+[^ms-jea]: [Overview of Just Enough Administration (JEA) — Microsoft Learn](https://learn.microsoft.com/en-us/powershell/scripting/security/remoting/jea/overview). Constrains a session to named cmdlets and can run them under a temporary virtual account.
+[^ms-laps]: [Windows LAPS overview — Microsoft Learn](https://learn.microsoft.com/en-us/windows-server/identity/laps/laps-overview). Shipped in the 11 April 2023 Windows updates; free on all supported platforms. The legacy Microsoft LAPS product is deprecated as of Windows 11 23H2.
+[^ms-event-4688]: [4688(S) A new process has been created — Microsoft Learn](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4688). The Process Command Line field is empty unless the "Include command line in process creation events" policy is enabled.
+[^apple-unified-logging]: [Logging — Apple Developer Documentation](https://developer.apple.com/documentation/os/logging). The unified logging system, read from the command line with `log`.
 
 ### Further reading
 

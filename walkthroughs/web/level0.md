@@ -523,6 +523,24 @@ falsepositives:
 
 This rule, fed into Meridian's SIEM (Splunk, Sentinel, ElasticSearch, whatever), would alert on the next external retrieval of any sensitive path — turning the audit cadence into a real-time detection.
 
+### The same mistake on IIS and nginx
+
+The cross-platform axis for this finding is the web server, not the
+desktop OS. A macOS laptop does not serve Meridian's backup folder; a
+Windows server might.
+
+| Apache (this level) | IIS | nginx |
+| --- | --- | --- |
+| `Options +Indexes` generates a listing when no index file is present | Directory browsing is a separate feature and the `<directoryBrowse>` element's `enabled` attribute **defaults to `false`**, so an IIS listing is almost always something a person switched on deliberately[^ms-iis-directorybrowse] | `autoindex` is `off` by default; a listing means it was enabled in a server or location block |
+| Remove the directory; then turn the option off globally and re-enable per-path only where a listing is the intended product | Set `enabled="false"` in `web.config`, or uninstall the Directory Browsing role feature so it cannot be re-enabled per-site by accident | Remove the `autoindex on;` directive |
+| An index file hides the listing without fixing it | Same trap | Same trap |
+
+Worth noting which way the defaults run. IIS and nginx both ship this
+off, so a listing on either is a decision somebody made. Apache is the
+one where a distribution's default configuration can hand you a listing
+nobody chose, which is how this class of exposure survives a review that
+asked "who turned this on" and got the answer "nobody."
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` lists what you've unlocked.
@@ -582,6 +600,7 @@ The historical "best practice" of using robots.txt to hide things is the most re
 [^cwe-1392]: [CWE-1392](https://cwe.mitre.org/data/definitions/1392.html).
 [^cwe-668]: [CWE-668](https://cwe.mitre.org/data/definitions/668.html).
 [^maricopa-class-action]: [Maricopa County Community Colleges District data breach — class-action case summary (Hagens Berman)](https://www.hbsslaw.com/cases/maricopa-county-community-colleges-district-data-breach). 2.49 million records; the district's remediation spend approached $26 million.
+[^ms-iis-directorybrowse]: [Directory Browse &lt;directoryBrowse&gt; — Microsoft Learn](https://learn.microsoft.com/en-us/iis/configuration/system.webserver/directorybrowse). The `enabled` attribute defaults to `false`.
 
 ### Further reading
 

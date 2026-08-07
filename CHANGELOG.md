@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-08-07
+
+**The game is a Linux terminal. The findings are not Linux findings.** Eight walkthroughs now show the same control on Windows and macOS. No gameplay changes.
+
+### Added
+
+- **A cross-platform mapping at the end of §7**, on the eight walkthroughs where an operating system is the thing being fixed. A standing sudo grant, a world-readable credential file, a scheduled job that logs too much, and an exposed directory listing all exist on every platform, and a defender who only ever sees the Linux spelling learns half a control.
+- **Direction follows the level.** Linux levels map to Windows and macOS. The two Windows forensics cases map the other way, to macOS and Linux, because the question a DFIR analyst is asked does not change when the endpoint does. `level0@web` maps across *servers* rather than desktops, since a Mac laptop does not serve the vulnerable directory.
+- **The asymmetries, which are the part worth reading.** Windows has no per-command `sudo`, so a too-wide grant cannot be narrowed the way a sudoers line can and the fix is removing standing membership instead. PowerShell's PSReadLine refuses to write history lines containing `password`, `token`, `apikey` or `secret`, which bash does not do and which creates false confidence, because the filter only ever sees the *command*: a secret written into a file, or passed positionally, lands on disk exactly as it does on Linux. And turning on Windows command-line auditing, which you should, converts every secret typed on a command line into a secret in a retained, forwarded security log.
+- **Nine vendor sources**, each verified against the page it cites: PSReadLine's history behaviour, Windows LAPS, Just Enough Administration, Event ID 4688 and the policy that makes its command-line field populate, `icacls`, Task Scheduler, the IIS `directoryBrowse` default, Apple's keychain, and Apple's unified logging.
+
+### Changed
+
+- **Sixteen walkthroughs deliberately get nothing.** Where remediation is IAM policy, application code, tenant configuration or open-source collection, there is no honest operating-system equivalent, and a column reading "the same idea applies" is padding. The authoring guide now says so explicitly.
+
 ## [2.11.0] - 2026-08-07
 
 **Walkthrough code blocks are highlighted, and the highlighting knows the difference between what you type and what the machine says back.** No gameplay changes.

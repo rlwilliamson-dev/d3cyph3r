@@ -178,7 +178,7 @@ npx playwright test
 
 ## Status and roadmap
 
-Current release is v2.11.0. All seven tracks are playable through level2. Level3 has shipped for linux, crypto, and forensics.
+Current release is v2.12.0. All seven tracks are playable through level2. Level3 has shipped for linux, crypto, and forensics.
 
 **Level3 across the remaining four tracks** (network, web, osint, cloud). Each already has its breadcrumb credential staged in the shipped level2, so the chain is continuous when the content lands.
 

@@ -428,6 +428,25 @@ For aggregation: ship Security.evtx and Sysmon logs via Windows Event Forwarding
 
 Dana coordinates with General Counsel on DC3 notification timing. The 72-hour clock is real and missing it is a contractual non-compliance event. The DIBNET portal (dibnet.dod.mil) is where the report files; Polaris's FSO has the credentials. The reporting form requires specific facts (the affected system, the timeline, the artifacts) — your timeline write-up is what Dana hands the FSO to populate the form.
 
+### The same evidence on macOS and Linux
+
+This case is a Windows workstation, so the artefacts are Windows
+artefacts. The reason to know the other two is that the *question* does
+not change when the endpoint does, and a DFIR analyst handed a Mac gets
+asked for the same timeline.
+
+| Windows (this case) | macOS | Linux |
+| --- | --- | --- |
+| `Security.evtx`, read by event ID: 4624 successful logon, 4625 failed logon | The unified log, queried with `log show` and a predicate. It is a ring buffer rather than a file you seize, which changes acquisition: collect early, because it rolls[^apple-unified-logging] | `/var/log/auth.log` on Debian-family systems, or `journalctl -u sshd` where logging is journald-native |
+| Logon type distinguishes interactive from network from service | The authorisation subsystem records the equivalent distinction, though not as a single tidy numeric field | `sshd` names the method in the message text; `pam` records the rest |
+| The file is the evidence: hash it, and the hash proves it was not altered | Export to a file first, then hash. The thing you hash is your extract, not the source, and your notes must say so | Same as macOS where journald is in play; `auth.log` can be hashed directly |
+
+The middle column carries a real chain-of-custody consequence and it is
+the one people get wrong. An `.evtx` file is a discrete object you can
+seize and hash. macOS's unified log is not: you hash an export you
+produced, which means your report has to record the query, the time, and
+the tool, or the number proves nothing about the system.
+
 ## §7.5 — Optional exploration
 
 The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` lists what you've unlocked.
@@ -515,6 +534,7 @@ For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-e
 [^cert-gcih]: [GIAC GCIH — Certified Incident Handler](https://www.giac.org/certifications/certified-incident-handler-gcih).
 [^cert-chfi]: [EC-Council CHFI — Computer Hacking Forensic Investigator](https://www.eccouncil.org/train-certify/computer-hacking-forensic-investigator-chfi-north-america/).
 [^cwe-1059]: [CWE-1059](https://cwe.mitre.org/data/definitions/1059.html).
+[^apple-unified-logging]: [Logging — Apple Developer Documentation](https://developer.apple.com/documentation/os/logging). The unified logging system, read from the command line with `log`.
 
 ### Further reading
 

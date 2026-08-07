@@ -344,6 +344,22 @@ keys held in a managed KMS with per-principal access policies and their
 own audit trail, at which point the question "who decrypted this" is
 answered by the key store rather than inferred from process arguments.
 
+### The same control on Windows and macOS
+
+Putting a passphrase in `argv` is a Unix-shaped mistake with an exact
+Windows counterpart, and the counterpart is arguably worse.
+
+| Linux (this level) | Windows | macOS |
+| --- | --- | --- |
+| `ps` exposes another process's arguments to any user on the box, so a passphrase on the command line is readable while it runs | Worse in one specific way: with *Include command line in process creation events* enabled, Event ID 4688 writes the full command line into the **security log**, so the secret outlives the process and lands wherever that log is shipped[^ms-event-4688] | `ps` behaves as it does on Linux |
+| Pass secrets by file descriptor, environment, or prompt instead | Same fix; the platform store is the credential manager rather than a flat file | Same fix; the keychain is the platform store[^apple-keychain] |
+
+That Windows row is a genuine trap for anyone hardening an estate. Command
+line auditing is a control you are told to switch on, correctly. Doing so
+converts every secret-on-the-command-line into a secret in a log that is
+retained, indexed and forwarded to a SIEM. The control is right; it just
+raises the cost of this particular mistake by an order of magnitude.
+
 ## §7.5 — Optional exploration
 
 Two bonus finds. `progress --detail` shows your discovered list. Neither changes the breadcrumb chain.
@@ -380,6 +396,8 @@ The bonus finds exist to exercise the schema-reading and key-tracing habits with
 [^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
+[^ms-event-4688]: [4688(S) A new process has been created — Microsoft Learn](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4688). The Process Command Line field is empty unless the "Include command line in process creation events" policy is enabled.
+[^apple-keychain]: [Keychain data protection — Apple Platform Security](https://support.apple.com/guide/security/keychain-data-protection-secb0694df1a/web). The system store for passwords, keys and secure notes.
 
 ### Further reading
 

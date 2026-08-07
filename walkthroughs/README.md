@@ -234,6 +234,41 @@ Run it on every walkthrough PR. Zero MISMATCH is the bar; read the WEAK
 list, since that is where a title that over-claims what a page contains
 shows up.
 
+### §7 cross-platform subsection (v2.12.0)
+
+Where the defender's remediation is genuinely OS-specific, §7 ends with a
+mapping table under one of these headings:
+
+- `### The same control on Windows and macOS` — the level is Linux
+- `### The same evidence on macOS and Linux` — the level is Windows
+  (the forensics cases), so the mapping runs the other way
+- `### The same mistake on IIS and nginx` — the axis is the *server*, not
+  the desktop OS
+
+Three columns, three or four rows, and a short paragraph after it naming
+the one asymmetry worth remembering. The paragraph is the point: a table
+alone reads as trivia, and what a reader should take away is usually that
+one platform makes the mistake harder and another makes it worse.
+
+**Do not add one to every walkthrough.** It belongs where an operating
+system is the thing being fixed. It does not belong where remediation is
+IAM policy (cloud), application code (web SQLi, IDOR), tenant
+configuration (M365), or open-source collection (OSINT) — 16 of the 24
+have no honest equivalent, and inventing one is padding. If the Windows
+cell would say "the same idea applies," leave the walkthrough alone.
+
+Every claim in the table is a claim, so it carries a citation to the
+vendor's own documentation on the same terms as the rest of §7. The
+sources below are already verified and can be reused: `ms-psreadline`,
+`ms-laps`, `ms-jea`, `ms-event-4688`, `ms-icacls`, `ms-task-scheduler`,
+`ms-iis-directorybrowse`, `apple-keychain`, `apple-unified-logging`.
+Reuse the same key when you cite the same document, since each
+walkthrough numbers its own §9 independently.
+
+Note that `developer.apple.com` is JavaScript-rendered, so
+`verify-citations.mjs` reports it UNVERIFIED rather than confirming it.
+That is expected and is not a failure; open it by hand.
+
 ### §7.5 Optional exploration — author guide (v1.10.0)
 
 Every shipped level has at least one `bonusFinds` entry that fires
