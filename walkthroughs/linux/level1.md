@@ -497,6 +497,24 @@ The rule, fed into Halton's SIEM, would alert on the next `sudo cp` operation th
 - **Train the engineering team on the shadow-copy pattern specifically.** It's the most common single-engineer convenience anti-pattern in modern production systems. A 30-minute internal-wiki article + a quarterly "spot-check" exercise (find the shadow copies on a sample of production systems) closes the institutional gap.
 - **For contractors and consultants specifically:** the engagement-closeout checklist should include *audit the contractor's home directory and `~/.bash_history` for any sensitive content before the laptop is wiped and the access is revoked.* This is exactly what level0@linux's audit found on Daniel's laptop; the same discipline applied at engagement-end at *every* client would have caught the shadow copy on the Halton jumphost months earlier.
 
+### The same control on Windows and macOS
+
+The finding is a file readable by people who had no reason to read it.
+Every operating system has that failure; they just spell the permission
+differently.
+
+| Linux (this level) | Windows | macOS |
+| --- | --- | --- |
+| A credential file left mode `0644`; the fix is `chmod 600` | NTFS uses discretionary ACLs rather than mode bits. `icacls <path>` shows the entries, `/grant` and `/remove` change them, and `/inheritancelevel:r` strips the inherited grants that are usually the reason a file is wider than intended[^ms-icacls] | POSIX modes, identical to Linux |
+| `find` for world-readable files under `/home` | `icacls <dir> /findsid` locates files whose ACL names a given principal, which is the closer question on Windows: not "is it world-readable" but "who is on this ACL" | `find` behaves as it does on Linux |
+| Move the secret into a managed store | The same argument applies | The keychain is the platform answer[^apple-keychain] |
+
+The difference that matters is inheritance. A Linux file's mode is a
+property of the file; a Windows file's effective access is usually
+inherited from a parent it never mentions. That is why a Windows review
+that reads permissions file-by-file misses things, and why the sweep has
+to start at the directory.
+
 ## §7.5 — Optional exploration
 
 The solve above ends when you've recovered the production DB credential and read `lessons-learned.md`. Everything in this section is *bonus* — no breadcrumb to level2 lives down this path, and you can skip it without missing anything load-bearing.
@@ -566,6 +584,8 @@ Two hidden bonus finds seed orthogonal lessons. `progress --detail` from anywher
 [^cwe-200]: [CWE-200](https://cwe.mitre.org/data/definitions/200.html).
 [^cwe-668]: [CWE-668](https://cwe.mitre.org/data/definitions/668.html).
 [^t1021-004]: [MITRE ATT&CK — T1021.004: Remote Services: SSH](https://attack.mitre.org/techniques/T1021/004/).
+[^ms-icacls]: [icacls — Microsoft Learn](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls). Displays or modifies discretionary access control lists on files and directories.
+[^apple-keychain]: [Keychain data protection — Apple Platform Security](https://support.apple.com/guide/security/keychain-data-protection-secb0694df1a/web). The system store for passwords, keys and secure notes.
 
 ### Further reading
 

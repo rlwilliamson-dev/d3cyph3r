@@ -490,6 +490,24 @@ process, so the interesting event becomes a blocked connection with a
 name attached rather than a successful upload found in an image weeks
 later.
 
+### The same evidence on macOS and Linux
+
+Reed's browser artefacts were read off a Windows image. Chromium's
+databases are the same on every platform, which is the useful half; the
+paths and the surrounding OS telemetry are not.
+
+| Windows (this case) | macOS | Linux |
+| --- | --- | --- |
+| Chromium `History` and `Cookies` SQLite databases under `%LOCALAPPDATA%\Google\Chrome\User Data\Default\` | Identical schema, under `~/Library/Application Support/Google/Chrome/Default/` | Identical schema, under `~/.config/google-chrome/Default/` |
+| Staging to `AppData\Local\Temp` before exfiltration | `~/Library/Caches` and `/tmp` play the same role | `/tmp` and `~/.cache` |
+| Process and file telemetry from Sysmon or EDR | The Endpoint Security framework is what EDR products build on; the unified log carries the surrounding system events[^apple-unified-logging] | auditd, or eBPF-based tooling on modern kernels |
+
+The first row is the one to internalise, because it is unusually kind:
+the query you wrote against `History` on this case runs unchanged against
+a Mac or a Linux workstation. The schema is Chromium's, not the operating
+system's. What changes is where you find the file and what else you can
+corroborate it with.
+
 ## §7.5 — Optional exploration
 
 This level carries one bonus find, accessible via the `progress --detail` command after you discover it. It's orthogonal to the credential-chain solve (you can complete the level without finding it) but it's the kind of artifact that turns a forensic engagement into a thorough one.
@@ -549,6 +567,7 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 [^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
 [^cert-sscp]: [ISC2 SSCP — Systems Security Certified Practitioner](https://www.isc2.org/certifications/sscp).
 [^cwe-539]: [CWE-539](https://cwe.mitre.org/data/definitions/539.html).
+[^apple-unified-logging]: [Logging — Apple Developer Documentation](https://developer.apple.com/documentation/os/logging). The unified logging system, read from the command line with `log`.
 
 ### Further reading
 

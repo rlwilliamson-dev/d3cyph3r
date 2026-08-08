@@ -343,6 +343,23 @@ treat every hit on a job that touches credentials as a finding. That scan
 is cheap, runs anywhere, and catches the next occurrence before it writes
 anything.
 
+### The same control on Windows and macOS
+
+A scheduled job that logs too much, into a file too many people can read.
+Both halves of that port cleanly.
+
+| Linux (this level) | Windows | macOS |
+| --- | --- | --- |
+| `/etc/cron.d/` and per-user crontabs | **Task Scheduler**, which fires on a clock or on a system event, and whose task definitions are the equivalent inventory to sweep[^ms-task-scheduler] | `launchd`, driven by job plists in the `LaunchDaemons` and `LaunchAgents` directories |
+| `set -x` writes the expanded command, secrets and all, into the job's log | The command line of every process can be recorded the same way, by design: enable *Include command line in process creation events* and Event ID 4688 carries the arguments. Useful for detection, and the same exposure if the log is over-shared[^ms-event-4688] | Shell tracing behaves exactly as it does on Linux |
+| The log was world-readable | Check the ACL on the log directory rather than the file, since it is normally inherited[^ms-icacls] | POSIX modes, as on Linux |
+
+The middle row is the one that generalises. `set -x` is not a Linux bug,
+it is an instance of "the thing that records what ran also records what
+it ran with." Windows has that switch too, and turning it on for
+detection means accepting that your security log now contains whatever
+your operators typed.
+
 ## §7.5 — Optional exploration
 
 Two bonus finds on this level seed orthogonal lessons. `progress --detail` from anywhere shows your discovered list. Neither find changes the breadcrumb chain.
@@ -394,6 +411,9 @@ The bonus finds exist to let curious players exercise the systemic-root-cause an
 [^cert-cysa]: [CompTIA CySA+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/cybersecurity-analyst/).
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cwe-200]: [CWE-200](https://cwe.mitre.org/data/definitions/200.html).
+[^ms-task-scheduler]: [Task Scheduler — Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/taskschd/task-scheduler-start-page). Runs tasks on a schedule or in response to a system event.
+[^ms-event-4688]: [4688(S) A new process has been created — Microsoft Learn](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4688). The Process Command Line field is empty unless the "Include command line in process creation events" policy is enabled.
+[^ms-icacls]: [icacls — Microsoft Learn](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls). Displays or modifies discretionary access control lists on files and directories.
 
 ### Further reading
 

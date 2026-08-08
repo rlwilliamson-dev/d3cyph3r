@@ -453,6 +453,26 @@ falsepositives:
 
 This rule, tuned by replacing "medium" with "high" for service accounts and dropping the `/home/` filter for cases where credentials shouldn't be anywhere outside the vault, is the kind of detection a SOC would deploy at scale.
 
+### The same control on Windows and macOS
+
+Daniel's credentials were sitting in a file and in shell history. Neither
+of those is a Linux idea, and the Windows version has a wrinkle worth
+knowing.
+
+| Linux (this level) | Windows | macOS |
+| --- | --- | --- |
+| `~/.bash_history` records every command verbatim, secrets included | PSReadLine writes `ConsoleHost_history.txt` under `%APPDATA%\Microsoft\Windows\PowerShell\PSReadLine`, and it *tries* to protect you: lines containing `password`, `token`, `apikey`, `secret` or `asplaintext` are never written, and since 2.2.0 it parses the command's syntax tree rather than matching strings[^ms-psreadline] | `~/.zsh_history`, with no filtering of any kind |
+| Credentials pasted into a flat file in `$HOME` | Same failure, same discovery. The filter above only sees the *command*; a secret written into a file is invisible to it | Same, and the store that should have been used instead is the keychain[^apple-keychain] |
+| Scan home directories, not just repos | The same scanners run here; point them at user profiles | The same scanners; add the keychain export path to the review |
+
+Read that Windows row carefully, because it is the kind of control that
+creates false confidence. PSReadLine's filter is real and it is better
+than nothing, but it matches the shape of a command. A credential passed
+positionally, embedded in a URL, or written to a file lands in history or
+on disk exactly as it does on Linux. "Windows scrubs that for you" is the
+belief the filter tends to produce, and it is wrong in precisely the
+cases this level is about.
+
 ## §7.5 — Optional exploration
 
 This section is bonus. The credential chain works without it; the post-mortem above stands without it. The level seeds one hidden bonus find that fires if you happen to run a particular command — type `progress --detail` from the lobby to see what's in your discovered list.
@@ -500,6 +520,8 @@ The bonus is a small wink at the discipline gap: the same set of commands (`sudo
 [^cert-oscp]: [OffSec PEN-200 / OSCP — course syllabus and exam guide](https://www.offsec.com/courses/pen-200/).
 [^cwe-256]: [CWE-256](https://cwe.mitre.org/data/definitions/256.html).
 [^cwe-312]: [CWE-312](https://cwe.mitre.org/data/definitions/312.html).
+[^ms-psreadline]: [about_PSReadLine — Microsoft Learn](https://learn.microsoft.com/en-us/powershell/module/psreadline/about/about_psreadline). Documents the history file location and the sensitive-data filtering that omits lines containing `password`, `token`, `apikey`, `secret` or `asplaintext`.
+[^apple-keychain]: [Keychain data protection — Apple Platform Security](https://support.apple.com/guide/security/keychain-data-protection-secb0694df1a/web). The system store for passwords, keys and secure notes.
 
 ### Further reading
 
