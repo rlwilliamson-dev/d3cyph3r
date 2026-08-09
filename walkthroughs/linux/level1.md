@@ -2,31 +2,37 @@
 
 **Track:** Linux · **Client:** Halton Bank (continued) · **Compliance regime:** GLBA § 501(b) (Interagency Guidelines)
 
-> ⚠ This page contains the full solve path **and** the breadcrumb credential for `level2@linux`. If you haven't solved `level1@linux` yet, close this tab and come back after — the puzzle is much more satisfying without spoilers. This walkthrough also assumes you've read or solved `level0@linux` first; the setup picks up where that one ended.
+> ⚠ This page contains the full solve path **and** the breadcrumb credential for `level2@linux`. If you haven't solved `level1@linux` yet, close this tab and come back after. It is a better puzzle unspoiled. This one also assumes you have done `level0@linux`, because the setup picks up where that ended.
 
 ---
 
 ## §1 — The setup
 
-Day two at Driftwood Systems. Yesterday you audited Daniel's offboarded laptop and recovered the Halton Bank staging-DB credential he'd left in `creds.txt`. Today you're using that credential — `please-rotate-me` — to walk a *different* box. Not a forensics-recovered laptop sitting on a forensic workstation; an actively-deployed client production bastion that you just SSH'd into using a credential that should have been revoked at engagement closeout and wasn't.
+Day two. Yesterday you audited a laptop that was already in a drawer waiting to be wiped, which is safe work. Today you are taking the credential you found on it, `please-rotate-me`, and typing it into a live client production bastion.
 
-The shell prompt now reads `app_admin@linux`. That's not your name. `app_admin` is the staging-worker service account on Halton Bank's jumphost — the account whose password Daniel committed to `creds.txt` and which Halton Bank's ops team never rotated. You are logged in as a *service identity*, on a *production bastion*, at a *client*, using *leaked credentials*. That sentence is the threat model of this entire level.
+Feel the difference. Nothing about the command changed. Everything about the consequences did.
 
-Three layered failures put you here, and they're worth naming explicitly before the technical content starts:
+The prompt now reads `app_admin@linux`, which is not your name and not Daniel's either. `app_admin` is the staging-worker service account on Halton Bank's jumphost, the one whose password Daniel wrote into `creds.txt` and Halton's ops team never rotated. So: you are logged in as a service identity, on a production bastion, at a client, using leaked credentials. Read that sentence again, because it is the threat model of the entire level.
 
-1. **Daniel's CWE-798 (Use of Hard-coded Credentials)** — covered in level0.[^cwe-798] The credential lived in a plaintext file on a workstation.
-2. **The Halton-side credential lifecycle failure** — the password Daniel had at engagement-start in early 2024 is the same password live in March 2026. Two-plus years without rotation on a service-account credential that crosses the Driftwood/Halton trust boundary.
-3. **Halton's service-account configuration anti-pattern** — and this one is on the client side: `app_admin` has `/bin/bash` as its login shell rather than `/usr/sbin/nologin` or `/bin/false`. Halton's ops team configured the staging service account with a login shell "for debugging" two years ago. That configuration choice means the leaked credential isn't just a database credential — it's an interactive-shell credential. A real attacker who recovered `please-rotate-me` from a `creds.txt` somewhere is exactly where you are right now.
+Three failures had to line up to put you here, and they belong to two different companies:
 
-The MSA between Driftwood and Halton contractually requires Driftwood to surface any client-environment finding within 24 hours of discovery. The conversation Priya is going to have with Halton's ops lead tomorrow morning is going to be uncomfortable: *"You gave a service account an interactive shell, your former Driftwood contractor left the password in cleartext on his workstation, and the same password still works two years later."* All three failures contributed; remediation has to address all three.
+1. **Daniel's CWE-798, Use of Hard-coded Credentials**, covered in level0.[^cwe-798] The credential lived in a plaintext file on a workstation.
+2. **A credential lifecycle failure on Halton's side.** The password Daniel was issued at engagement start in early 2024 is the same password working in March 2026. Two-plus years of no rotation on a service account that crosses the boundary between two companies.
+3. **A service-account configuration that should not exist.** `app_admin` has `/bin/bash` as its login shell instead of `/usr/sbin/nologin` or `/bin/false`. Somebody at Halton set that up "for debugging" two years ago and never set it back. That one choice converts a database password into an interactive shell, which is the difference between an attacker querying a table and an attacker standing on the box.
 
-Halton Bank is GLBA-covered, and as a bank its rule is the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks) rather than the FTC's Safeguards Rule, which reaches nonbank institutions only. A *production-database credential exposure* puts it inside III.C.1.g's response-program territory, and if the bank determines a notification incident has occurred it has **36 hours** to tell its primary federal regulator under the Computer-Security Incident Notification Rule.[^cfr-12-30] Halton processes deposits and loans for what's almost certainly hundreds of thousands of customers; the breach-math is unambiguous.
+The MSA gives Driftwood 24 hours to surface any client-environment finding. Spare a thought for Priya, who has to open tomorrow's call with Halton's ops lead by saying: *"You gave a service account an interactive shell, our former contractor left the password in cleartext on his laptop, and it still works two years later."* Three failures, two companies, and no single person to point at. Remediation has to hit all three or the box stays reachable.
 
-What you don't know yet, walking onto this box, is that the *production* database password lives in a properly locked-down systemd override file on this same machine — and that Daniel left a debug copy of that same override file in his home directory with default permissions. The properly-protected file is unreadable to you as `app_admin`. The debug copy isn't. The credential you're about to recover doesn't open the staging DB you came here through; it opens the *production* DB sitting behind it.
+Halton is GLBA-covered, and as a bank its rule is the Interagency Guidelines Establishing Information Security Standards (12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks) rather than the FTC's Safeguards Rule, which only reaches nonbank institutions. A production-database credential exposure lands in III.C.1.g response-program territory, and once the bank determines a notification incident has occurred, the Computer-Security Incident Notification Rule gives it **36 hours** to tell its primary federal regulator.[^cfr-12-30] Halton handles deposits and loans for what is almost certainly hundreds of thousands of customers, so nobody is going to argue this one down.
+
+Here is what you don't know walking onto the box. The *production* database password is also on this machine, sitting in a systemd override file that is locked down exactly the way it should be: root-owned, mode 600, completely unreadable to you. Good configuration, properly applied.
+
+Daniel also made a debug copy of that file in his home directory and left the default permissions on it.
+
+The credential you are about to recover does not open the staging database you arrived through. It opens the production database sitting behind it.
 
 ## §2 — The solve
 
-Four commands. The Linux discipline is in reading the permissions column before the contents column.
+Four commands. The whole discipline this level teaches is reading the permissions column before you read the contents column, which is a habit most people acquire the hard way.
 
 ### Step 1: Use the breadcrumb to enter the box
 
@@ -36,7 +42,7 @@ level1@linux's password: please-rotate-me
 app_admin@linux:~$
 ```
 
-The password `please-rotate-me` is the credential you recovered from `creds.txt` at the end of `level0@linux`. The fact that it *works* — that nothing has rotated it, that no MFA stops you, that no anomaly-detection layer flagged the SSH from Driftwood's audit IP block — is the first finding of the level. The MSA-required quarterly credential rotation that Halton's ops team committed to in their last attestation cycle clearly did not happen.
+That is the credential you pulled out of `creds.txt` at the end of `level0@linux`. It works. That is the first finding, and it is worth pausing on all the things that did not happen: nothing rotated the password, no MFA challenged you, and no anomaly detection noticed an SSH session arriving from Driftwood's audit IP block. Halton's ops team attested to quarterly credential rotation in their last cycle. This login is the evidence that the attestation was aspirational.
 
 ### Step 2: Orient
 
@@ -66,13 +72,13 @@ app_admin@linux:~$ cat handoff.md
 
 This is Daniel's note to whoever rotates onto this account. Three things in it matter for today's solve:
 
-1. *"The live production database password lives in `/etc/systemd/system/staging-worker.service.d/override.conf`. That file is owned by root and mode 600 — you can't cat it as app_admin. That's the correct configuration."* Daniel is acknowledging that the systemd override file is properly protected. He's also (helpfully, for the audit) documenting where the production credential actually lives.
+1. *"The live production database password lives in `/etc/systemd/system/staging-worker.service.d/override.conf`. That file is owned by root and mode 600 — you can't cat it as app_admin. That's the correct configuration."* Daniel is right, and he is helpfully documenting where Halton keeps its production credential. Both halves of that sentence will matter shortly.
 
-2. *"Last November I was debugging a staging-worker outage and I needed to grep the env vars without sudo. So I cp'd a copy into my home directory and called it `staging-worker.env.bak`. I MEANT to delete it after the incident. I did not."* This is the entire finding, narrated by the engineer who committed it. The shadow copy exists at `~/staging-worker.env.bak` with default permissions — owner-readable, group-readable, world-readable.
+2. *"Last November I was debugging a staging-worker outage and I needed to grep the env vars without sudo. So I cp'd a copy into my home directory and called it `staging-worker.env.bak`. I MEANT to delete it after the incident. I did not."* That is the entire finding, confessed in advance by the person who caused it. The shadow copy is sitting at `~/staging-worker.env.bak` with default permissions, readable by owner, group, and everybody else.
 
-3. *"The cron at 02:00 UTC runs `backup.sh` — that's mine. Don't disable it; Priya's pipeline depends on it."* Tangential to today's solve but worth noting — there's a `backup.sh` in the home directory that the cron runs as `app_admin`. We'll look at it briefly.
+3. *"The cron at 02:00 UTC runs `backup.sh` — that's mine. Don't disable it; Priya's pipeline depends on it."* Not today's problem, but note the `backup.sh` in the home directory running as `app_admin`. We look at it briefly later.
 
-The handoff note is documenting the exact failure path. That's the consultancy version of helpful, and it's also the kind of internal evidence that defense counsel hates because it establishes that the engineer knew what they were doing was wrong.
+Daniel has written you a map of the exact failure path, complete with dates and motive. Helpful of him. It is also the category of internal document that makes defence counsel put their head in their hands, because it establishes the engineer knew.
 
 ### Step 5: Read the permissions column
 
@@ -90,14 +96,16 @@ drwxr-xr-x  3 root      root       4096 2024-08-14 11:20 ..
 -rw-r--r--  1 app_admin app_admin  1842 2024-08-14 11:42 welcome.md
 ```
 
-The cross-reference between two specific lines is the finding:
+Two lines out of that listing are the whole level. Put them side by side:
 
 - `-rw-------  1 root      root        287 ... staging-worker.env`
 - `-rw-r--r--  1 app_admin app_admin   342 ... staging-worker.env.bak`
 
-The first file is the legitimate copy of the systemd override — owned by root, mode 600 (owner can read and write; group and other can do nothing). The presence of a root-owned mode-600 file in `app_admin`'s home is unusual but explainable: when Daniel did the `sudo cp` of the systemd override into `~`, the source file's ownership was preserved by default, but the destination filename was different. (Or the `cp -p` preserve-ownership flag was used. Or the file was placed there by a separate sudo command — the exact mechanism doesn't matter for the finding.)
+Same data. Wildly different permissions.
 
-The second file — the `.bak` — is the *shadow copy*. Owned by `app_admin`, mode 644 (owner read-write, group read, other read). The world-readable mode is Apache `umask 022` default behavior; when Daniel chowned the copy to himself with `sudo chown app_admin:app_admin staging-worker.env.bak`, the file's mode wasn't changed and stayed at the default Daniel's session umask produced. This is the CWE-732 instance — *Incorrect Permission Assignment for Critical Resource* — and it's the entire technical content of the level.[^cwe-732]
+The first is the legitimate copy of the systemd override: root-owned, mode 600, meaning the owner reads and writes and nobody else does anything. A root-owned mode-600 file sitting in `app_admin`'s home is odd but explainable. When Daniel `sudo cp`'d the override into `~`, ownership came along and the filename changed. Maybe he used `cp -p`, maybe a separate sudo command put it there. The mechanism does not change the finding.
+
+The second file, the `.bak`, is the shadow copy: owned by `app_admin`, mode 644, which is owner read-write and read for everyone else on the box. That mode is just what a default `umask 022` produces. When Daniel ran `sudo chown app_admin:app_admin staging-worker.env.bak`, he changed who owned it and never touched the mode, so it kept whatever his session umask handed him. Nobody decided to make this file world-readable. It simply was, by default, and nobody looked. That is CWE-732, Incorrect Permission Assignment for Critical Resource, and it is the whole technical content of this level.[^cwe-732]
 
 ### Step 6: Confirm the legitimate file is locked down
 
@@ -106,7 +114,9 @@ app_admin@linux:~$ cat staging-worker.env
 cat: staging-worker.env: Permission denied
 ```
 
-The kernel's file-system layer rejects the read. As `app_admin` (not root, not in the root group), you have no permission to read a mode-600 root-owned file. This is the access-enforcement layer working *exactly as designed*. NIST 800-53 AC-3 *(Access Enforcement)* is being honored here; the legitimate file's protection is operationally correct.[^nist-800-53] Halton's ops team did the right thing for this specific file at this specific location.
+Denied, and correctly so. You are `app_admin`, not root and not in the root group, so the kernel will not let you near a root-owned mode-600 file. Take a moment to appreciate this, because it is the one part of the system doing its job perfectly. NIST 800-53 AC-3, Access Enforcement, honoured exactly as written.[^nist-800-53] Halton's ops team got this file right.
+
+Which is what makes the next step so annoying.
 
 ### Step 7: Read the shadow copy
 
@@ -128,14 +138,16 @@ DB_PROD_PASS=Halton-2024-Q3!
 PG_SSLMODE=require
 ```
 
-There it is. **`Halton-2024-Q3!`** is the production database password for Halton Bank — the credential the legitimate systemd-override file was designed to protect. The shadow copy carries the same data the protected file carries; the permission misconfiguration on the shadow copy means *the protection on the legitimate file is meaningless*. The lock on the front door doesn't matter when there's a key under the mat.
+And there it is. **`Halton-2024-Q3!`**, the production database password for a bank, sitting in a file called `.bak` that anyone with a shell on this host can read. It is the exact credential the locked-down override file exists to protect.
 
-A few additional things to notice in the file content:
+That protection is now worth nothing. Not weakened, not partially bypassed: worth nothing, because the same bytes are available two directories away with no privilege required. A deadbolt is an excellent deadbolt right up until somebody photocopies the key.
 
-- `DB_STAGING_PASS=please-rotate-me` — the same staging credential you used to enter this box, confirming the credential chain.
-- `DB_PROD_HOST=prod-db.halton.internal` — the production database hostname. The fact that you can reach `prod-db.halton.internal` from this jumphost is a *separate* network-segmentation question (Halton's production DB should arguably not be reachable from a staging-worker jumphost at all), but it's adjacent to today's finding rather than the finding itself.
-- `DB_PROD_USER=svc_prod_worker` — a different service account from `app_admin`. The prod database has its own service identity, presumably more tightly scoped.
-- The two `# TODO:` comments at the top of the file confirm Daniel knew the file shouldn't be there and that the credentials it contained needed rotation. Both intents were documented; neither was acted on. The handoff note we read in Step 4 is the audit trail of *why* the file was created (the November debugging incident); these TODO comments are the audit trail of *Daniel knew it was a problem and didn't fix it*.
+Four other things in that file are worth your attention:
+
+- `DB_STAGING_PASS=please-rotate-me` is the credential you used to get in, which confirms the chain from level0.
+- `DB_PROD_HOST=prod-db.halton.internal` is the production hostname. That you can *reach* it from a staging-worker jumphost is a separate network-segmentation problem, and arguably a worse one, but it is adjacent to today's finding rather than part of it.
+- `DB_PROD_USER=svc_prod_worker` is a different service account from `app_admin`, so production has its own identity and is presumably more tightly scoped. Presumably.
+- The two `# TODO:` comments at the top, which are the good part. Daniel documented that the file should be deleted and that the credentials needed rotating. He wrote both down, in the file, and did neither. Step 4's handoff note tells you why the file exists. These two lines tell you he knew it was a problem the entire time it sat there.
 
 ### Step 8: Confirm via `.bash_history`
 
@@ -155,15 +167,15 @@ ssh halton-bastion
 exit
 ```
 
-The history confirms the exact sequence of commands that produced the finding:
+This is the crime scene on video. Every step that produced the finding, in order, timestamped by position:
 
-1. `sudo cat` the legitimate override file (confirms Daniel had root via sudo on this box — a separate AC-6 *Least Privilege* finding, since the staging service account shouldn't have unrestricted sudo).
-2. `sudo cp` the override file into `~/staging-worker.env.bak` (the shadow copy is created).
-3. `sudo chown` the copy to `app_admin:app_admin` (the ownership change; mode stayed at the umask default of 644).
-4. `grep DB_PROD_PASS staging-worker.env.bak` (Daniel reading the credential out of the shadow copy — the very pattern the finding now exposes to anyone with `app_admin` access).
-5. `psql -h prod-db.halton.internal -U svc_prod_worker` (Daniel actually using the recovered prod credential to authenticate against the production database).
+1. `sudo cat` on the legitimate override file, which incidentally confirms Daniel had unrestricted sudo on this box. That is its own AC-6 Least Privilege finding, because a staging service account should not.
+2. `sudo cp` the override into `~/staging-worker.env.bak`. The shadow copy is born.
+3. `sudo chown` it to `app_admin:app_admin`. Ownership changes, mode stays at the umask default of 644, and nobody notices.
+4. `grep DB_PROD_PASS staging-worker.env.bak`, which is Daniel reading the production credential out of the shadow copy. Exactly what you just did, for the same reason, with the same command.
+5. `psql -h prod-db.halton.internal -U svc_prod_worker`.
 
-That last command line is worth its own paragraph. The shell history doesn't include the password — but it shows Daniel using `svc_prod_worker` against the production database, which is the exact pattern a hostile actor with the leaked credential would execute. The credential leak isn't theoretical; it has been demonstrated to work, on the production system, by the engineer who later left the credential in a readable file.
+Stop at line five. The history does not record the password, but it records Daniel authenticating to the production database as `svc_prod_worker`, which is precisely the move a hostile actor holding this credential would make next. You do not have to argue that the leak is exploitable. The exploit is already in the log, run by the engineer who left the credential readable.
 
 ### Step 9: Look at backup.sh (briefly)
 
@@ -191,11 +203,11 @@ scp "$OUT" halton-bastion:/var/backups/halton-staging/
 rm -f "$OUT"
 ```
 
-`backup.sh` `source`s the systemd override file at runtime. It runs from the root crontab, so it has the privilege to read the mode-600 override. The script itself is documented and well-formed — it's not a finding. It's worth noting because:
+`backup.sh` sources the systemd override at runtime and runs from the root crontab, which is how it can read a mode-600 file. The script is documented, well-formed, and not a finding. Somebody wrote this one carefully.
 
-- It explains the legitimate purpose of the staging-worker override file (the script needs database connection info, sourced from the override at script start).
-- It demonstrates the *right* pattern for accessing the override: a privileged-context script `source`ing the file with proper permissions, rather than a debug copy with loosened permissions.
-- It's the artifact that would be missed if Halton's remediation team simply deletes the override file. The legitimate use case persists; the remediation has to be *move the credential to a secrets manager, not delete the override*.
+It still matters, for three reasons. It explains why the override file exists at all, since the job needs connection details and reads them at startup. It demonstrates the correct pattern for getting at those details: a privileged script sourcing a properly-permissioned file, rather than a loosened debug copy left lying around. And it is the thing a remediation team will break if they get overexcited.
+
+That last point is the one to carry into §7. Deleting the override file feels like fixing the problem and would take down Priya's backup pipeline at 02:00 the following morning. The credential needs to move into a secrets manager. The override needs to keep working until it does.
 
 ### Step 10: The breadcrumb
 
@@ -214,15 +226,15 @@ The walkthrough ends at *the finding*. Halton's ops team needs to rotate the pro
 
 It is tempting to summarize this level as "Daniel left a debug copy of a sensitive file." That's true and it's the headline, but it under-specifies the failure. There are four distinct vulnerabilities stacked here, and the right remediation has to address all four.
 
-**Failure 1 — `app_admin` was granted a login shell.** This is the root failure that put any of this in play. The staging-worker service account, by every modern best practice (and by the explicit guidance of the CIS Linux Benchmark, the NIST 800-53 IA-2 Identification and Authentication enhancements, and every Linux-hardening guide ever published), should have `/usr/sbin/nologin` or `/bin/false` as its login shell. A service account exists to run a specific daemon (the staging-worker systemd service); it does not need to be SSH-able by any human. Halton's ops team configured `app_admin` with `/bin/bash` "for debugging" — and once the bash shell exists, anyone who recovers the credential can SSH in. The remediation is *remove the login shell on the service account*, full stop.
+**Failure 1, `app_admin` was given a login shell.** Everything else follows from this one. By the CIS Linux Benchmark, by the NIST 800-53 IA-2 enhancements, and by every Linux hardening guide ever written, a service account gets `/usr/sbin/nologin` or `/bin/false`. It exists to run a daemon, and a daemon does not need to SSH anywhere. Somebody at Halton set `/bin/bash` "for debugging," which is the most reasonable-sounding sentence in this entire walkthrough and also the reason you have a prompt. Once that shell exists, the password stops being a database credential and becomes a way onto the machine. Remove the login shell. There is no second half to this remediation.
 
-**Failure 2 — `app_admin` had unrestricted `sudo` access.** The `.bash_history` shows Daniel running `sudo cat`, `sudo cp`, `sudo chown`, `sudo systemctl restart` against the systemd override. For a *staging-worker service account*, even one that mistakenly has a login shell, having unrestricted `sudo` is a separate AC-6 *Least Privilege* failure. The legitimate sudo needs for the staging-worker daemon are narrow — restart the service, read its logs — and should be expressed as specific `sudoers.d` rules permitting `systemctl restart staging-worker` and `journalctl -u staging-worker` only. The unrestricted `ALL=(ALL) ALL` line that almost certainly exists in `/etc/sudoers.d/app_admin` is what enabled Daniel to make the shadow copy in the first place. Without that, the entire incident doesn't happen.
+**Failure 2, `app_admin` had unrestricted `sudo`.** The history shows `sudo cat`, `sudo cp`, `sudo chown` and `sudo systemctl restart`, all against a systemd override, all run by a service account. That is an AC-6 Least Privilege failure independent of the shell problem. What this daemon legitimately needs from sudo is small and easy to write down: restart the service, read its logs. Two `sudoers.d` rules covering `systemctl restart staging-worker` and `journalctl -u staging-worker` would cover it. Instead there is almost certainly an `ALL=(ALL) ALL` line sitting in `/etc/sudoers.d/app_admin`, and that line is what let Daniel copy the file. Take it away and the incident never occurs, regardless of what he intended.
 
 **Failure 3 — The systemd override file was placed where it could be sudo-copied to a less-privileged location.** This is more nuanced and more philosophical. The legitimate systemd override file is in the canonical systemd-override location and is properly locked down. But it's *on the same filesystem* as `app_admin`'s home directory. A privileged `cp` from one location to the other is one command. The structural fix — beyond fixing the immediate sudo and shell issues — is to move the credential out of the local filesystem entirely. **Secrets managers (HashiCorp Vault, AWS Secrets Manager, Doppler, 1Password Secrets Automation, Akeyless, Infisical)** retrieve credentials at runtime, never write them to disk in the running container/host, and audit every access. The staging-worker daemon's systemd unit can fetch the credential from a vault at start, hold it only in process memory, and never write it to a file at all. The shadow-copy attack surface disappears entirely.
 
 **Failure 4 — The credential was never rotated.** The `staging-worker.env.bak` file has a `TODO` comment from Daniel acknowledging that the prod credential needs to be rotated. The file's date in the listing is November 2025 — five months before today's audit. The credential `Halton-2024-Q3!` is, by its own name, dated to Q3 of 2024. That makes the credential approximately 18 months old as of today. NIST SP 800-63B Rev 4 explicitly *deprecates* forced periodic rotation absent evidence of compromise — but this credential has evidence of compromise (the shadow copy has been world-readable to anyone on this jumphost for five months), and the modern best practice is *event-driven rotation* triggered by breach indicators.[^nist-800-63b] The breach indicator is the shadow copy itself.
 
-Each of these four failures is independently a finding. Fixing only one — say, deleting the shadow copy — leaves the sudo configuration and the login-shell configuration intact, which means *the next engineer in this role makes a different but isomorphic mistake six months from now*. The remediation needs to address all four, and the audit deliverable needs to surface all four to Halton's ops lead.
+Four failures, four findings. Delete the shadow copy and stop there and you have removed one artifact while leaving the shell, the sudo rule and the unrotated credential exactly as they were. The next engineer in this seat will make a different mistake with the same shape, probably within six months, and it will be nobody's fault in particular. All four go in the deliverable, and all four go to Halton's ops lead.
 
 ## §3.5 — Blast radius
 
@@ -268,11 +280,11 @@ LastPass disclosed an initial breach in late August 2022 involving compromised d
 
 The November 2022 breach, formally disclosed across multiple updates through January and February 2023, involved an attacker leveraging information stolen in the first August 2022 incident to target *a single senior DevOps engineer's home computer*. The attacker exploited a vulnerable Plex Media Server installation on the engineer's home machine (CVE-2020-5741)[^cve-2020-5741] to gain code execution, then installed a keylogger that captured the engineer's LastPass master password during their day-to-day work.[^lastpass-2023-followup] With that master password — which protected a corporate LastPass vault — the attacker accessed *production decryption keys for LastPass's customer-data backups*. The corporate vault contained, per LastPass's January 2023 customer notice, "decryption keys needed to access AWS S3 LastPass production backups, other cloud-based storage resources, and some related critical database backups."
 
-The exact details are extraordinary for how directly they parallel level1@linux's finding. A *senior DevOps engineer* — exactly the role Daniel held — kept *production credential material* in a *personal location* (home computer's password manager) *for convenience* (so they could do their job without having to re-authenticate every time). The credential material was *theoretically protected* (master password + LastPass vault encryption) but the *protection surface had been extended* to a less-secure location (the engineer's home machine with a vulnerable Plex installation). The attacker didn't have to defeat LastPass's vault encryption — they defeated the *less-protected location where the engineer had cached access*.
+Read that again with Daniel in mind, because the shape is uncanny. A senior DevOps engineer, which is Daniel's exact job title, kept production credential material somewhere personal so he would not have to re-authenticate constantly. The material was genuinely protected: master password, vault encryption, the works. But the protection surface had been stretched to include a home machine running a vulnerable Plex install, and that is where the attacker went. Nobody broke LastPass's encryption. They broke into the convenient place where an engineer had cached his access to it.
 
-LastPass's response cycle ran through 2023. Customer trust took years to recover; the company's market position in the consumer password-manager space declined materially. Multiple class-action lawsuits were filed; a consolidated multidistrict litigation settled in late 2024 for an undisclosed amount. The longer-arc lesson — explicit in LastPass's own retrospectives — was that *credential-handling discipline has to apply uniformly across every location a credential can exist*, not just the canonical protected location.
+The response cycle ran through 2023, customer trust took years to rebuild, and the company's position in the consumer password-manager market fell materially. Class actions followed, and a consolidated multidistrict litigation settled in late 2024 for an undisclosed sum. LastPass's own retrospectives land on the lesson that matters here: credential discipline has to hold everywhere a credential can exist, not just in the place you designated as protected.
 
-For Halton's situation, the parallel is exact in shape if smaller in scale. Daniel kept production credential material in a less-protected location (his home directory on the jumphost) for convenience (so he could `grep DB_PROD_PASS` without `sudo`). The credential was *theoretically protected* by the systemd-override file's mode 600. The *protection surface had been extended* to a less-secure location. An attacker (or in this case, today's audit) didn't have to defeat the systemd-override protection — they defeated the *less-protected location where the engineer had cached access*. Same shape, smaller blast radius.
+Halton's version is the same shape at a smaller scale. Daniel cached production credential material in a less-protected location so he could `grep DB_PROD_PASS` without typing `sudo`. The credential was protected, by mode 600 on the override file. The protection surface got stretched. Today's audit did not defeat that protection any more than LastPass's attacker defeated vault encryption. Both walked to the convenient copy.
 
 ### Uber — September 2022 (the PowerShell-script angle)
 
@@ -282,7 +294,7 @@ The PowerShell script was, by every account in the post-incident analysis, a *de
 
 Industry post-incident analysis of the Uber breach mapped the lateral-movement step to **MITRE ATT&CK T1552.001 (Unsecured Credentials: Credentials In Files)** — the canonical technique ID for "credentials cached in operational files an attacker can read after gaining file-system access."[^t1552-001] The mitigations the security-press post-mortems converged on are exactly the controls level1@linux's remediation list specifies: secrets-management deployment with no cached credentials, file-integrity monitoring on operational scripts, employee training on the difference between *the credential's canonical protected location* and *cached copies thereof*.
 
-For Halton, the structural parallel is identical. Daniel's `staging-worker.env.bak` is the same artifact category as Uber's PowerShell script — a convenience cache of credentials whose canonical copy is properly protected. The blast radius differs (Uber's was an enterprise-PAM-admin credential; Halton's is a database service-account credential), but the mechanism and the remediation are the same.
+Daniel's `staging-worker.env.bak` and Uber's PowerShell script are the same artifact wearing different file extensions: a convenience cache of a credential whose real copy is properly locked down. The blast radius differs, since Uber lost an enterprise PAM admin credential and Halton lost a database service account. The mechanism is identical and so is the fix.
 
 ### Snowflake customer breach campaign — April–July 2024
 
