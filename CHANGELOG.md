@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`level0@linux`'s walkthrough is about 730 words tighter.** An editorial pass for pace and readability: paragraph length now tracks how much an idea is worth, setup recedes so the findings stand out, and a run of rhetorical flourishes that carried no information came out. No claim, figure, citation or identifier changed.
+
 ## [2.12.0] - 2026-08-07
 
 **The game is a Linux terminal. The findings are not Linux findings.** Eight walkthroughs now show the same control on Windows and macOS. No gameplay changes.
