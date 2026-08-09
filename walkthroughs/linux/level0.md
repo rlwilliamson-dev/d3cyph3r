@@ -108,7 +108,7 @@ This is the win condition.
 
 The password is `please-rotate-me`.
 
-Sit with that one. Somebody chose a password that is a written request to change the password, put it in a file whose header says "DO NOT COMMIT," added a second comment reading "Goal: rotate this. Then delete this file. Neither happened," and then went home. The credential is not hidden. It is not encoded. It is begging, in plain English, to be dealt with, and it stayed exactly where it was until you turned up on a Monday.
+Sit with that one. Somebody chose a password that is a written request to change the password, put it in a file whose header says "DO NOT COMMIT," added a second comment reading "Goal: rotate this. Then delete this file. Neither happened." Then he went home. The credential is not hidden. It is not encoded. It is begging, in plain English, to be dealt with, and it stayed exactly where it was until you turned up on a Monday.
 
 It is also your ticket into `level1@linux`. Every level in D3CYPH3R leaks the password for the next one in its track, and Halton's staging DB credential is level1's front door.
 
