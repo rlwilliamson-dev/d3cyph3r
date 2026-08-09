@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`level0@linux`'s walkthrough has more voice and better pacing.** An editorial pass aimed at the reader who gives up halfway through 8,000 words of framework citations. Paragraph length now tracks how much an idea is worth, the narrator is allowed an opinion, and the level's genuinely absurd moments (a password whose literal text is `please-rotate-me`, a departing consultant writing "Yes, I know" next to the credential he left behind) are allowed to land instead of being reported flatly. No claim, figure, citation or identifier changed.
+
 ## [2.12.0] - 2026-08-07
 
 **The game is a Linux terminal. The findings are not Linux findings.** Eight walkthroughs now show the same control on Windows and macOS. No gameplay changes.
