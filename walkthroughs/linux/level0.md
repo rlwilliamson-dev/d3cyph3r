@@ -10,19 +10,19 @@
 
 Driftwood Systems is a mid-sized tech consulting firm: around 600 consultants working about 80 client engagements at any given time. Each engagement hands a consultant access to a different client's environment, and every six to eighteen months they roll off one and onto the next. That rotation is what the firm sells. It is also where its worst security problems come from.
 
-You are the new hire on Driftwood's internal security team, day one. Your team exists to make sure consultants don't roll off an engagement with the client's credentials still sitting on their laptop.
+You are the new hire on Driftwood's internal security team. It is day one, and your entire job is stopping consultants from rolling off an engagement with a client's credentials still sitting on their laptop. You will be very busy.
 
-The first morning, the fire is already lit. Daniel Yoo, a senior consultant whose Halton Bank engagement ended Friday, dropped his work laptop with IT for reimaging. His Halton access was revoked over the weekend, but the laptop hasn't been wiped and his home directory hasn't been audited. IT reimages on Wednesday. Until then you have a window to find whatever he left exposed.
+Because the fire is already lit. Daniel Yoo, a senior consultant whose Halton Bank engagement ended Friday, handed his laptop to IT for reimaging. His Halton access was revoked over the weekend, so somebody did *something* right. But the disk hasn't been wiped and nobody has looked in his home directory. IT reimages Wednesday. You have until then.
 
-IT booted the laptop into Daniel's account so you can read everything he could. The prompt says `daniel@linux` because you are standing where he stood, which is how a forensic audit works. He is gone; his files are not.
+IT booted the laptop into Daniel's own account so you can see what he saw, which is why the prompt says `daniel@linux`. You are not Daniel. You are standing in his shoes reading his mail, which is roughly what a forensic audit feels like from the inside. He is gone; his files are not.
 
-Halton Bank is a regional bank, and that detail decides which rulebook applies. As a bank it falls under **GLBA § 501(b)** as implemented by the federal banking agencies' Interagency Guidelines, not the FTC Safeguards Rule that covers nonbank lenders and brokers. The Guidelines put oversight of service providers like Driftwood squarely on Halton, at III.D. Halton's regulator clock is measured in hours: 36 of them, counted from the moment it determines a notification incident has occurred. On top of that, the Master Services Agreement Driftwood signed makes credential exposure a contractual breach in its own right. Contract and regulation are both live before you have opened a single file.
+One detail decides which rulebook you are working under: Halton is a regional *bank*. That puts it under **GLBA § 501(b)** as implemented by the federal banking agencies' Interagency Guidelines, and not under the FTC Safeguards Rule that covers nonbank lenders and brokers. People mix these up constantly, and §5 will explain why the mix-up is expensive. The Guidelines also drop oversight of service providers like Driftwood squarely on Halton at III.D, so the bank is on the hook for your firm's habits. Its regulator clock runs in hours: 36 of them, from the moment it decides a notification incident has occurred. Meanwhile the Master Services Agreement makes credential exposure a contractual breach all on its own. Contract and regulation are both live and you have not opened a single file yet.
 
-What you don't know walking in is that Daniel kept passwords in plaintext files.
+What nobody has told you is that Daniel kept passwords in plaintext.
 
 ## §2 — The solve
 
-The whole level is `ls` plus `cat`. The lesson is in noticing what's in front of you.
+The whole level is `ls` and `cat`. Two commands, no exploit, no clever trick. The difficulty is entirely in noticing what is sitting in front of you, which is also true of a depressing share of real findings.
 
 ### Step 1: Orient
 
@@ -40,7 +40,9 @@ daniel@linux:~$ ls
 creds.txt  handoff.md  notes.txt  tasks.md  welcome.md
 ```
 
-Five files, none of them screaming "credential." Except `creds.txt`, which should stop you. Attackers do grep for `creds*`, but that is the defender's framing. The simpler point is that the file is named after what it holds, and it was left in plain view.
+Five files. Four of them look like ordinary work. The fifth is called `creds.txt`.
+
+Take a second with that. Attackers do grep for `creds*`, and you will hear that framing a lot, but it slightly misses the point. Nobody had to be clever here. The file announces its own contents in its filename and then sits in the open where anyone with a shell can read it.
 
 The `-a` flag exposes hidden files (anything whose name starts with `.`):
 
@@ -49,7 +51,7 @@ daniel@linux:~$ ls -a
 .   ..   .bash_history   creds.txt   handoff.md   notes.txt   tasks.md   welcome.md
 ```
 
-`.bash_history` is the shell's per-user log of every command Daniel typed. That's the second find. We'll come back to it.
+`.bash_history` is the shell's per-user log of every command Daniel typed, which means it is a diary he did not know he was keeping. That is the second find. We come back to it in §7.5.
 
 ### Step 3: Read the briefing
 
@@ -67,9 +69,9 @@ daniel@linux:~$ cat handoff.md
 
 This is Daniel's note to whoever picks up the Halton account next. Three things stand out:
 
-1. *"Halton's staging DB credentials: see creds.txt. Yes, I know."* Daniel is acknowledging in writing that the file is a problem, and leaving it anyway. For an auditor that is worse than carelessness, because the record shows he understood the risk and accepted it.
-2. He mentions a 02:00 UTC cron job on Halton's jumphost, which becomes the entry point for level1.
-3. The voice. Daniel sounds tired, like a competent person who has stopped caring about one particular policy. Security models that assume the consultant will do the right thing on their last day fail for exactly this reason.
+1. *"Halton's staging DB credentials: see creds.txt. Yes, I know."* Read that "Yes, I know" again. Daniel is not oblivious. He is writing a note to his successor that acknowledges the problem, shrugs, and moves on. For an auditor that is worse than carelessness, because the record now shows he understood the risk and accepted it on the client's behalf.
+2. A 02:00 UTC cron job on Halton's jumphost gets a passing mention. File that away; it is the entry point for level1.
+3. The voice. Daniel sounds tired. Not malicious, not incompetent, just a good engineer who has quietly stopped caring about one specific policy in his last week. Any security model that depends on the consultant doing the right thing on their final Friday is going to meet a lot of Daniels.
 
 ### Step 5: Read the rest
 
@@ -85,7 +87,9 @@ daniel@linux:~$ cat notes.txt
 
 Both unchecked. He intended to delete the file. He didn't.
 
-`notes.txt` is engineering scratch about Daniel's Halton workflow, including a production deploy pipeline ("scp the artifact, ssh in, ./deploy.sh, pray") that is its own finding for a different day. More usefully, the notes list every place the staging DB password leaks beyond `creds.txt`: `.bash_history`, an exported `DB_PASS` variable, and a systemd override on Halton's jumphost. Daniel wrote an exposure map and left it on the laptop.
+`notes.txt` is engineering scratch about Daniel's Halton workflow. It includes his production deploy pipeline, which he documents as "scp the artifact, ssh in, ./deploy.sh, pray." That is a finding for a different day and possibly a different consultant.
+
+The useful part is that the notes list every other place the staging DB password lives: `.bash_history`, an exported `DB_PASS` variable, and a systemd override on Halton's jumphost. Daniel, in effect, wrote the attacker's shopping list and left it next to the credentials. He meant it as a reminder to himself. It works just as well for anyone else.
 
 ### Step 6: Read the credential file
 
@@ -102,9 +106,11 @@ pass: please-rotate-me
 
 This is the win condition.
 
-The password is `please-rotate-me`, which reads like a sticky note reminding somebody to deal with it later. Daniel knew it needed rotating and knew the file needed deleting, then rolled off the engagement with both still outstanding.
+The password is `please-rotate-me`.
 
-It is also the credential that gets you into `level1@linux`. Every level in D3CYPH3R leaks the password for the next one in the same track, and Halton's staging DB credential doubles as level1's gate.
+Sit with that one. Somebody chose a password that is a written request to change the password, put it in a file whose header says "DO NOT COMMIT," added a second comment reading "Goal: rotate this. Then delete this file. Neither happened," and then went home. The credential is not hidden. It is not encoded. It is begging, in plain English, to be dealt with, and it stayed exactly where it was until you turned up on a Monday.
+
+It is also your ticket into `level1@linux`. Every level in D3CYPH3R leaks the password for the next one in its track, and Halton's staging DB credential is level1's front door.
 
 ### Step 7: Use the credential
 
@@ -113,7 +119,9 @@ daniel@linux:~$ ssh level1@linux
 level1@linux's password: please-rotate-me
 ```
 
-You are now on Halton Bank's jumphost as `app_admin`, sitting on a client production bastion with credentials that should have been rotated months ago. An attacker who recovered the same workstation, found `creds.txt`, and tried the staging DB password against the jumphost would be standing in the same place. That is level1's subject, covered in its own walkthrough.
+And there you are: on Halton Bank's jumphost as `app_admin`, standing on a client production bastion, holding a password that should have been retired months ago.
+
+Notice how little that took. No exploit, no vulnerability, no CVE. You read a file and typed what it said. An attacker who bought the same laptop at auction, opened `creds.txt`, and tried the staging credential against the jumphost would be exactly where you are now, with exactly as much effort. Level1 picks up from here.
 
 ### If you got stuck
 
@@ -123,17 +131,17 @@ You are now on Halton Bank's jumphost as `app_admin`, sitting on a client produc
 
 ## §3 — The vulnerability
 
-The easy summary is "Daniel kept passwords in a flat file," which is true and undersells it. Three separate failures are stacked here, and fixing one of them leaves the other two intact.
+The easy summary is "Daniel kept passwords in a flat file." True, and it undersells things badly. Three separate failures are stacked on top of each other here, and each one would have been enough to keep the credential alive on its own. Fix one, keep the other two, still get breached.
 
 **Failure 1, account lifecycle.** Daniel's `level0` local account was never disabled after his rolloff. In a well-run shop the account goes dead the day the engagement ends and the laptop is quarantined for audit before anyone else logs in. Instead IT logged you into his still-active account. That is convenient and forensically wrong: your activity now commingles with his, which contaminates the audit trail and says plainly that the laptop-handling procedure is not being followed.
 
 **Failure 2, plaintext credential storage.** The credential sat in a default-readable file on a consumer laptop with no verified full-disk encryption, no vault, no password manager, no scoped environment variable. Daniel knew: the CWE-798 acknowledgement is in the file's own header comment.[^cwe-798]
 
-**Failure 3, no rotation forcing function.** The password is called `please-rotate-me`. Nothing in the system ever made him do it. Halton's ops team enforced no rotation policy on Driftwood's consultants, and Driftwood ran no scan of consultant home directories at engagement closeout. The task lived in `tasks.md` on Daniel's laptop, so when Daniel left, the task left with him.
+**Failure 3, no rotation forcing function.** The password is called `please-rotate-me` and nothing in the entire system ever made anyone rotate it. Halton's ops team enforced no rotation policy on Driftwood's consultants. Driftwood scanned no home directories at closeout. The one place the task existed was `tasks.md`, on Daniel's laptop, in Daniel's handwriting. When Daniel left, the reminder left with him. The only system tracking this credential was a man who no longer worked there.
 
-Each one is a finding on its own, and each one alone is insufficient. Rotate the credential without fixing the lifecycle and the same thing happens at the next rolloff. Disable ex-employee accounts without credential scanning and you find the next `creds.txt` six months later on a different laptop. Deploy scanning without a rotation policy and you get a tidy inventory of credentials nobody rotates.
+Each failure is a finding by itself, and none of them is sufficient by itself. Rotate the credential and skip the lifecycle fix, and the next rolloff reproduces the whole thing. Disable ex-employee accounts and skip the scanning, and you meet the next `creds.txt` in six months on somebody else's laptop. Deploy the scanner and skip the rotation policy, and congratulations: you now have a beautifully catalogued list of credentials that nobody rotates.
 
-§7 has the defender's playbook. First, the parallels.
+§7 has the defender's playbook. First, three companies who lived this.
 
 ## §3.5 — Blast radius
 
@@ -172,7 +180,7 @@ service-provider finding rarely stays the service provider's problem.
 
 ## §4 — Real-world parallels
 
-Three named incidents follow this pattern, and all three are documented in primary sources you can read yourself.
+Daniel is fictional. The pattern is not. Three companies you have heard of ran this exact play, and all three are documented in primary sources you can go read yourself.
 
 ### Cash App Investing — April 2022
 
@@ -180,7 +188,7 @@ On April 4, 2022, Block Inc., Cash App's parent company, filed an SEC 8-K disclo
 
 The exposed data covered customer names, brokerage account numbers, portfolio values, holdings and trading activity. No Social Security numbers, dates of birth or payment information were involved, and the financial details were still enough to drive class-action litigation that Block settled for $15 million in 2024.[^block-cash-app-investing-sec]
 
-The data category is not what makes this the closest parallel to level0@linux, since Cash App is brokerage rather than banking. The vector is: a former employee kept working access because offboarding did not actually revoke it.
+The data category is not what makes this the closest parallel, since Cash App is brokerage and Halton is a bank. The vector is. A former employee kept working access because offboarding said it revoked access and did not.
 
 Block's handling drew nearly as much criticism as the breach. Roughly four months passed between detecting the unauthorized access in December 2021 and notifying customers in April 2022. Many state breach-notification laws set a 60-day limit, and New York's NYDFS Part 500 requires 72 hours from covered entities. Disclosure speed is its own regulatory exposure, and Cash App demonstrated that by getting it wrong.
 
@@ -188,11 +196,11 @@ Block's handling drew nearly as much criticism as the breach. Roughly four month
 
 On August 23, 2022, Peiter "Mudge" Zatko, formerly Twitter's head of security, filed an 84-page whistleblower complaint with the Securities and Exchange Commission, the Federal Trade Commission and the Department of Justice, alleging systemic security failures.[^peiter-zatko-mudge-whistleblower-disclosure] The Washington Post and CNN made it public, and Mudge testified before the Senate Judiciary Committee on September 13, 2022.
 
-The most-quoted finding was that over 4,000 Twitter employees, engineers included, held admin-level access to systems that could read or modify any account on the platform. The part that matters here is quieter: Mudge alleged the company had no reliable inventory of who had access to what, and that departed employees frequently kept access to internal tools. By his account, Twitter could not have produced a defensible answer to "did any ex-employee have access to internal systems on date X?"
+The headline number was that over 4,000 Twitter employees, engineers included, held admin-level access to systems that could read or modify any account on the platform. That is the finding everyone quoted. The one that should worry you is quieter: Mudge alleged the company had no reliable inventory of who had access to what, and that departed employees routinely kept their access to internal tools. Asked "did any ex-employee have access to internal systems on date X," Twitter could not have answered defensibly.
 
-That widens the lens. Cash App was one ex-employee exploiting one lapse. Mudge described a population of accounts nobody could enumerate, which is a continuous attack surface rather than a single incident.
+Sit with the difference between the two cases. Cash App is one ex-employee walking through one open door. Mudge is describing a building where nobody has a list of the doors.
 
-The comparison is uncomfortable for Driftwood. Six hundred consultants rotating across 80 engagements is harder to track than a 7,500-employee social network, and the IAM controls Twitter was alleged to lack are precisely the ones Driftwood's internal security team is meant to provide.
+Which is the uncomfortable comparison for Driftwood, because 600 consultants rotating across 80 engagements is a harder tracking problem than a 7,500-employee social network. The IAM controls Twitter was alleged to lack are the exact controls your new team is supposed to be.
 
 ### Uber — September 2022
 
@@ -202,13 +210,13 @@ What happened next is. Once on Uber's VPN, the attacker found a PowerShell scrip
 
 Uber published a detailed post-mortem within days, which is why the incident is so widely studied. The CISA advisory referencing it named `T1552.001`, Unsecured Credentials: Credentials In Files, as the technique that turned one employee's compromise into a network-wide breach.
 
-That is what you just did to Daniel's laptop. A credential sits in a flat file, somebody who should not have it reads the file, and the credential grants access it was never meant to grant. Each step is small and the sequence is a breach.
+Which is what you just did to Daniel's laptop, minus the MFA fatigue and the international press coverage. A credential sits in a flat file. Somebody who should not have it opens the file. The credential works. Every individual step is unremarkable, and the sequence is a breach.
 
-T1552.001 is among the highest-frequency techniques in the public threat intelligence corpus.[^t1552-001] Read three breach post-mortems without seeing it cited and you have been unlucky; read a fourth.
+T1552.001 is among the highest-frequency techniques in the public threat intelligence corpus.[^t1552-001] If you read three breach post-mortems and none of them cites it, you got unlucky. Read a fourth.
 
 ## §5 — Frameworks, deep dive
 
-The in-game post-mortem cited six framework controls. Each is expanded below: what the control requires, what evidence proves it is in place, and what auditors write up when it isn't.
+The in-game post-mortem name-dropped six framework controls. Name-dropping controls is easy and nearly useless, so here is each one properly: what it actually demands, what evidence convinces an auditor you are doing it, and what gets written up when you aren't.
 
 ### NIST SP 800-53 Rev 5 — AC-2: Account Management
 
@@ -218,7 +226,7 @@ The enhancement that fits this level is `AC-2(3)`, Disable Accounts, which requi
 
 Proving AC-2 is in place takes an account inventory that reconciles against HR's roster of employees and contractors, a defined SLA for disabling access after departure (usually 24 hours, less for privileged accounts), and log evidence that the SLA is actually met. An auditor pulls the inventory, samples 20 accounts, and checks each terminated user's disable date against their HR departure date. The write-ups repeat themselves: accounts disabled but never deleted, which builds cleanup debt; an SLA that is documented but unmeasured, so nothing proves it is met; HR data not wired into IAM, so the disable signal never arrives.
 
-Driftwood has an extra wrinkle. "Departure" means two things at a consulting firm: leaving the company, and rolling off a client. AC-2 was written for the first. The second is the one that gets missed, and it is where most consultant-driven breaches start.
+Driftwood has an extra wrinkle, and it is the one that bites consulting firms specifically. "Departure" means two different things here: leaving the company, and rolling off a client. AC-2 was written with the first in mind. Daniel never triggered it, because he never left Driftwood. He just stopped being Halton's problem, which nobody's IAM system treats as an event. That gap is where most consultant-driven breaches begin.
 
 ### NIST SP 800-53 Rev 5 — PS-4: Personnel Termination
 
@@ -232,7 +240,7 @@ Evidence for PS-4 is an offboarding ticket trail whose access-disable timestamps
 
 IA-5 governs the lifecycle of authenticators (passwords, tokens, keys, certificates). It requires organizations to verify identity before issuing authenticators, establish initial authenticator content, change/refresh authenticators at organization-defined intervals, protect authenticator content from unauthorized disclosure and modification, and require users to take reasonable steps to safeguard their authenticators.
 
-`please-rotate-me` violates IA-5 several times over. It was never rotated, so the refresh interval was ignored. It sat in a world-readable file, so protection from unauthorized disclosure failed. And Daniel took no reasonable step to safeguard it, having written it down in a file called `creds.txt`. The name is its own indictment: he knew it needed rotating and nothing in the system made him do it.
+`please-rotate-me` manages to violate IA-5 three separate ways in a single string. It was never rotated, so the refresh interval is fiction. It sat in a world-readable file, so protection from unauthorized disclosure failed. And "reasonable steps to safeguard the authenticator" is a hard argument to make about a password written into a file named `creds.txt`. The password's own text is the confession.
 
 Evidence for IA-5 is a credential inventory with rotation timestamps, plus a rotation policy with enforcement behind it, whether that is automatic forced rotation, ticket-driven manual rotation, or scanner-driven reissuance. Recurring findings: credentials never rotated since the system was built, credentials recorded in unencrypted files, and service-account credentials with no owner, so nobody can answer who is supposed to rotate them.
 
@@ -255,7 +263,7 @@ Evidence for Control 5 is dormant-account reporting (usually no login in 30, 60 
 
 CWE, the Common Weakness Enumeration, is MITRE's catalog of software weaknesses. CWE-798, Use of Hard-coded Credentials, describes a credential embedded directly in source code, configuration or scripts, where anyone who can read the file can take it.[^cwe-798]
 
-The entry dates to roughly 2006 and appeared on every annual Top 25 Most Dangerous Software Weaknesses list from 2019 through 2024. The 2025 Top 25 dropped it entirely, after MITRE changed its methodology and stopped normalizing to abstract weaknesses. Nothing about the underlying problem changed; practitioner surveys and vendor reporting still put hardcoded credentials near the top of breach causes. The ranking moved, not the risk. Secrets managers have existed for years and this weakness still fills post-mortems.
+The entry dates to roughly 2006 and made every annual Top 25 Most Dangerous Software Weaknesses list from 2019 through 2024. Then the 2025 Top 25 dropped it completely, which sounds like progress and isn't. MITRE changed its methodology and stopped normalizing to abstract weaknesses. Practitioner surveys and vendor reporting still put hardcoded credentials near the top of breach causes. The ranking moved; the risk stayed exactly where it was. Twenty years and an entire industry of secrets managers later, this weakness is still filling post-mortems.
 
 Daniel's `creds.txt` is textbook: a credential in a flat file, unencrypted, readable by anyone on the system. It is not source code, but CWE-798 covers configuration files and any persistent storage. The fix is a secrets manager (Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler) with credentials fetched at runtime rather than parked on disk.[^aws-secrets-manager-user-guide]
 
@@ -271,7 +279,7 @@ OWASP's mitigations for A07 stack up. Enforce multi-factor authentication, prefe
 
 ### GLBA § 501(b) — Interagency Guidelines (12 CFR Pt. 30 App. B)
 
-The Gramm-Leach-Bliley Act of 1999 requires financial institutions to safeguard the confidentiality of customer information. Two different regulators implement § 501(b) for two different populations, and choosing the wrong one is the most common citation error in bank work. The Federal Trade Commission's Safeguards Rule (16 CFR Part 314) covers *nonbank* financial institutions.[^cfr-16-314] Banks answer to the federal banking agencies instead, under the Interagency Guidelines Establishing Information Security Standards: 12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks.[^cfr-12-30] Halton is a regional bank, so the Guidelines are its rule.
+The Gramm-Leach-Bliley Act of 1999 requires financial institutions to safeguard the confidentiality of customer information. Simple enough, until you notice that two different regulators implement § 501(b) for two different populations. Cite the wrong one in front of a bank's compliance team and you have announced that you do not work in this sector. It is the most common citation error in bank engagements and it is entirely avoidable. The Federal Trade Commission's Safeguards Rule (16 CFR Part 314) covers *nonbank* financial institutions.[^cfr-16-314] Banks answer to the federal banking agencies instead, under the Interagency Guidelines Establishing Information Security Standards: 12 CFR Pt. 30 App. B for OCC-supervised banks, Pt. 208 App. D-2 for Fed members, Pt. 364 App. B for FDIC-supervised banks.[^cfr-12-30] Halton is a regional bank, so the Guidelines are its rule.
 
 The substantive requirements track each other closely. Where the FTC rule says § 314.4(c)(1), the Guidelines say III.C.1.a: *"Access controls on customer information systems, including controls to authenticate and permit access only to authorized individuals."* III.C.1.f requires *"monitoring systems and procedures to detect actual and attempted attacks on or intrusions into customer information systems."* III.C.1.g requires *"response programs that specify actions to be taken when the bank suspects or detects that unauthorized individuals have gained access to customer information systems, including appropriate reports to regulatory and law enforcement agencies."* III.D covers oversight of service provider arrangements, which is the provision that reaches Driftwood.
 
@@ -288,7 +296,7 @@ One caution on which GLBA rule applies, since this is the mis-citation that show
 
 PCI-DSS (Payment Card Industry Data Security Standard) governs any organization that stores, processes, or transmits cardholder data. **Requirement 12.8** specifically covers third-party service providers: organizations must maintain a list of providers with cardholder data access, have a written agreement that acknowledges the provider's responsibility for the security of cardholder data, follow a documented due-diligence process before engaging, and monitor provider PCI-DSS compliance status at least annually.
 
-Halton is a regional bank, so payment-card data lives somewhere in its environment. Wherever Daniel's engagement gave him access to systems touching cardholder data, Req 12.8 puts Driftwood on Halton's third-party-service-provider list and requires contract terms covering credential handling.
+Halton is a regional bank, so cardholder data lives somewhere in that environment whether or not anyone has drawn it on a diagram. Wherever Daniel's engagement touched those systems, Req 12.8 puts Driftwood on Halton's third-party-service-provider list and requires contract terms covering credential handling.
 
 PCI-DSS v4.0.1 is the only version the PCI SSC currently supports. v4.0 was published in March 2022 and retired on December 31, 2024. v4.0.1, published June 2024, is a clarifying revision that tightened wording without changing requirements.[^pci-dss-v4-0-1] Every future-dated requirement introduced in v4.0, including the strengthened Req 12.8 expectations around explicit monitoring and documented agreements, became mandatory on March 31, 2025. Driftwood's contractual posture is therefore assessed against v4.0.1 in full, not v3.2.1's lighter baseline.
 
@@ -296,7 +304,7 @@ Evidence for Req 12.8 is the provider list, the executed agreement setting out s
 
 ## §6 — Cert exam relevance
 
-Equal-depth coverage for the four certifications cited in the in-game post-mortem. For each: current exam version, the most-tested objectives related to this material, and a sample question framing in the style of that cert's actual exam.
+Four certifications cited the material in this level, and each one tests it in a completely different accent. Below: the current exam version, the objectives this level maps to, and a sample question written in that cert's actual voice. If you are studying for any of them, the sample questions are the useful part, because knowing the content and knowing how a cert *asks* about the content are separate skills.
 
 ### CompTIA Security+ — current version SY0-701
 
@@ -316,9 +324,11 @@ CompTIA refreshed Security+ from SY0-601 to **SY0-701** in November 2023; SY0-60
 > C. Quarterly rotation of database credentials
 > D. Encryption at rest on the database server
 
-The trap is that A, C and D are all good controls and all sound right in isolation. The breach pattern here is credentials retained by ex-personnel. MFA on the database would not have helped: the ex-consultant knew the password and would clear MFA himself if he is the attacker, and if the credential leaked instead, whether MFA stops the attacker depends on which factor is being checked. Rotation shrinks the window without closing it. Encryption at rest is irrelevant, since the credential authenticates to the database rather than unlocking a disk. **B** is correct, because this is a personnel-security failure rather than an authentication or encryption one.
+Every wrong answer here is a good control, which is the trap. Read them again and notice that A, C and D are all things you would genuinely recommend.
 
-That is how Security+ writes: several defensible answers, one that addresses the root cause of the specific scenario.
+They still lose. The breach pattern is credentials retained by ex-personnel. MFA on the database does nothing when the ex-consultant *is* the attacker and clears his own second factor, and if the credential leaked to someone else, whether MFA helps depends on which factor gets checked. Rotation shrinks the window without closing it. Encryption at rest is answering a question nobody asked, since the credential authenticates to the database rather than unlocking a disk. **B** wins because this is a personnel-security failure wearing a technical costume.
+
+That is the Security+ house style: several defensible answers, one that goes at the root cause of the specific scenario in front of you.
 
 ### (ISC)² Certified in Cybersecurity (CC)
 
@@ -348,7 +358,7 @@ CISSP is the senior (ISC)² cert, aimed at people with five or more years in the
 - **Domain 5, Identity and Access Management.** Account lifecycle from provisioning through deprovisioning, plus federation, single sign-on and privileged access management. The IAM questions go deep here, into specific PAM tooling such as CyberArk and BeyondTrust, just-in-time access patterns, and the differences between role-based, attribute-based and discretionary access control.
 - **Domain 7, Security Operations.** Investigations, incident management, personnel safety. Offboarding straddles Domains 5 and 7: the process belongs to 5, the operational handling of a departing-employee incident belongs to 7.
 
-CISSP framings are famously oblique and reward thinking like a manager rather than an engineer. The best answer is usually the one addressing the broader risk-management context, not the one that solves the narrow technical problem.
+CISSP framings are famously oblique, and the trick to them is to stop thinking like an engineer. The best answer is almost never the one that fixes the immediate technical problem. It is the one a person with budget authority would give.
 
 > A consulting firm's CIO is reviewing a recent incident in which an offboarded consultant left credentials for a client environment on a personal device. As the firm's Chief Information Security Officer, which of the following should be your PRIMARY focus going forward?
 >
@@ -399,11 +409,11 @@ OSCP also tests whether you recognise that a found credential should be tried la
 
 ## §7 — What a defender does
 
-This scenario is not theoretical. Every defender at a consulting firm, and every IAM, IT and security engineer at any large enterprise, has to answer it concretely.
+Everything above diagnoses. This part is the actual job. Every defender at a consulting firm, and every IAM, IT and security engineer at any large enterprise, eventually has to answer this one with a budget and a timeline attached.
 
 **1. Automate Joiner-Mover-Leaver (JML).** The IAM industry's name for the access-lifecycle process. Tools like Okta Lifecycle Management, Microsoft Entra ID Governance (formerly Azure AD Identity Governance) and SailPoint IdentityIQ connect to HR systems such as Workday, BambooHR and ADP, then provision and deprovision accounts off HR events. HR is the source of truth: it records the termination, IAM disables the access, the laptop gets flagged for return, and the SIEM logs the deauthorization for audit. Without automation this is a manual ticket chain, and manual chains fail at a rate that scales with the number of systems and the number of leavers.
 
-**2. Treat the workstation as a witness.** A rolled-off consultant's laptop is evidence, not stock. Image the disk for forensic preservation first (FTK Imager, EnCase, or `dd` with a write-blocker), run an automated credential scanner against the image, and reimage after that. Audit, then wipe. Driftwood's process is meant to enforce that order, and the fact that you are doing it by hand on your first day says it isn't automated.
+**2. Treat the workstation as a witness.** A rolled-off consultant's laptop is evidence before it is inventory. Image the disk for forensic preservation first (FTK Imager, EnCase, or `dd` with a write-blocker), run a credential scanner against the image, and only then reimage. Audit, then wipe, in that order, every time. Driftwood's process is supposed to enforce this, and the fact that you are doing it by hand on your first morning tells you exactly how well that is going.
 
 **3. Run credential scanners against home directories, not just repos.** Most secret-scanning tools were built for source repositories, but gitleaks, TruffleHog, GitHub secret scanning and GitGuardian all work on filesystems.[^trufflehog-secret-scanning] Point them at `/home/*` on workstations at engagement closeout. The findings will be uncomfortable and they will also be correct.
 
@@ -412,15 +422,15 @@ This scenario is not theoretical. Every defender at a consulting firm, and every
 gitleaks dir /home --report-path /tmp/scan.json --no-git
 ```
 
-The first run against a representative sample of consultant laptops always goes badly, which is the reason to do it. The second run goes better, because consultants now know the firm checks.
+Brace for the first run. Point a scanner at a representative sample of consultant laptops and the results are always grim, which is precisely why you do it. The second run looks better, and not because anyone deployed a tool. It looks better because word got round that the firm checks now.
 
-**4. Vault credentials at the firm level, not the laptop level.** Driftwood should run a vault (HashiCorp Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler, Bitwarden Secrets Manager) that consultants check credentials out of and that audits every access.[^hashicorp-vault-getting-started] People keep client credentials in files on their laptop because the vault is friction. Lower the friction until the vault is the easiest path.
+**4. Vault credentials at the firm level, not the laptop level.** Driftwood should run a vault (HashiCorp Vault, AWS Secrets Manager, 1Password Secrets Automation, Doppler, Bitwarden Secrets Manager) that consultants check credentials out of, with every access audited.[^hashicorp-vault-getting-started] People keep client credentials in a text file because your vault is annoying and the text file is not. That is the whole reason, and you will not out-argue it with policy. Lower the friction until the vault is genuinely the easiest option, and the text files go away by themselves.
 
-**5. Forensic-grade access logs.** The day after a breach surfaces, Halton's lawyer asks Driftwood's lawyer whether `creds.txt` was ever copied to an external device or uploaded somewhere. The only acceptable answer is a forensic-grade access log from the laptop's EDR, whether that is CrowdStrike Falcon, SentinelOne, Microsoft Defender for Endpoint or Carbon Black. It needs to be tamper-evident, retained for a defined period (12 months or more is typical), and produceable on demand.
+**5. Forensic-grade access logs.** The day after a breach surfaces, Halton's lawyer will ask Driftwood's lawyer one question: was `creds.txt` ever copied to a USB stick or uploaded anywhere? "We don't know" is not an answer anybody survives. What you need is a forensic-grade access log from the laptop's EDR, whether that is CrowdStrike Falcon, SentinelOne, Microsoft Defender for Endpoint or Carbon Black, and it needs to be tamper-evident, retained for a defined period (12 months or more is typical), and produceable on demand.
 
-**6. Quarterly attestation walks.** Even with automation, once a quarter a human walks a sample of consultant home directories with a credential scanner and an audit checklist. The walk catches drift: the gap in the automation, the client-specific file path the scanner has never seen, the one consultant routing around the vault because they think it is slow. Treat it as a measure of whether the security program works, not just as remediation.
+**6. Quarterly attestation walks.** Automation drifts, so once a quarter a human walks a sample of consultant home directories with a scanner and a checklist. The walk is what finds the gap in the automation, the client-specific file path the scanner has never been taught, and the one consultant quietly routing around the vault because they think it is slow. Treat the results as a measure of whether the program works, not as a to-do list.
 
-**7. Tabletop the breach.** Run an annual exercise on exactly this scenario: a rolling-off consultant's laptop is found to contain client credentials, walk us through the response. It surfaces which playbooks are written down, which assumptions the team is carrying, which legal and contractual notifications apply, and which clients have to be told. The first one goes badly, which is the point of running it before a real incident does.
+**7. Tabletop the breach.** Once a year, run this exact scenario at a table: a rolling-off consultant's laptop turns out to contain client credentials, walk us through the response. You will find out fast which playbooks exist in writing, which live in one person's head, which notifications are legally required, and which clients have to be phoned. Your first tabletop will be a mess. Far better to have that morning in a conference room than during an actual incident.
 
 **Sample detection rule (Sigma, generic Linux file-access):**[^sigma-generic-signature-format-for]
 
@@ -480,19 +490,19 @@ This section is bonus. The credential chain works without it and the post-mortem
 
 **Trigger:** `cat .bash_history`
 
-**What it teaches:** Daniel's shell history is full of `sudo systemctl status`, because he was checking the staging-worker service constantly. That repetition is the signal. The developer who copies secrets to `.bak` files is often the same one logged into every box, and a real incident-response sweep does not stop at finding the credential. It asks who else was working on these machines with the same fingerprints, because muscle memory is a behavioural signature that survives a password rotation. `.bash_history` is one of the cheapest places to read it.
+**What it teaches:** Daniel's shell history is wall-to-wall `sudo systemctl status`, because he spent his last months anxiously poking the staging-worker service. The repetition is the interesting part. The developer who copies secrets into `.bak` files is very often the same person logged into every box in the estate, and a good incident-response sweep does not stop once it has the credential. It asks who else was working these machines and leaving the same fingerprints. Muscle memory is a behavioural signature, and unlike a password it survives rotation. `.bash_history` is the cheapest place on the system to read one.
 
-It is also why the CIS Linux Benchmark treats `HISTSIZE` and `HISTFILESIZE` as settings worth thinking about on shared service accounts. Daniel's box had `HISTSIZE=1000`, which you may have spotted earlier when you ran `env`. For a busy DevOps engineer that is roughly five days of activity, enough for the trail to still be useful when somebody finally audits it.
+This is also why the CIS Linux Benchmark bothers to have an opinion about `HISTSIZE` and `HISTFILESIZE` on shared service accounts. Daniel's box was set to `HISTSIZE=1000`, which you may have caught earlier if you ran `env`. For an engineer at his pace that is about five days of history, which is just enough to still be worth reading when someone finally audits the machine.
 
-The bonus is a small joke about the discipline gap. The same commands (`sudo systemctl`, `cat secret.env`, `cp secret.env.bak`) recur throughout, and `.bash_history` is mode 600 owned by Daniel: readable by the person about to be audited, and written by someone who never considered that anyone would read it later. Nobody thinks of themselves as the audience for their own shell history.
+There is a quiet joke buried in the file permissions. The same handful of commands (`sudo systemctl`, `cat secret.env`, `cp secret.env.bak`) repeat down the page, and `.bash_history` is mode 600, owned by Daniel. Locked down, private, his. Written by a man who never once pictured a stranger reading it on a Monday morning. Almost nobody thinks of themselves as the audience for their own shell history, which is why it is such good evidence.
 
 ## §8 — Key takeaways
 
-- **The credential file was the entire breach.** Three stacked failures, account lifecycle, plaintext storage and no rotation forcing function, combine into one finding that violates AC-2, IA-5, CWE-798, OWASP A07, GLBA and PCI-DSS at once.
-- **Verizon's annual DBIR keeps putting "use of stolen credentials" among the top three initial-access vectors.** The 2026 edition recorded a reshuffle, with vulnerability exploitation taking the top slot from credential abuse, but credential-driven access remains the persistent runner-up and still dominates incident-response casework. This is not an obscure failure mode.
-- **The OSCP enumeration loop is also the attacker's first move after a foothold.** `ls`, `cat`, `grep`. The methodology that earns the cert is the methodology that produces breaches when defenders don't run it first.
-- **At a consulting firm the blast radius is your clients' data, not your own.** That raises the legal, contractual and reputational stakes by an order of magnitude.
-- **The fix is the process around the tool rather than the tool.** A vault nobody is required to use, a scanner with no quarterly walk behind it, JML automation that was never wired into the HR system: each fails in a predictable way. Closing those loops is the job.
+- **One text file was the entire breach.** Three stacked failures (account lifecycle, plaintext storage, no rotation forcing function) produce a single finding that manages to violate AC-2, IA-5, CWE-798, OWASP A07, GLBA and PCI-DSS simultaneously. That is efficient, in the worst way.
+- **This is the most boring attack in security, and it keeps working.** Verizon's annual DBIR has put "use of stolen credentials" among the top three initial-access vectors for years running. The 2026 edition saw a reshuffle, with vulnerability exploitation taking the top slot, but credential abuse is the permanent runner-up and still dominates incident-response casework.
+- **The OSCP enumeration loop is also the attacker's opening move.** `ls`, `cat`, `grep`. The methodology that earns you the certificate is the methodology that produces breaches when defenders never run it on themselves first.
+- **At a consulting firm, the blast radius is your clients' data.** Not yours. That single fact moves the legal, contractual and reputational stakes by an order of magnitude, and it is why this job exists.
+- **Buying the tool is the easy 10%.** A vault nobody is required to use, a scanner with no quarterly walk behind it, JML automation that was never wired into HR: each of those is a purchase order pretending to be a control. Closing the loop is the actual work, and it is unglamorous, and it is the job.
 
 ## §9 — Further reading
 
