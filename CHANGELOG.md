@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.12.1] - 2026-10-07
+
+**The walkthroughs get an editorial and fact-checking pass, and the game's own text stops contradicting itself.** No new levels or commands.
+
 ### Changed
 
-- **Sixteen walkthroughs have more voice and better pacing.** That covers all four Linux levels, cloud 0 to 2, level0 and level1 of crypto, forensics, network and web, and `level0@osint`. The pass is aimed at the reader who gives up halfway through 8,000 words of framework citations. Paragraph length now tracks how much an idea is worth, the narrator is allowed an opinion, and the absurd moments (a password whose literal text is `please-rotate-me`, a departing consultant writing "Yes, I know" next to the credential he left behind) get to land instead of being reported flatly. The Linux track now reads in one voice across Daniel's whole arc.
+- **Sixteen walkthroughs have more voice and better pacing.** That covers all four Linux levels, cloud 0 to 2, level0 and level1 of crypto, forensics, network and web, and `level0@osint`. The pass is aimed at the reader who gives up halfway through 8,000 words of framework citations. Paragraph length now tracks how much an idea is worth, the narrator is allowed an opinion, and the absurd moments (a password whose own text begs to be rotated, a departing consultant writing "Yes, I know" next to the credential he left behind) get to land instead of being reported flatly. The Linux track now reads in one voice across Daniel's whole arc.
 
 ### Added
 
@@ -4117,7 +4121,10 @@ Initial public release. The engine is complete; one Linux level ships with it.
 - Deployment to [www.d3cyph3r.com](https://www.d3cyph3r.com) via Azure
   Static Web Apps with GitHub Actions auto-deploy on push to `main`.
 
-[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.12.1...HEAD
+[2.12.1]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.12.0...v2.12.1
+[2.12.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.11.0...v2.12.0
+[2.11.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.10.0...v2.11.0
 [2.10.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/rlwilliamson-dev/d3cyph3r/compare/v2.7.0...v2.8.0

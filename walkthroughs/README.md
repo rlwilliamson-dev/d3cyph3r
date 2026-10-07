@@ -240,6 +240,21 @@ Run it on every walkthrough PR. Zero MISMATCH is the bar; read the WEAK
 list, since that is where a title that over-claims what a page contains
 shows up.
 
+### Quoting the game correctly
+
+```bash
+node tools/check-quotes.mjs
+```
+
+Walkthroughs reproduce lines from `levels/<track>.js` word for word: a
+character's note, a log line, a file the player reads. An edit that
+tidies one of those lines leaves the page disagreeing with the level it
+documents, and nothing else in the build notices. This takes every
+quoted span of 40 characters or more and fails when a near-identical
+string exists in the level data but the quote doesn't match it exactly.
+Run it after any walkthrough edit, and after changing level text that a
+walkthrough quotes.
+
 ### §7 cross-platform subsection (v2.12.0)
 
 Where the defender's remediation is genuinely OS-specific, §7 ends with a
