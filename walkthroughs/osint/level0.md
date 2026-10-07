@@ -475,7 +475,7 @@ The historical lesson is for product designers: **never store password hints in 
 [^nist-800-66]: [NIST SP 800-66 Rev. 2 — Implementing the HIPAA Security Rule](https://csrc.nist.gov/pubs/sp/800/66/r2/final).
 [^hitrust-csf-v11-hitrust-alliance]: [HITRUST CSF v11 (HITRUST Alliance)](https://hitrustalliance.net/hitrust-framework).
 [^cis-critical-security-controls-v8]: [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
-[^owasp-a07-2025]: [OWASP Top 10:2025 — A07:2025 Authentication Failures (deep link)](https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/).
+[^owasp-a07-2025]: [OWASP Top 10:2025 — A07:2025 Authentication Failures (deep link)](https://top10.owasp.org/2025/A07_2025-Authentication_Failures/).
 [^cwe-521]: [CWE-521 — Weak Password Requirements](https://cwe.mitre.org/data/definitions/521.html).
 [^cwe-262]: [CWE-262 — Not Using Password Aging](https://cwe.mitre.org/data/definitions/262.html).
 [^cwe-309]: [CWE-309 — Use of Password System for Primary Authentication](https://cwe.mitre.org/data/definitions/309.html).

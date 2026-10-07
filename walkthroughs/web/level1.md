@@ -660,9 +660,9 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 [^cwe-863]: [CWE-863: Incorrect Authorization](https://cwe.mitre.org/data/definitions/863.html).
 [^cwe-285]: [CWE-285: Improper Authorization](https://cwe.mitre.org/data/definitions/285.html).
 [^cwe-312]: [CWE-312: Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
-[^owasp-top-10-2025-a01]: [OWASP Top 10 (2025) — A01: Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/).
-[^owasp-api-security-top-10]: [OWASP API Security Top 10 (2023) — API1: Broken Object Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/).
-[^owasp-asvs-v5-0-v4]: [OWASP ASVS v5.0 — V4 Access Control](https://owasp.org/www-project-application-security-verification-standard/).
+[^owasp-top-10-2025-a01]: [OWASP Top 10 (2025) — A01: Broken Access Control](https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/).
+[^owasp-api-security-top-10]: [OWASP API Security Top 10 (2023) — API1: Broken Object Level Authorization](https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization/).
+[^owasp-asvs-v5-0-v4]: [OWASP ASVS v5.0 — V4 Access Control](https://owasp.org/projects/asvs).
 [^krebs-on-security-usps-site]: [Krebs on Security — "USPS Site Exposed Data on 60 Million Users" (Nov 2018)](https://krebsonsecurity.com/2018/11/usps-site-exposed-data-on-60-million-users/). The original USPS Informed Visibility writeup.
 [^burp-suite-authorize-extension]: [Burp Suite Authorize extension](https://portswigger.net/bappstore/f9bbac8c4acf4aefa4d7dc92a991af2f).
 [^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
@@ -689,6 +689,6 @@ Carlos's ten-year MeridianSSO token is the same shape, smaller blast radius. Sti
 - [Open Policy Agent (OPA)](https://www.openpolicyagent.org/).
 - [Casbin](https://casbin.apache.org/).
 - [Oso](https://www.osohq.com/).
-- [HackerOne *Hacker-Powered Security Report* (evergreen landing)](https://www.hackerone.com/report/hacker-powered-security). Industry-wide vulnerability-class frequencies.
+- [HackerOne *Security Research Report*](https://www.hackerone.com/report/hacker-powered-security). The annual report formerly called the *Hacker-Powered Security Report*; the link always points at the latest edition. Industry-wide vulnerability-class frequencies.
 - [Semgrep registry](https://semgrep.dev/r/). Search for `idor`, `bola`, `authorization`.
 - [CodeQL](https://codeql.github.com/). GitHub-native semantic code analysis with IDOR-aware queries in the default JavaScript, Python, and Java suites.

@@ -577,7 +577,7 @@ Two hidden bonus finds seed orthogonal lessons. `progress --detail` from anywher
 [^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html).
 [^cis-critical-security-controls-v8]: [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
 [^cis-linux-benchmarks-ubuntu-rhel]: [CIS Linux Benchmarks — Ubuntu / RHEL / CentOS distribution-specific configuration baselines](https://www.cisecurity.org/cis-benchmarks).
-[^owasp-a02-2025]: [OWASP Top 10:2025 — A02:2025 Security Misconfiguration (deep link)](https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/).
+[^owasp-a02-2025]: [OWASP Top 10:2025 — A02:2025 Security Misconfiguration (deep link)](https://top10.owasp.org/2025/A02_2025-Security_Misconfiguration/).
 [^cfr-12-30]: [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030).
 [^cfr-12-53]: [Computer-Security Incident Notification Rule — 12 CFR Part 53 (36-hour clock)](https://www.ecfr.gov/current/title-12/chapter-I/part-53).
 [^interagency-guidance-on-response-programs]: [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and).

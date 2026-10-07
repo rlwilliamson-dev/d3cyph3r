@@ -600,7 +600,7 @@ For broader awareness: every fitness app, every social media platform, every "fi
 
 - [NIST SP 800-218 — Secure Software Development Framework (SSDF) v1.1](https://csrc.nist.gov/pubs/sp/800/218/final). February 2022, Final. The federal-acquisition baseline.
 - [NIST SP 800-53 Rev. 5 — Security and Privacy Controls for Information Systems and Organizations](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). Published September 2020; latest release 5.2.0 (August 2025).
-- [OWASP ASVS v5.0](https://owasp.org/www-project-application-security-verification-standard/). Chapter V13 (Configuration) covers secrets-management. (V14 in v5.0 is *Data Protection* — easy to conflate; cite V13 for secrets specifically.)
+- [OWASP ASVS v5.0](https://owasp.org/projects/asvs). Chapter V13 (Configuration) covers secrets-management. (V14 in v5.0 is *Data Protection* — easy to conflate; cite V13 for secrets specifically.)
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls).
 - [HIPAA Security Rule (45 CFR Part 164, Subpart C)](https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C).
 - [TruffleHog](https://github.com/trufflesecurity/trufflehog). Open-source pre-push / CI scanner. 700+ detectors with verified-credential checks.

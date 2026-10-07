@@ -584,9 +584,9 @@ Using robots.txt to hide things is probably the most reliably wrong piece of web
 [^cwe-552]: [CWE-552 — Files or Directories Accessible to External Parties](https://cwe.mitre.org/data/definitions/552.html).
 [^cwe-200]: [CWE-200 — Exposure of Sensitive Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/200.html).
 [^cwe-798]: [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html).
-[^owasp-top-10-2025]: [OWASP Top 10:2025](https://owasp.org/Top10/2025/).
-[^owasp-a02-2025]: [OWASP Top 10:2025 — A02:2025 Security Misconfiguration (deep link)](https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/).
-[^owasp-a01-2025]: [OWASP Top 10:2025 — A01:2025 Broken Access Control (deep link)](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/).
+[^owasp-top-10-2025]: [OWASP Top 10:2025](https://top10.owasp.org/2025/).
+[^owasp-a02-2025]: [OWASP Top 10:2025 — A02:2025 Security Misconfiguration (deep link)](https://top10.owasp.org/2025/A02_2025-Security_Misconfiguration/).
+[^owasp-a01-2025]: [OWASP Top 10:2025 — A01:2025 Broken Access Control (deep link)](https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/).
 [^first-american-financial-corp-may]: [First American Financial Corp. May 2019 data exposure — KrebsOnSecurity](https://krebsonsecurity.com/2019/05/first-american-financial-corp-leaked-hundreds-of-millions-of-title-insurance-records/).
 [^first-american-sec-enforcement-action]: [First American — SEC enforcement action settlement (June 2021)](https://www.sec.gov/newsroom/press-releases/2021-102).
 [^cve-2023-34362]: [MOVEit Transfer CVE-2023-34362 — NVD entry](https://nvd.nist.gov/vuln/detail/CVE-2023-34362).

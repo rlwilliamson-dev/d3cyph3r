@@ -411,8 +411,8 @@ This is also the shape of why secret-management migrations stall at most consult
 [^cwe-326]: [CWE-326 — Inadequate Encryption Strength](https://cwe.mitre.org/data/definitions/326.html).
 [^cwe-256]: [CWE-256 — Plaintext Storage of a Password](https://cwe.mitre.org/data/definitions/256.html).
 [^cwe-798]: [CWE-798 — Use of Hard-coded Credentials](https://cwe.mitre.org/data/definitions/798.html).
-[^owasp-top-10-2025]: [OWASP Top 10:2025](https://owasp.org/Top10/2025/).
-[^owasp-a04-2025]: [OWASP Top 10:2025 — A04:2025 Cryptographic Failures (deep link)](https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/).
+[^owasp-top-10-2025]: [OWASP Top 10:2025](https://top10.owasp.org/2025/).
+[^owasp-a04-2025]: [OWASP Top 10:2025 — A04:2025 Cryptographic Failures (deep link)](https://top10.owasp.org/2025/A04_2025-Cryptographic_Failures/).
 [^t1552-001]: [MITRE ATT&CK — T1552.001: Unsecured Credentials — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
 [^hashicorp-vault-getting-started]: [HashiCorp Vault — Getting Started](https://developer.hashicorp.com/vault/tutorials/get-started).
 [^aws-secrets-manager-user-guide]: [AWS Secrets Manager — User Guide](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html).

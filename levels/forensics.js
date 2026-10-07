@@ -1585,7 +1585,7 @@ Two weaknesses, and the second one is about the investigators.
        ingest into the SIEM. EZ Tools' EvtxECmd
        (ericzimmerman.github.io) for manual analysis;
        Hayabusa (github.com/Yamato-Security/hayabusa) and
-       Chainsaw (github.com/WithSecureLabs/chainsaw) for
+       Chainsaw (github.com/WithSecureOpenSource/chainsaw) for
        hunting at scale.
 
   4. For DFARS 7012 reporting:

@@ -390,7 +390,7 @@ The bonus finds exist to exercise the schema-reading and key-tracing habits with
 [^cwe-312]: [CWE-312 — Cleartext Storage of Sensitive Information](https://cwe.mitre.org/data/definitions/312.html).
 [^nist-800-57]: [NIST SP 800-57 Part 1 Rev. 5 — Recommendation for Key Management](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final).
 [^nist-800-132]: [NIST SP 800-132 — Recommendation for Password-Based Key Derivation](https://csrc.nist.gov/pubs/sp/800/132/final).
-[^owasp-top-10-2025-a04]: [OWASP Top 10:2025 — A04: Cryptographic Failures](https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/).
+[^owasp-top-10-2025-a04]: [OWASP Top 10:2025 — A04: Cryptographic Failures](https://top10.owasp.org/2025/A04_2025-Cryptographic_Failures/).
 [^lastpass-notice-of-recent-security]: [LastPass — Notice of Recent Security Incident (December 2022 update)](https://blog.lastpass.com/posts/notice-of-recent-security-incident).
 [^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).
 [^cert-security-plus]: [CompTIA Security+ — certification page and exam objectives](https://www.comptia.org/en-us/certifications/security/).

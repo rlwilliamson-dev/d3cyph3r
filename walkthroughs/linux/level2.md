@@ -393,9 +393,9 @@ The bonus finds exist to let curious players exercise the systemic-root-cause an
 [^nist-800-53]: [NIST SP 800-53 Rev. 5 (current Release 5.2.0, August 2025)](https://csrc.nist.gov/pubs/sp/800/53/r5/final).
 [^nist-800-63b]: [NIST SP 800-63B-4 — Digital Identity Guidelines: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html).
 [^cis-critical-security-controls-v8]: [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
-[^owasp-a02-2025]: [OWASP Top 10:2025 — A02:2025 Security Misconfiguration](https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/).
-[^owasp-a06-2025]: [OWASP Top 10:2025 — A06:2025 Insecure Design](https://owasp.org/Top10/2025/A06_2025-Insecure_Design/).
-[^owasp-a09-2025]: [OWASP Top 10:2025 — A09:2025 Security Logging and Alerting Failures](https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/).
+[^owasp-a02-2025]: [OWASP Top 10:2025 — A02:2025 Security Misconfiguration](https://top10.owasp.org/2025/A02_2025-Security_Misconfiguration/).
+[^owasp-a06-2025]: [OWASP Top 10:2025 — A06:2025 Insecure Design](https://top10.owasp.org/2025/A06_2025-Insecure_Design/).
+[^owasp-a09-2025]: [OWASP Top 10:2025 — A09:2025 Security Logging and Alerting Failures](https://top10.owasp.org/2025/A09_2025-Security_Logging_and_Alerting_Failures/).
 [^cfr-12-30]: [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030).
 [^cfr-12-53]: [Computer-Security Incident Notification Rule — 12 CFR Part 53 (36-hour clock)](https://www.ecfr.gov/current/title-12/chapter-I/part-53).
 [^interagency-guidance-on-response-programs]: [Interagency Guidance on Response Programs and Customer Notice (2005)](https://www.federalregister.gov/documents/2005/03/29/05-5980/interagency-guidance-on-response-programs-for-unauthorized-access-to-customer-information-and).
