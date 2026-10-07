@@ -387,7 +387,7 @@ NIST Special Publication 800-53 Revision 5, the federal control catalog and, out
 
 **OWASP API Security Top 10 (2023), API2: Broken Authentication.**[^owasp-api-security-top-10] The API-specific list, last updated in 2023, names JWT misuse explicitly: accepting unsigned or weakly signed tokens (`{"alg":"none"}`), not validating expiry, and weak keys.
 
-**OWASP JWT Cheat Sheet.** The focused defender reference (<https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html>). On algorithm confusion its advice is to "hardcode the accepted algorithms" and not mix public-key signature algorithms with MAC algorithms. The tester's companion is OWASP's WSTG chapter on testing JSON Web Tokens (<https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/06-Session_Management_Testing/10-Testing_JSON_Web_Tokens>).
+**OWASP JWT Cheat Sheet.** The focused defender reference (<https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html>). On algorithm confusion its advice is to "hardcode the accepted algorithms" and not mix public-key signature algorithms with MAC algorithms. The tester's companion is OWASP's WSTG chapter on testing JSON Web Tokens (<https://wstg.owasp.org/latest/4-Web_Application_Security_Testing/06-Session_Management/10-JSON_Web_Tokens/>).
 
 ### RFCs
 
@@ -654,8 +654,8 @@ For JWT specifically, **always pass the `algorithms` parameter on every `verify(
 [^cve-2018-0114]: [CVE-2018-0114 (NVD)](https://nvd.nist.gov/vuln/detail/CVE-2018-0114). The node-jose embedded-`jwk` key-injection disclosure (Cisco).
 [^pci-dss-v4-0-1]: [PCI-DSS v4.0.1 full text (PCI Security Standards Council)](https://www.pcisecuritystandards.org/document_library/). Free registration required. The Requirement 6 and 8 sections cover authentication and secure coding directly.
 [^nist-800-53]: [NIST SP 800-53 Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). The IA, SC, AC, and AU control families cover the controls cited above.
-[^owasp-top-10-2025]: [OWASP Top 10 (2025)](https://owasp.org/Top10/). The current edition.
-[^owasp-api-security-top-10]: [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x00-header/). The API-focused companion. Last updated in 2023; the 2025 cycle is in draft.
+[^owasp-top-10-2025]: [OWASP Top 10 (2025)](https://top10.owasp.org/). The current edition.
+[^owasp-api-security-top-10]: [OWASP API Security Top 10 (2023)](https://api-security.owasp.org/editions/2023/en/0x00-header/). The API-focused companion. Last updated in 2023; the 2025 cycle is in draft.
 [^owasp-jwt-cheat-sheet]: [OWASP JWT Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html).
 [^semgrep-registry-jwt-rules]: [Semgrep registry — JWT rules](https://semgrep.dev/r/?q=jwt). Community-maintained static-analysis rules for the JWT misconfiguration patterns.
 [^cert-cissp]: [ISC2 CISSP — certification exam outline](https://www.isc2.org/certifications/cissp/cissp-certification-exam-outline).

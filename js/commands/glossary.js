@@ -194,7 +194,7 @@ Exceptional Conditions.
 The list is awareness-grade, not comprehensive — it ranks
 prevalence and exploitability, not all known web risks.
 
-See also: https://owasp.org/Top10/`,
+See also: https://top10.owasp.org/`,
 
   ASVS: `OWASP ASVS — Application Security Verification Standard
 
@@ -207,7 +207,7 @@ published May 2025.
 Used as a contract requirement, audit checklist, or pen-test
 scoping document. Much more comprehensive than the Top 10.
 
-See also: https://owasp.org/www-project-application-security-verification-standard/`,
+See also: https://owasp.org/projects/asvs`,
 
   WSTG: `OWASP WSTG — Web Security Testing Guide
 
@@ -220,7 +220,7 @@ identifier.
 Companion to the Testing Guide is the MASTG (Mobile Application
 Security Testing Guide).
 
-See also: https://owasp.org/www-project-web-security-testing-guide/`,
+See also: https://owasp.org/projects/web-security-testing-guide`,
 
   // ─── Specific CWEs (the ones cited most in lessons-learned) ──────
   "CWE-200": `CWE-200 — Exposure of Sensitive Information to Unauthorized Actor

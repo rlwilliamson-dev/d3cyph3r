@@ -457,7 +457,7 @@ The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/
 [^cwe-668]: [CWE-668 — Exposure of Resource to Wrong Sphere (parent; MITRE flags as "Discouraged" for mapping)](https://cwe.mitre.org/data/definitions/668.html).
 [^cwe-1392]: [CWE-1392 — Use of Default Credentials](https://cwe.mitre.org/data/definitions/1392.html).
 [^cwe-798]: [CWE-798 — Use of Hard-coded Credentials (closely related)](https://cwe.mitre.org/data/definitions/798.html).
-[^owasp-top-10-2025]: [OWASP Top 10:2025](https://owasp.org/Top10/2025/).
+[^owasp-top-10-2025]: [OWASP Top 10:2025](https://top10.owasp.org/2025/).
 [^hhs-hph-cpgs-healthcare-and]: [HHS HPH-CPGs (Healthcare and Public Health Cybersecurity Performance Goals)](https://hphcyber.hhs.gov/performance-goals.html).
 [^universal-health-services-september-2020]: [Universal Health Services September 2020 ransomware — 8-K filing (direct)](https://www.sec.gov/Archives/edgar/data/352915/000156459020044863/uhs-8k_20200927.htm).
 [^universal-health-services-sec-filings]: [Universal Health Services SEC filings index (EDGAR)](https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000352915&type=8-K).

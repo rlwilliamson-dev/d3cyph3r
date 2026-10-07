@@ -364,7 +364,7 @@ The bonus finds exist to exercise the systemic-root-cause pattern without leavin
 [^nist-800-53]: [NIST SP 800-53 Rev. 5 — AC-6 Least Privilege (current Release 5.2.0)](https://csrc.nist.gov/pubs/sp/800/53/r5/final).
 [^cis-critical-security-controls-v8]: [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/v8-1).
 [^cis-safeguard-5-3]: [CIS Controls Navigator — Safeguards 5.3 / 5.4 / 4.7 / 3.11](https://www.cisecurity.org/controls/cis-controls-navigator).
-[^owasp-a01-2025]: [OWASP Top 10:2025 — A01:2025 Broken Access Control](https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/).
+[^owasp-a01-2025]: [OWASP Top 10:2025 — A01:2025 Broken Access Control](https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/).
 [^cfr-12-30]: [Interagency Guidelines Establishing Information Security Standards — 12 CFR Pt. 30 App. B](https://www.ecfr.gov/current/title-12/chapter-I/part-30/appendix-Appendix%20B%20to%20Part%2030).
 [^ftc-safeguards-rule-2023-amendments]: [FTC Safeguards Rule — 2023 amendments (security-event notification, 30-day clock)](https://www.ftc.gov/news-events/news/press-releases/2023/10/ftc-amends-safeguards-rule-require-non-banking-financial-institutions-report-data-security-breaches).
 [^cisco-ex-employee-webex-deletion]: [Cisco ex-employee WebEx deletion (2018) — DOJ press release](https://www.justice.gov/usao-ndca/pr/san-jose-man-pleads-guilty-damaging-cisco-s-network).

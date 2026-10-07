@@ -239,7 +239,7 @@ BluePier's handler did the opposite — string concatenation — and three failu
 
 And the prize compounds a fourth: **the DB-admin credential stored in plaintext in a database table (CWE-312 / CWE-522).**[^cwe-312][^cwe-522] Credentials belong in a secrets manager, never in a row an injection can read.
 
-A note on the threat landscape. In the [OWASP Top 10:2025](https://owasp.org/Top10/), Injection sits at **A05** — it dropped from A03:2021 (and from #1 in the 2013/2017 editions). That decline is real and it's good news: parameterized queries and ORMs are now the framework default, so classic SQLi is genuinely less common than it was a decade ago. But "less common" is not "gone," and when it lands the impact is total — as MOVEit (§4) demonstrated in 2023. Meridian's catalog is exactly the kind of code that slips through: a 2021 hand-built query, inherited and never rewritten, on a subdomain nobody re-reviewed.
+A note on the threat landscape. In the [OWASP Top 10:2025](https://top10.owasp.org/), Injection sits at **A05** — it dropped from A03:2021 (and from #1 in the 2013/2017 editions). That decline is real and it's good news: parameterized queries and ORMs are now the framework default, so classic SQLi is genuinely less common than it was a decade ago. But "less common" is not "gone," and when it lands the impact is total — as MOVEit (§4) demonstrated in 2023. Meridian's catalog is exactly the kind of code that slips through: a 2021 hand-built query, inherited and never rewritten, on a subdomain nobody re-reviewed.
 
 ## §3.5 — Blast radius
 
@@ -300,11 +300,11 @@ The through-line across all four: SQL injection's prevalence has fallen, but its
 
 **CWE-312 / CWE-522: Cleartext Storage of Sensitive Information / Insufficiently Protected Credentials.** The `meridian_dbadmin` password stored in plaintext in `app_config`. ([MITRE CWE-312](https://cwe.mitre.org/data/definitions/312.html), [CWE-522](https://cwe.mitre.org/data/definitions/522.html))
 
-**OWASP Top 10:2025 — A05 Injection.** The umbrella category. Injection is A05 in the 2025 edition, down from A03:2021 (and from the #1 slot in the 2013 and 2017 editions). The decline reflects the industry-wide adoption of parameterized queries and ORMs — not that the bug is solved. ([OWASP Top 10:2025](https://owasp.org/Top10/))
+**OWASP Top 10:2025 — A05 Injection.** The umbrella category. Injection is A05 in the 2025 edition, down from A03:2021 (and from the #1 slot in the 2013 and 2017 editions). The decline reflects the industry-wide adoption of parameterized queries and ORMs — not that the bug is solved. ([OWASP Top 10:2025](https://top10.owasp.org/))
 
 **OWASP SQL Injection Prevention Cheat Sheet.** The single most-cited defender reference. Its primary defense is "use of prepared statements (with parameterized queries)"; secondary defenses are stored procedures, allow-list input validation, and escaping (in that priority order). ([OWASP Cheat Sheet Series — SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html))
 
-**OWASP Web Security Testing Guide (WSTG).** The offensive-side reference: WSTG-INPV-05 (Testing for SQL Injection) documents the exact methodology this level walks — error-based probing, UNION-based extraction, `information_schema` enumeration. ([OWASP WSTG](https://owasp.org/www-project-web-security-testing-guide/))
+**OWASP Web Security Testing Guide (WSTG).** The offensive-side reference: WSTG-INPV-05 (Testing for SQL Injection) documents the exact methodology this level walks — error-based probing, UNION-based extraction, `information_schema` enumeration. ([OWASP WSTG](https://owasp.org/projects/web-security-testing-guide))
 
 **NIST SP 800-53 Rev. 5.**[^nist-800-53]
 - **SI-10 (Information Input Validation)** — the control directly addressing injection: validate/neutralize input before it reaches an interpreter.
@@ -467,8 +467,8 @@ The level3 credential — **`M3rid14n-DBr00t!2026`** — is the `meridian_dbadmi
 
 - [PortSwigger Web Security Academy — SQL injection](https://portswigger.net/web-security/sql-injection). — the best free hands-on labs, including UNION attacks and information_schema enumeration.
 - [OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html). — the canonical defender reference; prepared statements first.
-- [OWASP Web Security Testing Guide — Testing for SQL Injection](https://owasp.org/www-project-web-security-testing-guide/). — the offensive methodology (WSTG-INPV-05).
-- [OWASP Top 10:2025](https://owasp.org/Top10/). — A05 Injection.
+- [OWASP Web Security Testing Guide — Testing for SQL Injection](https://owasp.org/projects/web-security-testing-guide). — the offensive methodology (WSTG-INPV-05).
+- [OWASP Top 10:2025](https://top10.owasp.org/). — A05 Injection.
 - [sqlmap](https://sqlmap.org/). — the tool that automates the entire §2 sequence; understanding it by hand first is the point of this level.
 - [Heartland Payment Systems 2008 Albert Gonzalez (SQLi methodology)](https://en.wikipedia.org/wiki/Albert_Gonzalez).
 - [Heartland breach scope](https://en.wikipedia.org/wiki/Heartland_Payment_Systems#Security_breach).

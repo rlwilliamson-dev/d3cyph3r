@@ -475,7 +475,7 @@ The level3 credential — `T3mp-DevopsCI-HD8814!q2` — is in `/var/log/exim/aut
 - [Wikipedia DigiNotar consolidated case study](https://en.wikipedia.org/wiki/DigiNotar).
 - [Wikipedia Sony Pictures hack 2014](https://en.wikipedia.org/wiki/Sony_Pictures_hack). (the original US-CERT TA14-353A advisory now circulates as a PDF in archives).
 - [SpecterOps Certified Pre-Owned: Active Directory Certificate Services attack surface](https://specterops.io/blog/2021/06/17/certified-pre-owned/). by Will Schroeder and Lee Christensen.
-- [OWASP Top 10:2025](https://owasp.org/Top10/). — A02 Security Misconfiguration, A04 Cryptographic Failures.
+- [OWASP Top 10:2025](https://top10.owasp.org/). — A02 Security Misconfiguration, A04 Cryptographic Failures.
 - [OWASP Transport Layer Protection Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html). — modern TLS configuration guide.
 - [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls/cis-controls-list). — Controls 3.10, 4.6, 12.5 covered above.
 - [HIPAA Security Rule NPRM (January 2025)](https://www.federalregister.gov/documents/2025/01/06/2024-30983/hipaa-security-rule-to-strengthen-the-cybersecurity-of-electronic-protected-health-information). — proposed strengthening of encryption requirements (comment period closed March 7, 2025).

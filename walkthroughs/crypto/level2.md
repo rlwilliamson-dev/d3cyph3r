@@ -261,7 +261,7 @@ misunderstanding the whole level exists to correct.
 
 **PCI-DSS v4.0.1 §8.3.2 — Strong Cryptography for Password Hashing.** Requires a one-way cryptographic function that includes a salt. Theo's MD5 unsalted fails both clauses. The PCI QSA's job on Vesta's audit includes confirming that authentication credentials are stored per §8.3.2; the file you just found is the negative finding.
 
-**OWASP Top 10 (2025) — A02 Security Misconfiguration + A04 Cryptographic Failures.** Both apply. A02 covers the broad class "credentials in source control with weak protection." A04 (the modern name for "Sensitive Data Exposure") covers the specific MD5-unsalted choice. ([OWASP Top 10](https://owasp.org/Top10/))
+**OWASP Top 10 (2025) — A02 Security Misconfiguration + A04 Cryptographic Failures.** Both apply. A02 covers the broad class "credentials in source control with weak protection." A04 (the modern name for "Sensitive Data Exposure") covers the specific MD5-unsalted choice. ([OWASP Top 10](https://top10.owasp.org/))
 
 **OWASP Application Security Verification Standard (ASVS) v4.0.3.** V2.4 (Credential Storage) verifies that any password hash uses Argon2 / bcrypt / scrypt / PBKDF2 with appropriate parameters AND includes salt. ([OWASP ASVS GitHub repo](https://github.com/OWASP/ASVS))
 
@@ -451,7 +451,7 @@ The level3 credential — `TheoVesta!1` — is the AES backup encryption passwor
 - [gitleaks](https://github.com/gitleaks/gitleaks). — pre-commit + repo-history secret scanner.
 - [trufflesecurity / trufflehog](https://github.com/trufflesecurity/trufflehog). — entropy-aware secret scanner.
 - [PCI Security Standards Council document library](https://www.pcisecuritystandards.org/document_library/). — PCI-DSS v4.0.1 §3.5.1 (Strong Cryptography for Account Data) + §8.3.2 (Strong Cryptography for Password Hashing).
-- [OWASP Top 10:2025](https://owasp.org/Top10/). — A02 Security Misconfiguration, A04 Cryptographic Failures.
+- [OWASP Top 10:2025](https://top10.owasp.org/). — A02 Security Misconfiguration, A04 Cryptographic Failures.
 - [T1110.002 — Brute Force: Password Cracking](https://attack.mitre.org/techniques/T1110/002/).
 - [T1552.001 — Credentials In Files](https://attack.mitre.org/techniques/T1552/001/).
 - [T1078 — Valid Accounts](https://attack.mitre.org/techniques/T1078/).

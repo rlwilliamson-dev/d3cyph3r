@@ -394,7 +394,7 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 
 **Trigger:** `curl https://web.archive.org/web/20110210161500/http://www.aaronhines.net/robots.txt`
 
-**What it teaches:** the archived 2011 `robots.txt` lists `Disallow:` paths pointing at exactly what Aaron wanted hidden — an old CV PDF, a `/backup/` directory, and a draft of the `saltyhelm` sailing blog (which corroborates the alias pivot independently of the homepage). robots.txt tells crawlers what to skip; it tells a human analyst precisely where to look. It's a *disclosure* control, never an *access* control — formalized in [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309.html) and tested under OWASP [WSTG-INFO-03](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage). The defender fix is to move private content off the public server, not to `Disallow` it.
+**What it teaches:** the archived 2011 `robots.txt` lists `Disallow:` paths pointing at exactly what Aaron wanted hidden — an old CV PDF, a `/backup/` directory, and a draft of the `saltyhelm` sailing blog (which corroborates the alias pivot independently of the homepage). robots.txt tells crawlers what to skip; it tells a human analyst precisely where to look. It's a *disclosure* control, never an *access* control — formalized in [RFC 9309](https://www.rfc-editor.org/rfc/rfc9309.html) and tested under OWASP [WSTG-INFO-03](https://wstg.owasp.org/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage/). The defender fix is to move private content off the public server, not to `Disallow` it.
 
 ## §8 — Key takeaways
 
@@ -418,7 +418,7 @@ The credential chain works without this section. `level2@osint` seeds two bonus 
 
 [^google-retires-the-cached-link]: [Google retires the "Cached" link (Feb 2024)](https://searchengineland.com/google-search-officially-retires-cache-link-437122). Search Liaison Danny Sullivan confirmed the removal and suggested the Internet Archive as the replacement.
 [^rfc-9309]: [RFC 9309 — Robots Exclusion Protocol (September 2022)](https://www.rfc-editor.org/rfc/rfc9309.html). The IETF standardization of robots.txt.
-[^owasp-wstg-info-03-review]: [OWASP WSTG-INFO-03 — Review Webserver Metafiles for Information Leakage](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage).
+[^owasp-wstg-info-03-review]: [OWASP WSTG-INFO-03 — Review Webserver Metafiles for Information Leakage](https://wstg.owasp.org/latest/4-Web_Application_Security_Testing/01-Information_Gathering/03-Review_Webserver_Metafiles_for_Information_Leakage/).
 [^ross-ulbricht-altoid-deanonymization-wikipedia]: [Ross Ulbricht / "altoid" deanonymization (Wikipedia, with the `rossulbricht@gmail.com` forum-post detail)](https://en.wikipedia.org/wiki/Ross_Ulbricht).
 [^strava-global-heatmap-exposure-january]: [Strava global heatmap exposure (January 2018)](https://www.theguardian.com/world/2018/jan/28/fitness-tracking-app-gives-away-location-of-secret-us-army-bases). The forgotten-footprint / location-leak pattern.
 [^nist-800-53]: [NIST SP 800-53 Rev. 5 — IA-5 (Authenticator Management)](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). Revoke/replace a compromised authenticator.

@@ -384,7 +384,7 @@ description: |
   username field by mistake.
 status: experimental
 references:
-  - https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625
+  - https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4625
 logsource:
   product: windows
   service: security
@@ -421,7 +421,7 @@ For aggregation: ship Security.evtx and Sysmon logs via Windows Event Forwarding
 
 - **EvtxECmd** (ericzimmerman.github.io). Eric Zimmerman's EZ Tools command-line .evtx parser.[^eric-zimmerman-blog] The go-to for offline triage.
 - **Hayabusa** (github.com/Yamato-Security/hayabusa). Yamato Security's threat-hunting tool that ships with thousands of pre-built detection rules in Sigma format, applied to .evtx files in bulk.[^hayabusa]
-- **Chainsaw** (github.com/WithSecureLabs/chainsaw). WithSecure Labs' tool that searches .evtx files using YAML detection rules.[^chainsaw] Often used alongside Hayabusa for cross-validation.
+- **Chainsaw** (github.com/WithSecureOpenSource/chainsaw). WithSecure Labs' tool that searches .evtx files using YAML detection rules.[^chainsaw] Often used alongside Hayabusa for cross-validation.
 - **KAPE** (kape.kroll.com). Kroll Artifact Parser and Extractor; a triage-collection tool that pulls a curated set of forensic artifacts from a running system, including the Security log and a long list of supporting artifacts.
 
 ### For DFARS 7012 reporting
@@ -511,14 +511,14 @@ For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-e
 [^t1059-003]: [MITRE ATT&CK T1059.003 — Command and Scripting Interpreter: Windows Command Shell](https://attack.mitre.org/techniques/T1059/003/).
 [^t1567-002]: [MITRE ATT&CK T1567.002 — Exfiltration Over Web Service: Exfiltration to Cloud Storage](https://attack.mitre.org/techniques/T1567/002/).
 [^event-4624]: [Event 4624 (Logon)](https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4624).
-[^event-4625]: [Event 4625 (Failed Logon)](https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625). The reference for SubStatus codes including 0xC0000064 / 0xC000006A.
+[^event-4625]: [Event 4625 (Failed Logon)](https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4625). The reference for SubStatus codes including 0xC0000064 / 0xC000006A.
 [^event-4663]: [Event 4663 (Object Access)](https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4663).
 [^event-4688]: [Event 4688 (Process Creation)](https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4688). Includes the command-line capture setting.
 [^windows-event-forwarding-for-intrusion]: [Windows Event Forwarding for Intrusion Detection](https://learn.microsoft.com/en-us/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection).
 [^swiftonsecurity-sysmon-config]: [SwiftOnSecurity Sysmon config](https://github.com/SwiftOnSecurity/sysmon-config). Practitioner-default starter configuration.
 [^olaf-hartong-s-sysmon-modular]: [Olaf Hartong's sysmon-modular](https://github.com/olafhartong/sysmon-modular). Modular alternative.
 [^hayabusa]: [Hayabusa](https://github.com/Yamato-Security/hayabusa). Yamato Security's threat-hunting tool with built-in Sigma rules.
-[^chainsaw]: [Chainsaw](https://github.com/WithSecureLabs/chainsaw). WithSecure Labs' .evtx search tool.
+[^chainsaw]: [Chainsaw](https://github.com/WithSecureOpenSource/chainsaw). WithSecure Labs' .evtx search tool.
 [^target-2013-breach-senate-commerce]: [Target 2013 breach — Senate Commerce Committee report (March 2014)](https://www.commerce.senate.gov/wp-content/uploads/media/doc/2014%200325%20Target%20Kill%20Chain%20Analysis.pdf). Includes process-creation timeline pulled from Windows event logs.
 [^sony-pictures-2014-fbi-update]: [Sony Pictures 2014 — FBI update (December 2014)](https://www.fbi.gov/news/press-releases/update-on-sony-investigation). Cites WIPALL anti-forensic event-log destruction.
 [^mandiant-sunburst-writeup-december-2020]: [Mandiant SUNBURST writeup (December 2020)](https://cloud.google.com/blog/topics/threat-intelligence/sunburst-additional-technical-details/). Event-log forensics is a primary detection mechanism. (Mandiant content moved to Google Cloud post-acquisition; original `mandiant.com/resources/blog/...` URL redirects here.)
