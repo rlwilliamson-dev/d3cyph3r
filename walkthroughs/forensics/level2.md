@@ -560,7 +560,7 @@ Return to the lobby: `ssh guest@d3cyph3r`. The next breadcrumb is in your hand.
 [^iso-27037]: [ISO/IEC 27037:2012 — Guidelines for identification, collection, acquisition and preservation of digital evidence](https://www.iso.org/standard/44381.html). International equivalent to 800-86; covers the same four-phase model.
 [^cfr-32-2002]: [32 CFR Part 2002 — Controlled Unclassified Information](https://www.ecfr.gov/current/title-32/subtitle-B/chapter-XX/part-2002). The CUI Program regulation under the National Archives.
 [^national-archives-cui-program]: [National Archives CUI Program](https://www.archives.gov/cui). Cross-government program landing; canonical reference for the CUI Marking Handbook and category index.
-[^dfars-252-204-7012-safeguarding]: [DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting](https://www.ecfr.gov/current/title-48/chapter-2/subchapter-H/part-252/subpart-252.2/section-252.204-7012.). 72-hour reporting clock authority.
+[^dfars-252-204-7012-safeguarding]: [DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting](https://www.ecfr.gov/current/title-48/chapter-2/subchapter-H/part-252/subpart-252.2/section-252.204-7012). 72-hour reporting clock authority.
 [^sqlite-wal-mode]: [SQLite WAL mode](https://www.sqlite.org/wal.html). The journal-page mechanism that lets historical row data survive deletion.
 [^sans-for500]: [SANS FOR500](https://www.sans.org/cyber-security-courses/windows-forensic-analysis/).
 [^chrome-enterprise-policy-list]: [Chrome Enterprise policy list](https://chromeenterprise.google/policies/). The catalog defenders should configure.
