@@ -1156,7 +1156,7 @@ Return to the lobby:    ssh guest@d3cyph3r`
   // Lesson: credentials in DB row values are the same anti-pattern
   // as credentials in source-control files. CWE-798 + CWE-540 +
   // CWE-312. T1078 + T1213 + T1552.001 (DB rows as the credentials-
-  // in-files analog). SOC 2 CC6.1/CC6.2/CC6.6/CC7.1 +
+  // in-files analog). SOC 2 CC6.1/CC6.2/CC6.6/CC7.2 +
   // NIST SP 800-53 Rev. 5 IA-5(7) + NAIC §4.D/§6 + NYDFS 500.7/500.17
   // + GLBA Safeguards 314.4(c)(4)/314.5. AWS Secrets Manager +
   // Database Activity Streams + GuardDuty RDS Protection +
@@ -1633,8 +1633,9 @@ found:
      extension). This entry suggests someone used the leaked
      credential to enumerate the schema on 2026-05-20, two
      days before Coverline made the bucket private. Cross-
-     reference with CloudTrail + VPC Flow Logs to identify
-     the source IP.
+     reference with VPC Flow Logs to identify the source
+     IP. (CloudTrail records RDS API calls, not database
+     logins, so it won't show this connection.)
 
   5. The \`users\` table shows a terminated former employee
      (\`vikram.shah\`, role \`senior_devops\`, terminated
@@ -1735,8 +1736,8 @@ findings stack from the two engagements:
     public bucket. CC6.1 gap.
   - Today: secondary credentials in DB rows, dormant employee
     account, possible unauthorized schema-enumeration query.
-    CC6.2 (System User Management) gap; CC7.1 (Detection)
-    gap as well.
+    CC6.2 (System User Management) gap; CC7.2 (Monitoring
+    for anomalies) gap as well.
 
 The breach-notification math now turns on:
 
@@ -1744,9 +1745,10 @@ The breach-notification math now turns on:
      query was followed by data exfiltration. The
      \`pg_tables\` query alone is reconnaissance; if
      subsequent queries SELECTed from claims / customers /
-     policies, that's a different story. CloudTrail + VPC
-     Flow Logs + (if enabled) Database Activity Streams
-     together determine this.
+     policies, that's a different story. VPC Flow Logs
+     (where the connection came from, how much it moved)
+     plus Database Activity Streams, if they were enabled
+     (what it actually queried), together determine this.
 
   2. Whether the broker-portal migration credential
      (\`Cv-BrokerSvc-Pr0d-2024-Migration\`) was used by any
@@ -1859,11 +1861,13 @@ Two weaknesses, and a missing log.
      - Disable / delete the dormant \`vikram.shah\` database
        account.
      - Pull the source IP for the 2026-05-20 02:14 anomalous
-       query from CloudTrail + VPC Flow Logs. Sloane's team
-       needs this for the breach-notification analysis.
-     - Enable pgaudit on the RDS cluster with source-IP
-       capture. The configuration gap that made the 2026-
-       05-20 finding hard to attribute should not persist.
+       query from VPC Flow Logs. Sloane's team needs this
+       for the breach-notification analysis.
+     - Turn on connection logging and pgaudit on the RDS
+       cluster, so every login and query is logged with its
+       source address. The configuration gap that made the
+       2026-05-20 finding hard to attribute should not
+       persist.
 
   2. For Coverline's broader secrets-handling posture, this
      quarter:
@@ -2209,14 +2213,14 @@ Return to the lobby:    ssh guest@d3cyph3r`
         // finding is key AGE, not dormancy.
         accessKeyLastUsed: {
           "AKIAVSHAH2022DEVOPSX": { UserName: "vikram.shah",          LastUsedDate: "2024-01-29 16:50:33", ServiceName: "ec2",            Region: "us-east-2" },
-          "AKIABRKRPORTALSVC024": { UserName: "broker-portal-svc",    LastUsedDate: "2026-06-01 08:02:11", ServiceName: "iam",            Region: "us-east-2" },
+          "AKIABRKRPORTALSVC024": { UserName: "broker-portal-svc",    LastUsedDate: "2026-05-26 08:02:11", ServiceName: "iam",            Region: "us-east-2" },
           "AKIA7X4DEPLOYB0T2024": { UserName: "legacy-deploy-bot",    LastUsedDate: "2024-03-02 07:41:55", ServiceName: "s3",             Region: "us-east-2" },
           "AKIAMIGRUNNERB0T024X": { UserName: "migration-runner-bot", LastUsedDate: "2024-04-30 23:18:02", ServiceName: "s3",             Region: "us-east-2" },
-          "AKIA3RC1DEPLOY2019XQ": { UserName: "ci-deploy-svc",        LastUsedDate: "2026-05-31 02:14:50", ServiceName: "codedeploy",     Region: "us-east-2" },
-          "AKIABACKUPSVC2023RDS": { UserName: "backup-svc",           LastUsedDate: "2026-06-01 03:05:00", ServiceName: "rds",            Region: "us-east-2" },
-          "AKIANAICEXCH2024SFTP": { UserName: "naic-exchange-svc",    LastUsedDate: "2026-05-28 06:00:00", ServiceName: "s3",             Region: "us-east-2" },
-          "AKIATERRAFRMC12024XQ": { UserName: "terraform-ci",         LastUsedDate: "2026-05-30 19:22:41", ServiceName: "cloudformation", Region: "us-east-2" },
-          "AKIAMONITORINGSVC024": { UserName: "monitoring-svc",       LastUsedDate: "2026-06-01 07:59:00", ServiceName: "monitoring",     Region: "us-east-2" },
+          "AKIA3RC1DEPLOY2019XQ": { UserName: "ci-deploy-svc",        LastUsedDate: "2026-05-25 02:14:50", ServiceName: "codedeploy",     Region: "us-east-2" },
+          "AKIABACKUPSVC2023RDS": { UserName: "backup-svc",           LastUsedDate: "2026-05-26 03:05:00", ServiceName: "rds",            Region: "us-east-2" },
+          "AKIANAICEXCH2024SFTP": { UserName: "naic-exchange-svc",    LastUsedDate: "2026-05-22 06:00:00", ServiceName: "s3",             Region: "us-east-2" },
+          "AKIATERRAFRMC12024XQ": { UserName: "terraform-ci",         LastUsedDate: "2026-05-24 19:22:41", ServiceName: "cloudformation", Region: "us-east-2" },
+          "AKIAMONITORINGSVC024": { UserName: "monitoring-svc",       LastUsedDate: "2026-05-26 07:59:00", ServiceName: "monitoring",     Region: "us-east-2" },
         },
         // Account posture (get-account-summary). AWS encodes booleans
         // as 0/1. AccountAccessKeysPresent = 1 (root key — CIS 2.4,
