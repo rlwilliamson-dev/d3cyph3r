@@ -339,7 +339,7 @@ The enterprise-IR cert.[^cert-gcih] Less forensics-deep, more incident-process-b
 
 ### GIAC GCDA — Certified Detection Analyst
 
-SOC/SIEM-side cert (formerly branded as "Continuous Monitoring & Security Operations Analyst"). Detection engineering, log pipeline design, threat hunting in event-log data, Sigma rules. Feeds from SANS SEC555 (recently renamed to "Detection Engineering and SIEM Analytics", previously "SIEM with Tactical Analytics"). GCDA is the natural pursuit for someone who wants to build the detection content rather than respond to its alerts.
+The SOC and SIEM side: detection engineering, log pipeline design, threat hunting in event-log data, Sigma rules. It pairs with SANS SEC555 (now "Detection Engineering and SIEM Analytics", previously "SIEM with Tactical Analytics"). GCDA is the natural pursuit for someone who wants to build the detection content rather than respond to its alerts.
 
 ### CompTIA CySA+ (CS0-003 / CS0-004)
 
