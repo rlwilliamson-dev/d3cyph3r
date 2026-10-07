@@ -132,7 +132,9 @@ Driftwood handler: Priya
 Client counterparts: Theo (backend engineer, ~18 months at Vesta)
                      Saanvi (CTO)
 Compliance regime: PCI-DSS v4.0.1. Vesta is a Level 2 merchant
-                   (1M-6M transactions/year, scaled up from
+                   (1M-6M Visa transactions/year; levels are
+                   counted per card brand, so ~12M across four
+                   brands still lands here. Scaled up from
                    Level 3 in 2024). Annual Self-Assessment
                    Questionnaire (SAQ D); QSA on-site review
                    every other year.

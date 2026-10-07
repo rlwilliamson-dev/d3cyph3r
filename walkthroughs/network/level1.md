@@ -190,7 +190,7 @@ Two enforcement modes are in common use. An **IP-based ACL** (`allow-transfer { 
 
 That is CWE-306, *Missing Authentication for Critical Function*.[^cwe-306] Full zone replication is about as critical as DNS functions get, since the response contains every record in the zone, every hostname, every mail pointer and every free-form text record anybody ever attached. The requirement to authenticate it has been in the standards literature since the late 1990s. Failing to enforce it is mundane: the operator did not know, did not configure it, or configured something that never took effect.
 
-CWE-306 has appeared on the CWE Top 25 repeatedly, because the general pattern of a critical function exposed without authentication turns up across every kind of protocol and system. The DNS version is one of the cheapest to fix and one of the most consistently overlooked.
+CWE-306 keeps returning to the CWE Top 25 (18th in 2022, 25th in 2024, 21st in 2025),[^cwe-top-25-2025] because the general pattern of a critical function exposed without authentication turns up across every kind of protocol and system. The DNS version is one of the cheapest to fix and one of the most consistently overlooked.
 
 ### Failure 4: A live credential was stored in a public-readable record (CWE-200, with caveat)
 
@@ -202,7 +202,7 @@ A useful companion is CWE-540, *Inclusion of Sensitive Information in Source Cod
 
 ### Failure 5: The "temporary" service account was never deprovisioned (the sticky-account anti-pattern)
 
-The `audit-bypass` account was created for a one-off event, the "Tessera Q4 dry-run", presumably an external compliance audit Atlas was preparing for, and was supposed to disappear when that audit closed. It did not. The TXT record itself says "scheduled removal end of Q4". Q4 2025 ended five months before this level, and the account is still live and still advertised in DNS.
+The `audit-bypass` account was created for a one-off event, the "Tessera Q4 dry-run", presumably an external compliance audit Atlas was preparing for, and was supposed to disappear when that audit closed. It did not. The TXT record itself says "scheduled removal end of Q4". Q4 2025 ended more than three months before this level, and the account is still live and still advertised in DNS.
 
 This is the sticky-account anti-pattern, well documented in IAM literature and named in several frameworks:
 
@@ -302,11 +302,11 @@ The audit-bypass account, created for a one-off vendor audit dry-run and never r
 
 The **SolarWinds Orion supply-chain compromise (disclosed December 2020)** started with a compromised build pipeline, but the remediation guidance that followed kept coming back to identity. CISA's advisories, AA20-352A ("Advanced Persistent Threat Compromise of Government Agencies, Critical Infrastructure, and Private Sector Organizations") and AR21-134A ("Eviction Guidance for Networks Affected by the SolarWinds and Active Directory/M365 Compromise"), treat service-account and identity-platform hygiene as recurring remediation themes.
 
-The **Okta support-system breach (October 2023)** is a cousin of today's finding. The initial access came through credentials for a service account that an Okta employee had saved to a personal Google account, which an attacker then compromised. A service account's credential, living somewhere it never should have been, became the way in.
+The **Okta support-system breach (October 2023)** is a cousin of today's finding.[^okta-support-system-rca-2023] Okta's root-cause report traces the access to a service account stored in the support system itself, with permissions to view and update customer support cases. An employee had saved its username and password to a personal Google profile signed into Chrome on an Okta-managed laptop, and Okta names a compromise of that personal account or device as the most likely way the credential got out. A service account's credential, living somewhere it never should have been, became the way in.
 
 Far more often, and far less famously, it turns up as a routine pentest finding: service accounts created for a vendor engagement, an integration or a one-off project, kept indefinitely with their original permissions, often holding more access than the original reason ever needed. The mitigations are well established (an account registry, mandatory expiry dates, automated deprovisioning, periodic recertification) and widely skipped. Verizon's *Data Breach Investigations Report* keeps ranking credential-related compromise among the top initial-access vectors. The 2026 edition recorded a reshuffle, with vulnerability exploitation taking the top slot at 31% of breaches, but credential-driven access remains the persistent runner-up, and sticky accounts are part of why.[^verizon-dbir]
 
-The audit-bypass account is fictional, and it is also the most ordinary finding imaginable: created in good faith for a specific purpose, documented poorly, deprovisioned never. The TXT-record leak makes it worse, but the underlying weakness is the account existing at all, five months past its own scheduled removal date.
+The audit-bypass account is fictional, and it is also the most ordinary finding imaginable: created in good faith for a specific purpose, documented poorly, deprovisioned never. The TXT-record leak makes it worse, but the underlying weakness is the account existing at all, more than three months past its own scheduled removal date.
 
 ## §5 — Frameworks, deep dive
 
@@ -667,6 +667,8 @@ None of this changes the solve. It does change how a written-up finding *reads*,
 [^rfc-8945]: [RFC 8945 — Secret Key Transaction Authentication for DNS (TSIG)](https://datatracker.ietf.org/doc/html/rfc8945). The current TSIG spec (obsoletes RFC 2845, 4635). The mechanism the AXFR ACL relies on for authentication. Read sections 4 (TSIG RR format) and 5 (Protocol Details) for the implementation specifics.
 [^nist-800-81]: [NIST SP 800-81 Rev 3 — Secure Domain Name System (DNS) Deployment Guide](https://csrc.nist.gov/pubs/sp/800/81/r3/final). The federal DNS hardening guide. Published March 2026, withdrawing SP 800-81-2 (2013) on the same date. Rev 3 substantially expands the older guide with Protective DNS, encrypted DNS (DoT/DoH/DoQ), zero-trust integration, and OT/IoT chapters. If you're working from the older SP 800-81-2 in any organizational documentation, swap to Rev 3.
 [^cwe-306]: [CWE-306: Missing Authentication for Critical Function](https://cwe.mitre.org/data/definitions/306.html). Includes the current mapping-status notes and the relationship to the CWE Top 25.
+[^cwe-top-25-2025]: [2025 CWE Top 25 Most Dangerous Software Weaknesses](https://cwe.mitre.org/top25/archive/2025/2025_cwe_top25.html). CWE-306 ranks 21st.
+[^okta-support-system-rca-2023]: [Unauthorized Access to Okta's Support Case Management System: Root Cause and Remediation](https://sec.okta.com/articles/2023/11/unauthorized-access-oktas-support-case-management-system-root-cause/). Okta's November 2023 report.
 [^cwe-1392]: [CWE-1392: Use of Default Credentials](https://cwe.mitre.org/data/definitions/1392.html).
 [^cwe-732]: [CWE-732: Incorrect Permission Assignment for Critical Resource](https://cwe.mitre.org/data/definitions/732.html). Note the ALLOWED-WITH-REVIEW mapping status and the cautionary text about confusion with CWE-862/863.
 [^cwe-200]: [CWE-200: Exposure of Sensitive Information to an Unauthorized Actor](https://cwe.mitre.org/data/definitions/200.html). Note the DISCOURAGED mapping status.
