@@ -8,7 +8,7 @@
 
 ## §1 — The setup
 
-Vesta Retail is one of Driftwood's e-commerce clients: an online retailer doing roughly $200M a year across roughly 12 million transactions. It takes Visa, Mastercard, AmEx and Discover, runs the bulk through Stripe, and keeps a small in-house gateway for a handful of high-volume B2B accounts. Its card-handling profile moved it from PCI-DSS Level 3 to Level 2 in 2024, into the 1-6 million transactions-a-year bracket, which means an annual Self-Assessment Questionnaire (SAQ D) and an on-site Qualified Security Assessor (QSA) review every other year.
+Vesta Retail is one of Driftwood's e-commerce clients: an online retailer doing roughly $200M a year across roughly 12 million transactions. It takes Visa, Mastercard, AmEx and Discover, runs the bulk through Stripe, and keeps a small in-house gateway for a handful of high-volume B2B accounts. Its card volume moved it from PCI-DSS Level 3 to Level 2 in 2024. Merchant levels are counted per card brand rather than across all of them, so the 12 million total still leaves Vesta's Visa volume inside Level 2's bracket of 1 to 6 million a year. That means an annual Self-Assessment Questionnaire (SAQ D) and, under its acquirer's arrangement, an on-site Qualified Security Assessor (QSA) review every other year.
 
 The annual PCI-DSS re-attestation is six weeks out, so Saanvi, Vesta's CTO, has asked Priya for a pre-walkthrough. Driftwood reads the payment-handling code before the QSA does, surfaces findings, gives Theo's team time to fix them, and the formal audit goes quickly with a short findings list. Saanvi does this every year, and it works for a simple reason: a QSA is a much happier person when the obvious problems are already gone.
 
