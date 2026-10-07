@@ -1013,11 +1013,14 @@ Level:           Information
 Still \`secops\` on the same forensics-triage workstation. Day
 two of the Polaris case. The alibi finding went to Dana Reyes
 last Friday — she escalated to the formal insider-threat track
-exactly as the workflow expects. Polaris's FSO (Sgt. Chen) pulled
-a live forensic image of Reed Connolly's workstation (host
-POL-WS-0418) on Tuesday night under the insider-threat program,
-packaged the E01 set with a single-use password, and handed it
-off through Polaris's secure portal.
+exactly as the workflow expects. The image was already waiting.
+Polaris's FSO (Sgt. Chen) had pulled a live forensic image of
+Reed Connolly's workstation (host POL-WS-0418) on the Tuesday
+night before, hours after the badge audit flagged his Saturday
+entry and before anyone had spoken to him. Friday's escalation
+brought it into the formal case: Chen packaged the E01 set with
+a single-use password and handed it off through Polaris's
+secure portal.
 
 That handoff password (\`POL-IIS-2026-0007-handoff\`, set by
 Sgt. Chen in his case-summary.txt at the end of the prior
@@ -1126,15 +1129,18 @@ record signed and hashed; chain of custody held.
 Friday 2026-03-20 late afternoon: Dana escalated the case to
 Polaris's formal Insider Threat Program. Sgt. Chen, in his
 capacity as Polaris's Facility Security Officer (FSO), took
-custody of the evidence trail and authorized a workstation
-seizure under NISPOM 32 CFR §117.8(c) (cleared-contractor
-investigative authority). Reed's clearance was administratively
+custody of the evidence trail, including the image the IR team
+had already taken (below), and authorized seizure of the
+workstation itself under NISPOM 32 CFR §117.8(c)
+(cleared-contractor investigative authority). Reed's clearance was administratively
 suspended same day; his badge access was revoked; he was placed
 on paid administrative leave pending investigation outcome.
 
-Tuesday night 2026-03-17 → Wednesday morning 2026-03-18 UTC:
-Polaris IR team pulled a live forensic image of POL-WS-0418
-(Reed's primary workstation) using FTK Imager. The acquisition
+Earlier, Tuesday night 2026-03-17 → Wednesday morning
+2026-03-18 UTC: hours after the SOC's routine badge audit
+flagged the Saturday entry, and before anyone had interviewed
+Reed, Polaris IR team pulled a live forensic image of
+POL-WS-0418 (Reed's primary workstation) using FTK Imager. The acquisition
 ran from IR-JUMPBOX-01 (10.42.7.18) via out-of-band management;
 Sgt. Chen was the operator, Maya Voss (Polaris IR Lead)
 was supervising. Live acquisition was chosen over power-off

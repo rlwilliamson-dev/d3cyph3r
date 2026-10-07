@@ -8,7 +8,7 @@
 
 ## §1 — The setup
 
-When you left `level0@network`, Atlas Health had a Tier-1 incident on its hands. You had filed the perimeter finding: PostgreSQL 13.11 on `staging.atlas.health:5432`, listening on the open internet, guarded by a named default credential, `atlas-default-2025`, which Atlas's DevOps lead admitted to in a recorded Q1 2025 quarterly review and never rotated. An open port plus a known password is a HIPAA-grade exposure waiting for anybody with `nmap`, `psql` and a free evening.
+When you left `level0@network`, Atlas Health had a Tier-1 incident on its hands. You had filed the perimeter finding: PostgreSQL 13.11 on `staging.atlas.health:5432`, listening on the open internet, guarded by a named default credential, `atlas-default-2025`, which Atlas's DevOps lead admitted to in a recorded Q3 2025 quarterly review and never rotated. An open port plus a known password is a HIPAA-grade exposure waiting for anybody with `nmap`, `psql` and a free evening.
 
 The night after reads like a textbook escalation. Priya took the finding to Marcus at 8:42pm. Marcus opened an internal incident at 8:47pm, woke his on-call engineer at 8:52pm, and had a firewall ACL written by 11:30pm, with a deploy slot booked for the next morning's maintenance window. So when you walk back to Driftwood's audit workstation at 7:14am for Day Two, the firewall change is being staged and the credential rotation is on the calendar for Friday's regular change window, three days away. Marcus's reasoning is sound. Rotating `atlas-default-2025` means a coordinated push to all seven Atlas services that have it baked in, and doing that without a change-control plan risks breaking patient-facing systems. The Friday slot already has the right reviewers booked.
 
@@ -170,7 +170,7 @@ Today's finding looks like one bad DNS response. It is actually five failures st
 
 ### Failure 1: The default credential was never rotated (CWE-1392)
 
-`atlas-default-2025` is a vendor default. Marcus admitted to it in a Q1 2025 quarterly review and promised rotation "next sprint", and five sprints later it was still live. This is CWE-1392, *Use of Default Credentials*,[^cwe-1392] and it is about the cleanest weakness there is: the system shipped with a credential, the documentation said to change it, the team meant to change it, and nobody did.
+`atlas-default-2025` is a vendor default. Marcus admitted to it in the Q3 2025 quarterly review, three meetings before this engagement, and promised rotation "next sprint", and five sprints later it was still live. This is CWE-1392, *Use of Default Credentials*,[^cwe-1392] and it is about the cleanest weakness there is: the system shipped with a credential, the documentation said to change it, the team meant to change it, and nobody did.
 
 CWE-1392 is the more specific successor to the older and broader CWE-798, *Use of Hard-coded Credentials*.[^cwe-798] MITRE draws a useful line between them. Hard-coded credentials are baked into source or binaries by developers; default credentials ship with a product and are documented as something the operator must change. The operator's fix is identical either way (change it, prove the change took, audit periodically), but the blame moves. A hard-coded credential is the vendor's failure. A default credential left in place is the operator's failure to follow the vendor's instructions.
 
@@ -241,7 +241,7 @@ Plenty of real breaches have exactly this shape. There is rarely one dramatic vu
 | Reached | The staging-db host's internal DNS resolver, from a shell obtained with an unrotated vendor default |
 | Disclosed | Atlas's full internal data-centre map via unauthenticated zone transfer, plus a service-account credential parked in a TXT record |
 | Compounding weaknesses | CWE-1392 default credential, CWE-732 interactive shell on a service account, CWE-306 missing authentication on the transfer[^cwe-732][^cwe-1392][^cwe-306] |
-| Exposure window | The default was flagged in a Q1 2025 review with rotation promised "next sprint"; five sprints later it was live |
+| Exposure window | The default was flagged in the Q3 2025 review with rotation promised "next sprint"; five sprints later it was live |
 | Escalates to | The credential recovered from DNS, which is `level2@network` |
 | Regime | HIPAA Breach Notification Rule, 45 CFR 164.400-414: individuals within 60 days, and at 500+ also HHS plus in-state media[^cfr-45-164] |
 

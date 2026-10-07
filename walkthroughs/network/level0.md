@@ -433,7 +433,7 @@ The mitigation pattern is straightforward and rarely implemented:
 - Each risk register entry has a named owner with an explicit acknowledged due date
 - The due date is reviewed (or rolled with documented justification) at every subsequent quarterly meeting
 
-The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/) ties a substantial fraction of credential-driven initial-access incidents to credentials that were "known stale" before the breach, i.e., credentials a defender could have rotated but didn't, often because the rotation was on someone's list but not on someone's calendar. Marcus's `atlas-default-2025` is the textbook case: every quarterly review since Q1 2025 included a verbal "yes, next sprint", and every quarterly review *also* didn't have a place to write that down.
+The 2025 [Verizon DBIR](https://www.verizon.com/business/resources/reports/dbir/) ties a substantial fraction of credential-driven initial-access incidents to credentials that were "known stale" before the breach, i.e., credentials a defender could have rotated but didn't, often because the rotation was on someone's list but not on someone's calendar. Marcus's `atlas-default-2025` is the textbook case: every quarterly review since Q3 2025 included a verbal "yes, next sprint", and every quarterly review *also* didn't have a place to write that down.
 
 ## §8 — Key takeaways
 
