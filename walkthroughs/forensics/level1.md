@@ -8,19 +8,19 @@
 
 ## §1 — The setup
 
-When the lobby spun you out of `level0@forensics` last Friday morning, the alibi photo had cracked Reed Connolly's story open and Dana Reyes had a forensic finding she could take to HR. By Friday afternoon she'd done more than that. Dana brought the EXIF report to Polaris's General Counsel, the General Counsel called Sgt. Marcus Chen (Polaris's Facility Security Officer), and Chen — in his FSO capacity rather than his line-IT capacity — invoked NISPOM 32 CFR §117.8(c) and escalated the case to the formal Insider Threat Program. Reed's DoD Secret clearance was administratively suspended same day. His badge access was revoked. He was placed on paid administrative leave pending investigation outcome. The escalation was procedurally textbook; the alibi-photo finding was the threshold and the rest of the program kicked in the way the program is supposed to.
+When you left `level0@forensics` on Friday morning, the alibi photo had broken Reed Connolly's story open and Dana Reyes had a finding she could take to HR. By Friday afternoon she had gone further. She took the EXIF report to Polaris's General Counsel, the General Counsel called Sgt. Marcus Chen, Polaris's Facility Security Officer, and Chen, acting as FSO rather than as line IT, invoked NISPOM 32 CFR §117.8(c) and escalated the case into the formal Insider Threat Program. Reed's DoD Secret clearance was administratively suspended the same day, his badge was revoked, and he went on paid administrative leave pending the outcome. Textbook. The photo finding crossed the threshold, and the rest of the program did exactly what it is designed to do.
 
-Tuesday night, Polaris's IR team pulled a live forensic image of Reed's primary workstation. Live, not power-off, because powering Reed's machine down would have given him a visible signal that something was happening — the lit monitor and spinning fans on his desk are part of the social-engineering surface area of an insider-threat case, and tipping him off before HR has the conversation lined up is the kind of mistake that ends investigations. The acquisition ran from `IR-JUMPBOX-01` (10.42.7.18) via the workstation's out-of-band management channel. Sgt. Chen ran FTK Imager; Maya Voss, Polaris's IR Team Lead, supervised from the same jumpbox. Power-on acquisition through the management interface preserves the workstation's running state, leaves its console untouched, and — critically for chain of custody — produces an audit trail of its own that proves nobody touched the keyboard during the acquisition window.
+On Tuesday night Polaris's IR team pulled a live forensic image of Reed's primary workstation. Live rather than powered off, because shutting the machine down would have told Reed something was happening; a lit monitor and spinning fans on his desk are part of the social-engineering surface of an insider-threat case, and tipping off the subject before HR has its conversation lined up is how investigations die. The acquisition ran from `IR-JUMPBOX-01` (10.42.7.18) over the workstation's out-of-band management channel, with Sgt. Chen running FTK Imager and Maya Voss, Polaris's IR Team Lead, supervising from the same jumpbox. Acquiring through the management interface keeps the machine's running state, leaves its console untouched, and, crucially for chain of custody, produces its own audit trail proving nobody touched the keyboard during the acquisition.
 
-The image came across as an EnCase E01 split set, eight segments, ~480 GB total, wrapped in a single-use password-protected archive. Chen set the handoff password to a string he generated specifically for this case — `POL-IIS-2026-0007-handoff` — and that string is what gated entry to this shell. The archive password and the triage-workspace password are the same value by design: single-use means it gets rotated and destroyed when the engagement closes, and re-using a sysadmin's daily-driver password to gate evidence custody would be the kind of cross-contamination forensic procedure exists to prevent. (Side note: this is the breadcrumb pattern from the very end of `level0@forensics`'s `case-summary.txt`, exactly where you found it.)
+The image arrived as an EnCase E01 split set, eight segments and ~480 GB in total, inside a single-use password-protected archive. Chen generated the handoff password specifically for this case, `POL-IIS-2026-0007-handoff`, and that is what let you into this shell. The archive password and the triage-workspace password are the same value on purpose. Single-use means it is rotated and destroyed when the engagement closes, and gating evidence custody with somebody's everyday sysadmin password is precisely the cross-contamination forensic procedure exists to prevent. (It is also the breadcrumb from the end of `level0@forensics`'s `case-summary.txt`, exactly where you found it.)
 
-Today's task is narrow. Polaris IT extracted the Windows Security event log — `C:\Windows\System32\winevt\Logs\Security.evtx`, the same path on every Windows host since Vista — and dropped it in this working directory. The rest of the mounted image is on a separate analysis volume, out of scope for this engagement. Dana wants two things by COB Wednesday: a reconstruction of Reed's Saturday-morning activity inside the OS during the 13:42-15:18 UTC (09:42-11:18 EDT) badge window, and any other findings the IR team needs to know about. Priya's hand-off note in `engagement-notes.md` foreshadows the second one — *"there's a finding in the IR-team activity from Tuesday night that I noticed during my own walkthrough of the file. It's not the Reed case directly, but it IS something Polaris needs to know about"* — and a Tuesday-night-fatigue finding in an audit log is the kind of moment that distinguishes a forensic engagement from a transactional log review.
+Today's task is narrow. Polaris IT extracted the Windows Security event log, `C:\Windows\System32\winevt\Logs\Security.evtx` (the same path on every Windows host since Vista), and dropped it in this working directory; the rest of the image sits on a separate analysis volume, out of scope. Dana wants two things by COB Wednesday: a reconstruction of Reed's Saturday-morning activity inside the OS during the 13:42-15:18 UTC (09:42-11:18 EDT) badge window, and anything else the IR team needs to know. Priya's hand-off note in `engagement-notes.md` hints at that second item, *"there's a finding in the IR-team activity from Tuesday night that I noticed during my own walkthrough of the file. It's not the Reed case directly, but it IS something Polaris needs to know about"*, and spotting a fatigue mistake in an audit log is exactly what separates a forensic engagement from a transactional log review.
 
-You're logged in as `secops` on Driftwood's forensics-triage workstation. Same shared service account you used in `level0@forensics`, same workstation. The continuity is deliberate: forensic capacity in a small defense contractor lives on a single hardened triage host, and the engagement keeps you in the same chair. The legal frame hasn't softened. DFARS 252.204-7012 (c) starts a 72-hour reporting clock to DoD Cyber Crime Center (DC3) the moment "compromise of covered defense information" is discovered.[^dfars-252-204-7012-safeguarding] The CUI artifacts in scope on Reed's machine — subsystem-A schematics, BOM, fab process notes — meet the covered-defense-information definition. Polaris's discovery moment is when Dana receives your report, which means the clock starts the moment you transmit it. Sgt. Chen has the DIBNET portal credentials standing by. Coordinate timing with the client before you press send.
+You are `secops` on Driftwood's forensics-triage workstation again, same shared account, same machine as `level0@forensics`. That continuity is deliberate; a small defense contractor's forensic capacity lives on one hardened triage host, and the engagement keeps you in the same chair. The legal frame has not softened either. DFARS 252.204-7012(c) starts a 72-hour reporting clock to the DoD Cyber Crime Center (DC3) the moment "compromise of covered defense information" is discovered.[^dfars-252-204-7012-safeguarding] The CUI on Reed's machine (subsystem-A schematics, the BOM, fab process notes) meets that definition, and Polaris's moment of discovery is when Dana receives your report. In other words, the clock starts when you press send. Sgt. Chen has the DIBNET portal credentials ready, so agree the timing with the client first.
 
 ## §2 — The solve
 
-The puzzle path is short and rewards filter discipline. Sixteen events, four interesting Event IDs, two distinct findings to extract.
+Sixteen events, four Event IDs worth caring about, two findings to pull out. The path is short, and it rewards one habit above all: filter before you read.
 
 ### Step 1: Open the workspace
 
@@ -34,7 +34,7 @@ secops@forensics:~$ pwd
 /home/secops
 ```
 
-You used the single-use handoff password Sgt. Chen set on the archive. The same string that gated the archive gates this triage workspace; that's by design and the lessons-learned will explain why.
+That is the single-use handoff password Sgt. Chen set on the archive. The same string gates the archive and this workspace by design, and the lessons-learned file explains why.
 
 ### Step 2: Read the engagement files
 
@@ -44,7 +44,7 @@ Security.evtx        engagement-notes.md   welcome.md
 case-summary.txt     lessons-learned.md
 ```
 
-Five files. `welcome.md` is the mechanics file: it explains the new `evtx` command and the common Security-channel Event IDs (4624 successful logon, 4625 failed logon, 4634 logoff, 4663 object access, 4688 process creation).[^event-4624][^event-4625][^event-4663][^event-4688] `engagement-notes.md` is Priya's update — the day-two narrative, what happened between Friday and Tuesday, what Dana is asking for, and the foreshadowed "second finding" you'll need to extract alongside the Reed timeline. `case-summary.txt` is the formal case file: subject metadata, acquisition chain of custody (FTK Imager v4.7.1.2, live acquisition through OOB management, EnCase E01 split, single-use handoff password, hash placeholder), and the explicit Driftwood task — *(1)* reconstruct Reed's inside-the-OS activity during the badge window, *(2)* identify CUI access/exfil, *(3)* flag any other findings.
+Five files. `welcome.md` covers mechanics: the new `evtx` command and the common Security-channel Event IDs (4624 successful logon, 4625 failed logon, 4634 logoff, 4663 object access, 4688 process creation).[^event-4624][^event-4625][^event-4663][^event-4688] `engagement-notes.md` is Priya's day-two update: what happened between Friday and Tuesday, what Dana wants, and that hint about a "second finding". `case-summary.txt` is the formal case file, with subject metadata, the acquisition's chain of custody (FTK Imager v4.7.1.2, live acquisition over OOB management, EnCase E01 split, single-use handoff password, hash placeholder) and Driftwood's explicit task: *(1)* reconstruct Reed's activity inside the OS during the badge window, *(2)* identify CUI access or exfiltration, *(3)* flag anything else.
 
 ### Step 3: First pass — dump the whole log
 
@@ -60,16 +60,16 @@ Computer:        POL-WS-0418.polaris-ds.local
 ...
 ```
 
-The dump is sixteen events spanning four days. Two distinct activity windows are visible by timestamp alone:
+Sixteen events across four days, and the timestamps alone split them into two activity windows:
 
-- **2026-03-14 13:42-15:18 UTC** (Saturday morning EDT 09:42-11:18) — Reed's badge window
-- **2026-03-18 02:47-06:14 UTC** (Tuesday night EDT 22:47-Wednesday 02:14) — IR team's triage
+- **2026-03-14 13:42-15:18 UTC** (Saturday morning EDT 09:42-11:18). Reed's badge window
+- **2026-03-18 02:47-06:14 UTC** (Tuesday night EDT 22:47-Wednesday 02:14). IR team's triage
 
-Eleven events fall in the first window, five in the second. The two are easy to separate by date. Don't confuse them in your write-up — Dana cares about Reed.
+Eleven events in the first window, five in the second. Easy to tell apart by date, and very important not to blur in the write-up. Dana's question is about Reed.
 
 ### Step 4: Filter to logon events
 
-The cleanest place to start is authentication. Logon events tell you who was where, when, and from where; everything else attaches to that scaffolding.
+Start with authentication. Logons tell you who was where, when, and from where, and everything else hangs off that scaffolding.
 
 ```bash
 secops@forensics:~$ evtx -id 4624 Security.evtx
@@ -79,11 +79,11 @@ Total events: 16   (filtered to ID 4624: 3 matches)
 
 Three successful logons:
 
-1. **Reed Saturday 13:42 UTC, LogonType 2 (Interactive)** — workstation console, `TargetUserName: rconnolly`, `WorkstationName: POL-WS-0418`, source IP 127.0.0.1. He sat down at his own keyboard.
-2. **`lchen` Tuesday 02:47 UTC, LogonType 10 (RemoteInteractive)** — RDP session from `IR-JUMPBOX-01`, source IP 10.42.7.18. Chen logging in to run the imaging.
-3. **`mvoss` Tuesday 03:02 UTC, LogonType 3 (Network)** — network resource access from the same `IR-JUMPBOX-01` / 10.42.7.18.
+1. **Reed, Saturday 13:42 UTC, LogonType 2 (Interactive)**: the workstation console, `TargetUserName: rconnolly`, `WorkstationName: POL-WS-0418`, source IP 127.0.0.1. He sat down at his own keyboard.
+2. **`lchen`, 02:47 UTC Wednesday (Tuesday night EDT), LogonType 10 (RemoteInteractive)**: an RDP session from `IR-JUMPBOX-01`, source IP 10.42.7.18. Chen logging in to run the imaging.
+3. **`mvoss`, 03:02 UTC Wednesday, LogonType 3 (Network)**: network resource access from the same `IR-JUMPBOX-01` / 10.42.7.18.
 
-Reed's interactive logon is what you'd expect. The two Tuesday-night logons are Chen and Voss doing the acquisition. Nothing here is anomalous yet — but the third one, `mvoss` at 03:02 UTC, will become more interesting in a moment.
+Reed's interactive logon is exactly what you would expect, and the two overnight logons are Chen and Voss doing the acquisition. Nothing anomalous yet. But keep an eye on that third one, `mvoss` at 03:02 UTC.
 
 ### Step 5: Filter to failed logons — the smoking gun
 
@@ -118,17 +118,17 @@ Level:           Information
 
 Read this event slowly. Four facts matter:
 
-1. **`SubStatus: 0xC0000064` — STATUS_NO_SUCH_USER.** Windows logged this code because the typed "username" was not a real account in the directory. (The companion code `0xC000006A`, STATUS_WRONG_PASSWORD, is what gets logged when the username DOES exist but the password is wrong. The distinction matters: `0xC0000064` means Windows literally couldn't find an account by that name.)
+1. **`SubStatus: 0xC0000064`, STATUS_NO_SUCH_USER.** Windows logged this because the typed "username" does not exist in the directory. Its sibling, `0xC000006A` (STATUS_WRONG_PASSWORD), is what you see when the username is real and the password is wrong. The difference matters: `0xC0000064` means Windows could not find an account by that name at all.
 
-2. **`TargetUserName: P0l4r1s-IR-L3ad-2026!`** — that string is not a username. It's mixed case, contains digits, contains a special character (`!`), is 22 characters long. Real Polaris usernames are short, lowercase, surname-and-initial format — `lchen`, `mvoss`, `rconnolly`. This string is a password.
+2. **`TargetUserName: P0l4r1s-IR-L3ad-2026!`**. That is not a username. It is mixed case, has digits and a special character (`!`), and runs to 21 characters. Real Polaris usernames are short, lowercase, surname-and-initial: `lchen`, `mvoss`, `rconnolly`. This string is a password.
 
-3. **`WorkstationName: IR-JUMPBOX-01`, `IpAddress: 10.42.7.18`** — same jumpbox, same source IP as the Tuesday-night `lchen` and `mvoss` logons. The typo came from the IR triage activity.
+3. **`WorkstationName: IR-JUMPBOX-01`, `IpAddress: 10.42.7.18`**: the same jumpbox and source IP as the overnight `lchen` and `mvoss` logons. The mistake came from the IR triage.
 
-4. **Timestamp 03:02:14, followed 37 seconds later by `mvoss`'s successful 4624 at 03:02:51 from the same source.** Whoever was at the keyboard fumbled the credential, immediately retried, got it right.
+4. **Timestamp 03:02:14, then `mvoss`'s successful 4624 at 03:02:51 from the same source, 37 seconds later.** Someone fumbled the credential, tried again straight away, and got it right.
 
-The conclusion is uncomfortable but unambiguous: Maya Voss, Polaris's IR Team Lead, supervising Chen's acquisition at ~11pm EDT on a Tuesday, typed her own password into the username field of a network-auth prompt. Windows logged the typed string verbatim into the 4625 record's `TargetUserName` field. The string `P0l4r1s-IR-L3ad-2026!` is Voss's credential — and it's now sitting in plaintext in an audit log, and that audit log is in your working directory, ready to be handed off as evidence.
+The conclusion is uncomfortable and not in doubt. Maya Voss, Polaris's IR Team Lead, supervising Chen's acquisition at about 11pm EDT on a Tuesday, typed her own password into the username field of a network-auth prompt. Windows recorded the typed string verbatim in the 4625 record's `TargetUserName`. So `P0l4r1s-IR-L3ad-2026!` is Voss's credential, sitting in plaintext in an audit log, and that audit log is in your working directory, about to be handed over as evidence. Everyone who will ever review this evidence now has her password.
 
-That's your second finding. It's also the breadcrumb credential for `level2@forensics`: a string the IR team needs to know about IMMEDIATELY (same-day rotation), and a string that — for the in-game continuity — represents an IR-team service account password whose rotation/recovery becomes the entry gate for the next engagement.
+That is your second finding. It is also the breadcrumb for `level2@forensics`: something the IR team needs to hear about *today* so the password can be rotated, and, for in-game continuity, the IR-team credential whose rotation and recovery become the entry gate for the next engagement.
 
 ### Step 6: Filter to process creations — Reed's exfil chain
 
@@ -142,13 +142,13 @@ Total events: 16   (filtered to ID 4688: 6 matches)
 
 Six process-creation records. Sorted by timestamp:
 
-1. **14:04:18** — `cmd.exe`, parent `explorer.exe`. Reed opens a shell.
-2. **14:04:21** — `powershell.exe`, parent `cmd.exe`, with the command line: `Compress-Archive -Path D:\CUI\Subsystem-A\* -DestinationPath C:\Users\rconnolly\AppData\Local\Temp\sa-export.zip -Force`. Reed archives the entire CUI directory into his AppData\Temp.
-3. **14:06:44** — `certutil.exe`, parent `cmd.exe`, with `certutil.exe -encode <zip> <b64>`. This is the LOLBin moment. `certutil` is a Microsoft-signed binary intended for certificate management; its `-encode` and `-decode` subcommands perform raw base64. Adversaries and insiders use them to obscure payloads from content-inspection DLP that grep for file signatures or sensitive-keyword strings. Reed has no legitimate reason to invoke certutil here. The LOLBAS project (lolbas-project.github.io) has certutil at the top of its catalog precisely because this pattern is common in real-world exfil chains.
-4. **14:11:55** — `chrome.exe`, parent `explorer.exe`, `--new-window`. Reed opens a browser.
-5. **14:42:08** — second `chrome.exe`, parent `chrome.exe`, `--new-tab https://mega.nz/upload`. A new tab pointed at Mega's upload page.
+1. **14:04:18**, `cmd.exe`, parent `explorer.exe`. Reed opens a shell.
+2. **14:04:21**, `powershell.exe`, parent `cmd.exe`, with the command line: `Compress-Archive -Path D:\CUI\Subsystem-A\* -DestinationPath C:\Users\rconnolly\AppData\Local\Temp\sa-export.zip -Force`. Reed archives the entire CUI directory into his AppData\Temp.
+3. **14:06:44**, `certutil.exe`, parent `cmd.exe`, with `certutil.exe -encode <zip> <b64>`. This is the LOLBin moment. `certutil` is a Microsoft-signed binary meant for certificate management, and its `-encode` and `-decode` subcommands do raw base64. Attackers and insiders use them to hide payloads from content-inspection DLP that looks for file signatures or sensitive keywords. Reed has no legitimate reason to run certutil here. The LOLBAS project (lolbas-project.github.io) catalogues it for exactly this reason: it keeps turning up in real exfil chains.
+4. **14:11:55**, `chrome.exe`, parent `explorer.exe`, `--new-window`. Reed opens a browser.
+5. **14:42:08**, second `chrome.exe`, parent `chrome.exe`, `--new-tab https://mega.nz/upload`. A new tab pointed at Mega's upload page.
 
-That's the exfil chain: collect (CUI dir reads, visible separately under 4663) → archive (PowerShell Compress-Archive) → encode (certutil base64) → upload (chrome → mega.nz). Reed used valid credentials and legitimate Microsoft-signed binaries the whole way. None of these processes are individually anomalous; the *combination* of them in a 38-minute window is what makes the chain.
+There is the exfil chain: collect (the CUI reads, visible separately under 4663), archive (PowerShell Compress-Archive), encode (certutil base64), upload (Chrome to mega.nz). Valid credentials and Microsoft-signed binaries the whole way. No single process here is anomalous. The *sequence* inside a 38-minute window is the finding.
 
 ### Step 7: Filter to file access — what he read
 
@@ -158,33 +158,33 @@ Event log: Security.evtx
 Total events: 16   (filtered to ID 4663: 4 matches)
 ```
 
-Four file-access records. Three at the start of the badge window (Reed reading the CUI files) and one at the end (certutil writing the encoded blob). The reads:
+Four file-access records: three at the start of the badge window, Reed reading the CUI, and one at the end, certutil writing the encoded blob. The reads:
 
-- **13:48:33** — `D:\CUI\Subsystem-A\subsystem-a-schematics.pdf` (AccessMask 0x1 = ReadData), via Adobe Acrobat Reader.
-- **13:51:02** — `D:\CUI\Subsystem-A\subsystem-a-bom.xlsx` (ReadData), via Excel.
-- **13:54:18** — `D:\CUI\Subsystem-A\fab-process-notes.docx` (ReadData), via Word.
+- **13:48:33**, `D:\CUI\Subsystem-A\subsystem-a-schematics.pdf` (AccessMask 0x1 = ReadData), via Adobe Acrobat Reader.
+- **13:51:02**, `D:\CUI\Subsystem-A\subsystem-a-bom.xlsx` (ReadData), via Excel.
+- **13:54:18**, `D:\CUI\Subsystem-A\fab-process-notes.docx` (ReadData), via Word.
 
-These are the CUI artifacts. They match the categories Polaris's CMMC artifact inventory marks as covered defense information — design data, bills of materials, manufacturing process documentation. Once you can name the specific files Reed read, the DFARS 7012 reporting requirement is no longer conditional. Polaris has a notifiable incident.
+These are the CUI artifacts, and they match the categories Polaris's CMMC inventory marks as covered defense information: design data, bills of materials, manufacturing process documentation. Once you can name the exact files Reed read, the DFARS 7012 reporting requirement stops being conditional. Polaris has a notifiable incident.
 
 ### Step 8: The hand-off
 
 Your report has three sections:
 
-1. **Reed's activity timeline.** Quote the event IDs and UTC timestamps verbatim. The exfil chain, in five lines: 13:42 logon → 13:48-13:54 CUI reads → 14:04 PowerShell Compress-Archive → 14:06 certutil -encode → 14:42 chrome upload to mega.nz → 15:18 logoff.
+1. **Reed's activity timeline.** Quote Event IDs and UTC timestamps verbatim. The chain on one line: 13:42 logon → 13:48-13:54 CUI reads → 14:04 PowerShell Compress-Archive → 14:06 certutil -encode → 14:42 Chrome upload to mega.nz → 15:18 logoff.
 2. **CUI exposure determination.** Yes. Cite the three filenames. Note that Reed's exit timestamp on chrome means his upload window ran for ~36 minutes; without server-side mega.nz cooperation, you cannot confirm successful transfer, but the upload tab was opened and the encoded payload was sitting in `AppData\Local\Temp\` ready to send. Dana's DFARS 7012 clock should start at her receipt of this report.
-3. **Other observations.** One paragraph. The 4625 event at 03:02:14 UTC on 2026-03-18 contains a credential in the `TargetUserName` field consistent with a password typed into the wrong field by an IR responder during the live acquisition. Voss (the IR Team Lead) was on the jumpbox at the time per the surrounding 4624 records. Recommend immediate credential rotation for `mvoss` and any service account that string is keyed to, AND a SIEM detection rule for the 4625 + `0xC0000064` + password-shape `TargetUserName` pattern going forward. Same-week remediation.
+3. **Other observations.** One paragraph. The 4625 event at 03:02:14 UTC on 2026-03-18 contains a credential in the `TargetUserName` field, consistent with an IR responder typing a password into the wrong field during the live acquisition. The surrounding 4624 records put Voss, the IR Team Lead, on the jumpbox at the time. Recommend immediate rotation of `mvoss` and any service account keyed to that string, plus a SIEM rule for the 4625 + `0xC0000064` + password-shaped `TargetUserName` pattern. Same-week remediation.
 
 Hand it to Dana. Sign and hash `Security.evtx` for chain-of-custody.
 
 ## §3 — The vulnerability
 
-Two distinct findings sit in one log file. Both are vulnerabilities; both have CWE mappings; both deserve treatment in the report.
+One log file, two separate findings, and they could hardly be more different. One is an insider walking out with CUI. The other is the people investigating him leaking a password into the evidence. Both get a CWE and both go in the report.
 
-The first finding — Reed's exfil chain — is the textbook insider-threat scenario. From a vulnerability-class perspective it's not a flaw in any single Polaris system; it's a *missing detection* problem. Every individual action Reed took was legitimate when viewed in isolation. He had access to D:\CUI\Subsystem-A because his role gave him access. PowerShell is allowed on his workstation because it's a developer machine. certutil is shipped by Microsoft. Chrome is the corporate browser. mega.nz is on the open internet. No control was bypassed; instead, every control assumed valid intent and got valid intent, and the malicious *combination* never tripped a correlated alert because Polaris doesn't have rules that say "PowerShell Compress-Archive on a CUI directory, followed within 5 minutes by certutil -encode, followed within 30 minutes by a chrome tab to mega.nz, is a DLP-evasion exfil pattern." That detection content is what defenders write *after* incidents like this one; it's the lesson the SOC takes back to detection engineering after the case closes. The CWE mapping is awkward — there's no CWE for "the right detection wasn't in place" — but the upstream class is **CWE-1059 (Insufficient Technical Documentation)** in some framings, or just MITRE ATT&CK T1078 (Valid Accounts) without a CWE counterpart because ATT&CK techniques and CWE weaknesses don't always overlap.[^t1078][^cwe-1059]
+Reed's exfil chain is the textbook insider-threat case, and as a vulnerability class it is not a flaw in any Polaris system at all. It is a *missing detection*. Every action Reed took was legitimate on its own. He could read `D:\CUI\Subsystem-A` because his role required it. PowerShell is allowed on his workstation because it is a developer machine. Microsoft ships certutil. Chrome is the corporate browser. mega.nz is on the open internet. Nothing was bypassed. Every control assumed valid intent and saw valid intent, and the malicious *combination* never tripped an alert because Polaris has no rule saying "PowerShell Compress-Archive on a CUI directory, then certutil -encode within 5 minutes, then a Chrome tab to mega.nz within 30, is a DLP-evasion exfil pattern." Defenders write that rule *after* a case like this one, which is the lesson the SOC carries back to detection engineering when the case closes. The CWE mapping is awkward because no CWE describes "the right detection wasn't there". **CWE-1059 (Insufficient Technical Documentation)** is the upstream class in some framings, and honestly a stretch; MITRE ATT&CK T1078 (Valid Accounts) describes it better and has no CWE counterpart, because ATT&CK techniques and CWE weaknesses only partly overlap.[^t1078][^cwe-1059]
 
-The second finding — the 4625 typed-password-as-username — has a direct CWE mapping: **CWE-532 (Insertion of Sensitive Information into Log File)**.[^cwe-532] It's a *defensive* vulnerability rather than an offensive one: nothing was exploited, no attacker is involved, but a credential is now sitting in plaintext inside an audit artifact that will be handled by multiple parties (Polaris IR, Driftwood forensics, eventually Dana's legal team, potentially DCSA if the clearance review needs the underlying evidence, potentially federal prosecutors if the case develops criminal weight). Every handoff is an opportunity for the credential to land somewhere it shouldn't. The remediation is rotation, not redaction — once a credential has been preserved in evidence, you can't retroactively un-preserve it without breaking chain of custody. You rotate the live credential and accept that the preserved copy in evidence is what it is. Sigma-based detection rules can be retro-fitted to alert on future occurrences; the underlying user-behavior fix is short retraining on credential hygiene under fatigue.
+The second finding, the password typed into the username field, maps cleanly: **CWE-532 (Insertion of Sensitive Information into Log File)**.[^cwe-532] It is a *defensive* failure rather than an offensive one. Nothing was exploited and no attacker is involved, but a credential now sits in plaintext inside an audit artifact that will pass through many hands: Polaris IR, Driftwood forensics, Dana's legal team, possibly DCSA if the clearance review wants the underlying evidence, possibly federal prosecutors if the case turns criminal. Every handoff is another place for it to end up. And the fix is rotation, not redaction. Once a credential is preserved in evidence you cannot un-preserve it without breaking chain of custody, so you rotate the live credential and accept that the preserved copy is what it is. A Sigma rule can catch the next occurrence, and the human fix is a short refresher on credential hygiene when tired.
 
-The structural lesson: Windows event logs catch what defenders forget to look at. CMMC AU.L2-3.3.x mandates the audit infrastructure; what it doesn't mandate is that anyone actually reads it. Polaris has them on, has the reviews scheduled, has a vendor (Driftwood) who actually opens the files — and so two findings surfaced from one log in one engagement. Most CMMC-compliant environments are AU-2 compliant (the logs are generated) and AU-12 compliant (the rules say what to log), but AU-6 noncompliant in practice (the logs are not actually reviewed beyond ingest into a SIEM that fires only on a small handful of pre-built rules). Reed's chain wouldn't have alerted on most default SIEM rule sets. The 4625 typed-password would not have alerted at all. Both findings depended on a human reading the log.
+The structural lesson is that Windows event logs record what defenders forget to look at. CMMC AU.L2-3.3.x mandates the audit infrastructure. It does not mandate that anybody read it. Polaris has the logs on, the reviews scheduled, and a vendor who actually opens the files, which is how two findings came out of one log in one engagement. Plenty of CMMC-compliant environments are AU-2 compliant (logs are generated) and AU-12 compliant (rules say what to log) and quietly AU-6 noncompliant in practice, because nothing reviews the logs beyond ingest into a SIEM firing on a handful of stock rules. Reed's chain would not have tripped most default rule sets. The typed password would not have tripped anything. Both findings needed a human reading the log.
 
 ## §3.5 — Blast radius
 
@@ -194,7 +194,7 @@ The structural lesson: Windows event logs catch what defenders forget to look at
 | The chain recovered | Archive creation, encoding to text, browser launch, and upload to a consumer file-sharing host, on a Saturday |
 | Data class | Controlled Unclassified Information, which is what makes this a DFARS matter rather than an HR one[^dfars-252-204-7012-safeguarding] |
 | Second finding | An IR responder's password, typed into the username field and captured verbatim in a failed-logon record |
-| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012 — 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days[^nist-800-171] |
+| Regime | CMMC Level 2, NIST SP 800-171, DFARS 252.204-7012, 72 hours to DoD via DIBNet, with images and logs preserved at least 90 days[^nist-800-171] |
 
 **This is the point where the case becomes reportable, and the clock is
 72 hours from the determination.** Level0 refuted an alibi. This
@@ -220,15 +220,15 @@ investigation team is now part of the exposure it is investigating.
 
 ## §4 — Real-world parallels
 
-Windows event log forensics shows up in essentially every major IR investigation of the last fifteen years. A non-exhaustive tour:
+Windows event-log forensics turns up in a long list of major investigations. A non-exhaustive tour:
 
-**TJX (2006-2007).** TJX Companies disclosed a breach affecting ~45.7 million payment cards in early 2007; subsequent legal filings put the figure significantly higher. The investigation reconstruction relied heavily on Windows event logs from TJX's retail-store domain controllers and POS infrastructure. The famous "Wi-Fi from the parking lot" entry point is the headline; the timeline of what attackers did *after* gaining a foothold — credential reuse, lateral movement, staging — was reconstructed from event-log forensics. The TJX case is on the GCIH and CHFI exam syllabi for that reason.[^cert-chfi][^cert-gcih]
+**TJX (2006-2007).** TJX Companies disclosed a breach affecting ~45.7 million payment cards in early 2007; subsequent legal filings put the figure significantly higher. The investigation reconstruction relied heavily on Windows event logs from TJX's retail-store domain controllers and POS infrastructure. The famous "Wi-Fi from the parking lot" entry point is the headline; the timeline of what attackers did *after* gaining a foothold, credential reuse, lateral movement, staging, was reconstructed from event-log forensics. The TJX case is on the GCIH and CHFI exam syllabi for that reason.[^cert-chfi][^cert-gcih]
 
-**Target (2013).** The Target breach (~40 million payment cards + 70 million customer records) is most famous for the Fazio Mechanical Services HVAC vendor as the initial vector, but the bulk of the published case material covers what BlackPOS malware did once inside — which the investigators reconstructed from Windows event logs across the POS environment. Krebs on Security's coverage cites event-log findings directly. The Senate Commerce Committee's March 2014 report on the breach has a process-creation timeline pulled from 4688 events.[^target-2013-breach-senate-commerce]
+**Target (2013).** The Target breach (~40 million payment cards + 70 million customer records) is most famous for the Fazio Mechanical Services HVAC vendor as the initial vector, but the bulk of the published case material covers what BlackPOS malware did once inside, which the investigators reconstructed from Windows event logs across the POS environment. Krebs on Security's coverage cites event-log findings directly. The Senate Commerce Committee's March 2014 report on the breach has a process-creation timeline pulled from 4688 events.[^target-2013-breach-senate-commerce]
 
-**Sony Pictures (2014).**[^sony-pictures-2014-fbi-update] The "Guardians of Peace" wiper attack on Sony Pictures Entertainment is interesting in the opposite direction: the WIPALL malware family used in the attack actively destroyed event logs as part of its anti-forensics behavior. The FBI's December 2014 update and Mandiant's incident report both note the event-log destruction as a deliberate IR-frustration step. The lesson defenders took from Sony was forwarding event logs in real-time to a separate collector so destruction at the source doesn't destroy the evidence — what later became codified as Windows Event Forwarding (WEF) best practice.[^windows-event-forwarding-for-intrusion]
+**Sony Pictures (2014).**[^sony-pictures-2014-fbi-update] The "Guardians of Peace" wiper attack on Sony Pictures Entertainment is interesting in the opposite direction: the WIPALL malware family used in the attack actively destroyed event logs as part of its anti-forensics behavior. The FBI's December 2014 update and Mandiant's incident report both note the event-log destruction as a deliberate IR-frustration step. The lesson defenders took from Sony was forwarding event logs in real-time to a separate collector so destruction at the source doesn't destroy the evidence, what later became codified as Windows Event Forwarding (WEF) best practice.[^windows-event-forwarding-for-intrusion]
 
-**The 2014 Sony breach and subsequent Microsoft guidance** prompted Microsoft to ship the Advanced Audit Policy improvements that landed in Windows 8.1 / Server 2012 R2 and have been the foundation of event-log forensics since. Command-line auditing for 4688 events ("Include command line in process creation events" Group Policy setting) was promoted from optional to recommended in Microsoft's security baselines specifically because of incidents where the *what* of an attacker's process activity could not be reconstructed without it.
+**Command-line auditing** is the setting that made this level solvable. The "Include command line in process creation events" Group Policy setting, which puts the arguments into 4688 events, arrived with Windows 8.1 and Server 2012 R2.[^event-4688] Without it, a 4688 records *that* `certutil.exe` ran and not *what it was told to do*, which is the difference between an anomaly and a finding. It is now standard advice in security baselines, for the plain reason that too many investigations have stalled on a log that recorded the binary and lost the arguments.
 
 **OPM (2015).** The Office of Personnel Management breach (~21.5 million records of federal employees and contractors) was reconstructed in large part from event logs that OPM had been generating for compliance reasons but not actively reviewing. The House Oversight Committee report ("The OPM Data Breach: How the Government Jeopardized Our National Security for More than a Generation") cites event-log evidence throughout. The lesson echoed in OPM was the same as TJX: generating logs is not the same as reviewing them.
 
@@ -240,7 +240,7 @@ Windows event log forensics shows up in essentially every major IR investigation
 
 **The "certutil -encode for exfil" pattern** is documented across MITRE ATT&CK (T1027 Obfuscated Files or Information), the LOLBAS project, and a long list of post-incident reports going back to ~2016.[^t1027] The classic public references are Casey Smith's research on LOLBin techniques (his blog *subTee* and the *LOLBin* talk at Derbycon 2017), Oddvar Moe's LOLBAS project (which formally catalogs the binaries), and various Microsoft blue-team writeups noting which Living-Off-the-Land patterns produce reliably detectable event-log signatures. Reed used a pattern that has been on every detection-engineer's "things to alert on" list for nearly a decade.
 
-What unites these cases is the asymmetry of audit-log value: the logs are cheap to generate, cheap to retain at modern storage costs, very valuable to reconstruct after-the-fact, and operationally inert until someone reads them. Polaris is not Sony or OPM; Polaris is a small DIB subcontractor whose CMMC posture happens to fund a SOC that happens to retain Driftwood that happens to actually open the file. That entire chain has to hold for the finding to emerge. It held here.
+What unites these cases is how lopsided the value of audit logs is. They are cheap to generate, cheap to keep at today's storage prices, enormously valuable after the fact, and completely inert until somebody reads them. Polaris is not Sony or OPM. It is a small DIB subcontractor whose CMMC obligations happen to fund a SOC, which happens to retain Driftwood, which happens to actually open the file. Every link in that chain had to hold for these findings to surface. This time, it did.
 
 ## §5 — Frameworks, deep dive
 
@@ -248,15 +248,15 @@ What unites these cases is the asymmetry of audit-log value: the logs are cheap 
 
 The federal-control catalog. Rev. 5 was published in September 2020 and is the current revision. The AU family is the most directly relevant control family for this engagement:
 
-- **AU-2 Event Logging** — what events the organization logs. This engagement exists because Polaris's AU-2 baseline includes the Security channel events 4624, 4625, 4634, 4663, and 4688. (Microsoft's default Windows audit policy is narrower; Polaris's CMMC tailoring expanded it.)
-- **AU-3 Content of Audit Records** — what fields each record carries. **AU-3(1) Additional Audit Information** is the control enhancement that mandates command-line capture for process-creation events. Without AU-3(1), the 4688 records would not have shown the PowerShell or certutil cmdlines and Reed's exfil chain would have been much harder to reconstruct. Polaris had it enabled; confirm it across the rest of their fleet.
-- **AU-6 Audit Record Review, Analysis, and Reporting** — the "actually look at the logs" control. The entire Driftwood engagement is AU-6 working correctly. Most CMMC-compliant environments fail AU-6 in practice (logs are generated but not actively reviewed beyond a handful of pre-built SIEM alerts).
-- **AU-9 Protection of Audit Information** — the integrity of audit records. Chain of custody on `Security.evtx` is what makes the finding admissible if Reed's case develops criminal weight. Hash the file, sign the chain-of-custody affidavit, preserve the original alongside any working copies.
-- **AU-12 Audit Record Generation** — the rules that govern what produces a record at the system level. The 4663 file-access events on D:\CUI\Subsystem-A exist because Polaris enabled object-access auditing on that volume specifically (Microsoft's default is OFF because of performance overhead).
+- **AU-2 Event Logging**, what events the organization logs. This engagement exists because Polaris's AU-2 baseline includes the Security channel events 4624, 4625, 4634, 4663, and 4688. (Microsoft's default Windows audit policy is narrower; Polaris's CMMC tailoring expanded it.)
+- **AU-3 Content of Audit Records** , what fields each record carries. **AU-3(1) Additional Audit Information** is the control enhancement that mandates command-line capture for process-creation events. Without AU-3(1), the 4688 records would not have shown the PowerShell or certutil cmdlines and Reed's exfil chain would have been much harder to reconstruct. Polaris had it enabled; confirm it across the rest of their fleet.
+- **AU-6 Audit Record Review, Analysis, and Reporting**, the "actually look at the logs" control. The entire Driftwood engagement is AU-6 working correctly. Most CMMC-compliant environments fail AU-6 in practice (logs are generated but not actively reviewed beyond a handful of pre-built SIEM alerts).
+- **AU-9 Protection of Audit Information**, the integrity of audit records. Chain of custody on `Security.evtx` is what makes the finding admissible if Reed's case develops criminal weight. Hash the file, sign the chain-of-custody affidavit, preserve the original alongside any working copies.
+- **AU-12 Audit Record Generation**, the rules that govern what produces a record at the system level. The 4663 file-access events on D:\CUI\Subsystem-A exist because Polaris enabled object-access auditing on that volume specifically (Microsoft's default is OFF because of performance overhead).
 
 ### NIST SP 800-92 — Guide to Computer Security Log Management
 
-NIST SP 800-92 was originally published in September 2006 and has remained the canonical NIST reference for enterprise log management for nearly two decades.[^nist-800-92] NIST published a Revision 1 Initial Public Draft (IPD) on October 11, 2023 to update the guidance for SIEM/SOAR-era practices, cloud-native log shipping, and the contemporary tooling landscape; public comment closed November 29, 2023. As of the May 2026 review date, Rev. 1 has **not** been finalized — NIST is still processing comments, with no Final Public Draft (FPD) yet posted. Check the NIST CSRC page (`csrc.nist.gov/pubs/sp/800/92/r1/ipd`) for current revision status before quoting specific section numbers in audit work. Section 3 (Log Management Infrastructure) and Section 5 (Operational Processes) are the most-cited sections for IR practice and remain valid in both the original publication and the in-progress IPD.
+NIST SP 800-92 was originally published in September 2006 and has remained the canonical NIST reference for enterprise log management for nearly two decades.[^nist-800-92] NIST published a Revision 1 Initial Public Draft (IPD) on October 11, 2023 to update the guidance for SIEM/SOAR-era practices, cloud-native log shipping, and the contemporary tooling landscape; public comment closed November 29, 2023. As of the May 2026 review date, Rev. 1 has **not** been finalized. NIST is still processing comments, with no Final Public Draft (FPD) yet posted. Check the NIST CSRC page (`csrc.nist.gov/pubs/sp/800/92/r1/ipd`) for current revision status before quoting specific section numbers in audit work. Section 3 (Log Management Infrastructure) and Section 5 (Operational Processes) are the most-cited sections for IR practice and remain valid in both the original publication and the in-progress IPD.
 
 ### NIST SP 800-86 — Guide to Integrating Forensic Techniques into Incident Response
 
@@ -264,14 +264,14 @@ Originally published 2006 and a co-citation alongside 800-92 in essentially ever
 
 ### NIST SP 800-171 Rev. 3 — Protecting Controlled Unclassified Information in Nonfederal Systems and Organizations
 
-Published May 14, 2024 (Final). The current standard Polaris is audited against. The §03.03 (Audit and Accountability) family inherits directly from 800-53 AU controls, tailored for non-federal systems.[^nist-800-53] Note that Rev. 3 adopted a zero-padded, period-separated numbering scheme (`03.03.01`) — distinct from Rev. 2's `3.3.1` style:
+Published May 14, 2024 (Final). The current standard Polaris is audited against. The §03.03 (Audit and Accountability) family inherits directly from 800-53 AU controls, tailored for non-federal systems.[^nist-800-53] Note that Rev. 3 adopted a zero-padded, period-separated numbering scheme (`03.03.01`), distinct from Rev. 2's `3.3.1` style:
 
 - **§03.03.01 Event Logging** ↔ AU-2
 - **§03.03.02 Audit Record Content** ↔ AU-3
 - **§03.03.05 Audit Record Review, Analysis, and Reporting** ↔ AU-6
 - **§03.03.08 Protection of Audit Information** ↔ AU-9
 
-Auditors are still in the transition window; cite Rev. 3 numbers (`§03.03.0x`) but be aware older Polaris artifacts may use Rev. 2's `§3.3.x` style. The CMMC Level 2 practice notation is its own scheme — `AU.L2-3.3.x` — which mirrors the Rev. 2 numbering by historical accident and is separate from the NIST scheme.
+Auditors are still in the transition window; cite Rev. 3 numbers (`§03.03.0x`) but be aware older Polaris artifacts may use Rev. 2's `§3.3.x` style. The CMMC Level 2 practice notation is its own scheme, `AU.L2-3.3.x`, which mirrors the Rev. 2 numbering by historical accident and is separate from the NIST scheme.
 
 ### CMMC Level 2 (DoD CIO, finalized 2024)
 
@@ -290,7 +290,7 @@ CIS Controls v8.1 was released in 2024 (a maintenance update to v8). Control 8 (
 
 ### DFARS 252.204-7012 — Safeguarding Covered Defense Information and Cyber Incident Reporting
 
-The DFARS clause that creates the 72-hour reporting clock to DoD (functionally to DC3 / DoD Cyber Crime Center via the DIBNET portal) upon discovery of a cyber incident affecting CUI.[^dfars-252-204-7012-safeguarding] The clause's (c) paragraph defines the reporting requirement; the (e) paragraph requires preservation of media for at least 90 days post-incident — which is why Polaris is sitting on the full E01 image in cold storage even after this engagement closes.
+The DFARS clause that creates the 72-hour reporting clock to DoD (functionally to DC3 / DoD Cyber Crime Center via the DIBNET portal) upon discovery of a cyber incident affecting CUI.[^dfars-252-204-7012-safeguarding] The clause's (c) paragraph defines the reporting requirement; the (e) paragraph requires preservation of media for at least 90 days post-incident, which is why Polaris is sitting on the full E01 image in cold storage even after this engagement closes.
 
 ### NISPOM 32 CFR Part 117
 
@@ -298,16 +298,16 @@ The National Industrial Security Program Operating Manual, codified into 32 CFR 
 
 ### CWE / MITRE
 
-- **CWE-532 Insertion of Sensitive Information into Log File** — the typed-password-in-4625 finding.[^cwe-532]
-- **CWE-117 Improper Output Neutralization for Logs** — adjacent; covers log-injection rather than passive sensitive-data exposure.[^cwe-117] Cited together with CWE-532 when reviewing log-handling design.
-- **CWE-200 Exposure of Sensitive Information to an Unauthorized Actor** — the parent of CWE-532, and the CWE cited in `level0@forensics` for the EXIF metadata finding.[^cwe-200] (CWE-200 itself is now mapping-**Discouraged** in current CWE guidance — MITRE recommends citing the more specific child weakness, which for the typed-password finding is CWE-532.)
-- **MITRE ATT&CK T1078 Valid Accounts** — Reed's use of his own valid credentials.[^t1078]
-- **MITRE ATT&CK T1083 File and Directory Discovery** — the 4663 CUI reads as deliberate enumeration.[^t1083]
-- **MITRE ATT&CK T1560.001 Archive Collected Data: Archive via Utility** — the PowerShell Compress-Archive step.[^t1560-001]
-- **MITRE ATT&CK T1027 Obfuscated Files or Information** — the certutil -encode base64 step.[^t1027]
-- **MITRE ATT&CK T1059.001 Command and Scripting Interpreter: PowerShell** — the cmdline.[^t1059-001]
-- **MITRE ATT&CK T1059.003 Command and Scripting Interpreter: Windows Command Shell** — the cmd.exe parent.[^t1059-003]
-- **MITRE ATT&CK T1567.002 Exfiltration Over Web Service: Exfiltration to Cloud Storage** — the chrome → mega.nz tab.[^t1567-002]
+- **CWE-532 Insertion of Sensitive Information into Log File**, the typed-password-in-4625 finding.[^cwe-532]
+- **CWE-117 Improper Output Neutralization for Logs**, adjacent; covers log-injection rather than passive sensitive-data exposure.[^cwe-117] Cited together with CWE-532 when reviewing log-handling design.
+- **CWE-200 Exposure of Sensitive Information to an Unauthorized Actor** , the parent of CWE-532, and the CWE cited in `level0@forensics` for the EXIF metadata finding.[^cwe-200] (CWE-200 itself is now mapping-**Discouraged** in current CWE guidance. MITRE recommends citing the more specific child weakness, which for the typed-password finding is CWE-532.)
+- **MITRE ATT&CK T1078 Valid Accounts**. Reed's use of his own valid credentials.[^t1078]
+- **MITRE ATT&CK T1083 File and Directory Discovery**, the 4663 CUI reads as deliberate enumeration.[^t1083]
+- **MITRE ATT&CK T1560.001 Archive Collected Data: Archive via Utility**, the PowerShell Compress-Archive step.[^t1560-001]
+- **MITRE ATT&CK T1027 Obfuscated Files or Information**, the certutil -encode base64 step.[^t1027]
+- **MITRE ATT&CK T1059.001 Command and Scripting Interpreter: PowerShell**, the cmdline.[^t1059-001]
+- **MITRE ATT&CK T1059.003 Command and Scripting Interpreter: Windows Command Shell**, the cmd.exe parent.[^t1059-003]
+- **MITRE ATT&CK T1567.002 Exfiltration Over Web Service: Exfiltration to Cloud Storage**, the chrome → mega.nz tab.[^t1567-002]
 
 ### Microsoft documentation
 
@@ -323,11 +323,11 @@ The Sigma project (sigmahq.io) defines a YAML-based detection-rule format that c
 
 ## §6 — Cert exam relevance
 
-Windows event log forensics is core curriculum across the IR/DFIR certification landscape and shows up in SOC analyst, blue-team, and cleared-environment certs as well.
+Windows event-log forensics is core curriculum across the IR and DFIR certifications, and it turns up in SOC-analyst, blue-team and cleared-environment certs too. If you are studying for any of these, the Event IDs in this level are worth knowing cold.
 
 ### GIAC GCFE — Certified Forensic Examiner
 
-The Windows-forensics-on-disk specialist cert.[^cert-gcfe] Security.evtx structure and analysis is core content — both the binary EVTX format (XML-typed records, channels, providers) and the analytical patterns (logon-type taxonomy, sub-status codes, process-tree reconstruction). Feeds from SANS FOR500 (Windows Forensic Analysis), which is the most direct training-path course for what we just did. GCFE is typically the first DFIR cert practitioners earn.
+The Windows-forensics-on-disk specialist cert.[^cert-gcfe] Security.evtx structure and analysis is core content, both the binary EVTX format (XML-typed records, channels, providers) and the analytical patterns (logon-type taxonomy, sub-status codes, process-tree reconstruction). Feeds from SANS FOR500 (Windows Forensic Analysis), which is the most direct training-path course for what we just did. GCFE is typically the first DFIR cert practitioners earn.
 
 ### GIAC GCFA — Certified Forensic Analyst
 
@@ -335,19 +335,19 @@ The deeper IR/forensics cert.[^cert-gcfa] Event-log analysis at timeline-reconst
 
 ### GIAC GCIH — Certified Incident Handler
 
-The enterprise-IR cert.[^cert-gcih] Less forensics-deep, more incident-process-broad. Detection-engineering coverage of event-log monitoring lives here — the rule that would catch the 4625 typed-password pattern is the kind of content GCIH covers. Feeds from SANS SEC504 (Hacker Tools, Techniques, and Incident Handling).
+The enterprise-IR cert.[^cert-gcih] Less forensics-deep, more incident-process-broad. Detection-engineering coverage of event-log monitoring lives here, the rule that would catch the 4625 typed-password pattern is the kind of content GCIH covers. Feeds from SANS SEC504 (Hacker Tools, Techniques, and Incident Handling).
 
 ### GIAC GCDA — Certified Detection Analyst
 
-SOC/SIEM-side cert (formerly branded as "Continuous Monitoring & Security Operations Analyst"). Detection engineering, log pipeline design, threat hunting in event-log data, Sigma rules. Feeds from SANS SEC555 (recently renamed to "Detection Engineering and SIEM Analytics" — previously "SIEM with Tactical Analytics"). GCDA is the natural pursuit for someone who wants to build the detection content rather than respond to its alerts.
+SOC/SIEM-side cert (formerly branded as "Continuous Monitoring & Security Operations Analyst"). Detection engineering, log pipeline design, threat hunting in event-log data, Sigma rules. Feeds from SANS SEC555 (recently renamed to "Detection Engineering and SIEM Analytics", previously "SIEM with Tactical Analytics"). GCDA is the natural pursuit for someone who wants to build the detection content rather than respond to its alerts.
 
 ### CompTIA CySA+ (CS0-003 / CS0-004)
 
-CySA+ is the broad SOC-analyst credential.[^cert-cysa] CS0-003 was the current exam revision as of the May 2026 review date, **with CS0-004 launched on 23 June 2026** — CS0-003 retires 22 December 2026, so by the time anyone reads this much past the review date, CS0-004 will be the only sittable version. Domain 1 (Security Operations) covers log analysis and SIEM correlation; Domain 3 (Incident Response and Management) covers forensic analysis including event logs. CySA+ is a non-vendor cert; it's lighter than GIAC but cheaper and more broadly recognized at entry-to-mid SOC roles.
+CySA+ is the broad SOC-analyst credential.[^cert-cysa] CS0-003 was the current exam revision as of the May 2026 review date, **with CS0-004 launched on 23 June 2026**. CS0-003 retires 22 December 2026, so by the time anyone reads this much past the review date, CS0-004 will be the only sittable version. Domain 1 (Security Operations) covers log analysis and SIEM correlation; Domain 3 (Incident Response and Management) covers forensic analysis including event logs. CySA+ is a non-vendor cert; it's lighter than GIAC but cheaper and more broadly recognized at entry-to-mid SOC roles.
 
 ### ISC2 CISSP
 
-The Common Body of Knowledge cert.[^cert-cissp] Domain 7 (Security Operations) includes "Conduct logging and monitoring activities" and "Conduct investigations" — both procedural-side coverage of what we just did. CISSP is conceptual rather than hands-on; you'd cite it as the framework cert, not the practical one.
+The Common Body of Knowledge cert.[^cert-cissp] Domain 7 (Security Operations) includes "Conduct logging and monitoring activities" and "Conduct investigations", both procedural-side coverage of what we just did. CISSP is conceptual rather than hands-on; you'd cite it as the framework cert, not the practical one.
 
 ### Microsoft SC-200 — Security Operations Analyst Associate
 
@@ -355,7 +355,7 @@ The Microsoft-native SOC cert. Microsoft Sentinel KQL queries, Microsoft Defende
 
 ### EC-Council CHFI — Computer Hacking Forensic Investigator
 
-Module 13 (Windows Forensics) covers event logs in depth — both the binary EVTX format and the analytical patterns.[^cert-chfi] CHFI is a whole-cert forensics credential, generally considered weaker than GCFE/GCFA in the DFIR community but holds federal-recognition status (DoD 8570 / 8140 baseline cert for IAT/IAM/CSSP roles) that GCFE/GCFA don't.
+Module 13 (Windows Forensics) covers event logs in depth, both the binary EVTX format and the analytical patterns.[^cert-chfi] CHFI is a whole-cert forensics credential, generally considered weaker than GCFE/GCFA in the DFIR community but holds federal-recognition status (DoD 8570 / 8140 baseline cert for IAT/IAM/CSSP roles) that GCFE/GCFA don't.
 
 ## §7 — What a defender does
 
@@ -363,13 +363,13 @@ Two parallel remediation tracks, plus the longer-arc audit-log-program improveme
 
 ### For the Reed case specifically
 
-Hand Dana the timeline with verbatim event IDs and UTC timestamps. She will cite them to General Counsel and (when the DFARS clock starts at her receipt) to DC3 via the DIBNET portal.[^dfars-252-204-7012-safeguarding] Do not speculate in the report about Reed's intent — the events show what happened, intent is Dana's call to make with HR, legal, and DCSA in the loop. Sign and hash `Security.evtx` as part of the chain-of-custody package; the hash you compute now is what proves the log wasn't altered between acquisition and any eventual proceeding.
+Hand Dana the timeline with verbatim event IDs and UTC timestamps. She will cite them to General Counsel and (when the DFARS clock starts at her receipt) to DC3 via the DIBNET portal.[^dfars-252-204-7012-safeguarding] Do not speculate in the report about Reed's intent, the events show what happened, intent is Dana's call to make with HR, legal, and DCSA in the loop. Sign and hash `Security.evtx` as part of the chain-of-custody package; the hash you compute now is what proves the log wasn't altered between acquisition and any eventual proceeding.
 
 Polaris IT's parallel containment work: rotate Reed's account credentials (already initiated under Friday's escalation), revoke his M365 / VPN tokens, audit any external systems his account touched between 2026-03-14 and 2026-03-20. Clean up `C:\Users\rconnolly\AppData\Local\Temp\sa-export.zip` and `sa-export.b64` from the workstation image's source path on Polaris's file servers (the live workstation is offline pending the formal investigation; the file artifacts on it are evidence-preserved on the E01).
 
 ### For the IR-team credential leak
 
-Same-day rotation of `mvoss`'s password and any service account that credential string is keyed to. Same-day means before the audit-log file leaves Polaris's direct control on its way to any downstream handler. The credential preserved in the 4625 record is what it is — chain of custody prevents retroactive redaction — but the *live* credential it represents can and must be rotated immediately.
+Same-day rotation of `mvoss`'s password and any service account that credential string is keyed to. Same-day means before the audit-log file leaves Polaris's direct control on its way to any downstream handler. The credential preserved in the 4625 record is what it is, chain of custody prevents retroactive redaction, but the *live* credential it represents can and must be rotated immediately.
 
 Add a SIEM detection rule for the pattern going forward. The Sigma rule is straightforward:
 
@@ -379,7 +379,7 @@ id: pol-ir-4625-typed-password-v1
 description: |
   Detects 4625 failed-logon events where SubStatus is 0xC0000064
   (no such user) and TargetUserName does NOT look like a normal
-  username — i.e., contains symbols, mixed case + digits, or is
+  username, i.e. contains symbols, mixed case + digits, or is
   unusually long. Typical signature of a password typed into the
   username field by mistake.
 status: experimental
@@ -407,7 +407,7 @@ falsepositives:
   - Internal pentests that deliberately spray malformed usernames
 ```
 
-Light retraining for the IR team on credential hygiene under fatigue. Frame it as "the audit caught us this time" rather than punitive — this is a humans-get-tired-at-11pm finding, not a careless-individual finding. The remediation language matters: a punitive frame teaches IR responders to be defensive about audit-log review, which is exactly the opposite of what you want when the audit-log review is the control that protects the institution.
+Light retraining for the IR team on credential hygiene under fatigue. Frame it as "the audit caught us this time" rather than punitive, this is a humans-get-tired-at-11pm finding, not a careless-individual finding. The remediation language matters: a punitive frame teaches IR responders to be defensive about audit-log review, which is exactly the opposite of what you want when the audit-log review is the control that protects the institution.
 
 ### For Polaris's longer-arc audit-log program
 
@@ -419,14 +419,14 @@ Deploy Sysmon (sysinternals.com) to extend native audit categories with richer p
 
 For aggregation: ship Security.evtx and Sysmon logs via Windows Event Forwarding (WEF) to a central collector, then ingest into the SIEM. Microsoft's documentation at `learn.microsoft.com/windows/security/operating-system-security/device-management/use-windows-event-forwarding-to-assist-in-intrusion-detection` covers the WEF setup. For analysis, the canonical practitioner-tool stack is:
 
-- **EvtxECmd** (ericzimmerman.github.io) — Eric Zimmerman's EZ Tools command-line .evtx parser.[^eric-zimmerman-blog] The go-to for offline triage.
-- **Hayabusa** (github.com/Yamato-Security/hayabusa) — Yamato Security's threat-hunting tool that ships with thousands of pre-built detection rules in Sigma format, applied to .evtx files in bulk.[^hayabusa]
-- **Chainsaw** (github.com/WithSecureLabs/chainsaw) — WithSecure Labs' tool that searches .evtx files using YAML detection rules.[^chainsaw] Often used alongside Hayabusa for cross-validation.
-- **KAPE** (kape.kroll.com) — Kroll Artifact Parser and Extractor; a triage-collection tool that pulls a curated set of forensic artifacts from a running system, including the Security log and a long list of supporting artifacts.
+- **EvtxECmd** (ericzimmerman.github.io). Eric Zimmerman's EZ Tools command-line .evtx parser.[^eric-zimmerman-blog] The go-to for offline triage.
+- **Hayabusa** (github.com/Yamato-Security/hayabusa). Yamato Security's threat-hunting tool that ships with thousands of pre-built detection rules in Sigma format, applied to .evtx files in bulk.[^hayabusa]
+- **Chainsaw** (github.com/WithSecureLabs/chainsaw). WithSecure Labs' tool that searches .evtx files using YAML detection rules.[^chainsaw] Often used alongside Hayabusa for cross-validation.
+- **KAPE** (kape.kroll.com). Kroll Artifact Parser and Extractor; a triage-collection tool that pulls a curated set of forensic artifacts from a running system, including the Security log and a long list of supporting artifacts.
 
 ### For DFARS 7012 reporting
 
-Dana coordinates with General Counsel on DC3 notification timing. The 72-hour clock is real and missing it is a contractual non-compliance event. The DIBNET portal (dibnet.dod.mil) is where the report files; Polaris's FSO has the credentials. The reporting form requires specific facts (the affected system, the timeline, the artifacts) — your timeline write-up is what Dana hands the FSO to populate the form.
+Dana coordinates with General Counsel on DC3 notification timing. The 72-hour clock is real and missing it is a contractual non-compliance event. The DIBNET portal (dibnet.dod.mil) is where the report files; Polaris's FSO has the credentials. The reporting form requires specific facts (the affected system, the timeline, the artifacts), your timeline write-up is what Dana hands the FSO to populate the form.
 
 ### The same evidence on macOS and Linux
 
@@ -449,51 +449,51 @@ the tool, or the number proves nothing about the system.
 
 ## §7.5 — Optional exploration
 
-The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern — `progress --detail` lists what you've unlocked.
+The credential chain works without this section. The level seeds one hidden bonus find that fires if you happen to run a particular command pattern, `progress --detail` lists what you've unlocked.
 
 ### certutil as a LOLBin
 
 **Trigger:** `evtx -id 4688 Security.evtx` (a natural filter for any process-creation investigation; the bonus fires when the 4688 chain surfaces)
 
-**What it teaches:** Reed's 4688 process-creation chain includes `certutil.exe -encode` — a Microsoft-shipped binary whose dual-use potential makes it one of the founding entries on the [LOLBAS Project](https://lolbas-project.github.io/) (Living Off the Land Binaries and Scripts). The signal isn't *that certutil ran*; it's that **certutil ran via cmd.exe with `-encode` arguments by a user who has no certificate-management reason to invoke it.**
+**What it teaches:** Reed's 4688 process-creation chain includes `certutil.exe -encode`, a Microsoft-shipped binary whose dual-use potential makes it one of the founding entries on the [LOLBAS Project](https://lolbas-project.github.io/) (Living Off the Land Binaries and Scripts). The signal isn't *that certutil ran*; it's that **certutil ran via cmd.exe with `-encode` arguments by a user who has no certificate-management reason to invoke it.**
 
 The LOLBin pattern matters for three reasons:
 
 1. **AV/EDR signature rules don't flag it.** certutil.exe is signed by Microsoft. Its hash matches the Windows install. Every signature-based detection treats it as legitimate. The attack pattern is the *combination* of legitimate binary + suspicious argument usage, not the binary itself.
 2. **Forensic timelines look "normal" at a glance.** A 4688 event for certutil.exe looks like routine certificate operations to an analyst who isn't paying attention to the command-line arguments. The argument string is where the signal lives.
-3. **Defender response is behavioral rules, not signatures.** Sigma, Velociraptor, ATT&CK-aligned hunt queries — these are how teams catch LOLBin patterns. Reed's specific sequence (cmd.exe → certutil.exe -encode → outbound to a non-Polaris domain) is detectable via behavioral rules that look at the parent-child process chain and the argument string.
+3. **Defender response is behavioral rules, not signatures.** Sigma, Velociraptor, ATT&CK-aligned hunt queries, these are how teams catch LOLBin patterns. Reed's specific sequence (cmd.exe → certutil.exe -encode → outbound to a non-Polaris domain) is detectable via behavioral rules that look at the parent-child process chain and the argument string.
 
 The canonical LOLBin references for the Polaris IR team to add to their hunting library:
 
-- **[LOLBAS Project](https://lolbas-project.github.io/)** — the community-maintained catalog of Windows binaries with documented dual-use potential. certutil, bitsadmin, mshta, rundll32, wmic, regsvr32, msbuild, installutil, powershell, and ~50 others.
-- **[Sigma Rules Repository](https://github.com/SigmaHQ/sigma)** — open-source signature-format detection rules. The certutil-encode-with-suspicious-args pattern is well-covered in `rules/windows/process_creation/proc_creation_win_certutil_*.yml`.
-- **[MITRE ATT&CK T1140 — Deobfuscate/Decode Files or Information](https://attack.mitre.org/techniques/T1140/)** — the technique covering certutil-encode usage in real campaigns. Polaris's MITRE-aligned detection coverage should include T1140 with certutil specifically called out.
+- **[LOLBAS Project](https://lolbas-project.github.io/)**, the community-maintained catalog of Windows binaries with documented dual-use potential. certutil, bitsadmin, mshta, rundll32, wmic, regsvr32, msbuild, installutil, powershell, and ~50 others.
+- **[Sigma Rules Repository](https://github.com/SigmaHQ/sigma)**, open-source signature-format detection rules. The certutil-encode-with-suspicious-args pattern is well-covered in `rules/windows/process_creation/proc_creation_win_certutil_*.yml`.
+- **[MITRE ATT&CK T1140, Deobfuscate/Decode Files or Information](https://attack.mitre.org/techniques/T1140/)**, the mirror image of Reed's step. Reed *encoded* (T1027); T1140 covers certutil's `-decode` side, which is how a payload hidden that way gets turned back into a file at the other end. Polaris's ATT&CK-aligned detection coverage should name certutil under both.
 
 For Polaris's IR runbook: a behavioral rule that fires on "certutil.exe with `-encode` argument by any user in the manufacturing-engineering OU" would have caught Reed's encoding step in near real-time. Add to the hunting library.
 
 ## §8 — Key takeaways
 
-- **Windows event logs catch what defenders forget to look at — but only if defenders look.** CMMC AU.L2-3.3.x mandates the audit infrastructure; what it doesn't mandate is that anyone actually reads it. Most CMMC-compliant environments are AU-2/AU-12 compliant (logs are generated) but AU-6 noncompliant in practice (logs are not actively reviewed). Polaris's posture was funded by their CMMC certification; Driftwood's retainer was funded by Polaris's posture; this engagement happened because that whole chain held. None of it is automatic.
+- **Event logs catch what defenders forget to look at, but only if somebody looks.** CMMC AU.L2-3.3.x mandates the audit infrastructure and says nothing about anyone reading it. Plenty of CMMC-compliant shops are AU-2/AU-12 compliant (logs generated) and AU-6 noncompliant in practice (logs never reviewed). Polaris's CMMC posture funded its SOC, the SOC funded Driftwood's retainer, and this engagement happened because that whole chain held. None of it is automatic.
 
-- **Reed's chain looked legitimate at every individual step.** Valid credentials, Microsoft-signed binaries, default-permitted PowerShell, default-permitted certutil, default-permitted chrome. The malicious *combination* — Compress-Archive of a CUI directory, followed by certutil -encode, followed by chrome to mega.nz — is what makes the case. The detection content that would have alerted on this combination is exactly the kind of correlation rule SOCs add *after* incidents like this one. Detection engineering is reactive by nature; the lesson the SOC takes back to its rule library is the durable output of the investigation.
+- **Reed's chain looked legitimate at every single step.** Valid credentials, Microsoft-signed binaries, and PowerShell, certutil and Chrome all permitted by default. The *combination* is the case: Compress-Archive of a CUI directory, then certutil -encode, then Chrome to mega.nz. The correlation rule that would have caught it is exactly the kind SOCs write after incidents like this, because detection engineering is reactive by nature, and the rule that comes back to the library is the investigation's most durable output.
 
-- **certutil -encode is a textbook LOLBin and has been on every detection engineer's "watch this binary" list for nearly a decade.** The pattern is documented in the LOLBAS project, in MITRE ATT&CK T1027, and across dozens of post-incident reports. If your environment hasn't deployed detection content for certutil-with-encode-or-decode-flags, that's the easiest detection-engineering win in any SOC operating under CMMC, PCI-DSS, or any other audit-driven posture.
+- **`certutil -encode` is a textbook LOLBin.** It is documented in the LOLBAS project, in MITRE ATT&CK T1027, and across a long run of post-incident reports. If your environment has no detection for certutil with encode or decode flags, that is about the easiest detection-engineering win available to a SOC under CMMC, PCI-DSS or any other audit-driven regime.
 
-- **The 4625 typed-password-as-username pattern is a real-world finding category, not a hypothetical.** SubStatus 0xC0000064 (STATUS_NO_SUCH_USER) combined with a TargetUserName that looks like a password (mixed case + digits + symbols, length > 12-16 chars) is the signature. Most SIEM platforms don't ship the detection by default; SOCs add it after either finding it themselves or reading about another SOC finding it. The Sigma rule in §7 above is the starting point.
+- **A password typed into the username field is a real finding category, not a thought experiment.** The signature is SubStatus 0xC0000064 (STATUS_NO_SUCH_USER) plus a `TargetUserName` that looks like a password: mixed case, digits, symbols, longer than a real username. Most SIEMs do not ship this detection out of the box; SOCs add it after finding one themselves or hearing about someone else's. The Sigma rule in §7 is a starting point.
 
-- **CMMC posture is what funds defensive depth in small DIB subcontractors.** Polaris is not Sony or Target — Polaris is a ~$80M-revenue defense subcontractor whose security budget exists primarily because losing CMMC certification would end their ability to bid on contracts. The audit-log program that surfaced both of today's findings is paid for by the regulatory floor. That floor matters more in DIB environments than in any other vertical; the regulatory mechanism is what closes the gap between "we technically have the controls" and "we operate the controls."
+- **In small DIB subcontractors, CMMC is what pays for defence in depth.** Polaris is not Sony or Target. It is a ~$80M-revenue subcontractor whose security budget exists mostly because losing CMMC certification would end its ability to bid. The audit-log program that surfaced both of today's findings is paid for by that regulatory floor, which is what turns "we technically have the controls" into "we actually run them."
 
-- **The audit infrastructure that catches a CUI-exfil insider is the same audit infrastructure that catches an exhausted IR responder's typo.** The system doesn't know the difference between a malicious actor and a process failure. Both findings landed in the same log file in the same engagement. Both got remediation. The lesson for IR teams: the audit log is not just a tool you use against attackers, it's a record of YOUR behavior too, and the discipline of treating it as both is what makes the institution healthier over time.
+- **The log that catches an insider stealing CUI also catches an exhausted responder's typo.** It cannot tell a malicious actor from a process failure, and it should not. Both findings came from the same file in the same engagement and both got remediated. For IR teams the lesson is a little humbling: the audit log is a tool you use on attackers, and it is also a record of *you*.
 
 - **For DIB and other DFARS-bound environments specifically**, the 72-hour DC3 reporting clock starts at *discovery* of the CUI compromise, not at the original badge event. Discovery here is when Dana receives this engagement's report. The clock-management lesson: forensic engagements that confirm CUI exposure should be timed in coordination with General Counsel, because the discovery moment is also the notification-clock-start moment. Don't surprise the client.
 
-- **Chain of custody is what makes the finding admissible.** Sign and hash `Security.evtx` at receipt. Preserve the original alongside any working copies. Document every tool you ran against it. The forensic finding has to survive cross-examination if Reed's case develops into a federal criminal proceeding under 18 U.S.C. § 1832 (theft of trade secrets) or § 1030 (Computer Fraud and Abuse Act). The procedural discipline you applied during this engagement is what protects both the institution and — perversely — the subject, by ensuring that whatever consequence follows is supported by evidence that was handled correctly.
+- **Chain of custody is what makes the finding admissible.** Sign and hash `Security.evtx` on receipt, keep the original alongside any working copies, and record every tool you ran against it. If Reed's case becomes a federal prosecution under 18 U.S.C. § 1832 (theft of trade secrets) or § 1030 (the Computer Fraud and Abuse Act), the finding has to survive cross-examination. That discipline protects the institution and, a little perversely, the subject too, by making sure whatever happens to him rests on evidence handled correctly.
 
-- **The narrow lesson: read the failed-logon events.** Most SIEM dashboards aggregate 4625s into a count by hour and alert only on high-volume spikes (brute-force signal). Real-world findings — typo'd credentials, sprayed-username reconnaissance, abandoned-account probes — live in the *low-volume* 4625 traffic that the count-based alerting ignores. Make a habit of reading the 4625 stream by hand once a week if you don't have detection content for the long tail. The investment is small; the asymmetric upside is large.
+- **Read the failed-logon events.** Most SIEM dashboards roll 4625s up into an hourly count and alert only on brute-force spikes. The interesting findings (typed credentials, sprayed-username reconnaissance, probes against abandoned accounts) live in the *low-volume* 4625 traffic that count-based alerting ignores. If you have no detection for that long tail, read the 4625 stream by hand once a week. It costs very little, and occasionally it hands you a password.
 
 ## §9 — Further reading
 
-*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026, links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs, NIST publication revision status, historical-case figures) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
 [^nist-800-53]: [NIST SP 800-53 Rev. 5 — Security and Privacy Controls for Information Systems and Organizations](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final). Published September 2020; Revision 5 Update 1 published December 2023. AU family is in chapter 3.3.
 [^nist-800-92]: [NIST SP 800-92 — Guide to Computer Security Log Management](https://csrc.nist.gov/pubs/sp/800/92/final).
