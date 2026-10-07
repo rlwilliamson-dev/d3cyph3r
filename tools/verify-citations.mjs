@@ -35,6 +35,14 @@
 // pages) is reported as UNVERIFIED rather than guessed at, because the
 // entire point is to stop asserting things that were never checked.
 //
+// NVD is the one exception worth special handling. Its CVE detail pages
+// are rendered in the browser, so a plain fetch gets an empty shell
+// titled "NVD - Home" and nothing else. NVD addresses those pages by CVE
+// id, so a link of the form nvd.nist.gov/vuln/detail/<id> is checked by
+// reading <id>'s record from the CVE.org API instead (see cveRecord()).
+// A citation that names one CVE and links another still fails, because
+// the record fetched is the one in the URL.
+//
 // WHY NOT IN THE BLOCKING BUILD
 // -----------------------------
 // Same reason as check-links: it is a network check, and the generator
@@ -55,6 +63,13 @@ const PER_HOST_DELAY_MS = 400;
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+
+// Below this much visible text, a page with an app mount point is
+// treated as a JavaScript shell. NVD's shell yields 10 characters.
+const SHELL_TEXT_MAX = 200;
+
+// NVD detail pages are addressed by CVE id; see cveRecord().
+const NVD_DETAIL = /^https?:\/\/nvd\.nist\.gov\/vuln\/detail\/(CVE-\d{4}-\d{4,7})\/?$/i;
 
 // ─── What a citation claims ───────────────────────────────────────
 
@@ -184,12 +199,70 @@ async function fetchText(url) {
     } while (text !== prev);
     text = text.replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ");
 
+    // A page whose content is built by JavaScript. What arrives is a
+    // mount point for the app and almost no text, so "the page never
+    // mentions X" would be a statement about the shell, not the page.
+    // Both conditions are required: plenty of real pages are short, and
+    // plenty of server-rendered pages also carry an id="root".
+    if (
+      text.trim().length < SHELL_TEXT_MAX &&
+      /<app-root\b|<div[^>]+id=["'](?:root|app|__next)["']/i.test(raw)
+    ) {
+      return { skip: "rendered by JavaScript (empty page shell)", finalUrl: res.url };
+    }
+
     return { title: title.replace(/\s+/g, " ").trim(), text, finalUrl: res.url };
   } catch (e) {
     return { skip: e?.name === "AbortError" ? "timeout" : (e?.cause?.code || e.message) };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Stand-in for an NVD detail page: the CVE record for the id in the URL,
+ * read from the CVE.org API, which answers scripts with JSON.
+ *
+ * Returns the same shape as fetchText() so verify() treats it like any
+ * other page. The record's own id goes into the text, so a citation
+ * naming a different CVE than the one it links still fails the
+ * identifier check. A rejected id is still a real record (crypto/level1
+ * cites one deliberately, to warn readers off it), so the state is
+ * reported in the title rather than treated as an error. An id with no
+ * record at all comes back with empty text and fails.
+ */
+async function cveRecord(url, id) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`https://cveawg.mitre.org/api/cve/${id.toUpperCase()}`, {
+      signal: ctrl.signal,
+      headers: { "User-Agent": UA, Accept: "application/json" },
+    });
+    if (res.status === 404) return { title: "no CVE record", text: "", finalUrl: url };
+    if (!res.ok) return { skip: `CVE API HTTP ${res.status}`, finalUrl: url };
+    const rec = await res.json();
+    const meta = rec.cveMetadata || {};
+    const cna = rec.containers?.cna || {};
+    const prose = [...(cna.descriptions || []), ...(cna.rejectedReasons || [])]
+      .map((d) => d.value)
+      .join(" ");
+    return {
+      title: `${meta.cveId || ""} (${meta.state || "unknown state"})`,
+      text: `${meta.cveId || ""} ${prose}`.replace(/\s+/g, " "),
+      finalUrl: url,
+    };
+  } catch (e) {
+    return { skip: e?.name === "AbortError" ? "timeout" : (e?.cause?.code || e.message) };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Fetch whatever stands in for the page at `url`. */
+function fetchPage(url) {
+  const nvd = NVD_DETAIL.exec(url);
+  return nvd ? cveRecord(url, nvd[1]) : fetchText(url);
 }
 
 // ─── Verdict ──────────────────────────────────────────────────────
@@ -310,7 +383,7 @@ async function main() {
   const results = [];
   let done = 0;
   await pool(urls, async (url) => {
-    const page = await fetchText(url);
+    const page = await fetchPage(url);
     for (const c of byUrl.get(url)) {
       const v = verify(c, page);
       results.push({ ...c, ...v, finalUrl: page.finalUrl });
@@ -347,7 +420,9 @@ async function main() {
     }
   }
 
-  process.exit(by("MISMATCH").length ? 1 : 0);
+  // exitCode rather than process.exit(): exiting immediately can cut off
+  // a large --json report that is still being written to a pipe.
+  process.exitCode = by("MISMATCH").length ? 1 : 0;
 }
 
 main().catch((e) => {

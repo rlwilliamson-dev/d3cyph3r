@@ -271,7 +271,7 @@ Marcus — the conversation goes better when there's no surprise.
 Two weaknesses, one control, one regime.
 
   CWE-1392  Use of Default Credentials — the vendor default was
-            flagged in a Q1 2025 review and never rotated.
+            flagged in a Q3 2025 review and never rotated.
   CWE-668   Exposure of Resource to Wrong Sphere — a host the
             scope file says is VPN-only, answering the internet.
 

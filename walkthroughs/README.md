@@ -230,6 +230,12 @@ majority of the title's distinctive words. Anything it cannot read —
 bot walls, PDFs, JavaScript-rendered pages — is reported as UNVERIFIED
 rather than guessed at, and those need a human to open them.
 
+NVD is handled separately. Its CVE pages are built in the browser, so a
+script only ever sees an empty shell. A link of the form
+`nvd.nist.gov/vuln/detail/<CVE id>` is checked against that CVE's record
+in the CVE.org API instead, which still fails a citation that names one
+CVE and links another.
+
 Run it on every walkthrough PR. Zero MISMATCH is the bar; read the WEAK
 list, since that is where a title that over-claims what a page contains
 shows up.
