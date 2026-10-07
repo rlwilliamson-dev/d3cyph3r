@@ -8,31 +8,31 @@
 
 ## §1 — The setup
 
-When you left the lobby at the end of `level0@network`, Atlas Health had a Tier-1 incident on its hands. You'd filed the perimeter finding: PostgreSQL 13.11 on `staging.atlas.health:5432`, listening on the open internet, with a named default credential — `atlas-default-2025` — that the client's DevOps lead had admitted to in a recorded quarterly meeting fifteen months ago and never rotated. The combination of the open port and the known credential gave you a HIPAA-grade exposure ready for somebody — anybody — with `nmap` and `psql`.
+When you left `level0@network`, Atlas Health had a Tier-1 incident on its hands. You had filed the perimeter finding: PostgreSQL 13.11 on `staging.atlas.health:5432`, listening on the open internet, guarded by a named default credential, `atlas-default-2025`, which Atlas's DevOps lead admitted to in a recorded Q1 2025 quarterly review and never rotated. An open port plus a known password is a HIPAA-grade exposure waiting for anybody with `nmap`, `psql` and a free evening.
 
-The night-after timeline reads like a textbook escalation. Priya took the finding to Marcus at 8:42pm. Marcus opened an internal incident at 8:47pm, woke up his on-call engineer at 8:52pm, and got the firewall ACL written by 11:30pm with a deploy slot scheduled for the next morning's maintenance window. By the time you walk back to Driftwood's audit workstation at 7:14am for what's now Day Two of the Atlas engagement, the firewall change is being staged and the credential rotation is on the calendar — for Friday's regular change window, three days out. Marcus's argument for the delay is reasonable: rotating `atlas-default-2025` will require a coordinated push to every Atlas service that has the cred baked in (there are seven), and doing that without a change-control plan would risk breaking patient-facing systems. The Friday slot already has the right reviewers on the calendar.
+The night after reads like a textbook escalation. Priya took the finding to Marcus at 8:42pm. Marcus opened an internal incident at 8:47pm, woke his on-call engineer at 8:52pm, and had a firewall ACL written by 11:30pm, with a deploy slot booked for the next morning's maintenance window. So when you walk back to Driftwood's audit workstation at 7:14am for Day Two, the firewall change is being staged and the credential rotation is on the calendar for Friday's regular change window, three days away. Marcus's reasoning is sound. Rotating `atlas-default-2025` means a coordinated push to all seven Atlas services that have it baked in, and doing that without a change-control plan risks breaking patient-facing systems. The Friday slot already has the right reviewers booked.
 
-That decision left a gap. Three days, between now and Friday, during which:
+Sound reasoning, but it leaves a three-day gap between now and Friday, during which:
 
-- The firewall ACL might catch most casual exposure but won't catch any attacker who's already on the host.
+- The firewall ACL might stop most casual exposure, and does nothing about an attacker already on the host.
 - The credential is still live everywhere it was live yesterday.
-- The audit trail of who has historically used the credential is essentially empty — staging-db's auth logs only go back 30 days, and the credential has been authoritative for a year and a half.
+- The record of who has used the credential is essentially empty. Staging-db's auth logs go back 30 days, and the credential has been live for far longer than that.
 
-This is the conversation Priya had with Driftwood's engagement lead between 9pm and 10pm last night. The shape of the question: *we know the credential was reachable; we don't know who else used it; what do we owe the client in terms of validating actual blast radius before Friday?* The answer they landed on is the foundation of today's level.
+Priya spent an hour on exactly that last night with Driftwood's engagement lead, between 9pm and 10pm. The question, roughly: *we know the credential was reachable and we don't know who else used it, so what do we owe the client in terms of checking the real blast radius before Friday?* Their answer is today's level.
 
-Priya has authorized **one controlled, documented blast-radius check** using the still-live credential. The terms are tight: log in once, do reconnaissance-only enumeration (no logging into anything you discover, no scraping databases, no lateral nmap from the foothold), write up what's reachable from the compromised host, exit. The point is not to exploit; the point is to produce an accurate-scope appendix for the incident report that lands on Marcus's CISO's desk tomorrow morning, so the recovery plan is sized to the real exposure rather than the theoretical one.
+Priya has authorized **one controlled, documented blast-radius check** using the still-live credential, on tight terms. Log in once. Do reconnaissance-only enumeration: no logging into anything you discover, no scraping databases, no lateral nmap from the foothold. Write up what is reachable from the compromised host, and leave. The point is not exploitation. It is an accurately scoped appendix for the incident report that lands on Marcus's CISO's desk tomorrow morning, so the recovery plan is sized to the real exposure and not the imagined one.
 
-This kind of controlled, authorized post-finding reconnaissance is what mature consulting firms do when they need to size an incident response. It is also legally and ethically fraught — you are technically using a live credential to access a client production environment. The authorization letter Priya wrote (with Driftwood's general counsel signing off, and Marcus's CISO countersigning by 6am this morning) is what keeps the activity inside the engagement's scope of work and outside the Computer Fraud and Abuse Act. Without that paper, today's level would be an actual crime.
+Mature consulting firms do this kind of authorized post-finding reconnaissance when they need to size an incident response, and it is legally and ethically delicate, because you are, technically, using a live credential to get into a client's production environment. The authorization letter Priya wrote, signed off by Driftwood's general counsel and countersigned by Marcus's CISO by 6am this morning, is what keeps the activity inside the scope of work and outside the Computer Fraud and Abuse Act. Without that paper, today's level would be a crime. With it, it is a Tuesday.
 
-You're logged in as `dbadmin` on `staging-db.atlas.health`. The host is a stock Ubuntu LTS box running PostgreSQL 13.11. The `dbadmin` account is the default vendor service account that ships with Atlas's database provisioning template; somebody enabled `/bin/bash` on it during an upgrade six months back when a junior engineer needed quick shell access for a debug session and never reverted the change. (This is also a finding — a vendor service account should not have an interactive shell — but it's not today's finding.) Your prompt reads `dbadmin@network:~$`.
+You are logged in as `dbadmin` on `staging-db.atlas.health`, a stock Ubuntu LTS box running PostgreSQL 13.11. `dbadmin` is the vendor service account that ships with Atlas's database provisioning template. Six months ago, during an upgrade, a junior engineer needed quick shell access for a debug session, somebody enabled `/bin/bash` on it, and nobody turned it back off. (That is a finding too, since a vendor service account has no business with an interactive shell, but it is not today's.) Your prompt reads `dbadmin@network:~$`.
 
-The legal regime hasn't softened overnight. Atlas Health is HIPAA-covered. The Security Rule (45 CFR Part 164, Subpart C) applies to every system that touches electronic protected health information (ePHI).[^cfr-45-164] The HITECH Act sets the breach notification clock: 60 days from discovery to notify affected individuals; HHS Office for Civil Rights gets notice in the same window if 500 or more individuals are affected; and a breach affecting 500+ individuals in a single state or jurisdiction requires public media notice — the kind that lands on a regional news affiliate's homepage.[^hhs-office-for-civil-rights-2] Atlas serves roughly 400,000 patients across the Pacific Northwest. The "500+ affected" threshold is, in practice, a guarantee for any meaningful exposure here.
+The legal regime has not softened overnight. Atlas is HIPAA-covered, so the Security Rule (45 CFR Part 164, Subpart C) applies to every system touching electronic protected health information (ePHI).[^cfr-45-164] The HITECH Act sets the clock: 60 days from discovery to notify affected individuals; notice to HHS's Office for Civil Rights in the same window if 500 or more are affected; and public media notice for a breach of 500+ in a single state or jurisdiction, which means the regional news site's homepage.[^hhs-office-for-civil-rights-2] Atlas serves roughly 400,000 patients across the Pacific Northwest, so any meaningful exposure clears the 500 threshold before lunch.
 
-What you don't know yet, sitting at the shell, is that Atlas's internal DNS server is going to give up the entire data center's hostname inventory plus a service-account credential in a single `dig` command. The lesson today is that the directory of internal services is, often, the directory of internal services someone left readable to anyone who can reach the DNS resolver.
+What you don't know yet is that Atlas's internal DNS server is about to hand you the whole data centre's hostname inventory, plus a service-account credential, in a single `dig` command. Today's lesson is that the directory of internal services is often, also, a directory anyone who can reach the resolver is allowed to read.
 
 ## §2 — The solve
 
-The puzzle path is short. The reading around it is what makes the lesson land.
+The puzzle itself is one command long. The reading around it is where the lesson lives.
 
 ### Step 1: Confirm the credential and what it bought you
 
@@ -46,9 +46,9 @@ dbadmin@network:~$ pwd
 /home/dbadmin
 ```
 
-You are now logged into Atlas's staging database server as the default vendor service account. This is the same access you found leaking yesterday — the same access an attacker who ran the same perimeter scan and read the same engagement-notes leak would have. You're standing where they would stand.
+You are on Atlas's staging database server as the default vendor service account. This is the access you watched leaking yesterday, and the same access any attacker who ran the same scan and read the same notes would have. You are standing exactly where they would stand.
 
-Read what's in front of you before you do anything else.
+Read what is in front of you before you touch anything.
 
 ### Step 2: Read the engagement context
 
@@ -60,12 +60,12 @@ priya-note.md       welcome.md
 
 Five files. Read them in order.
 
-`welcome.md` is the mechanics file — it introduces the new tool you'll use today (`dig <domain> AXFR`) and explains what a zone transfer reveals. `priya-note.md` is the in-character handoff: the day-two engagement update, the rules of engagement, the legal frame for what you're about to do. `atlas-internal.txt` is the scope document — the list of zones Atlas runs internally, with `atlas.internal` named as the only one in scope for today's check. `.bash_history` is flavor (the `dbadmin` account's previous postgres-operations history, confirming this is a real working account someone uses for routine DBA work). `lessons-learned.md` is what you'll come back to after you find the finding.
+`welcome.md` covers mechanics: the new tool (`dig <domain> AXFR`) and what a zone transfer reveals. `priya-note.md` is the in-character handoff, with the day-two update, the rules of engagement and the legal frame for what you are about to do. `atlas-internal.txt` is the scope document listing Atlas's internal zones, with `atlas.internal` named as the only one in scope today. `.bash_history` is colour, showing `dbadmin`'s routine Postgres work and confirming this is a real working account. `lessons-learned.md` is for after you find the finding.
 
 The critical pieces to extract:
 
-- **The new tool**: `dig <domain> AXFR` asks the DNS server to dump every record in the zone. The server *should* refuse unless you're an authorized secondary nameserver authenticating with TSIG; in practice, many servers don't refuse.
-- **The internal DNS**: Atlas runs an authoritative resolver at `dns.atlas.internal` (also `10.40.0.10`) for the `atlas.internal` zone. The staging host you're on can reach it — your DNS configuration points there for internal-name resolution.
+- **The new tool**: `dig <domain> AXFR` asks the DNS server for every record in the zone. The server *should* refuse unless you are an authorized secondary nameserver authenticating with TSIG. In practice, a lot of them simply don't.
+- **The internal DNS**: Atlas runs an authoritative resolver at `dns.atlas.internal` (`10.40.0.10`) for the `atlas.internal` zone, and the host you are on can reach it, because your DNS configuration points there for internal names.
 - **The rules**: enumerate only; do not log into anything you discover; do not pivot.
 
 ### Step 3: Run the zone transfer
@@ -109,21 +109,21 @@ atlas.internal.                  3600  IN  SOA   dns.atlas.internal. ops.atlas.h
 ;; XFR size: 22 records
 ```
 
-Twenty-two records. The SOA appears at the start and end (standard zone-transfer framing — RFC 5936 requires that any AXFR response opens and closes with the zone's SOA so the receiver knows the transfer is complete and atomic).[^rfc-5936]
+Twenty-two records. The SOA appears at both the start and the end, which is standard zone-transfer framing: RFC 5936 requires every AXFR response to open and close with the zone's SOA, so the receiver knows the transfer is complete.[^rfc-5936]
 
-Read the records by tier. The IP plan tells the story.
+Now read it by tier, because the IP plan tells a story Atlas never meant to publish.
 
-**Infrastructure tier (10.40.0/24).** `dns.atlas.internal` (10.40.0.10) is the resolver you're querying. `mail.atlas.internal` (10.40.0.25), `jumpbox-vpn.atlas.internal` (10.40.0.20), `syslog.atlas.internal` (10.40.0.30), `ntp.atlas.internal` (10.40.0.40). Standard operational supporting services.
+**Infrastructure tier (10.40.0/24).** `dns.atlas.internal` (10.40.0.10) is the resolver you are querying. Then `mail.atlas.internal` (10.40.0.25), `jumpbox-vpn.atlas.internal` (10.40.0.20), `syslog.atlas.internal` (10.40.0.30) and `ntp.atlas.internal` (10.40.0.40): the usual supporting services.
 
-**Staging tier (10.40.10/24).** `staging-db.atlas.internal` is the host you're on. `staging-web` and `staging-api` are its peers. This is the segment you're authorized to know about.
+**Staging tier (10.40.10/24).** `staging-db.atlas.internal` is where you are; `staging-web` and `staging-api` are its neighbours. This is the segment you are authorized to know about.
 
-**Production tier (10.40.20/24).** `prod-db`, `prod-web`, `prod-api`. The systems Atlas Health's actual patients touch. By Atlas's stated architecture, staging hosts should not be able to reach this tier. The fact that you can resolve the hostnames doesn't prove the firewall lets the packets through — but it gives a future attacker the targets to plan against. *You wouldn't have to find these. The DNS named them.*
+**Production tier (10.40.20/24).** `prod-db`, `prod-web`, `prod-api`: the systems Atlas's real patients touch. By Atlas's stated architecture, staging should not be able to reach this tier at all. Resolving a hostname does not prove the firewall will pass the packets, but it hands a future attacker a target list. *You did not have to find these. DNS named them for you.*
 
-**PHI / clinical tier (10.40.30/24).** This is the one that makes the lesson HIPAA-specific. Three hosts: `phi-warehouse.atlas.internal` is presumably the data warehouse aggregating clinical PHI for analytics; `pacs-imaging.atlas.internal` is a PACS (Picture Archiving and Communication System) — the standard storage for medical imaging (radiology, MRI, CT scans, etc.) — and PACS is one of the highest-sensitivity PHI categories under HIPAA because imaging includes facial-recognition-grade identifiers; `ehr-fhir.atlas.internal` is presumably an EHR (Electronic Health Record) system exposing FHIR (Fast Healthcare Interoperability Resources, HL7's modern interop standard) APIs. All three are systems that an attacker who reached them could exfiltrate PHI from at scale.
+**PHI / clinical tier (10.40.30/24).** This is the tier that makes the lesson specifically about HIPAA. Three hosts. `phi-warehouse.atlas.internal` is presumably the data warehouse aggregating clinical PHI for analytics. `pacs-imaging.atlas.internal` is a PACS (Picture Archiving and Communication System), the standard store for medical imaging such as radiology, MRI and CT, and imaging is among the most sensitive PHI there is, since an image can identify a person as surely as a name does. `ehr-fhir.atlas.internal` is presumably an EHR (Electronic Health Record) system exposing FHIR (Fast Healthcare Interoperability Resources, HL7's modern interoperability standard) APIs. Reach any of the three and you can exfiltrate PHI at scale.
 
-**Backup tier (10.40.40/24).** `backups.atlas.internal`. Backup systems are a recurring high-value target for ransomware operators specifically — the playbook for healthcare ransomware is now to encrypt or destroy backups *first* (the December 2024 update to CISA's #StopRansomware guide on the healthcare-sector advisory walks through exactly this pattern), then encrypt the production tier, leaving the victim with no recovery option except payment. A named backup host in the DNS zone is operationally a target.
+**Backup tier (10.40.40/24).** `backups.atlas.internal`. Backups are a favourite target for ransomware operators, because the healthcare playbook now goes after them *first*: encrypt or destroy the backups, then encrypt production, and leave the victim no way back except paying. A backup host named in the zone file is, operationally, a target with a label on it.
 
-**Shadow tier (10.40.99/24).** `audit-bypass.atlas.internal`. This is the smoking gun. The hostname doesn't match the tiered scheme (10.40.99/24 isn't in the staging / prod / PHI / backups plan); the name itself implies "bypass" (i.e., this exists to route around some other control); and the IP range is one segment higher than any other tier, suggesting somebody dropped it into a "miscellaneous" subnet so it wouldn't show up in tier-level inventory queries. The naming convention of `audit-bypass` paired with the unusual subnet placement is a deliberate camouflage move that wasn't subtle enough to survive an AXFR.
+**Shadow tier (10.40.99/24).** `audit-bypass.atlas.internal`. This is the one. It does not fit the tier scheme (10.40.99/24 is not part of the staging / prod / PHI / backups plan), the name says "bypass", as in something built to route around another control, and the subnet sits well above every other tier, as though someone parked it in a miscellaneous range to keep it out of tier-level inventory queries. Whether or not that was deliberate camouflage, it did not survive an AXFR.
 
 And then the TXT record.
 
@@ -131,13 +131,13 @@ And then the TXT record.
 audit-bypass.atlas.internal.     3600  IN  TXT   "audit-bypass DEPRECATED creds — user=audit-svc pass=atlas-audit-bypass-2026 — added 2025-09-12 for Tessera Q4 dry-run, scheduled removal end of Q4"
 ```
 
-A free-form text record carrying a literal username, a literal password, the date it was added, the reason it was added (a vendor audit dry-run with "Tessera," whoever that is), and the scheduled-removal date that obviously passed without anyone removing it. Whoever wrote this TXT record needed somewhere to stash the credential, didn't have a secrets-management tool already wired up for this use case, and decided "well, DNS is internal anyway" was a good enough justification.
+A free-form text record holding a literal username, a literal password, the date it was added, why it was added (a vendor audit dry-run with "Tessera", whoever that is), and a scheduled-removal date that came and went with nobody removing anything. Whoever wrote it needed somewhere to stash a credential, had no secrets manager wired up for the job, and decided "well, DNS is internal anyway" was good enough.
 
 It wasn't.
 
 ### Step 4: Document and stop
 
-Per Priya's rules of engagement, you do not now SSH into `audit-bypass.atlas.internal`. You do not query the database it provides access to. You do not pivot. What you do is write up exactly what the AXFR revealed and tie it to the incident-report appendix.
+Priya's rules of engagement apply here, and they are the point of the level. You do not SSH into `audit-bypass.atlas.internal`. You do not query whatever database it fronts. You do not pivot. You write up exactly what the AXFR revealed and attach it to the incident-report appendix.
 
 The minimum report content:
 
@@ -147,7 +147,7 @@ The minimum report content:
 4. **The `audit-bypass` account itself is undocumented in Atlas's service inventory.** Atlas needs to determine who created it, when, for what purpose ("Tessera Q4 dry-run" per the TXT comment, but Tessera doesn't appear in the engagement notes), and whether it can be deprovisioned outright rather than just rotated.
 5. **The blast radius of `atlas-default-2025` extends past staging-db** to anything `audit-bypass.atlas.internal` provides access to, and to anything an attacker would have done with the internal map between the credential's first exposure and Friday's rotation.
 
-Send the report to Priya. She'll route it to Marcus's CISO with the day-one report attached. Exit the level.
+Send it to Priya, who routes it to Marcus's CISO with yesterday's report attached. Then exit the level.
 
 ```bash
 dbadmin@network:~$ exit
@@ -155,7 +155,7 @@ dbadmin@network:~$ exit
 
 ### Step 5 (game-world only): Use the credential
 
-In a real engagement, today ends here. In D3CYPH3R the credential chain continues into `level2@network`, where the audit-bypass account becomes the entry point. The mechanic is the same as it was for `level0@network → level1@network`: yesterday's leaked password gates today's level. Today's TXT-disclosed credential will gate tomorrow's.
+In a real engagement, today ends there. In D3CYPH3R the credential chain continues into `level2@network`, with the audit-bypass account as the way in. Same mechanic as before: yesterday's leaked password gated today's level, and today's TXT-record credential gates tomorrow's.
 
 ```bash
 guest@d3cyph3r:~$ ssh level2@network
@@ -166,55 +166,55 @@ level2@network's password: atlas-audit-bypass-2026
 
 ## §3 — The vulnerability
 
-Today's finding looks like a single bad query response. It's actually a five-failure stack, each of which is independently a known anti-pattern, none of which is individually exotic, all of which compound into the credential disclosure you walked through above.
+Today's finding looks like one bad DNS response. It is actually five failures stacked up, each a well-known anti-pattern, none of them exotic, and together they add up to the credential you just walked out with.
 
 ### Failure 1: The default credential was never rotated (CWE-1392)
 
-`atlas-default-2025` is a vendor default. Marcus admitted to it in a Q1 2025 quarterly review and said the rotation would happen "next sprint." Five sprints later, it was still live. This is CWE-1392, *Use of Default Credentials*.[^cwe-1392] It's the cleanest possible weakness — the system shipped with a credential, the documentation flagged that the credential needed to be changed, the team intended to change it, the change never happened.
+`atlas-default-2025` is a vendor default. Marcus admitted to it in a Q1 2025 quarterly review and promised rotation "next sprint", and five sprints later it was still live. This is CWE-1392, *Use of Default Credentials*,[^cwe-1392] and it is about the cleanest weakness there is: the system shipped with a credential, the documentation said to change it, the team meant to change it, and nobody did.
 
-CWE-1392 is the more specific successor to the broader and longer-running CWE-798 (*Use of Hard-coded Credentials*).[^cwe-798] MITRE distinguishes the two: hard-coded credentials are baked into source code or compiled binaries by developers; default credentials ship with the product and are documented as needing to be changed by the operator. The mitigation is the same on the operator side either way — change the value, prove the change took, audit periodically. But the responsibility shifts. Hard-coded credentials are a vendor failure; default credentials are an operator failure to follow vendor guidance.
+CWE-1392 is the more specific successor to the older and broader CWE-798, *Use of Hard-coded Credentials*.[^cwe-798] MITRE draws a useful line between them. Hard-coded credentials are baked into source or binaries by developers; default credentials ship with a product and are documented as something the operator must change. The operator's fix is identical either way (change it, prove the change took, audit periodically), but the blame moves. A hard-coded credential is the vendor's failure. A default credential left in place is the operator's failure to follow the vendor's instructions.
 
-Default credentials remain one of the most common findings in real-world penetration tests, despite being one of the easiest weaknesses to fix.
+Default credentials are still among the most common findings in real penetration tests, despite being one of the easiest weaknesses in existence to fix.
 
 ### Failure 2: The service account had an interactive shell (CWE-732)
 
-A vendor-provisioned service account should not have `/bin/bash` as its login shell. Atlas's database provisioning template created `dbadmin` as a postgres-operations service account; somebody (a junior engineer, six months ago, per the change history) replaced the default `/sbin/nologin` shell with `/bin/bash` to enable interactive debugging during an upgrade and never reverted the change.
+A vendor-provisioned service account should not have `/bin/bash` as its login shell. Atlas's provisioning template created `dbadmin` as a Postgres-operations service account with `/sbin/nologin`. Six months ago, according to the change history, a junior engineer swapped in `/bin/bash` to debug an upgrade and never swapped it back.
 
-This is CWE-732, *Incorrect Permission Assignment for Critical Resource* — the same weakness that drove the level1@linux puzzle.[^cwe-732] Different surface (login shell configuration rather than file mode), same underlying anti-pattern: a permission was loosened for a one-time legitimate reason and never tightened back down. The MITRE entry for CWE-732 carries the "ALLOWED-WITH-REVIEW" mapping status — meaning it's a valid weakness ID but is frequently misused for authorization weaknesses (which actually belong under CWE-862 / CWE-863).[^cwe-863] For our finding here, CWE-732 fits cleanly: the explicit permission to log in interactively was set wrong for a service account.
+That is CWE-732, *Incorrect Permission Assignment for Critical Resource*, the same weakness behind level1@linux.[^cwe-732] Different surface (a login shell rather than a file mode), same anti-pattern: a permission loosened for a one-off legitimate reason and never tightened again. MITRE gives CWE-732 an "ALLOWED-WITH-REVIEW" mapping status because people misuse it for authorization weaknesses that really belong under CWE-862 or CWE-863.[^cwe-863] Here it fits cleanly, since the permission to log in interactively was simply set wrong for a service account.
 
 ### Failure 3: The DNS server allowed AXFR from any source (CWE-306)
 
-DNS zone transfer (AXFR — Authoritative Zone Transfer, defined in RFC 5936) is the protocol mechanism by which authoritative DNS servers replicate full zone contents to other authoritative servers in the same zone. The legitimate use case is straightforward: a primary nameserver pushes its zone data to its configured secondaries so the secondaries can answer queries authoritatively. The expected enforcement: the primary should refuse AXFR requests from any client that isn't a known, authenticated secondary.
+DNS zone transfer (AXFR, Authoritative Zone Transfer, specified in RFC 5936) is how authoritative DNS servers replicate a whole zone to one another. The legitimate use is simple: a primary pushes its zone to its configured secondaries so they can answer authoritatively too. The expected enforcement is just as simple: refuse AXFR from anything that is not a known, authenticated secondary.
 
-There are two enforcement modes in current use. **IP-based ACL** (`allow-transfer { 10.40.0.20; };` in BIND syntax) restricts AXFR responses to a whitelist of source IPs. This is the historical model and works fine when the secondaries are on stable, known IPs. **TSIG** (RFC 8945, formerly RFC 2845) authenticates AXFR requests cryptographically — the requester presents an HMAC over the request signed with a shared secret, and the server verifies before responding.[^rfc-8945] TSIG is the modern recommendation because it survives IP changes, NAT, and source-spoofing attacks that IP-based ACLs don't. Atlas's resolver implements neither; the `allow-transfer` directive is left at its (overly permissive) default, which on most distributions amounts to "allow from any source that can connect to TCP 53."
+Two enforcement modes are in common use. An **IP-based ACL** (`allow-transfer { 10.40.0.20; };` in BIND syntax) restricts transfers to a whitelist of source IPs, the historical model, and fine as long as the secondaries sit on stable, known addresses. **TSIG** (RFC 8945, formerly RFC 2845) authenticates transfers cryptographically: the requester presents an HMAC over the request using a shared secret, and the server checks it before answering.[^rfc-8945] TSIG is the modern recommendation because it survives IP changes, NAT and source spoofing, all of which defeat an IP ACL. Atlas's resolver does neither. Its `allow-transfer` is left at a permissive default, which in practice means anyone who can reach TCP 53 gets the zone.
 
-This is CWE-306, *Missing Authentication for Critical Function*.[^cwe-306] The function — full zone replication — is critical: the response contains every record in the zone, including subdomain mappings, mail-server pointers, and any free-form text records anyone has ever attached. The authentication requirement on this function is well-documented in standards literature going back to the late 1990s. The failure to enforce it is straightforward: the operator either didn't know about the requirement, didn't configure it, or configured something that didn't take effect.
+That is CWE-306, *Missing Authentication for Critical Function*.[^cwe-306] Full zone replication is about as critical as DNS functions get, since the response contains every record in the zone, every hostname, every mail pointer and every free-form text record anybody ever attached. The requirement to authenticate it has been in the standards literature since the late 1990s. Failing to enforce it is mundane: the operator did not know, did not configure it, or configured something that never took effect.
 
-CWE-306 has been on the CWE Top 25 list multiple times — most recently the 2024 edition, where it placed #21 on the "Most Dangerous Software Weaknesses" list (see the live CWE Top 25 archive for the current year's exact placement, which shifts as the CVE-data normalization rolls forward). It is a high-frequency finding because the broader pattern (a critical function exposed without authentication) shows up across protocols and systems, not just DNS. The DNS-specific manifestation is one of the cheapest to fix and one of the most consistently overlooked.
+CWE-306 has appeared on the CWE Top 25 repeatedly, because the general pattern of a critical function exposed without authentication turns up across every kind of protocol and system. The DNS version is one of the cheapest to fix and one of the most consistently overlooked.
 
 ### Failure 4: A live credential was stored in a public-readable record (CWE-200, with caveat)
 
-Whoever needed to stash the audit-bypass credential during the Tessera dry-run picked the most convenient place they could reach without setting up new infrastructure. DNS TXT records are infinitely flexible — they can hold any printable ASCII, up to 255 characters per string with multiple strings allowed per record — and they're trivially editable by anyone with DNS administrator privileges. The convenience of "I just need to put this somewhere quickly" found its way to the convenience of "we already have DNS, let's just put it in a TXT record."
+Whoever needed to stash the audit-bypass credential for the Tessera dry-run picked the most convenient place within reach. TXT records will hold almost anything printable, up to 255 characters per string with several strings allowed per record, and anyone with DNS admin rights can edit them. "I just need to put this somewhere quickly" met "we already have DNS", and the rest is in your terminal.
 
-This is CWE-200, *Exposure of Sensitive Information to an Unauthorized Actor*.[^cwe-200] The catalog entry covers exactly this case: sensitive data placed where an unauthorized actor can read it. The framework-mapping caveat worth flagging: MITRE has marked CWE-200 as **"Discouraged for mapping"** in the current CWE catalog (it's listed under "Mapping Problems" with a recommendation that mappers use a more specific weakness ID when possible). CWE-200 is broad enough to apply to almost any disclosure, which makes it less useful for analytics and root-cause taxonomy. For our purposes here, CWE-200 is cited as the framework-mapping reference — the surgical-fix description is "do not store credentials in DNS records; use a real secrets manager."
+This is CWE-200, *Exposure of Sensitive Information to an Unauthorized Actor*,[^cwe-200] whose entry covers exactly this: sensitive data placed where an unauthorized actor can read it. The caveat worth flagging is that MITRE marks CWE-200 **"Discouraged for mapping"** and asks mappers to use something more specific, because disclosure is an impact rather than a cause and CWE-200 fits almost any leak. So it serves here as the framework reference, and the actual fix is plainer: never store credentials in DNS records, and use a real secrets manager.
 
-The companion weakness worth citing alongside CWE-200 is CWE-540, *Inclusion of Sensitive Information in Source Code*.[^cwe-540] CWE-540 is technically about source code, but the spirit of the entry — "do not write secrets into any artifact whose visibility is governed by something other than secret-grade access control" — captures the DNS-TXT case better than CWE-200's broad disclosure framing.
+A useful companion is CWE-540, *Inclusion of Sensitive Information in Source Code*.[^cwe-540] Strictly it is about source code, but its spirit, never write a secret into an artifact whose visibility is controlled by something other than secret-grade access control, describes the DNS TXT case better than CWE-200's broad disclosure framing does.
 
 ### Failure 5: The "temporary" service account was never deprovisioned (the sticky-account anti-pattern)
 
-The `audit-bypass` account was created for a one-time event (the "Tessera Q4 dry-run," presumably an external compliance audit Atlas was preparing for). It was supposed to be removed when the audit closed. It wasn't. The TXT record explicitly notes "scheduled removal end of Q4" — Q4 2025 ended five months ago at the time of the level — and the account is still live and still listed in DNS.
+The `audit-bypass` account was created for a one-off event, the "Tessera Q4 dry-run", presumably an external compliance audit Atlas was preparing for, and was supposed to disappear when that audit closed. It did not. The TXT record itself says "scheduled removal end of Q4". Q4 2025 ended five months before this level, and the account is still live and still advertised in DNS.
 
-This is the sticky-account anti-pattern, well-documented in IAM literature and explicitly called out in several frameworks:
+This is the sticky-account anti-pattern, well documented in IAM literature and named in several frameworks:
 
 - **NIST SP 800-53 Rev. 5 AC-2(3)** (*Disable Accounts*) requires accounts to be disabled when no longer needed.[^nist-800-53]
 - **CIS Critical Security Controls v8.1 Control 5.3** (*Disable Dormant Accounts*) is the same requirement, phrased operationally.[^cis-critical-security-controls-v8]
-- **NIST SP 800-63B-4** (*Digital Identity Guidelines: Authentication and Authenticator Management*, July 2025 — supersedes the 2017 edition) covers the full account lifecycle including credential deprovisioning.[^nist-800-63b] (The 2017 edition was titled "Authentication and Lifecycle Management"; the Rev 4 retitle reflects the broader scope.)
+- **NIST SP 800-63B-4** (*Digital Identity Guidelines: Authentication and Authenticator Management*, July 2025, supersedes the 2017 edition) covers the full account lifecycle including credential deprovisioning.[^nist-800-63b] (The 2017 edition was titled "Authentication and Lifecycle Management"; the Rev 4 retitle reflects the broader scope.)
 
-The pattern fails the same way at every organization that has ever set up a temporary access path: the access gets created with the best of intentions, an expiration date gets discussed in passing, no automated mechanism enforces the expiration, the people who set it up move on or forget, and the account remains live indefinitely. The IAM-platform answer (CyberArk PAM, BeyondTrust Privileged Identity, HashiCorp Vault with TTL-bound dynamic secrets) exists precisely because spreadsheets-of-expiration-dates don't work.
+It fails the same way everywhere. A temporary access path gets created with good intentions, an expiry date gets mentioned in passing, nothing automated enforces the expiry, the people involved move on or forget, and the account lives forever. PAM platforms (CyberArk PAM, BeyondTrust Privileged Identity, HashiCorp Vault with TTL-bound dynamic secrets) exist precisely because a spreadsheet of expiry dates does not expire anything.
 
 ### The compound effect
 
-Each failure in isolation is a manageable finding. Compound them, and you get today's level.
+Each failure on its own is a manageable finding. Stack them and you get today's level.
 
 ```
   unrotated default credential
@@ -230,9 +230,9 @@ Each failure in isolation is a manageable finding. Compound them, and you get to
   undocumented account with elevated access
 ```
 
-Pull any one of the five threads out of the chain and the breach becomes substantially harder to execute. Rotate the default credential and you can't get on the box. Disable the interactive shell and the credential gets you a database connection but not the DNS query. Segment staging away from internal DNS and the resolver can't be queried from the foothold. Lock down AXFR and the zone doesn't dump. Don't put credentials in DNS and the dump doesn't include the breadcrumb. The fact that no single layer holds means the engineering effort to fully remediate is five separate efforts — and each of those five efforts needs to be tracked, scheduled, and verified independently.
+Pull any one of the five out and the breach gets much harder. Rotate the default credential and you never get on the box. Remove the interactive shell and the credential buys a database connection but no DNS query. Segment staging away from the internal resolver and there is nothing to ask. Lock down AXFR and the zone does not dump. Keep credentials out of DNS and the dump carries no breadcrumb. The flip side is that full remediation is five separate pieces of work, each of which needs tracking, scheduling and verifying on its own.
 
-This is the shape of most real-world breaches. There is rarely a single dramatic vulnerability that opens the front door; there are five or six mundane misconfigurations that compound into a path. The lesson is not "lock down AXFR" — the lesson is "any one of these five would have stopped this."
+Plenty of real breaches have exactly this shape. There is rarely one dramatic vulnerability holding the front door open. There are five or six mundane misconfigurations that happen to line up into a path. Locking down AXFR is good advice. The more useful lesson is that any one of these five would have stopped you.
 
 ## §3.5 — Blast radius
 
@@ -269,120 +269,120 @@ monitoring exists to catch and did not.
 
 ## §4 — Real-world parallels
 
-DNS zone transfer is one of the longest-running classes of misconfiguration in the security catalog. The technique predates Common Vulnerabilities and Exposures (CVE) as an indexing system; AXFR enumeration is documented in security literature going back to the mid-1990s, and the first significant published red-team writeups about using it appeared around 2000-2001. What follows is not a comprehensive history (that would be a different document) but three threads worth tracing.
+Open zone transfers are one of the oldest misconfigurations in the catalog. AXFR enumeration was being written about in security literature in the mid-1990s, before CVE existed as an indexing system. What follows is not a history, which would be a different document, but three threads worth following.
 
 ### Thread 1: The chronic, low-attention pattern
 
-AXFR misconfigurations are typically discovered quietly. A security researcher runs a passive sweep using tools like Project Sonar (Rapid7's continuous internet-scanning project) or one of the public DNS-discovery services (SecurityTrails, DNSDumpster, Shodan, Censys), notices an authoritative server returning zone data to unauthenticated clients, files a disclosure report, and the operator fixes it.[^project-sonar-rapid7][^securitytrails][^dnsdumpster] Most of these never become news because the data is "just" hostnames — embarrassing, but rarely a direct breach.
+Most open AXFR servers are found quietly. A researcher runs a passive sweep with Project Sonar (Rapid7's continuous internet-scanning project) or one of the public DNS-discovery services (SecurityTrails, DNSDumpster, Shodan, Censys), notices an authoritative server handing zone data to strangers, files a disclosure, and the operator fixes it.[^project-sonar-rapid7][^securitytrails][^dnsdumpster] Hardly any of these make the news, because the data is "just" hostnames: embarrassing, rarely a breach in itself. Today's TXT record is what happens when it is not just hostnames.
 
-The shape of the problem at scale is well-documented in Rapid7's annual *National / Industry Cyber Exposure Reports* (NICER), which use Project Sonar's continuous internet-wide scanning to characterize what's reachable from anywhere. AXFR-permitting authoritative DNS servers appear in those reports every year, in the thousands. The mitigation has been published, free, in operator-grade documentation (BIND ARM, PowerDNS docs, Knot DNS docs) for decades. The persistence of the misconfiguration is not a technical problem; it is an organizational-attention problem. Internal DNS gets configured once, by whoever was there first, and nobody re-audits it.
+Rapid7's *National / Industry Cyber Exposure Reports* (NICER), built on Project Sonar's internet-wide scanning, have documented the scale of it, with AXFR-permitting authoritative servers turning up in large numbers. The fix has been published, free, in operator documentation (the BIND ARM, the PowerDNS docs, the Knot DNS docs) for decades. So the persistence is not a technical problem. It is an attention problem. Internal DNS gets configured once, by whoever was there first, and nobody looks at it again.
 
-The OWASP Web Security Testing Guide (currently v4.2) includes DNS enumeration as a standard part of its information-gathering chapter, and AXFR is one of the named techniques. Any black-box penetration test that follows OWASP's testing methodology will attempt AXFR against the target's authoritative nameservers in the first hour of engagement. The test is so routine that it's automated in major commercial scanning suites (Tenable Nessus, Qualys, Rapid7 InsightVM all include AXFR checks in their default profiles).
+The OWASP Web Security Testing Guide (currently v4.2) puts DNS enumeration in its information-gathering chapter, with AXFR among the named techniques, so a black-box pentest following that methodology will try AXFR against the target's authoritative nameservers early on. It is routine enough to be automated in the major commercial scanners; Tenable Nessus, Qualys and Rapid7 InsightVM all include AXFR checks.
 
-For an organization that has never run a black-box external pentest, the question "would AXFR work against our zones?" is almost certainly unanswered. For an organization that has, the question "did we actually remediate the finding from last year's report?" is the more useful one.
+If your organization has never had a black-box external pentest, the question "would AXFR work against our zones?" is almost certainly unanswered. If it has, the better question is "did we actually fix last year's finding?"
 
 ### Thread 2: Healthcare-sector network compromises and the role of internal enumeration
 
-Healthcare has been the worst-performing sector in breach reporting for several years running. The HHS Office for Civil Rights' breach reporting portal (the "Wall of Shame," officially the *Breaches Affecting 500 or More Individuals* notice) lists hundreds of healthcare breaches per year affecting cumulative tens of millions of individuals.[^hhs-office-for-civil-rights] The 2024 calendar year was the worst on record by individuals-affected — driven heavily by the Change Healthcare ransomware attack of February 2024, which UnitedHealth Group disclosed had affected approximately 192.7 million individuals per Change Healthcare's notification to HHS OCR updated in July 2025 (revised up from the ~100 million October 2024 estimate as the forensic scope expanded).
+Healthcare has been the worst-performing sector in breach reporting for years. HHS's Office for Civil Rights breach portal (the "Wall of Shame", officially *Breaches Affecting 500 or More Individuals*) lists hundreds of healthcare breaches a year affecting tens of millions of people in total.[^hhs-office-for-civil-rights] 2024 was the worst year on record by individuals affected, driven largely by the February 2024 Change Healthcare ransomware attack, which UnitedHealth Group disclosed had affected approximately 192.7 million individuals per Change Healthcare's notification to HHS OCR as updated in July 2025, up from the ~100 million estimate of October 2024 as the forensic scope widened.
 
-The Change Healthcare incident, attributed to the ALPHV/BlackCat ransomware-as-a-service operation, was a credential-driven compromise: the initial access was via stolen credentials for a Citrix portal that lacked multi-factor authentication. Once inside, the operators spent nine days in the environment before deploying ransomware, and during those nine days they performed exactly the kind of internal enumeration today's level demonstrates — mapping internal services, identifying the highest-value data stores, locating and disabling backup systems. The CISA advisory and the subsequent forensic reports describe the enumeration phase in terms that match T1018 (Remote System Discovery) and T1590.002 (Gather Victim Network Information: DNS) — the same techniques the dig AXFR query in this level maps to.[^t1590-002][^t1018]
+Change Healthcare, attributed to the ALPHV/BlackCat ransomware-as-a-service operation, was a credential-driven compromise. Initial access came through stolen credentials for a Citrix portal with no multi-factor authentication, and the operators then spent nine days inside before deploying ransomware. Nine days is plenty of time for exactly what this level demonstrates: mapping internal services, finding the most valuable data stores, finding the backups. That enumeration phase maps to T1018 (Remote System Discovery) and T1590.002 (Gather Victim Network Information: DNS), the same techniques your `dig AXFR` maps to.[^t1590-002][^t1018]
 
-The pattern shows up repeatedly in the healthcare ransomware history of the last several years:
+The same pattern runs through recent healthcare ransomware:
 
 - **CommonSpirit Health (October 2022)**: ransomware affected 164 hospitals and care sites across 21 states. 623,774 patients ultimately had their data exposed.[^commonspirit-2022]
 - **Universal Health Services (September 2020)**: a Ryuk ransomware attack affected UHS operations across its 400+ facilities in the US and UK. Patient care diverted; staff fell back to paper records for weeks. Direct loss reported as $67 million; UHS publicly stated no patient data was confirmed exfiltrated.[^uhs-2020-ryuk]
 - **Scripps Health (May 2021)**: ransomware disrupted all four of Scripps' hospitals (two heavily). 147,267 patients had PHI stolen; recovery took roughly four weeks; total reported cost ~$113 million.[^scripps-2021]
 - **Ardent Health Services (November 2023)**: ransomware across 30+ hospitals in 6 states. ER diversions; surgeries postponed.
 
-What all of these have in common, beyond the ransomware payload itself, is an internal-enumeration phase that preceded the encryption — usually using stolen credentials for an initial foothold, then walking the internal network using techniques that included DNS reconnaissance, Active Directory enumeration, and lateral SMB/RDP discovery. The "find the high-value targets" phase of a healthcare ransomware compromise looks operationally a great deal like the legal, authorized blast-radius check in today's level — same techniques, opposite intent.
+Beyond the payload itself, what these share is an internal-enumeration phase before the encryption: a foothold from stolen credentials, then a walk around the internal network using DNS reconnaissance, Active Directory enumeration and lateral SMB or RDP discovery. The "find the valuable targets" phase of a healthcare ransomware attack looks a great deal like the authorized blast-radius check you just did. Same techniques, opposite intent, and one signed letter of difference.
 
 ### Thread 3: Vendor-engagement service accounts that outlived their use
 
-The audit-bypass account in today's level — created for a one-time vendor audit dry-run, never deprovisioned — is a near-exact match for one of the most consistently-cited patterns in IAM literature.
+The audit-bypass account, created for a one-off vendor audit dry-run and never removed, is a close match for one of the most consistently cited patterns in identity management.
 
-The **SolarWinds Orion supply-chain compromise (disclosed December 2020)** included, among many other findings, evidence that the malicious actors used legitimate-looking service accounts to maintain persistence across customer environments. While the initial vector was a compromised build pipeline, the persistence and lateral-movement phases relied substantially on accounts that had been provisioned for legitimate operational reasons and were available because deprovisioning processes hadn't kept pace with the actual usage. CISA's SolarWinds advisory series (AA20-352A "Advanced Persistent Threat Compromise of Government Agencies, Critical Infrastructure, and Private Sector Organizations" and the AR21-134A "Eviction Guidance for Networks Affected by the SolarWinds and Active Directory/M365 Compromise") named service-account and identity-platform hygiene as recurring remediation themes.
+The **SolarWinds Orion supply-chain compromise (disclosed December 2020)** started with a compromised build pipeline, but the remediation guidance that followed kept coming back to identity. CISA's advisories, AA20-352A ("Advanced Persistent Threat Compromise of Government Agencies, Critical Infrastructure, and Private Sector Organizations") and AR21-134A ("Eviction Guidance for Networks Affected by the SolarWinds and Active Directory/M365 Compromise"), treat service-account and identity-platform hygiene as recurring remediation themes.
 
-The **Okta support-system breach (October 2023)** is another example — the initial access vector was credentials for a service account that an Okta employee had inadvertently saved to a personal Google account, which an attacker subsequently compromised. The service account had broader access than the support workflow it was originally provisioned for required. Okta's disclosure and subsequent customer notifications described both the credential exposure and the over-scoped permissions as contributing factors.
+The **Okta support-system breach (October 2023)** is a cousin of today's finding. The initial access came through credentials for a service account that an Okta employee had saved to a personal Google account, which an attacker then compromised. A service account's credential, living somewhere it never should have been, became the way in.
 
-More routinely (and less famously), the pattern shows up in nearly every published penetration-test methodology guide as a category of finding: "service accounts created for vendor engagements, third-party integrations, or one-time projects, retained indefinitely with original permissions, often holding more access than the original justification required." The mitigations are standardized — registry of accounts, mandatory expiration dates, automated deprovisioning workflows, periodic recertification — and the failure rate in industry surveys is consistently above 50%. (Verizon's *Data Breach Investigations Report*, year over year, identifies credential-related compromise as one of the top initial-access vectors. The 2026 edition documented a reshuffle — vulnerability exploitation overtook credential abuse to claim the #1 slot at 31% of breaches — but credential-driven access remains the persistent runner-up, and the sticky-account variant is a meaningful slice of that total.)[^verizon-dbir]
+Far more often, and far less famously, it turns up as a routine pentest finding: service accounts created for a vendor engagement, an integration or a one-off project, kept indefinitely with their original permissions, often holding more access than the original reason ever needed. The mitigations are well established (an account registry, mandatory expiry dates, automated deprovisioning, periodic recertification) and widely skipped. Verizon's *Data Breach Investigations Report* keeps ranking credential-related compromise among the top initial-access vectors. The 2026 edition recorded a reshuffle, with vulnerability exploitation taking the top slot at 31% of breaches, but credential-driven access remains the persistent runner-up, and sticky accounts are part of why.[^verizon-dbir]
 
-The audit-bypass account in today's level is fictional, but it represents the modal real-world finding: an account created in good faith for a specific purpose, documented insufficiently, deprovisioned never. The DNS-TXT-record credential leak compounds the failure, but the underlying weakness — the account existing at all, five months past its scheduled removal — is the larger problem.
+The audit-bypass account is fictional, and it is also the most ordinary finding imaginable: created in good faith for a specific purpose, documented poorly, deprovisioned never. The TXT-record leak makes it worse, but the underlying weakness is the account existing at all, five months past its own scheduled removal date.
 
 ## §5 — Frameworks, deep dive
 
-The post-mortem at the bottom of the level (`lessons-learned.md`) walks through the high-level framework mapping. This section expands each with the specific section / control / paragraph identifiers a compliance auditor would cite, plus the exact remediation language each framework expects.
+The in-game post-mortem (`lessons-learned.md`) gives the high-level framework mapping. This section adds what an auditor actually cites: the specific section, control and paragraph identifiers, plus the remediation language each framework expects to see.
 
 ### CWE — Common Weakness Enumeration
 
-**CWE-306: Missing Authentication for Critical Function.**[^cwe-306] The primary weakness for the AXFR failure. The CWE catalog entry describes the weakness as "the product does not perform any authentication for functionality that requires a provable user identity or consumes a significant amount of resources." AXFR fits both halves: it requires a provable identity (the requester should be a known secondary nameserver) and consumes significant resources (the full zone dump). CWE-306 has been on the CWE Top 25 *Most Dangerous Software Weaknesses* list multiple times, most recently the 2024 edition. The MITRE mapping status is **ALLOWED** — it's a valid weakness ID for analytics and reporting.
+**CWE-306: Missing Authentication for Critical Function.**[^cwe-306] The primary weakness for the AXFR failure. The CWE catalog entry describes the weakness as "the product does not perform any authentication for functionality that requires a provable user identity or consumes a significant amount of resources." AXFR fits both halves: it requires a provable identity (the requester should be a known secondary nameserver) and consumes significant resources (the full zone dump). CWE-306 has been on the CWE Top 25 *Most Dangerous Software Weaknesses* list multiple times, most recently the 2024 edition. The MITRE mapping status is **ALLOWED**, it's a valid weakness ID for analytics and reporting.
 
 **CWE-1392: Use of Default Credentials.**[^cwe-1392] Maps the unrotated `atlas-default-2025`. CWE-1392 is the more recent, more specific successor to CWE-798 (*Use of Hard-coded Credentials*); use it when the credential is a vendor-shipped default that the operator failed to change, rather than a developer-baked secret. MITRE mapping status: **ALLOWED**.
 
-**CWE-732: Incorrect Permission Assignment for Critical Resource.**[^cwe-732] Maps the `/bin/bash` shell on the `dbadmin` service account. MITRE mapping status: **ALLOWED-WITH-REVIEW** — the entry notes that CWE-732 is frequently misused for authorization weaknesses (which belong under CWE-862 *Missing Authorization* or CWE-863 *Incorrect Authorization*); the shell-mode case here fits the literal CWE-732 definition correctly.
+**CWE-732: Incorrect Permission Assignment for Critical Resource.**[^cwe-732] Maps the `/bin/bash` shell on the `dbadmin` service account. MITRE mapping status: **ALLOWED-WITH-REVIEW**, the entry notes that CWE-732 is frequently misused for authorization weaknesses (which belong under CWE-862 *Missing Authorization* or CWE-863 *Incorrect Authorization*); the shell-mode case here fits the literal CWE-732 definition correctly.
 
-**CWE-200: Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] Maps the TXT-record credential leak. MITRE mapping status: **DISCOURAGED** — the entry is "frequently misused" and is too broad to be useful for fine-grained analytics. Cite CWE-200 as the framework reference; for surgical analysis use CWE-540 (*Inclusion of Sensitive Information in Source Code* — extended in practice to "any non-secret-grade artifact") as the better-fitting weakness.[^cwe-540]
+**CWE-200: Exposure of Sensitive Information to an Unauthorized Actor.**[^cwe-200] Maps the TXT-record credential leak. MITRE mapping status: **DISCOURAGED**, the entry is "frequently misused" and is too broad to be useful for fine-grained analytics. Cite CWE-200 as the framework reference; for surgical analysis use CWE-540 (*Inclusion of Sensitive Information in Source Code*, extended in practice to "any non-secret-grade artifact") as the better-fitting weakness.[^cwe-540]
 
-**CWE-540: Inclusion of Sensitive Information in Source Code.** The narrower, more useful weakness for the TXT-record case. The literal catalog text is about source code, but the spirit — "credentials should not appear in artifacts whose access control is not credential-grade" — fits the DNS-record case directly.
+**CWE-540: Inclusion of Sensitive Information in Source Code.** The narrower, more useful weakness for the TXT-record case. The literal catalog text is about source code, but the spirit, "credentials should not appear in artifacts whose access control is not credential-grade", fits the DNS-record case directly.
 
 ### NIST SP 800-53 Rev. 5
 
 NIST Special Publication 800-53 Revision 5 (the federal control catalog, also widely used by the private sector) addresses today's findings across several control families.[^nist-800-53]
 
-**SC-22 — Architecture and Provisioning for Name/Address Resolution Service.** The most surgical fit for the AXFR failure. SC-22's control text requires that the system "provide name/address resolution services for organizational users that perform fault-tolerant name/address resolution services; implement internal/external role separation." (The SC-22(1) enhancement that lived separately in Rev 4 was incorporated into the SC-22 base control in Rev 5.) Atlas's resolver fails the architecture-and-provisioning requirement by not implementing the standard AXFR restriction.
+**SC-22, Architecture and Provisioning for Name/Address Resolution Service.** The most surgical fit for the AXFR failure. SC-22's control text requires that the system "provide name/address resolution services for organizational users that perform fault-tolerant name/address resolution services; implement internal/external role separation." (The SC-22(1) enhancement that lived separately in Rev 4 was incorporated into the SC-22 base control in Rev 5.) Atlas's resolver fails the architecture-and-provisioning requirement by not implementing the standard AXFR restriction.
 
-**SC-7 — Boundary Protection.** The fact that `staging-db.atlas.health` can reach `dns.atlas.internal` at all is a network-segmentation finding. SC-7 requires that the system "monitor and control communications at the external boundary of the system and at key internal boundaries within the system." The internal boundary between the staging tier and the management tier (where DNS lives) is not enforced.
+**SC-7, Boundary Protection.** The fact that `staging-db.atlas.health` can reach `dns.atlas.internal` at all is a network-segmentation finding. SC-7 requires that the system "monitor and control communications at the external boundary of the system and at key internal boundaries within the system." The internal boundary between the staging tier and the management tier (where DNS lives) is not enforced.
 
-**AC-3 — Access Enforcement.** The DNS server is required to "enforce approved authorizations for logical access to information and system resources." Allowing AXFR from any source is a failure to enforce the (implicit) authorization that only secondary nameservers should receive zone data.
+**AC-3, Access Enforcement.** The DNS server is required to "enforce approved authorizations for logical access to information and system resources." Allowing AXFR from any source is a failure to enforce the (implicit) authorization that only secondary nameservers should receive zone data.
 
-**AC-2(3) — Disable Accounts.** The audit-bypass account's continued existence past its scheduled removal date is the violation. AC-2(3) requires that accounts be disabled within an organization-defined time period when they're no longer required (the original "Tessera Q4 dry-run" purpose ended; the account didn't).
+**AC-2(3), Disable Accounts.** The audit-bypass account's continued existence past its scheduled removal date is the violation. AC-2(3) requires that accounts be disabled within an organization-defined time period when they're no longer required (the original "Tessera Q4 dry-run" purpose ended; the account didn't).
 
-**AC-6 — Least Privilege.** The `dbadmin` service account with an interactive shell has more privilege than its operational purpose requires. AC-6's control text is "employ the principle of least privilege, allowing only authorized accesses for users (or processes acting on behalf of users) that are necessary to accomplish assigned organizational tasks."
+**AC-6, Least Privilege.** The `dbadmin` service account with an interactive shell has more privilege than its operational purpose requires. AC-6's control text is "employ the principle of least privilege, allowing only authorized accesses for users (or processes acting on behalf of users) that are necessary to accomplish assigned organizational tasks."
 
-**IA-5 — Authenticator Management.** Covers the credential-management lifecycle, including "establishing initial authenticator content for any authenticators issued by the organization" and "establishing and implementing administrative procedures for initial authenticator distribution." Default authenticators that ship with vendor products and the operator's obligation to change them fall under this control.
+**IA-5, Authenticator Management.** Covers the credential-management lifecycle, including "establishing initial authenticator content for any authenticators issued by the organization" and "establishing and implementing administrative procedures for initial authenticator distribution." Default authenticators that ship with vendor products and the operator's obligation to change them fall under this control.
 
 ### NIST SP 800-81 Rev 3 — Secure Domain Name System (DNS) Deployment Guide
 
-The authoritative federal DNS hardening guide. **NIST SP 800-81 Rev 3 was published as final on March 19, 2026**, simultaneously withdrawing the long-standing SP 800-81-2 (2013).[^nist-800-81] Operators familiar with the older document should re-read; Rev 3 is a substantial expansion rather than a refresh — it adds chapters on Protective DNS (PDNS), encrypted DNS transports (DoT, DoH, DoQ), zero-trust integration, OT/IoT environments, and forensic logging, none of which were addressed in SP 800-81-2.
+The authoritative federal DNS hardening guide. **NIST SP 800-81 Rev 3 was published as final on March 19, 2026**, simultaneously withdrawing the long-standing SP 800-81-2 (2013).[^nist-800-81] Operators familiar with the older document should re-read; Rev 3 is a substantial expansion rather than a refresh, it adds chapters on Protective DNS (PDNS), encrypted DNS transports (DoT, DoH, DoQ), zero-trust integration, OT/IoT environments, and forensic logging, none of which were addressed in SP 800-81-2.
 
 The AXFR guidance carries through from the 2013 document but is now in a different chapter. The recommendation remains: AXFR allowed only to known secondary nameservers, authenticated via TSIG. The BIND `allow-transfer { key tsig-key; };` syntax is unchanged. The change in Rev 3 is that AXFR sits inside a broader "zone integrity and replication" treatment that explicitly cross-references zone signing (DNSSEC) and encrypted-transport integration.
 
-If you've been relying on SP 800-81-2 as your DNS hardening reference, swap to Rev 3 — the older document's `csrc.nist.gov/publications/detail/sp/800-81/2/final` URL still resolves but now shows the "(Withdrawn)" status banner.
+If you've been relying on SP 800-81-2 as your DNS hardening reference, swap to Rev 3, the older document's `csrc.nist.gov/publications/detail/sp/800-81/2/final` URL still resolves but now shows the "(Withdrawn)" status banner.
 
 ### HIPAA — 45 CFR Part 164
 
 The Privacy and Security Rules apply to Atlas Health as a HIPAA-covered entity.[^cfr-45-164]
 
-**§164.312(a)(1) — Access Control (Technical Safeguard).** Requires covered entities to "implement technical policies and procedures for electronic information systems that maintain electronic protected health information to allow access only to those persons or software programs that have been granted access rights." The architectural mechanism Atlas uses for PHI access control is network segmentation between the staging tier (no PHI) and the PHI tier. Today's finding doesn't directly cross the segmentation boundary — but it discloses where the boundary is, which is the first step of any subsequent attack against the boundary.
+**§164.312(a)(1), Access Control (Technical Safeguard).** Requires covered entities to "implement technical policies and procedures for electronic information systems that maintain electronic protected health information to allow access only to those persons or software programs that have been granted access rights." The architectural mechanism Atlas uses for PHI access control is network segmentation between the staging tier (no PHI) and the PHI tier. Today's finding doesn't directly cross the segmentation boundary, but it discloses where the boundary is, which is the first step of any subsequent attack against the boundary.
 
-**§164.312(e)(1) — Transmission Security (Technical Safeguard).** Covers "technical security measures to guard against unauthorized access to electronic protected health information that is being transmitted over an electronic communications network." Hostname enumeration via AXFR is the prerequisite for targeted transmission-layer attacks; the technical-safeguards control is implicated even though no PHI was directly transmitted in today's recon.
+**§164.312(e)(1), Transmission Security (Technical Safeguard).** Covers "technical security measures to guard against unauthorized access to electronic protected health information that is being transmitted over an electronic communications network." Hostname enumeration via AXFR is the prerequisite for targeted transmission-layer attacks; the technical-safeguards control is implicated even though no PHI was directly transmitted in today's recon.
 
-**§164.502 — Uses and Disclosures of Protected Health Information: General Rules (Privacy Rule).** The "minimum necessary" standard at §164.502(b) requires that uses, disclosures, and requests for PHI be "limited to the minimum necessary" to accomplish the intended purpose. Exposing the internal-network map of every PHI system to any host that can reach the resolver is the opposite of minimum-necessary.
+**§164.502, Uses and Disclosures of Protected Health Information: General Rules (Privacy Rule).** The "minimum necessary" standard at §164.502(b) requires that uses, disclosures, and requests for PHI be "limited to the minimum necessary" to accomplish the intended purpose. Exposing the internal-network map of every PHI system to any host that can reach the resolver is the opposite of minimum-necessary.
 
-**§164.530 — Administrative Requirements (Privacy Rule).** Subsection (c)(1) requires "appropriate administrative, technical, and physical safeguards to protect the privacy of protected health information." DNS zone-transfer hardening sits in the technical-safeguards bucket; the failure here is an administrative-safeguards failure as much as a technical one (no review process caught the misconfiguration).
+**§164.530, Administrative Requirements (Privacy Rule).** Subsection (c)(1) requires "appropriate administrative, technical, and physical safeguards to protect the privacy of protected health information." DNS zone-transfer hardening sits in the technical-safeguards bucket; the failure here is an administrative-safeguards failure as much as a technical one (no review process caught the misconfiguration).
 
-**§164.404 (HITECH) — Notification to Individuals.** Sixty-day clock from discovery to individual notification. If today's finding leads to evidence that the credential was used by an attacker before remediation, the breach is notifiable under HITECH and the clock starts when Atlas's forensic team confirms the use.
+**§164.404 (HITECH), Notification to Individuals.** Sixty-day clock from discovery to individual notification. If today's finding leads to evidence that the credential was used by an attacker before remediation, the breach is notifiable under HITECH and the clock starts when Atlas's forensic team confirms the use.
 
-**§164.408 (HITECH) — Notification to the Secretary.** Breaches affecting 500 or more individuals require notification to HHS Office for Civil Rights within the same 60-day window; smaller breaches get aggregated annual reporting. Atlas's patient population means any confirmed exposure here lands in the immediate-notice category.
+**§164.408 (HITECH), Notification to the Secretary.** Breaches affecting 500 or more individuals require notification to HHS Office for Civil Rights within the same 60-day window; smaller breaches get aggregated annual reporting. Atlas's patient population means any confirmed exposure here lands in the immediate-notice category.
 
 ### CIS Critical Security Controls v8.1
 
 The Center for Internet Security's *Critical Security Controls v8.1* (released June 2024; the v8.1 minor revision updated the IG (Implementation Group) mapping and added language on cloud-native deployments without changing the core 18 controls structure introduced in v8).
 
-**Control 4 — Secure Configuration of Enterprise Assets and Software.** Covers the broader category of "the software arrived configured wrong and we didn't fix it." Sub-controls 4.7 (Manage Default Accounts on Enterprise Assets and Software) and 4.8 (Uninstall or Disable Unnecessary Services on Enterprise Assets and Software) are both directly implicated.
+**Control 4, Secure Configuration of Enterprise Assets and Software.** Covers the broader category of "the software arrived configured wrong and we didn't fix it." Sub-controls 4.7 (Manage Default Accounts on Enterprise Assets and Software) and 4.8 (Uninstall or Disable Unnecessary Services on Enterprise Assets and Software) are both directly implicated.
 
-**Control 5 — Account Management.** Sub-control 5.3 (Disable Dormant Accounts) covers the audit-bypass-account-never-deprovisioned finding. Sub-control 5.4 (Restrict Administrator Privileges to Dedicated Administrator Accounts) is the structural fix for the `dbadmin`-shouldn't-have-a-shell problem.
+**Control 5, Account Management.** Sub-control 5.3 (Disable Dormant Accounts) covers the audit-bypass-account-never-deprovisioned finding. Sub-control 5.4 (Restrict Administrator Privileges to Dedicated Administrator Accounts) is the structural fix for the `dbadmin`-shouldn't-have-a-shell problem.
 
-**Control 12 — Network Infrastructure Management.** Sub-control 12.2 (Establish and Maintain a Secure Network Architecture) is the umbrella for DNS hardening and segmentation. Sub-control 12.3 (Securely Manage Network Infrastructure) covers the configuration-management side — versioned, reviewed, audited config for DNS servers.
+**Control 12, Network Infrastructure Management.** Sub-control 12.2 (Establish and Maintain a Secure Network Architecture) is the umbrella for DNS hardening and segmentation. Sub-control 12.3 (Securely Manage Network Infrastructure) covers the configuration-management side, versioned, reviewed, audited config for DNS servers.
 
-**Control 13 — Network Monitoring and Defense.** Sub-control 13.4 (Perform Traffic Filtering Between Network Segments) addresses the staging-can-reach-DNS-resolver finding. Sub-control 13.7 (Deploy a Host-Based Intrusion Detection Solution) and 13.8 (Deploy a Network Intrusion Detection Solution) would have alerted on the AXFR attempt.
+**Control 13, Network Monitoring and Defense.** Sub-control 13.4 (Perform Traffic Filtering Between Network Segments) addresses the staging-can-reach-DNS-resolver finding. Sub-control 13.7 (Deploy a Host-Based Intrusion Detection Solution) and 13.8 (Deploy a Network Intrusion Detection Solution) would have alerted on the AXFR attempt.
 
 ### OWASP
 
 **OWASP Web Security Testing Guide v4.2.**[^owasp-web-security-testing-guide] The current edition. Information Gathering is the first chapter; DNS enumeration techniques (including AXFR) are documented across multiple sub-sections covering footprinting and infrastructure mapping. Any OWASP-methodology black-box engagement will run AXFR in the first hour.
 
-**OWASP Top 10 (2025).**[^owasp-top-10-2025] The 2025 edition reshuffled several positions from 2021. The umbrella category for today's finding is **A02: Security Misconfiguration** (moved up from A05 in the 2021 list). The category text explicitly calls out "default accounts and their passwords still enabled and unchanged" and "unnecessary features are enabled or installed" as examples — both apply.
+**OWASP Top 10 (2025).**[^owasp-top-10-2025] The 2025 edition reshuffled several positions from 2021. The umbrella category for today's finding is **A02: Security Misconfiguration** (moved up from A05 in the 2021 list). The category text explicitly calls out "default accounts and their passwords still enabled and unchanged" and "unnecessary features are enabled or installed" as examples, both apply.
 
-The 2025 Top 10 also expanded **A03: Software Supply Chain Failures** (broader than the 2021 *Vulnerable and Outdated Components* category — now covers the full software supply chain rather than just outdated dependencies) and retained **A07: Authentication Failures** (renamed from 2021's *Identification and Authentication Failures*, same position). Default credentials map into the A07 category by content and A02 by example-list inclusion; most auditors will cite both. The 2025 edition also introduces a brand-new **A10: Mishandling of Exceptional Conditions** and elevates **A04: Cryptographic Failures** (which had been A02 in 2021) — neither applies directly to today's finding, but they're worth knowing when comparing 2021-era and 2025-era audit reports against each other.
+The 2025 Top 10 also expanded **A03: Software Supply Chain Failures** (broader than the 2021 *Vulnerable and Outdated Components* category, now covers the full software supply chain rather than just outdated dependencies) and retained **A07: Authentication Failures** (renamed from 2021's *Identification and Authentication Failures*, same position). Default credentials map into the A07 category by content and A02 by example-list inclusion; most auditors will cite both. The 2025 edition also introduces a brand-new **A10: Mishandling of Exceptional Conditions** and elevates **A04: Cryptographic Failures** (which had been A02 in 2021), neither applies directly to today's finding, but they're worth knowing when comparing 2021-era and 2025-era audit reports against each other.
 
 ### MITRE ATT&CK — the two techniques the credential enables
 
@@ -390,7 +390,7 @@ The zone transfer is reconnaissance. What the recovered credential
 enables afterwards is the part that matters for scoping, and the
 in-game post-mortem names both halves.
 
-**[T1078 — Valid Accounts](https://attack.mitre.org/techniques/T1078/)**
+**[T1078, Valid Accounts](https://attack.mitre.org/techniques/T1078/)**
 
 A working credential is the cleanest access primitive an adversary can
 hold: no exploit, no malware, no anomaly in any signature-based control.
@@ -401,7 +401,7 @@ legitimate use in the logs. This is why the unrotated default in this
 level is a more serious finding than the zone transfer that disclosed
 the map.
 
-**[T1133 — External Remote Services](https://attack.mitre.org/techniques/T1133/)**
+**[T1133, External Remote Services](https://attack.mitre.org/techniques/T1133/)**
 
 The service account was reachable from outside with an interactive
 shell, which is the combination this technique describes. Atlas's
@@ -414,23 +414,23 @@ business running an interactive session.
 
 ## §6 — Cert exam relevance
 
-The certification industry has been teaching this finding for decades. If you study any of the certs below, you've seen — or will see — the DNS zone transfer example.
+The certification industry has been teaching this finding for decades. If you study any of the certs below, you've seen, or will see, the DNS zone transfer example.
 
 **CompTIA Security+ (SY0-701).**[^cert-security-plus] The current exam (released November 2023). Domain 4 (*Security Operations*) covers DNS enumeration as a reconnaissance technique; the official objectives list `dig`, `nslookup`, and `whois` as named tools. Domain 3 (*Security Architecture*) covers DNS hardening from the defender side. Expect 2-3 questions touching the AXFR concept across a full exam attempt.
 
-**CompTIA CySA+ (CS0-003).**[^cert-cysa] The current exam (released June 2023). Domain 2 (*Threat Intelligence and Threat Hunting*) covers the "what does an adversary see from outside?" question that AXFR is one answer to. Domain 1 (*Security Operations*) covers DNS log analysis — the AXFR-request-monitoring half of the defender story.
+**CompTIA CySA+ (CS0-003).**[^cert-cysa] The current exam (released June 2023). Domain 2 (*Threat Intelligence and Threat Hunting*) covers the "what does an adversary see from outside?" question that AXFR is one answer to. Domain 1 (*Security Operations*) covers DNS log analysis, the AXFR-request-monitoring half of the defender story.
 
 **CompTIA PenTest+ (PT0-003).**[^cert-pentest-plus] The current exam (released December 2024, replacing PT0-002 which sunsets in mid-2025). Domain 2 (*Reconnaissance and Enumeration*) names DNS enumeration explicitly; AXFR is among the directly-listed techniques in the official exam objectives. Domain 3 (*Vulnerability Discovery and Analysis*) covers the follow-on of identifying internal services from the enumeration.
 
-**(ISC)² CISSP.**[^cert-cissp] Domain 4 (*Communication and Network Security*) covers DNS as a protocol with documented hardening requirements; the CBK chapters on DNS specifically reference RFC 5936 (AXFR) and RFC 8945 (TSIG).[^rfc-8945][^rfc-5936] Domain 3 (*Security Architecture and Engineering*) covers the architectural decisions — secure naming services, zone segregation, secondary nameserver placement.
+**(ISC)² CISSP.**[^cert-cissp] Domain 4 (*Communication and Network Security*) covers DNS as a protocol with documented hardening requirements; the CBK chapters on DNS specifically reference RFC 5936 (AXFR) and RFC 8945 (TSIG).[^rfc-8945][^rfc-5936] Domain 3 (*Security Architecture and Engineering*) covers the architectural decisions, secure naming services, zone segregation, secondary nameserver placement.
 
 **Offensive Security OSCP / PEN-200.**[^cert-oscp] OffSec's flagship offensive cert. The PEN-200 course material covers DNS enumeration as a standard part of the information-gathering phase; the lab environment includes machines where AXFR is the intended initial-recon win. The exam itself doesn't directly test "did you find the AXFR misconfig" as a discrete question (it's a practical exam), but the methodology that gets candidates to the foothold relies on the recon habits PEN-200 teaches.
 
-**SANS GIAC GSEC / GCIH / GCIA / GPEN.**[^cert-gpen][^cert-gcia][^cert-gsec][^cert-gcih] The SANS curriculum covers DNS recon across multiple courses — GSEC's *Security Essentials*, GCIH's *Hacker Tools, Techniques, and Incident Handling*, GCIA's *Intrusion Analyst* (DNS log analysis is a substantial chapter), and GPEN's *Network Penetration Tester* (AXFR is among the named techniques). The GCIH and GPEN material is the most directly relevant.
+**SANS GIAC GSEC / GCIH / GCIA / GPEN.**[^cert-gpen][^cert-gcia][^cert-gsec][^cert-gcih] The SANS curriculum covers DNS recon across multiple courses. GSEC's *Security Essentials*, GCIH's *Hacker Tools, Techniques, and Incident Handling*, GCIA's *Intrusion Analyst* (DNS log analysis is a substantial chapter), and GPEN's *Network Penetration Tester* (AXFR is among the named techniques). The GCIH and GPEN material is the most directly relevant.
 
 ## §7 — What a defender does
 
-The bulleted version is in the in-game `lessons-learned.md`. This section expands each bullet with the specific operational details that get a defender from "I read about this" to "I have shipped the change to production."
+The short version is in the in-game `lessons-learned.md`. This expands each point into the operational detail that gets a defender from "I read about this" to "I shipped the change to production".
 
 ### 1. Restrict AXFR at the authoritative nameserver
 
@@ -498,7 +498,7 @@ Or for zones with explicit secondaries:
 Set-DnsServerPrimaryZone -Name "atlas.internal" -SecureSecondaries TransferToSecureServers -SecondaryServers <list>
 ```
 
-If you have an AD-integrated DNS in your environment, audit it — the defaults are not always restrictive.
+If you have an AD-integrated DNS in your environment, audit it, the defaults are not always restrictive.
 
 ### 2. Audit existing TXT records for stashed credentials
 
@@ -511,7 +511,7 @@ dig @<your-ns> <your-zone> AXFR | grep -E '(TXT|SPF)' > /tmp/txt-audit.txt
 
 Run this from a trusted host with AXFR access (after you've configured the restriction). What you're looking for: anything that doesn't match a known verification-token pattern (Google site verification, MS365 verification, DKIM, DMARC, SPF) or a known vendor-mandated record. Anything that looks like a credential, a key, an admin note, or a free-form comment is a finding.
 
-For ongoing monitoring, a daily scheduled job that diffs the TXT records against an approved baseline catches drift. Tools like `dnscontrol` (StackExchange's DNS-as-code tool) make this trivial — the approved zone lives in version control, anything that diverges from the file gets reverted.
+For ongoing monitoring, a daily scheduled job that diffs the TXT records against an approved baseline catches drift. Tools like `dnscontrol` (StackExchange's DNS-as-code tool) make this trivial, the approved zone lives in version control, anything that diverges from the file gets reverted.
 
 ### 3. Monitor for AXFR attempts
 
@@ -550,17 +550,17 @@ The audit-bypass account is the half of today's finding that's hardest to fix st
 
 - **Privileged Access Management (PAM) platforms**: CyberArk PAM, BeyondTrust Privileged Identity, Delinea (formerly Thycotic) Secret Server. These platforms centralize service-account credential management with mandatory expiration, automatic rotation, and access-audit trails.
 - **Secrets-management platforms with TTL-bound credentials**: HashiCorp Vault is the canonical example. Vault's database secrets engine can issue dynamic, short-TTL database credentials on demand, eliminating the need for long-lived service-account passwords entirely. AWS Secrets Manager and Azure Key Vault have analogous capabilities for their respective ecosystems.
-- **Identity Governance and Administration (IGA) platforms**: SailPoint IdentityIQ, Saviynt, Microsoft Entra ID Governance. These cover the lifecycle side — account creation, periodic recertification, automated deprovisioning when access requirements change.
+- **Identity Governance and Administration (IGA) platforms**: SailPoint IdentityIQ, Saviynt, Microsoft Entra ID Governance. These cover the lifecycle side, account creation, periodic recertification, automated deprovisioning when access requirements change.
 
 The non-tool half is process: a registry of every service account that lists creation date, business justification, scheduled review date, and owner. Anything without a recent review or an active owner gets disabled and held in a recovery state for 30 days before deletion. The discipline is harder than the tooling, but the tooling makes the discipline enforceable.
 
 ### 6. External attack-surface management
 
-The defender-side analog to the AXFR query you just ran. ASM platforms continuously enumerate your organization's external attack surface — domains, subdomains, exposed services, certificate inventory — and alert when something changes or appears that shouldn't be there.
+The defender-side analog to the AXFR query you just ran. ASM platforms continuously enumerate your organization's external attack surface, domains, subdomains, exposed services, certificate inventory, and alert when something changes or appears that shouldn't be there.
 
 Current commercial offerings: **Microsoft Defender External Attack Surface Management** (formerly RiskIQ), **Tenable Attack Surface Management**, **Bishop Fox CAST**, **Detectify**, **Censys ASM**, **Palo Alto Cortex Xpanse**. Free-tier and research-grade alternatives include **SecurityTrails** and **DNSDumpster** for ad-hoc DNS reconnaissance.
 
-For internal-perimeter visibility specifically, **Project Sonar** (Rapid7's continuous internet-wide scanning project) publishes its data; you can query Sonar for your own org's exposed services. The value of running an ASM tool against your own org is the same as the value of running today's AXFR query — you find out what an attacker would find, before they look.
+For internal-perimeter visibility specifically, **Project Sonar** (Rapid7's continuous internet-wide scanning project) publishes its data; you can query Sonar for your own org's exposed services. The value of running an ASM tool against your own org is the same as the value of running today's AXFR query, you find out what an attacker would find, before they look.
 
 ### Sample detection rule (Sigma)
 
@@ -613,7 +613,7 @@ no meaningful access log, and is rarely in scope for secret scanning.
 
 ## §7.5 — Optional exploration
 
-The credential lifts straight out of the AXFR TXT record; you don't need anything below to solve the level. This section is *bonus* — a set of cross-check commands the level supports so you can confirm in-band what the zone transfer told you out-of-band. The commands shipped with the engine in v1.7.0, but the walkthrough above predates them.
+The credential lifts straight out of the AXFR TXT record; you don't need anything below to solve the level. This section is *bonus*, a set of cross-check commands the level supports so you can confirm in-band what the zone transfer told you out-of-band. The commands shipped with the engine in v1.7.0, but the walkthrough above predates them.
 
 After the solve, on `staging-db.atlas.health`, you can run:
 
@@ -628,40 +628,40 @@ traceroute audit-bypass.atlas.internal
 
 What you'll see:
 
-- **`ip addr`** — `eth0` carries staging-db's primary IPv4. The address sits inside Atlas's RFC 1918 internal segment, which is the orthogonal datapoint the AXFR query *didn't* give you.[^rfc-1918] Zone-file enumeration tells you *what hostnames exist*; `ip addr` tells you *where you are in the topology that resolves them*. A real-world auditor wants both.
-- **`ip route`** — the default route points at Atlas's internal gateway. Combined with `ip addr`, this is enough to draw a rough segment diagram on the engagement-notes whiteboard: staging-db lives on subnet X, routes outbound through gateway Y, and the AXFR-named internal hosts sit one hop deeper.
-- **`arp -a`** — entries for the gateway and any hosts staging-db has already exchanged packets with. This is post-hoc evidence of which AXFR targets are *reachable in practice* (a Layer-2 ARP entry only forms after a successful ARP request/reply round trip), not just *named in the zone file*. The two sets often differ in real engagements: zone files have stale entries, dev hosts that were decommed but never deregistered, etc.
-- **`nslookup atlas.internal`** — confirms the internal resolver from a different angle than `dig`. If you're documenting findings for an Atlas SRE who's used to nslookup output, having both renderings in the report is small-but-real polish.
-- **`ping audit-bypass.atlas.internal`** — confirms the breadcrumb host responds to ICMP (it does). A "host named in AXFR but unreachable" outcome would change the threat-model interpretation: you'd flag the AXFR but downgrade the blast-radius finding from "credentials reachable" to "credentials *named* but network-segmented from staging-db." Worth verifying every time.
-- **`traceroute audit-bypass.atlas.internal`** — shows the gateway hop sequence. Useful if you want to document *which* network segment the breadcrumb host lives in versus the gateway you'd traverse to reach it. For the level the answer is "one hop," but in real engagements this is how you find out whether a "reachable" host is actually multi-hop deep into a different team's environment (and therefore whose problem it is to fix).
+- **`ip addr`**, `eth0` carries staging-db's primary IPv4. The address sits inside Atlas's RFC 1918 internal segment, which is the orthogonal datapoint the AXFR query *didn't* give you.[^rfc-1918] Zone-file enumeration tells you *what hostnames exist*; `ip addr` tells you *where you are in the topology that resolves them*. A real-world auditor wants both.
+- **`ip route`**, the default route points at Atlas's internal gateway. Combined with `ip addr`, this is enough to draw a rough segment diagram on the engagement-notes whiteboard: staging-db lives on subnet X, routes outbound through gateway Y, and the AXFR-named internal hosts sit one hop deeper.
+- **`arp -a`**, entries for the gateway and any hosts staging-db has already exchanged packets with. This is post-hoc evidence of which AXFR targets are *reachable in practice* (a Layer-2 ARP entry only forms after a successful ARP request/reply round trip), not just *named in the zone file*. The two sets often differ in real engagements: zone files have stale entries, dev hosts that were decommed but never deregistered, etc.
+- **`nslookup atlas.internal`**, confirms the internal resolver from a different angle than `dig`. If you're documenting findings for an Atlas SRE who's used to nslookup output, having both renderings in the report is small-but-real polish.
+- **`ping audit-bypass.atlas.internal`**, confirms the breadcrumb host responds to ICMP (it does). A "host named in AXFR but unreachable" outcome would change the threat-model interpretation: you'd flag the AXFR but downgrade the blast-radius finding from "credentials reachable" to "credentials *named* but network-segmented from staging-db." Worth verifying every time.
+- **`traceroute audit-bypass.atlas.internal`**, shows the gateway hop sequence. Useful if you want to document *which* network segment the breadcrumb host lives in versus the gateway you'd traverse to reach it. For the level the answer is "one hop," but in real engagements this is how you find out whether a "reachable" host is actually multi-hop deep into a different team's environment (and therefore whose problem it is to fix).
 
-None of this changes the solve. It does change how a written-up finding *reads* — moving from "we found a credential in the AXFR response" to "we found a credential in the AXFR response, **and** confirmed network reachability from staging-db, **and** documented the network segmentation between staging-db and the credential's host." The second framing is what a senior reviewer will ask for during peer review of your engagement report.
+None of this changes the solve. It does change how a written-up finding *reads*, moving from "we found a credential in the AXFR response" to "we found a credential in the AXFR response, **and** confirmed network reachability from staging-db, **and** documented the network segmentation between staging-db and the credential's host." The second framing is what a senior reviewer will ask for during peer review of your engagement report.
 
 ### Bonus find: vendor default account with /bin/bash
 
 **Trigger:** `cat welcome.md` (you ran this as step 1)
 
-**What it teaches:** welcome.md's parenthetical aside notes that *somebody* enabled `/bin/bash` on `dbadmin` during a vendor upgrade six months ago and never reverted to the original `nologin` shell. A real attacker doing yesterday's exact sequence ends up here, with a working interactive shell on a host the account wasn't supposed to be interactive on. Service-account shell drift is its own finding category: the original control intent was that the vendor service account could connect to PostgreSQL but **not run shell commands** if the credential leaked. That control evaporated the moment somebody needed the shell "just for this debug session." The CIS Distribution-Independent Linux Benchmark control 5.5.1 (the shell-of-service-accounts check) addresses exactly this drift; running it on a quarterly cycle, with named-owner review of every diff, is the operational answer. Worth flagging in the same engagement report as the AXFR finding — same root cause (operational shortcuts that *outlive their justification*), different surface.
+**What it teaches:** welcome.md's parenthetical aside notes that *somebody* enabled `/bin/bash` on `dbadmin` during a vendor upgrade six months ago and never reverted to the original `nologin` shell. A real attacker doing yesterday's exact sequence ends up here, with a working interactive shell on a host the account wasn't supposed to be interactive on. Service-account shell drift is its own finding category: the original control intent was that the vendor service account could connect to PostgreSQL but **not run shell commands** if the credential leaked. That control evaporated the moment somebody needed the shell "just for this debug session." The CIS Distribution-Independent Linux Benchmark control 5.5.1 (the shell-of-service-accounts check) addresses exactly this drift; running it on a quarterly cycle, with named-owner review of every diff, is the operational answer. Worth flagging in the same engagement report as the AXFR finding, same root cause (operational shortcuts that *outlive their justification*), different surface.
 
 ## §8 — Key takeaways
 
-- **AXFR is one of the cheapest defender wins in the catalog.** One config line plus a TSIG key, applied at every authoritative nameserver in your environment, eliminates the technique. The fact that the misconfiguration persists at internet scale is a problem of organizational attention, not of difficulty.
+- **Closing AXFR is about the cheapest win a defender will ever get.** One config line and a TSIG key on every authoritative nameserver and the technique is gone. That it survives at internet scale says something about attention, not difficulty.
 
-- **DNS TXT records are a credential dumpster.** Anything someone needs to "stash somewhere quickly" can end up in a TXT record because TXT records are infinitely flexible and trivially editable. Periodic audits — a `dig <zone> AXFR | grep TXT` from a trusted host, reviewed against an approved baseline — catch these before AXFR exposure does.
+- **DNS TXT records are where credentials go to be forgotten.** Anything someone needs to "stash somewhere quickly" can end up in one, because TXT records take nearly anything and are trivial to edit. A periodic `dig <zone> AXFR | grep TXT` from a trusted host, checked against an approved baseline, finds these before an attacker's AXFR does.
 
-- **Service accounts created for one-time engagements are the modal sticky-account anti-pattern.** Audit-bypass accounts, vendor-engagement accounts, third-party integration accounts. They get created with good intent, an unfocused expiration discussion, and no automated enforcement; they live forever. The fix is registry-plus-automation, not spreadsheets.
+- **One-off accounts are the classic sticky accounts.** Audit-bypass accounts, vendor-engagement accounts, third-party integration accounts: created in good faith, with a vague conversation about expiry and nothing to enforce it, and then they live forever. The fix is a registry plus automation, never a spreadsheet.
 
-- **The directory of internal services is a target.** Knowing where `prod-db` lives, where the PHI tier sits, which subnet has the backups — all of this turns "where do I attack?" into "I have a map; I can plan." Restrict who can read the directory; segment so unauthorized discovery doesn't produce useful targets even when it succeeds.
+- **The directory of internal services is a target in its own right.** Knowing where `prod-db` lives, where the PHI tier sits and which subnet holds the backups turns "where do I attack?" into "I have a map, let me plan". Restrict who can read the directory, and segment so that a successful discovery still produces nothing worth targeting.
 
-- **Compound failures are how breaches happen.** Today's finding required five mundane misconfigurations to stack: unrotated credential, interactive shell on a service account, reach to internal DNS, unrestricted AXFR, credential in TXT record. None individually is exotic. Each independently is fixable. The lesson is not "fix the AXFR" — the lesson is that any one of the five would have stopped the chain.
+- **Breaches are usually stacks, not single holes.** This one needed five mundane misconfigurations to line up: an unrotated credential, an interactive shell on a service account, reach to internal DNS, unrestricted AXFR, and a credential in a TXT record. None is exotic and each is fixable on its own, which is the encouraging part: any one fix would have broken the chain.
 
-- **Authorized post-finding reconnaissance is real defender work.** Today's level is not an attack — it's a sized blast-radius validation, performed under written authorization, with documented rules of engagement, producing an incident-report appendix. The discipline distinguishing "controlled exception to validate scope" from "we just made the problem bigger" is paperwork, scope discipline, and the willingness to stop when the rules say stop.
+- **Authorized post-finding reconnaissance is real defender work.** Today was not an attack. It was a sized blast-radius check, done under written authorization with documented rules of engagement, producing an appendix for an incident report. What separates "a controlled exception to confirm scope" from "we just made it worse" is paperwork, scope discipline, and being willing to stop when the rules say stop.
 
-- **For HIPAA-covered environments, DNS reconnaissance is HIPAA reconnaissance.** Hostname enumeration that reveals PHI-tier systems is implicated under the Security Rule's Access Control and Transmission Security technical safeguards, and under the Privacy Rule's minimum-necessary standard. The fact that no PHI was directly transmitted in today's recon does not exempt the finding from HIPAA scope.
+- **In a HIPAA-covered environment, mapping the PHI tier is part of the breach story.** Hostnames are not PHI, but enumeration that names the PHI warehouse, the PACS and the EHR is the reconnaissance step toward PHI, and the Security Rule's access-control and transmission-security safeguards exist to protect exactly those systems. That no PHI moved today does not take the finding out of HIPAA scope.
 
 ## §9 — Further reading
 
-*Last reviewed: August 2026 — links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
+*Last reviewed: August 2026, links and version-specific claims (cert exam versions, framework revisions, regulation citation IDs) verified current as of the review date. Standards drift over time; if you're reading this more than 6-12 months past the review date, double-check the cited versions before quoting them in audit work.*
 
 [^rfc-5936]: [RFC 5936 — DNS Zone Transfer Protocol (AXFR)](https://datatracker.ietf.org/doc/html/rfc5936). The interoperable specification for AXFR — *updates* RFC 1035's original definition (per the "Updates: 1035" header) rather than replacing it; RFC 1035 §3.2.3, §4.2.2, and §6.3 remain foundational. Read sections 2 (Transport) and 4 (Authoritative Server's AXFR Response) for the operational meat.
 [^rfc-8945]: [RFC 8945 — Secret Key Transaction Authentication for DNS (TSIG)](https://datatracker.ietf.org/doc/html/rfc8945). The current TSIG spec (obsoletes RFC 2845, 4635). The mechanism the AXFR ACL relies on for authentication. Read sections 4 (TSIG RR format) and 5 (Protocol Details) for the implementation specifics.
